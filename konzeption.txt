@@ -1,0 +1,24 @@
+Konzeption:
+Programmiersprache Python GUI irgendwas schönes Linux und Windows 
+Keine propäritaren Programmteile
+Portable keine instalation wenn möglich 
+Appimage
+
+Darkmode
+
+Das Programm soll Dokumentation für Verteiler für Fernmeldekabel erstellen in LSA+ Technik.
+
+Die Grundstruktur für Verteiler soll über ein Menü ausgewählt werden benutzerdefinierte Verteiler sollen aber möglich sein über Auswahl der Anzahl det leisten und Reihen im verteiler.
+Die leisten sollen schon vorfüllt werden über die Eingaben in der verteilerübersicht (Leitung und kabel Beschriftung) bearbeiten soll aber möglich sein 
+Rangierungen soll automatisch erstellt werden es soll kein spezielles Format benutzt werden 
+Der Briefkopf soll zentral befüllt werden
+Eigene Felder sollten möglich sein
+Verschiedene LSA Verteiler vorlagen sollen möglich sein
+Eingaben und Endergebnis verschieden (kein word) vielleicht auf Basis von latex
+Vorschau
+Ausgabefotmat Mindestens PDF Format Excel währ toll oder CSV
+Verschiedenes wiederstandssymbol,zweite benachbarte rangierungen durch einen strich ersetzen
+Default Vorlage erstellen
+
+Optional 
+pluginschnitstelle.

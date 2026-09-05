@@ -1,0 +1,103 @@
+# Kabeltypen und ihre Adernfarben.
+#
+# Diese Datei liegt neben dem Programm und ist frei erweiterbar.
+# Eigene Typen einfach ergaenzen - eine Programmaenderung ist nicht noetig.
+#
+# Regeln:
+#   lagen        - Lagenverseilung: a-Ader zu Lagenbeginn eine eigene Farbe,
+#                  sonst Grundfarbe; b-Ader laeuft eine feste Folge durch.
+#   sternvierer  - Grundfarbe je Vierer, Adern durch Ringe unterschieden.
+#   liste        - feste Adernliste, paarweise auf a und b verteilt.
+
+kuerzel:
+  sw: schwarz
+  br: braun
+  rt: rot
+  or: orange
+  ge: gelb
+  gn: gruen
+  bl: blau
+  vi: violett
+  gr: grau
+  ws: weiss
+  rs: rosa
+  tk: tuerkis
+
+kabeltypen:
+
+  - id: jystyv
+    name: "J-Y(St)Y (Lagenverseilung)"
+    beschreibung: >-
+      Fernmelde-Installationskabel. Die b-Ader laeuft bl - ge - gn - br - sw
+      und wiederholt sich je Lage; die a-Ader ist zu Lagenbeginn rot, sonst
+      weiss. Beim 2x2-Kabel ist die erste b-Ader abweichend schwarz.
+    regel: lagen
+    lagenlaenge: 5
+    a_lagenbeginn: rt
+    a_sonst: ws
+    b_folge: [bl, ge, gn, br, sw]
+    b_erste_bei_2da: sw
+
+  - id: fernmeldekabel
+    name: "Fernmeldekabel (Sternvierer, buendelverseilt)"
+    beschreibung: >-
+      Grundfarben rt - gn - gr - ge - ws je Sternvierer, die Adern innerhalb
+      eines Vierers durch schwarze Ringe unterschieden. Fuenf Sternvierer
+      bilden ein Zehnerbuendel.
+    regel: sternvierer
+    grundfarben: [rt, gn, gr, ge, ws]
+    # Reihenfolge im Vierer: 1a ohne Ring, 1b ein Ring,
+    # 2a zwei Ringe langer Abstand, 2b zwei Ringe kurzer Abstand.
+    ringe: ["", "·", "··", ":"]
+
+  - id: din47100
+    name: "DIN 47100 (paarige Verseilung)"
+    beschreibung: >-
+      Adern 1 bis 44 ohne Farbwiederholung, paarweise auf a und b verteilt.
+      Ab Ader 45 beginnt der Code erneut.
+    regel: liste
+    adern:
+      - ws
+      - br
+      - gn
+      - ge
+      - gr
+      - rs
+      - bl
+      - rt
+      - sw
+      - vi
+      - gr-rs
+      - rt-bl
+      - ws-gn
+      - br-gn
+      - ws-ge
+      - ge-br
+      - ws-gr
+      - gr-br
+      - ws-rs
+      - rs-br
+      - ws-bl
+      - br-bl
+      - ws-rt
+      - br-rt
+      - ws-sw
+      - br-sw
+      - gr-gn
+      - ge-gr
+      - rs-gn
+      - ge-rs
+      - gn-bl
+      - ge-bl
+      - gn-rt
+      - ge-rt
+      - gn-sw
+      - ge-sw
+      - gr-bl
+      - rs-bl
+      - gr-rt
+      - rs-rt
+      - gr-sw
+      - rs-sw
+      - bl-sw
+      - rt-sw

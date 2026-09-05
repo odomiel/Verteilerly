@@ -1,0 +1,10 @@
+# Vorlage: 120 DA in zwei Reihen zu sechs Leisten.
+# Entspricht der Mustertabelle mit zwei Buchten.
+# Die Leisten werden ueber beide Reihen durchlaufend nummeriert:
+# Reihe 1 traegt die Leisten 1 bis 6, Reihe 2 die Leisten 7 bis 12.
+id: 120da-2x6x10
+name: "120 DA - 2 Reihen zu 6 Leisten"
+beschreibung: "Zwei Montagereihen nebeneinander, je sechs Leisten zu 10 DA."
+reihen: 2
+leisten_je_reihe: 6
+da_je_leiste: 10

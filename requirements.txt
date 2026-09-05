@@ -1,0 +1,5 @@
+# Verteilerly - Laufzeitabhaengigkeiten
+PySide6>=6.9      # LGPLv3 - Oberflaeche und Vorschau
+reportlab>=4.2    # BSD    - PDF-Ausgabe
+openpyxl>=3.1     # MIT    - Excel-Ausgabe
+PyYAML>=6.0       # MIT    - Vorlagen und Kabeltypen
