@@ -1,16 +1,20 @@
 #!/usr/bin/env python3
-"""Verteilerly verpacken: Linux als AppImage, Windows als .exe.
+"""Verteilerly verpacken.
 
-Eine Codebasis, ein Aufruf - der Unterschied liegt nur im Verpacken:
+Ein Aufruf fuer beide Plattformen; der Unterschied liegt nur im Verpacken:
 
-    python3 werkzeuge/bauen.py              baut fuer die laufende Plattform
-    python3 werkzeuge/bauen.py --nur-exe    nur die ausfuehrbare Datei
-    python3 werkzeuge/bauen.py --sauber     Bau- und Zielordner vorher leeren
+    python3 werkzeuge/bauen.py              fuer die laufende Plattform
+    python3 werkzeuge/bauen.py --nur-exe    auch unter Linux PyInstaller
+    python3 werkzeuge/bauen.py --sauber     Bau- und Zielordner leeren
 
-Der Datenordner wird nicht eingeschlossen, sondern neben das Programm
-gelegt: Vorlagen und Kabeltypen sollen ohne Auspacken zu aendern sein.
-Zusaetzlich steckt eine Kopie im Programm, damit ein weitergegebene
-Datei auch allein lauffaehig ist.
+Unter Windows entsteht eine einzelne .exe mit PyInstaller. Unter Linux
+uebernimmt werkzeuge/appimage.py: das AppImage bringt Python und Qt selbst
+mit und braucht deshalb weder PyInstaller noch ein passendes Python auf
+dem Zielrechner.
+
+Der Datenordner wird nicht nur eingeschlossen, sondern auch neben das
+Programm gelegt: Vorlagen und Kabeltypen sollen ohne Auspacken zu aendern
+sein.
 """
 
 from __future__ import annotations
@@ -136,57 +140,17 @@ def daten_danebenlegen() -> None:
     print(f"Datenordner: {ziel}")
 
 
-def appimage_bauen(programm: pathlib.Path, symbole: dict) -> pathlib.Path | None:
-    """Packt die Datei in ein AppDir und ruft appimagetool auf."""
-    werkzeug = shutil.which("appimagetool") or shutil.which("appimagetool-x86_64.AppImage")
-    appdir = BAUORDNER / f"{ANZEIGENAME}.AppDir"
-    if appdir.exists():
-        shutil.rmtree(appdir)
-    (appdir / "usr" / "bin").mkdir(parents=True)
-
-    shutil.copy2(programm, appdir / "usr" / "bin" / NAME)
-    (appdir / "usr" / "bin" / NAME).chmod(0o755)
-    shutil.copy2(symbole["png"], appdir / f"{NAME}.png")
-    (appdir / f"{NAME}.desktop").write_text(
-        "[Desktop Entry]\n"
-        "Type=Application\n"
-        f"Name={ANZEIGENAME}\n"
-        "Comment=Dokumentation für LSA+-Verteiler\n"
-        f"Exec={NAME}\n"
-        f"Icon={NAME}\n"
-        "Categories=Office;Engineering;\n"
-        "Terminal=false\n",
-        encoding="utf-8",
-    )
-    apprun = appdir / "AppRun"
-    apprun.write_text(
-        "#!/bin/sh\n"
-        'HIER="$(dirname "$(readlink -f "$0")")"\n'
-        f'exec "$HIER/usr/bin/{NAME}" "$@"\n',
-        encoding="utf-8",
-    )
-    apprun.chmod(0o755)
-    print(f"AppDir: {appdir}")
-
-    if not werkzeug:
-        print(
-            "appimagetool nicht gefunden - AppDir ist fertig, das AppImage nicht.\n"
-            "  https://github.com/AppImage/AppImageKit/releases holen, "
-            "ausführbar machen und in den PATH legen."
-        )
-        return None
-
-    ziel = ZIELORDNER / f"{ANZEIGENAME}-{VERSION}-x86_64.AppImage"
-    umgebung = dict(os.environ, ARCH=os.uname().machine)
-    subprocess.run([werkzeug, str(appdir), str(ziel)], check=True, env=umgebung)
-    ziel.chmod(0o755)
-    return ziel
+def appimage_aufrufen(argumente: list[str]) -> int:
+    """Reicht an das AppImage-Skript weiter, das alles selbst mitbringt."""
+    return subprocess.run(
+        [sys.executable, str(WURZEL / "werkzeuge" / "appimage.py"), *argumente]
+    ).returncode
 
 
 def main() -> int:
     zerleger = argparse.ArgumentParser(description=__doc__)
     zerleger.add_argument("--nur-exe", action="store_true",
-                          help="kein AppImage, nur die ausführbare Datei")
+                          help="auch unter Linux PyInstaller statt AppImage")
     zerleger.add_argument("--sauber", action="store_true",
                           help="Bau- und Zielordner vorher leeren")
     argumente = zerleger.parse_args()
@@ -195,17 +159,15 @@ def main() -> int:
         for ordner in (BAUORDNER, ZIELORDNER):
             shutil.rmtree(ordner, ignore_errors=True)
 
+    if sys.platform.startswith("linux") and not argumente.nur_exe:
+        return appimage_aufrufen([])
+
     voraussetzungen_pruefen()
     symbole = symbol_schreiben(BAUORDNER)
     programm = pyinstaller_aufrufen(symbole)
     daten_danebenlegen()
     groesse = programm.stat().st_size / 1024 / 1024
     print(f"Programm: {programm} ({groesse:.0f} MB)")
-
-    if not argumente.nur_exe and sys.platform.startswith("linux"):
-        ergebnis = appimage_bauen(programm, symbole)
-        if ergebnis:
-            print(f"AppImage: {ergebnis}")
 
     print(f"\nVerteilerly {VERSION} liegt in {ZIELORDNER}")
     return 0

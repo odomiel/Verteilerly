@@ -1,0 +1,487 @@
+#!/usr/bin/env python3
+"""Verteilerly als AppImage bauen, das alles selbst mitbringt.
+
+Grundlage ist eine fertige Python-AppImage von python-appimage: ein auf
+manylinux2014 gebautes Python, also gegen glibc 2.17 gelinkt. Da hinein
+kommen die Bibliotheken aus requirements.txt, das Programm selbst und die
+Systembibliotheken, die Qt braucht und die nicht auf jedem Rechner liegen.
+
+Wie alt das Zielsystem sein darf, sagt der Bau am Ende: die Untergrenze
+setzen das Qt-Rad und die mitgenommenen Bibliotheken des Baurechners, nicht
+das Python. Wer aeltere Systeme bedienen will, baut auf einer aelteren
+Verteilung.
+
+    python3 werkzeuge/appimage.py               laedt, baut, prueft
+    python3 werkzeuge/appimage.py --behalten    AppDir stehen lassen
+    python3 werkzeuge/appimage.py --basis DATEI  eigene Python-AppImage
+
+Ergebnis ist eine einzelne Datei in auslieferung/. Python, Qt, ReportLab,
+openpyxl und PyYAML stecken darin; vom Zielrechner erwartet das Programm
+nur die X11-Grundausstattung, die jede Arbeitsumgebung mitbringt.
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
+import pathlib
+import shutil
+import subprocess
+import sys
+import tempfile
+import urllib.request
+
+WURZEL = pathlib.Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(WURZEL))
+
+from verteilerly.version import VERSION  # noqa: E402
+
+NAME = "verteilerly"
+ANZEIGENAME = "Verteilerly"
+PYTHONFASSUNG = "3.13"
+BASIS_URL = (
+    "https://github.com/niess/python-appimage/releases/download/python3.13/"
+    "python3.13.15-cp313-cp313-manylinux2014_x86_64.AppImage"
+)
+WERKZEUG_URL = (
+    "https://github.com/AppImage/appimagetool/releases/download/continuous/"
+    "appimagetool-x86_64.AppImage"
+)
+
+BAUORDNER = WURZEL / "bau"
+BASISORDNER = BAUORDNER / "basis"
+APPDIR = BAUORDNER / f"{ANZEIGENAME}.AppDir"
+ZIELORDNER = WURZEL / "auslieferung"
+DATEN = WURZEL / "daten"
+
+# Qt-Module, die die Oberflaeche braucht. Alles andere fliegt raus - der
+# Rest von Qt ist ein Vielfaches des Programms gross.
+QT_BEHALTEN = {"Core", "Gui", "Widgets", "DBus", "XcbQpa", "OpenGL", "Svg"}
+# Steckmodule, die die Oberflaeche laedt. Der Rest zieht Fremdes nach:
+# das GTK-Thema die halbe GTK-Welt, das Drucksteckmodul CUPS - und
+# gedruckt wird hier ohnehin über das PDF.
+PLUGINS_BEHALTEN = {
+    "platforms", "xcbglintegrations", "imageformats", "iconengines",
+    "platforminputcontexts", "styles",
+}
+PLATTFORMEN_BEHALTEN = {"libqxcb", "libqminimal", "libqoffscreen"}
+# Ordner in der PySide6-Auslieferung, die die Oberflaeche nicht anfasst.
+PYSIDE_WEG = (
+    "Qt/qml",
+    "Qt/translations",
+    "Qt/resources",
+    "Qt/libexec",
+    "Qt/plugins/multimedia",
+    "Qt/plugins/webview",
+    "Qt/plugins/position",
+    "Qt/plugins/sqldrivers",
+    "Qt/plugins/renderers",
+    "Qt/plugins/geometryloaders",
+    "examples",
+    "glue",
+    "typesystems",
+    "include",
+    "scripts",
+    "support",
+)
+
+# Was ein AppImage nie mitbringen darf, weil es zum Kern des Zielsystems
+# gehoert. Gekuerzte Fassung der Liste von AppImage/pkg2appimage.
+NIE_MITNEHMEN = {
+    "ld-linux-x86-64.so.2", "libc.so.6", "libm.so.6", "libdl.so.2",
+    "libpthread.so.0", "librt.so.1", "libresolv.so.2", "libutil.so.1",
+    "libstdc++.so.6", "libgcc_s.so.1", "libGL.so.1", "libGLX.so.0",
+    "libEGL.so.1", "libGLdispatch.so.0", "libOpenGL.so.0", "libdrm.so.2",
+    "libglapi.so.0", "libX11.so.6", "libxcb.so.1", "libXext.so.6",
+    "libgio-2.0.so.0", "libglib-2.0.so.0", "libgobject-2.0.so.0",
+    "libgmodule-2.0.so.0", "libfontconfig.so.1", "libfreetype.so.6",
+    "libharfbuzz.so.0", "libz.so.1", "libselinux.so.1", "libexpat.so.1",
+    "libp11-kit.so.0", "libgcrypt.so.20", "libsystemd.so.0", "libdbus-1.so.3",
+}
+
+
+def melden(text: str) -> None:
+    print(f"· {text}", flush=True)
+
+
+def holen(url: str, ziel: pathlib.Path) -> pathlib.Path:
+    """Laedt eine Datei, wenn sie noch nicht daliegt."""
+    ziel.parent.mkdir(parents=True, exist_ok=True)
+    if ziel.exists() and ziel.stat().st_size > 0:
+        melden(f"schon vorhanden: {ziel.name}")
+        return ziel
+    melden(f"lade {url.rsplit('/', 1)[-1]} …")
+    with urllib.request.urlopen(url) as quelle, ziel.open("wb") as datei:
+        shutil.copyfileobj(quelle, datei)
+    ziel.chmod(0o755)
+    return ziel
+
+
+def basis_auspacken(basis: pathlib.Path) -> pathlib.Path:
+    """Entpackt die Python-AppImage zum AppDir."""
+    if APPDIR.exists():
+        shutil.rmtree(APPDIR)
+    arbeit = BAUORDNER / "auspacken"
+    shutil.rmtree(arbeit, ignore_errors=True)
+    arbeit.mkdir(parents=True)
+
+    melden(f"packe {basis.name} aus")
+    subprocess.run([str(basis), "--appimage-extract"], cwd=arbeit, check=True,
+                   stdout=subprocess.DEVNULL)
+    (arbeit / "squashfs-root").rename(APPDIR)
+    shutil.rmtree(arbeit, ignore_errors=True)
+    return APPDIR
+
+
+def _python() -> pathlib.Path:
+    return APPDIR / "opt" / f"python{PYTHONFASSUNG}" / "bin" / f"python{PYTHONFASSUNG}"
+
+
+def _site_packages() -> pathlib.Path:
+    return (
+        APPDIR / "opt" / f"python{PYTHONFASSUNG}" / "lib"
+        / f"python{PYTHONFASSUNG}" / "site-packages"
+    )
+
+
+def abhaengigkeiten_einbauen() -> None:
+    """PySide6, ReportLab, openpyxl und PyYAML in das AppDir installieren."""
+    melden("installiere die Bibliotheken in das AppDir (dauert)")
+    subprocess.run(
+        [str(_python()), "-m", "pip", "install", "--no-warn-script-location",
+         "--disable-pip-version-check", "--upgrade",
+         "PySide6-Essentials", "reportlab", "openpyxl", "PyYAML"],
+        check=True,
+        stdout=subprocess.DEVNULL,
+    )
+
+
+def programm_einbauen() -> None:
+    """Das Paket selbst und die Daten daneben."""
+    ziel = _site_packages() / "verteilerly"
+    shutil.rmtree(ziel, ignore_errors=True)
+    shutil.copytree(
+        WURZEL / "verteilerly", ziel,
+        ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+    )
+    datenziel = APPDIR / DATEN.name
+    shutil.rmtree(datenziel, ignore_errors=True)
+    shutil.copytree(DATEN, datenziel)
+    melden(f"Programm und Daten eingebaut ({ziel.name}, {datenziel.name})")
+
+
+def python_abspecken() -> None:
+    """Was in einem fertigen Programm niemand aufruft."""
+    stdlib = APPDIR / "opt" / f"python{PYTHONFASSUNG}" / "lib" / f"python{PYTHONFASSUNG}"
+    for teil in ("test", "idlelib", "tkinter", "ensurepip", "lib2to3",
+                 "distutils", "turtledemo", "config-*"):
+        for ordner in stdlib.glob(teil):
+            shutil.rmtree(ordner, ignore_errors=True) if ordner.is_dir() else ordner.unlink()
+    for ordner in APPDIR.rglob("__pycache__"):
+        shutil.rmtree(ordner, ignore_errors=True)
+
+
+def qt_abspecken() -> int:
+    """Wirft heraus, was die Oberflaeche nicht anfasst."""
+    pyside = _site_packages() / "PySide6"
+    if not pyside.is_dir():
+        return 0
+    vorher = _groesse(APPDIR)
+
+    for teil in PYSIDE_WEG:
+        shutil.rmtree(pyside / teil, ignore_errors=True)
+
+    for datei in list((pyside / "Qt" / "lib").glob("libQt6*.so*")):
+        modul = datei.name.split(".")[0].removeprefix("libQt6")
+        if modul not in QT_BEHALTEN:
+            datei.unlink()
+    for datei in list(pyside.glob("Qt*.abi3.so")):
+        if datei.name.removeprefix("Qt").removesuffix(".abi3.so") not in QT_BEHALTEN:
+            datei.unlink()
+    for datei in list(pyside.glob("Qt*.pyi")) + list(pyside.glob("*.debug")):
+        datei.unlink()
+
+    # pip und Konsorten braucht das fertige Programm nicht mehr.
+    for name in ("pip", "setuptools", "wheel", "pkg_resources"):
+        for ordner in _site_packages().glob(f"{name}*"):
+            shutil.rmtree(ordner, ignore_errors=True) if ordner.is_dir() else ordner.unlink()
+
+    gespart = vorher - _groesse(APPDIR)
+    melden(f"abgespeckt: {gespart / 1024 / 1024:.0f} MB")
+    return gespart
+
+
+def plugins_abspecken() -> None:
+    """Wirft die Steckmodule heraus, die das Programm nie laedt."""
+    plugins = _site_packages() / "PySide6" / "Qt" / "plugins"
+    if not plugins.is_dir():
+        return
+    for ordner in plugins.iterdir():
+        if ordner.is_dir() and ordner.name not in PLUGINS_BEHALTEN:
+            shutil.rmtree(ordner, ignore_errors=True)
+    for datei in (plugins / "platforms").glob("*.so"):
+        if datei.stem not in PLATTFORMEN_BEHALTEN:
+            datei.unlink()
+
+
+def verwaiste_entfernen() -> list[str]:
+    """Loescht, was auf ein herausgeworfenes Qt-Modul zeigt.
+
+    Sonst holte ldd das fehlende Modul spaeter vom Rechner, auf dem
+    gebaut wird - und im AppImage steckte fremdes Qt.
+    """
+    pyside = _site_packages() / "PySide6"
+    entfernt: list[str] = []
+    while True:
+        offen = []
+        for datei in list((pyside / "Qt" / "plugins").rglob("*.so")) + list(
+            (pyside / "Qt" / "lib").glob("libQt6*.so*")
+        ):
+            fehlend = [n for n, ort in _ldd(datei) if ort is None and n.startswith("libQt6")]
+            if fehlend:
+                offen.append(datei)
+        if not offen:
+            return entfernt
+        for datei in offen:
+            datei.unlink(missing_ok=True)
+            entfernt.append(datei.name)
+
+
+def systembibliotheken_mitnehmen() -> list[str]:
+    """Kopiert die Bibliotheken, die Qt braucht und die oft fehlen.
+
+    Der Kern des Zielsystems bleibt draussen (glibc, libGL, X11) - den
+    bringt jede Arbeitsumgebung mit, und eine mitgelieferte Fassung
+    wuerde sich mit dem Treiber des Rechners beissen.
+    """
+    lib = APPDIR / "usr" / "lib"
+    lib.mkdir(parents=True, exist_ok=True)
+    pyside = _site_packages() / "PySide6"
+    kandidaten = list((pyside / "Qt" / "lib").glob("libQt6*.so*"))
+    kandidaten += list((pyside / "Qt" / "plugins").rglob("*.so"))
+
+    mitgenommen: list[str] = []
+    for datei in kandidaten:
+        for name, ort in _ldd(datei):
+            if name in NIE_MITNEHMEN or not ort:
+                continue
+            if (lib / name).exists() or (pyside / "Qt" / "lib" / name).exists():
+                continue
+            if str(ort).startswith(str(APPDIR)):
+                continue
+            shutil.copy2(ort, lib / name)
+            mitgenommen.append(name)
+    if mitgenommen:
+        melden(f"mitgenommen: {', '.join(sorted(set(mitgenommen)))}")
+    return sorted(set(mitgenommen))
+
+
+def _ldd(datei: pathlib.Path) -> list[tuple[str, pathlib.Path | None]]:
+    """Abhaengigkeiten einer Datei, zuerst im AppDir gesucht."""
+    innen = os.pathsep.join(
+        str(o) for o in (
+            _site_packages() / "PySide6" / "Qt" / "lib",
+            APPDIR / "usr" / "lib",
+            datei.parent,
+        )
+    )
+    ergebnis = subprocess.run(
+        ["ldd", str(datei)], capture_output=True, text=True,
+        env=dict(os.environ, LD_LIBRARY_PATH=innen),
+    )
+    gefunden = []
+    for zeile in ergebnis.stdout.splitlines():
+        teile = zeile.split(" => ")
+        if len(teile) != 2:
+            continue
+        name = teile[0].strip()
+        ort = teile[1].split(" (")[0].strip()
+        gefunden.append((name, pathlib.Path(ort) if ort.startswith("/") else None))
+    return gefunden
+
+
+def glibc_bedarf() -> tuple[str, list[str]]:
+    """Hoechste glibc-Fassung, die das fertige AppDir verlangt, und woher.
+
+    Der Wert entscheidet, wie alt das Zielsystem sein darf. Gesetzt wird
+    er von den mitgenommenen Systembibliotheken - wer aeltere Systeme
+    bedienen will, baut auf einer aelteren Verteilung.
+    """
+    hoechste = (2, 0)
+    schuldige: list[str] = []
+    for datei in list(APPDIR.rglob("*.so")) + list(APPDIR.rglob("*.so.*")):
+        ergebnis = subprocess.run(
+            ["objdump", "-T", str(datei)], capture_output=True, text=True
+        )
+        bedarf = (2, 0)
+        for zeile in ergebnis.stdout.splitlines():
+            if "GLIBC_2." not in zeile:
+                continue
+            teil = zeile.split("GLIBC_2.")[1].split(")")[0].split()[0].strip()
+            try:
+                bedarf = max(bedarf, (2, int(teil.split(".")[0])))
+            except ValueError:
+                continue
+        if bedarf > hoechste:
+            hoechste, schuldige = bedarf, [datei.name]
+        elif bedarf == hoechste and datei.name not in schuldige:
+            schuldige.append(datei.name)
+    return f"{hoechste[0]}.{hoechste[1]}", sorted(schuldige)
+
+
+def _groesse(ordner: pathlib.Path) -> int:
+    return sum(d.stat().st_size for d in ordner.rglob("*") if d.is_file())
+
+
+def huelle_schreiben() -> None:
+    """AppRun, Desktop-Eintrag und Symbol - die Vorgaben von Python raus."""
+    for muster in ("python*.desktop", "python*.png", "*.desktop", "*.png", ".DirIcon"):
+        for datei in APPDIR.glob(muster):
+            datei.unlink()
+    shutil.rmtree(APPDIR / "usr" / "share" / "applications", ignore_errors=True)
+    shutil.rmtree(APPDIR / "usr" / "share" / "icons", ignore_errors=True)
+
+    apprun = APPDIR / "AppRun"
+    # In der Python-AppImage ist AppRun ein Verweis auf usr/bin/python -
+    # ohne Loeschen schriebe man den Python-Aufruf selbst kaputt.
+    apprun.unlink(missing_ok=True)
+    apprun.write_text(
+        "#!/bin/sh\n"
+        "# Verteilerly bringt Python und Qt selbst mit.\n"
+        'HIER="$(dirname "$(readlink -f "$0")")"\n'
+        'export APPDIR="${APPDIR:-$HIER}"\n'
+        f'export PYTHONHOME="$HIER/opt/python{PYTHONFASSUNG}"\n'
+        'export PYTHONNOUSERSITE=1\n'
+        'export LD_LIBRARY_PATH="$HIER/usr/lib:$LD_LIBRARY_PATH"\n'
+        f'PYTHON="$HIER/opt/python{PYTHONFASSUNG}/bin/python{PYTHONFASSUNG}"\n'
+        '# Erste Hilfe bei Fragen: --python startet den eingebauten Python.\n'
+        'if [ "$1" = "--python" ]; then shift; exec "$PYTHON" "$@"; fi\n'
+        'exec "$PYTHON" -m verteilerly "$@"\n',
+        encoding="utf-8",
+    )
+    apprun.chmod(0o755)
+
+    symbol_schreiben(APPDIR / f"{NAME}.png")
+    shutil.copy2(APPDIR / f"{NAME}.png", APPDIR / ".DirIcon")
+    (APPDIR / f"{NAME}.desktop").write_text(
+        "[Desktop Entry]\n"
+        "Type=Application\n"
+        f"Name={ANZEIGENAME}\n"
+        "Comment=Dokumentation für LSA+-Verteiler\n"
+        f"Exec={NAME}\n"
+        f"Icon={NAME}\n"
+        "Categories=Office;Engineering;\n"
+        "Terminal=false\n",
+        encoding="utf-8",
+    )
+    melden("AppRun, Desktop-Eintrag und Symbol geschrieben")
+
+
+def symbol_schreiben(ziel: pathlib.Path) -> pathlib.Path:
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    from PySide6.QtWidgets import QApplication
+
+    from verteilerly.gui.symbol import symbol
+
+    QApplication.instance() or QApplication([])
+    symbol(256).save(str(ziel))
+    return ziel
+
+
+def appimage_bauen(werkzeug: pathlib.Path) -> pathlib.Path:
+    ZIELORDNER.mkdir(parents=True, exist_ok=True)
+    ziel = ZIELORDNER / f"{ANZEIGENAME}-{VERSION}-x86_64.AppImage"
+    ziel.unlink(missing_ok=True)
+    melden("packe das AppImage")
+    subprocess.run(
+        [str(werkzeug), "--appimage-extract-and-run", str(APPDIR), str(ziel)],
+        check=True,
+        env=dict(os.environ, ARCH=os.uname().machine, VERSION=VERSION),
+    )
+    ziel.chmod(0o755)
+    return ziel
+
+
+def probelauf(programm: pathlib.Path) -> bool:
+    """Startet das fertige AppImage ohne Bildschirm und laesst es arbeiten.
+
+    Gearbeitet wird in einem leeren Ordner, damit nicht versehentlich der
+    Quellbaum geprueft wird: aus dem Arbeitsverzeichnis heraus faende
+    Python sonst das Paket daneben statt das eingebaute.
+    """
+    pruefung = (
+        "import pathlib, tempfile, sys, verteilerly;"
+        "from verteilerly.ausgabe import pdf_schreiben;"
+        "from verteilerly.modell import Projekt, Verteiler;"
+        "from verteilerly.pfade import datenordner;"
+        "from verteilerly.vorlagen import Vorlagen;"
+        "from verteilerly.gui.hauptfenster import Hauptfenster;"
+        "from PySide6.QtWidgets import QApplication;"
+        "a=QApplication([]);f=Hauptfenster();"
+        "v=Vorlagen.laden(datenordner()/'vorlagen').standard.verteiler(name='Probe');"
+        "z=pathlib.Path(tempfile.mkdtemp())/'p.pdf';"
+        "pdf_schreiben(Projekt(verteiler=v), z);"
+        "eingebaut = verteilerly.__file__.startswith(sys.prefix);"
+        "print('PYTHON', sys.version.split()[0]);"
+        "print('PAKET', verteilerly.__file__);"
+        "print('DATEN', datenordner());"
+        "print('PDF', z.stat().st_size);"
+        "sys.exit(0 if eingebaut else 'Es wurde nicht das eingebaute Paket geladen')"
+    )
+    mit = tempfile.mkdtemp(prefix="verteilerly-probe-")
+    umgebung = dict(os.environ, QT_QPA_PLATFORM="offscreen")
+    umgebung.pop("PYTHONPATH", None)
+    ergebnis = subprocess.run(
+        [str(programm), "--python", "-c", pruefung],
+        capture_output=True, text=True, cwd=mit, env=umgebung,
+    )
+    shutil.rmtree(mit, ignore_errors=True)
+    print(ergebnis.stdout.strip())
+    if ergebnis.returncode != 0:
+        print(ergebnis.stderr.strip(), file=sys.stderr)
+    return ergebnis.returncode == 0
+
+
+def main() -> int:
+    zerleger = argparse.ArgumentParser(description=__doc__)
+    zerleger.add_argument("--basis", type=pathlib.Path,
+                          help="schon geladene Python-AppImage")
+    zerleger.add_argument("--behalten", action="store_true",
+                          help="AppDir nach dem Bauen stehen lassen")
+    zerleger.add_argument("--ohne-probelauf", action="store_true")
+    argumente = zerleger.parse_args()
+
+    basis = argumente.basis or holen(
+        BASIS_URL, BASISORDNER / BASIS_URL.rsplit("/", 1)[-1]
+    )
+    werkzeug = holen(WERKZEUG_URL, BASISORDNER / "appimagetool-x86_64.AppImage")
+
+    basis_auspacken(basis)
+    abhaengigkeiten_einbauen()
+    programm_einbauen()
+    qt_abspecken()
+    plugins_abspecken()
+    python_abspecken()
+    verwaist = verwaiste_entfernen()
+    if verwaist:
+        melden(f"verwaist und entfernt: {', '.join(sorted(set(verwaist)))}")
+    systembibliotheken_mitnehmen()
+    huelle_schreiben()
+
+    fassung, wegen = glibc_bedarf()
+    melden(f"AppDir: {_groesse(APPDIR) / 1024 / 1024:.0f} MB, "
+           f"verlangt glibc {fassung} oder neuer")
+    melden(f"  gesetzt von: {', '.join(wegen[:6])}")
+    programm = appimage_bauen(werkzeug)
+    melden(f"fertig: {programm} ({programm.stat().st_size / 1024 / 1024:.0f} MB)")
+
+    if not argumente.ohne_probelauf and not probelauf(programm):
+        print("Probelauf fehlgeschlagen.", file=sys.stderr)
+        return 1
+    if not argumente.behalten:
+        shutil.rmtree(APPDIR, ignore_errors=True)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

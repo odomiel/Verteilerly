@@ -43,6 +43,10 @@ def _kandidaten() -> list[pathlib.Path]:
     if neben_appimage:
         orte.append(neben_appimage / DATENORDNER)
     orte.append(programmordner() / DATENORDNER)
+    # Im AppImage liegt die mitgelieferte Grundausstattung im AppDir.
+    eingehaengt = os.environ.get("APPDIR")
+    if eingehaengt:
+        orte.append(pathlib.Path(eingehaengt) / DATENORDNER)
     # PyInstaller entpackt Beigaben nach _MEIPASS; von dort kommt die
     # mitgelieferte Grundausstattung, falls daneben nichts liegt.
     mitgeliefert = getattr(sys, "_MEIPASS", None)

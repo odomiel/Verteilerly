@@ -28,6 +28,9 @@ daten/              Liegt neben dem Programm und ist frei erweiterbar
   vorlagen/         Eine YAML-Datei je Vorlage
   kabeltypen/       Farbfolgen der Kabeltypen
 werkzeuge/          Release und Verpacken
+  bauen.py          Eine Datei je Plattform
+  appimage.py       AppImage mit Python und Qt darin
+  release.py        Nächste Version aus den Git-Tags
 tests/              unittest, offscreen - kein pytest, kein Linter
 ```
 
@@ -73,21 +76,50 @@ Pluginschnittstelle, Blatt „Änderungen“, Strichregel.
 ## Verpacken
 
 ```bash
-.venv/bin/python3 werkzeuge/bauen.py            # für die laufende Plattform
-.venv/bin/python3 werkzeuge/bauen.py --nur-exe  # ohne AppImage
+.venv/bin/python3 werkzeuge/bauen.py    # Linux: AppImage, Windows: .exe
 ```
 
-Heraus kommt eine einzelne ausführbare Datei in `auslieferung/`, daneben
-der Ordner `daten/` — Vorlagen und Kabeltypen bleiben so ohne Auspacken
-änderbar. Eine Kopie steckt zusätzlich im Programm, damit eine
-allein weitergegebene Datei lauffähig bleibt.
+**Linux — AppImage.** `werkzeuge/appimage.py` baut ein AppImage, das seine
+Abhängigkeiten selbst mitbringt: Python, Qt, ReportLab, openpyxl und
+PyYAML stecken darin. Grundlage ist eine fertige Python-AppImage von
+[python-appimage](https://github.com/niess/python-appimage) — ein auf
+manylinux2014 gebautes Python. Auf dem Zielrechner muss weder Python noch
+Qt installiert sein.
 
-Voraussetzungen unter Linux: `pip install pyinstaller` und die Python-
-Bibliothek als `.so` (`sudo apt install libpython3.14` unter Debian und
-Ubuntu — ohne sie bricht PyInstaller ab). Für das AppImage muss
-`appimagetool` im `PATH` liegen; fehlt es, bleibt das fertige AppDir unter
-`bau/` liegen. Die Windows-`.exe` entsteht mit demselben Aufruf unter
-Windows.
+Was das Programm dem Zielsystem überlässt, ist dessen eigener Unterbau:
+glibc, `libGL`, `libX11`, `libxcb`, glib, fontconfig, freetype und dbus.
+Diese Bibliotheken gehören zur Arbeitsumgebung und dürfen nicht
+mitgeliefert werden — eine mitgebrachte Fassung würde sich mit dem
+Grafiktreiber des Rechners beißen. Alles andere, was Qt braucht und was
+oft fehlt (`libxcb-cursor`, `libxkbcommon` und die übrigen xcb-Helfer),
+liegt im AppImage.
+
+Der Bau meldet am Ende, welche glibc-Fassung das Ergebnis verlangt und
+welche Bibliothek diese Untergrenze setzt. Sie stammt aus den
+mitgenommenen Systembibliotheken des Baurechners: Wer ältere Systeme
+bedienen will, baut auf einer älteren Verteilung.
+
+Damit die Datei klein bleibt, fliegt heraus, was die Oberfläche nicht
+anfasst — Qt Quick, QML, WebEngine, Multimedia, das GTK-Thema (es zöge die
+halbe GTK-Welt nach), das Drucksteckmodul (gedruckt wird über das PDF) und
+die ungenutzten Teile der Standardbibliothek. Aus gut 300 MB werden so
+rund 57 MB.
+
+Nach dem Bauen startet das fertige AppImage einmal ohne Bildschirm, legt
+ein PDF an und prüft, dass dabei wirklich das eingebaute Paket und die
+mitgelieferten Daten benutzt werden — nicht der Quellbaum daneben.
+
+**Windows — `.exe`.** `werkzeuge/bauen.py` ruft dort PyInstaller mit
+`--onefile` auf. Unter Linux geht das mit `--nur-exe` ebenfalls; dafür
+werden `pip install pyinstaller` und die Python-Bibliothek als `.so`
+gebraucht (`sudo apt install libpython3.14` unter Debian und Ubuntu).
+
+**Daten.** Der Ordner `daten/` steckt im AppImage und wird zusätzlich
+neben die ausführbare Datei gelegt. Gesucht wird in dieser Reihenfolge:
+neben der AppImage-Datei (der Stick des Anwenders), neben dem Programm,
+im AppImage selbst, zuletzt im Quellbaum. Wer Vorlagen oder Kabeltypen
+ändern will, legt den Ordner also einfach neben die Datei — ohne
+Auspacken.
 
 ## Versionen
 

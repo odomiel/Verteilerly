@@ -24,6 +24,23 @@ class TestDatensuche(unittest.TestCase):
             self.assertIsNone(pfade.appimage())
             self.assertNotIn(pathlib.Path("/stick/daten"), pfade._kandidaten())
 
+    def test_appdir_traegt_die_mitgelieferten_daten(self):
+        """Im AppImage liegt die Grundausstattung im eingehängten AppDir."""
+        with mock.patch.dict(os.environ, {"APPDIR": "/tmp/.mount_abc"}):
+            self.assertIn(pathlib.Path("/tmp/.mount_abc/daten"), pfade._kandidaten())
+
+    def test_stick_geht_vor_appdir(self):
+        """Was der Anwender daneben legt, gilt vor dem Mitgelieferten."""
+        with mock.patch.dict(
+            os.environ,
+            {"APPIMAGE": "/stick/Verteilerly.AppImage", "APPDIR": "/tmp/.mount_abc"},
+        ):
+            orte = pfade._kandidaten()
+        self.assertLess(
+            orte.index(pathlib.Path("/stick/daten")),
+            orte.index(pathlib.Path("/tmp/.mount_abc/daten")),
+        )
+
     def test_mitgeliefertes_verzeichnis_als_rueckfall(self):
         """PyInstaller entpackt die Beigabe nach _MEIPASS."""
         with mock.patch.object(pfade.sys, "_MEIPASS", "/tmp/_MEIxyz", create=True):
