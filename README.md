@@ -30,8 +30,10 @@ daten/              Liegt neben dem Programm und ist frei erweiterbar
   kabeltypen/       Farbfolgen der Kabeltypen
   blattvorlagen/    Wie die Ausgabe aussieht
 werkzeuge/          Release und Verpacken
-  bauen.py          Eine Datei je Plattform
-  appimage.py       AppImage mit Python und Qt darin
+  bauen.py          Ein Aufruf, zwei Plattformen
+  exe.py            Windows: eine einzelne .exe
+  bauen.bat         Dasselbe per Doppelklick unter Windows
+  appimage.py       Linux: AppImage mit Python und Qt darin
   release.py        Nächste Version aus den Git-Tags
 tests/              unittest, offscreen - kein pytest, kein Linter
 ```
@@ -152,10 +154,28 @@ die mitgenommenen Bibliotheken, legt ein PDF an und prüft, dass dabei
 wirklich das eingebaute Paket und die mitgelieferten Daten benutzt werden
 — nicht der Quellbaum daneben.
 
-**Windows — `.exe`.** `werkzeuge/bauen.py` ruft dort PyInstaller mit
-`--onefile` auf. Unter Linux geht das mit `--nur-exe` ebenfalls; dafür
-werden `pip install pyinstaller` und die Python-Bibliothek als `.so`
-gebraucht (`sudo apt install libpython3.14` unter Debian und Ubuntu).
+**Windows — eine einzelne `.exe`.** `werkzeuge/exe.py` packt mit
+PyInstaller `--onefile --windowed`: keine Installation, keine
+Laufzeitumgebung daneben, kein Konsolenfenster, keine Registry-Einträge.
+Python, Qt und die mitgelieferten Vorlagen stecken in der
+Datei; beim ersten Start legt das Programm sie in einen Ordner `daten/`
+neben der `.exe`, wo sie ohne Auspacken änderbar sind.
+
+```bat
+py -m pip install -r requirements.txt pyinstaller
+py werkzeuge\exe.py                  ::  oder werkzeuge\bauen.bat doppelklicken
+```
+
+Die Datei trägt Symbol und Versionsangaben, sodass unter *Eigenschaften*
+ablesbar ist, welcher Stand weitergegeben wurde. Nach dem Bauen startet
+das Skript die `.exe` einmal mit `--selbsttest` und liest ihren Bericht:
+Fassung, Qt-Version, Arbeitsordner und die Zahl der gefundenen Vorlagen,
+Blattvorlagen und Kabeltypen.
+
+Gebaut werden muss **unter Windows** — PyInstaller packt den Python, der
+es aufruft, und übersetzt nicht über die Plattform hinweg.
+`werkzeuge/exe.py --zeigen` führt den Aufruf auch anderswo vor, ohne zu
+bauen.
 
 **Daten.** Vorlagen und Kabeltypen sollen ohne Auspacken änderbar sein.
 Beim ersten Start legt das Programm die mitgelieferten Dateien deshalb in
