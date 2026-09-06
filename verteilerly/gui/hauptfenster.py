@@ -132,45 +132,65 @@ class Hauptfenster(QMainWindow):
         werkzeuge.setMovable(False)
         self.addToolBar(werkzeuge)
 
-        def aktion(text, ausloeser, kuerzel=None, in_leiste=False, menue=datei):
+        def aktion(text, ausloeser, kuerzel=None, in_leiste=False, menue=datei,
+                   hinweis=""):
             handlung = QAction(text, self)
             handlung.triggered.connect(ausloeser)
             if kuerzel:
                 handlung.setShortcut(QKeySequence(kuerzel))
+            if hinweis:
+                # Steht in der Statuszeile, sobald der Eintrag berührt wird -
+                # auch wenn er ausgegraut ist. So ist ablesbar, was fehlt.
+                handlung.setStatusTip(hinweis)
             menue.addAction(handlung)
             if in_leiste:
                 werkzeuge.addAction(handlung)
             return handlung
 
-        aktion("&Neuer Verteiler…", self.neuer_verteiler, "Ctrl+N", True)
-        aktion("Ö&ffnen…", self.oeffnen, "Ctrl+O", True)
-        aktion("&Speichern", self.speichern, "Ctrl+S", True)
-        aktion("Speichern &unter…", self.speichern_unter, "Ctrl+Shift+S")
+        aktion("&Neuer Verteiler…", self.neuer_verteiler, "Ctrl+N", True,
+               hinweis="Einen Verteiler aus einer Vorlage oder eigenen Maßen anlegen")
+        aktion("Ö&ffnen…", self.oeffnen, "Ctrl+O", True,
+               hinweis="Eine gespeicherte Verteilerdatei öffnen")
+        self.aktion_speichern = aktion(
+            "&Speichern", self.speichern, "Ctrl+S", True,
+            hinweis="Den Verteiler speichern",
+        )
+        self.aktion_speichern_unter = aktion(
+            "Speichern &unter…", self.speichern_unter, "Ctrl+Shift+S",
+            hinweis="Den Verteiler unter einem anderen Namen speichern",
+        )
         datei.addSeparator()
-        self.aktion_pdf = aktion("Als &PDF…", self.pdf_ausgeben, "Ctrl+E", True)
-        self.aktion_xlsx = aktion("Als &Excel-Mappe…", self.xlsx_ausgeben)
-        self.aktion_csv = aktion("Als &CSV…", self.csv_ausgeben)
+        self.aktion_pdf = aktion("Als &PDF…", self.pdf_ausgeben, "Ctrl+E", True,
+                                 hinweis="Deckblatt, Verteilerbelegung und Leistenblätter")
+        self.aktion_xlsx = aktion("Als &Excel-Mappe…", self.xlsx_ausgeben,
+                                  hinweis="Die Belegungsdaten je Ader als xlsx")
+        self.aktion_csv = aktion("Als &CSV…", self.csv_ausgeben,
+                                 hinweis="Die Belegungsdaten je Ader als CSV")
         datei.addSeparator()
         aktion("&Beenden", self.close, "Ctrl+Q")
 
         bearbeiten = self.menuBar().addMenu("&Bearbeiten")
         werkzeuge.addSeparator()
         self.aktion_kabel = aktion(
-            "&Kabel auflegen…", self.kabel_auflegen, "Ctrl+K", True, bearbeiten
+            "&Kabel auflegen…", self.kabel_auflegen, "Ctrl+K", True, bearbeiten,
+            hinweis="Ein Kabel auf eine Leiste legen",
         )
         self.aktion_kabel_weg = aktion(
-            "Kabel &entfernen", self.kabel_entfernen, "Ctrl+Shift+K", True, bearbeiten
+            "Kabel &entfernen", self.kabel_entfernen, "Ctrl+Shift+K", True, bearbeiten,
+            hinweis="Erst eine Doppelader mit Kabel auswählen",
         )
         self.aktion_vorlage = aktion(
-            "Als &Vorlage speichern…", self.vorlage_ablegen, menue=bearbeiten
+            "Als &Vorlage speichern…", self.vorlage_ablegen, menue=bearbeiten,
+            hinweis="Die Maße dieses Verteilers als Vorlage ablegen",
         )
         bearbeiten.addSeparator()
-        aktion(
+        self.aktion_briefkopf = aktion(
             "&Briefkopf und eigene Felder…",
             self.briefkopf_bearbeiten,
             "Ctrl+B",
             True,
             bearbeiten,
+            hinweis="Stammdaten, die auf jedem Blatt stehen",
         )
 
         ansicht = self.menuBar().addMenu("&Ansicht")
@@ -225,6 +245,8 @@ class Hauptfenster(QMainWindow):
         self.statusBar().showMessage(text, 8000)
 
     def _auswahl_gemeldet(self, stelle) -> None:
+        # Auch das Abwählen zählt: „Kabel entfernen“ muss dann wieder aus.
+        self.aktionen_auffrischen()
         if stelle is None or self.projekt is None:
             return
         leiste, da = stelle
@@ -239,6 +261,7 @@ class Hauptfenster(QMainWindow):
         self.veraendert = True
         self.uebersicht.update()
         self._titel_setzen()
+        self.aktionen_auffrischen()
         self._vorschau_anstossen()
 
     def _blattvorlage_gemerkt(self, kennung: str) -> None:
@@ -278,16 +301,41 @@ class Hauptfenster(QMainWindow):
         self.uebersicht.verteiler_setzen(verteiler)
         self.leistenansicht.verteiler_setzen(verteiler)
         self.vorschau.projekt_setzen(projekt)
+        self.aktionen_auffrischen()
+        self._titel_setzen()
+
+    def aktionen_auffrischen(self) -> None:
+        """Graut aus, was gerade nicht geht.
+
+        Ein Menüeintrag, der nichts tun kann, soll das zeigen, statt beim
+        Anklicken eine Meldung zu bringen. Der Statushinweis am Eintrag
+        sagt, was fehlt - er erscheint auch bei ausgegrauten Einträgen.
+        """
+        offen = self.projekt is not None
         for handlung in (
-            self.aktion_kabel,
-            self.aktion_kabel_weg,
+            self.aktion_speichern_unter,
             self.aktion_pdf,
             self.aktion_xlsx,
             self.aktion_csv,
+            self.aktion_kabel,
             self.aktion_vorlage,
+            self.aktion_briefkopf,
         ):
-            handlung.setEnabled(projekt is not None)
-        self._titel_setzen()
+            handlung.setEnabled(offen)
+
+        # Speichern nur, wenn es etwas zu speichern gibt: ungesicherte
+        # Änderungen oder eine Datei, die es noch nicht gibt.
+        self.aktion_speichern.setEnabled(
+            offen and (self.veraendert or self.pfad is None)
+        )
+        self.aktion_kabel_weg.setEnabled(self._kabel_der_auswahl() is not None)
+
+    def _kabel_der_auswahl(self):
+        """Das Kabel an der ausgewählten Doppelader, wenn dort eines liegt."""
+        if self.projekt is None or self.uebersicht.auswahl is None:
+            return None
+        leiste, da = self.uebersicht.auswahl
+        return self.projekt.verteiler.kabel_an(leiste, da)
 
     def _darf_verwerfen(self) -> bool:
         if not self.veraendert:
@@ -344,6 +392,7 @@ class Hauptfenster(QMainWindow):
             return False
         self.veraendert = False
         self._titel_setzen()
+        self.aktionen_auffrischen()
         self.statusBar().showMessage(f"Gespeichert: {self.pfad}")
         return True
 
@@ -502,17 +551,13 @@ class Hauptfenster(QMainWindow):
             self.projekt.verteiler.kabel_entfernen(kabel)
             self._belegung_geaendert()
             self.leistenansicht.aktualisieren()
+            self.aktionen_auffrischen()
 
     def kabel_entfernen(self) -> None:
-        if self.projekt is None or self.uebersicht.auswahl is None:
-            self.statusBar().showMessage("Erst eine Doppelader mit Kabel auswählen")
-            return
-        leiste, da = self.uebersicht.auswahl
-        kabel = self.projekt.verteiler.kabel_an(leiste, da)
-        if kabel is None:
-            self.statusBar().showMessage(f"Auf Leiste {leiste} DA {da} liegt kein Kabel")
-            return
-        self._kabel_angeklickt(kabel)
+        """Der Eintrag ist nur da anklickbar, wo wirklich ein Kabel liegt."""
+        kabel = self._kabel_der_auswahl()
+        if kabel is not None:
+            self._kabel_angeklickt(kabel)
 
     # -- Sonstiges ---------------------------------------------------------
 

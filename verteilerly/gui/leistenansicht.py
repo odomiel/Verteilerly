@@ -293,6 +293,8 @@ class LeistenAnsicht(QWidget):
                 )
         self.auswahl.blockSignals(False)
         self.auswahl.setCurrentIndex(0 if self.auswahl.count() else -1)
+        # Ohne Verteiler gibt es nichts zu wählen - dann bleibt das Feld aus.
+        self.auswahl.setEnabled(bool(self.auswahl.count()))
         self._leiste_gewechselt()
 
     def leiste_zeigen(self, nummer: int) -> None:

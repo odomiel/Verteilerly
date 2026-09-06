@@ -257,4 +257,7 @@ class Vorschau(QWidget):
             self.zaehler.setText(f"{index + 1} / {gesamt}")
         self.zurueck.setEnabled(index > 0)
         self.vor.setEnabled(0 <= index < gesamt - 1)
+        # Ohne Blätter gibt es nichts zu wählen.
+        self.auswahl.setEnabled(bool(gesamt))
+        self.vorlagenwahl.setEnabled(bool(gesamt))
         self.blatt_gewechselt.emit(index)

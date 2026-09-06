@@ -142,6 +142,94 @@ class TestVorschau(unittest.TestCase):
 
 
 @unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
+class TestMenuezustaende(unittest.TestCase):
+    """Ausgegraut ist, was gerade nicht geht."""
+
+    def setUp(self):
+        from verteilerly.gui.hauptfenster import Hauptfenster
+
+        self.fenster = Hauptfenster()
+        self.ordner = tempfile.TemporaryDirectory()
+        self.addCleanup(self.ordner.cleanup)
+
+    def _projekt(self, mit_kabel=True):
+        verteiler = Verteiler.aus_geometrie(1, 4, 10, name="Probe")
+        if mit_kabel:
+            verteiler.kabel_anlegen("Leitung", 1, 1, 4)
+        self.fenster._projekt_setzen(Projekt(verteiler=verteiler), None)
+
+    def test_ohne_verteiler_ist_fast_alles_aus(self):
+        f = self.fenster
+        for name in ("aktion_speichern", "aktion_speichern_unter", "aktion_pdf",
+                     "aktion_xlsx", "aktion_csv", "aktion_kabel",
+                     "aktion_kabel_weg", "aktion_vorlage", "aktion_briefkopf"):
+            with self.subTest(aktion=name):
+                self.assertFalse(getattr(f, name).isEnabled(), name)
+
+    def test_neuer_und_oeffnen_gehen_immer(self):
+        """Sonst käme man aus dem leeren Fenster nicht heraus."""
+        eintraege = {
+            a.text(): a for a in self.fenster.menuBar().actions()[0].menu().actions()
+        }
+        self.assertTrue(eintraege["&Neuer Verteiler…"].isEnabled())
+        self.assertTrue(eintraege["Ö&ffnen…"].isEnabled())
+        self.assertTrue(eintraege["&Beenden"].isEnabled())
+
+    def test_mit_verteiler_geht_die_ausgabe(self):
+        self._projekt()
+        f = self.fenster
+        for name in ("aktion_pdf", "aktion_xlsx", "aktion_csv", "aktion_kabel",
+                     "aktion_vorlage", "aktion_briefkopf", "aktion_speichern_unter"):
+            with self.subTest(aktion=name):
+                self.assertTrue(getattr(f, name).isEnabled(), name)
+
+    def test_kabel_entfernen_nur_auf_einem_kabel(self):
+        self._projekt()
+        f = self.fenster
+        self.assertFalse(f.aktion_kabel_weg.isEnabled())   # noch nichts gewählt
+
+        f.uebersicht.auswahl = (1, 2)                      # dort liegt das Kabel
+        f._auswahl_gemeldet((1, 2))
+        self.assertTrue(f.aktion_kabel_weg.isEnabled())
+
+        f.uebersicht.auswahl = (1, 9)                      # freie Doppelader
+        f._auswahl_gemeldet((1, 9))
+        self.assertFalse(f.aktion_kabel_weg.isEnabled())
+
+        f.uebersicht.auswahl = None                        # abgewählt
+        f._auswahl_gemeldet(None)
+        self.assertFalse(f.aktion_kabel_weg.isEnabled())
+
+    def test_speichern_nur_wenn_es_etwas_zu_speichern_gibt(self):
+        self._projekt()
+        f = self.fenster
+        self.assertTrue(f.aktion_speichern.isEnabled())    # noch nie gesichert
+
+        f.pfad = pathlib.Path(self.ordner.name) / "p.vtly.json"
+        f.speichern()
+        self.assertFalse(f.aktion_speichern.isEnabled())   # nichts offen
+
+        f._belegung_geaendert()
+        self.assertTrue(f.aktion_speichern.isEnabled())    # wieder etwas offen
+
+    def test_jeder_eintrag_sagt_wofuer_er_da_ist(self):
+        """Der Statushinweis erscheint auch bei ausgegrauten Einträgen."""
+        for name in ("aktion_speichern", "aktion_pdf", "aktion_kabel",
+                     "aktion_kabel_weg", "aktion_vorlage", "aktion_briefkopf"):
+            with self.subTest(aktion=name):
+                self.assertTrue(getattr(self.fenster, name).statusTip())
+
+    def test_leere_auswahlfelder_sind_aus(self):
+        f = self.fenster
+        self.assertFalse(f.leistenansicht.auswahl.isEnabled())
+        self.assertFalse(f.vorschau.auswahl.isEnabled())
+        self._projekt()
+        self.assertTrue(f.leistenansicht.auswahl.isEnabled())
+        f.vorschau.aktualisieren()
+        self.assertTrue(f.vorschau.auswahl.isEnabled())
+
+
+@unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
 class TestEinstellungen(unittest.TestCase):
     """Die Einstellungen liegen als Datei, nicht in der Registry."""
 

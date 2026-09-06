@@ -78,6 +78,12 @@ Leiste, fragt der Überlaufdialog nach der Fortsetzung. Rangierungen werden
 in die Spalte getippt (`3 2a`, zwei durch Leerraum getrennt); die
 Gegenstelle trägt sich selbst ein.
 
+Menüeinträge, die gerade nichts bewirken können, sind ausgegraut: ohne
+Verteiler die ganze Ausgabe, *Kabel entfernen* nur dort, wo wirklich ein
+Kabel liegt, *Speichern* nur, wenn es etwas zu speichern gibt. Jeder
+Eintrag trägt einen Statushinweis, der auch im ausgegrauten Zustand
+erscheint und sagt, wofür er da ist.
+
 Die Blattfolge ist Deckblatt, Verteilerbelegung, dann je Leiste ein Blatt.
 Bis zwei Buchten passt die Verteilerbelegung auf ein Blatt; ab der dritten
 Bucht bekommt je zwei Buchten ein eigenes Blatt, benannt nach dem, was
