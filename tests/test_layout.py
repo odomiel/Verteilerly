@@ -4,12 +4,14 @@ import unittest
 
 from verteilerly.layout import (
     RAND,
+    REIHEN_JE_BLATT,
     SCHRIFTFELD_H,
     Blatt,
     Rechteck,
     Text,
     blaetter,
     leistenblatt,
+    verteilerbelegungen,
 )
 from verteilerly.modell import Aderadresse, Projekt, Verteiler
 
@@ -25,14 +27,54 @@ class TestBlattfolge(unittest.TestCase):
             (1, 4, 10, 6),
             (1, 2, 20, 4),
             (2, 6, 10, 14),
+            (4, 6, 10, 27),   # Deckblatt, zwei Buchten, 24 Leistenblätter
         ]:
             with self.subTest(geometrie=(reihen, leisten, da)):
                 v = Verteiler.aus_geometrie(reihen, leisten, da)
                 folge = blaetter(Projekt(verteiler=v))
                 self.assertEqual(len(folge), erwartet)
                 self.assertEqual(folge[0].titel, "Deckblatt")
-                self.assertEqual(folge[1].titel, "Verteilerbelegung")
-                self.assertEqual(folge[2].titel, "Leiste 1")
+                self.assertTrue(folge[1].quer)   # die Verteilerbelegung
+                self.assertEqual(folge[-1].titel, f"Leiste {reihen * leisten}")
+
+    def test_ab_drei_reihen_eine_bucht_je_blatt(self):
+        """Mehr als zwei Reihen nebeneinander waeren nur noch gequetscht."""
+        for reihen, erwartet in [(1, 1), (2, 1), (3, 2), (4, 2), (5, 3)]:
+            with self.subTest(reihen=reihen):
+                v = Verteiler.aus_geometrie(reihen, 4, 10)
+                belegung = verteilerbelegungen(Projekt(verteiler=v))
+                self.assertEqual(len(belegung), erwartet)
+
+    def test_bis_zwei_reihen_bleibt_es_ein_blatt_ohne_bucht(self):
+        v = Verteiler.aus_geometrie(2, 6, 10)
+        belegung = verteilerbelegungen(Projekt(verteiler=v))
+        self.assertEqual([b.titel for b in belegung], ["Verteilerbelegung"])
+
+    def test_buchten_werden_durchnummeriert(self):
+        v = Verteiler.aus_geometrie(5, 4, 10)
+        belegung = verteilerbelegungen(Projekt(verteiler=v))
+        self.assertEqual([b.titel for b in belegung], ["Bucht 1", "Bucht 2", "Bucht 3"])
+
+    def test_jede_leiste_steht_auf_genau_einer_bucht(self):
+        v = Verteiler.aus_geometrie(4, 6, 10)
+        gefunden = []
+        for blatt in verteilerbelegungen(Projekt(verteiler=v)):
+            gefunden += [t for t in _texte(blatt) if t.startswith("Leiste ")]
+        self.assertEqual(len(gefunden), len(v.alle_leisten))
+        self.assertEqual(len(set(gefunden)), len(v.alle_leisten))
+
+    def test_bucht_traegt_ihre_reihen_im_kopf(self):
+        v = Verteiler.aus_geometrie(4, 6, 10)
+        erste, zweite = verteilerbelegungen(Projekt(verteiler=v))
+        self.assertIn("Reihen 1 und 2", _texte(erste))
+        self.assertIn("Reihen 3 und 4", _texte(zweite))
+
+    def test_ungerade_letzte_bucht_nennt_eine_reihe(self):
+        v = Verteiler.aus_geometrie(3, 4, 10)
+        self.assertIn("Reihe 3", _texte(verteilerbelegungen(Projekt(verteiler=v))[-1]))
+
+    def test_reihen_je_blatt_ist_die_grenze(self):
+        self.assertEqual(REIHEN_JE_BLATT, 2)
 
     def test_ausrichtung(self):
         """Leistenblätter hoch, die Verteilerbelegung quer."""
@@ -43,7 +85,7 @@ class TestBlattfolge(unittest.TestCase):
 
     def test_alles_bleibt_auf_dem_blatt(self):
         """Auch ein sehr grosser Verteiler laeuft nicht ueber den Rand."""
-        for geometrie in [(1, 4, 10), (1, 2, 20), (2, 6, 10), (3, 8, 20)]:
+        for geometrie in [(1, 4, 10), (1, 2, 20), (2, 6, 10), (3, 8, 20), (5, 6, 20)]:
             v = Verteiler.aus_geometrie(*geometrie)
             for blatt in blaetter(Projekt(verteiler=v)):
                 with self.subTest(geometrie=geometrie, blatt=blatt.titel):

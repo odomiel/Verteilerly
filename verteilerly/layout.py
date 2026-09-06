@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from .modell import Projekt, Verteiler, adressen_schreiben
+from .modell import Projekt, Reihe, Verteiler, adressen_schreiben
 
 # -- Papier ----------------------------------------------------------------
 
@@ -248,9 +248,33 @@ ZELLE_H = 9.0
 LEISTENLABEL_B = 14.0
 ABSTAND_LEISTEN = 3.0
 ABSTAND_REIHEN = 12.0
+REIHEN_JE_BLATT = 2
 
 
-def verteilerbelegung(projekt: Projekt) -> Blatt:
+def verteilerbelegungen(projekt: Projekt) -> list[Blatt]:
+    """Die Verteilerbelegung, bei Bedarf auf mehrere Buchten verteilt.
+
+    Mehr als zwei Reihen nebeneinander waeren auf A4 quer nur noch
+    gequetscht. Ab der dritten Reihe bekommt deshalb je zwei Reihen ein
+    eigenes Blatt, durchnummeriert als Bucht 1, Bucht 2 und so weiter.
+    """
+    reihen = projekt.verteiler.reihen
+    buchten = [
+        reihen[i:i + REIHEN_JE_BLATT] for i in range(0, len(reihen), REIHEN_JE_BLATT)
+    ] or [[]]
+    if len(buchten) == 1:
+        return [verteilerbelegung(projekt, buchten[0])]
+    return [
+        verteilerbelegung(projekt, bucht, nummer)
+        for nummer, bucht in enumerate(buchten, 1)
+    ]
+
+
+def verteilerbelegung(
+    projekt: Projekt,
+    reihen: list[Reihe] | None = None,
+    bucht: int | None = None,
+) -> Blatt:
     """Jede Leiste ein Kasten aus DA-Zellen, Kabel als Block.
 
     Querformat, weil zwei Reihen im Hochformat nicht nebeneinander
@@ -258,15 +282,28 @@ def verteilerbelegung(projekt: Projekt) -> Blatt:
     es hergibt - ein 40-DA-Verteiler soll die Seite nicht als Briefmarke
     in der Ecke fuellen.
     """
-    blatt = Blatt(*A4_QUER, titel="Verteilerbelegung")
     v = projekt.verteiler
+    reihen = list(v.reihen if reihen is None else reihen)
 
-    blatt.text(RAND, RAND, 120, 8, "Verteilerbelegung", MITTEL, LINKS, True)
+    titel = "Verteilerbelegung" if bucht is None else f"Bucht {bucht}"
+    blatt = Blatt(*A4_QUER, titel=titel)
+    ueberschrift = (
+        "Verteilerbelegung" if bucht is None
+        else f"Verteilerbelegung — Bucht {bucht}"
+    )
+    blatt.text(RAND, RAND, 150, 8, ueberschrift, MITTEL, LINKS, True)
+    if bucht is not None:
+        erste, letzte = reihen[0].nummer, reihen[-1].nummer
+        blatt.text(
+            RAND, RAND, blatt.breite - 2 * RAND,
+            8, f"Reihe {erste}" if erste == letzte else f"Reihen {erste} und {letzte}",
+            NORMAL, RECHTS, False, TINTE_LEISE,
+        )
 
     oben = RAND + 12
     platz_b = blatt.breite - 2 * RAND
     platz_h = blatt.hoehe - RAND - SCHRIFTFELD_H - 6 - oben
-    faktor = _belegungsfaktor(v, platz_b, platz_h)
+    faktor = _belegungsfaktor(reihen, platz_b, platz_h)
 
     zelle_b = ZELLE_B * faktor
     zelle_h = ZELLE_H * faktor
@@ -278,7 +315,7 @@ def verteilerbelegung(projekt: Projekt) -> Blatt:
 
     kaesten: dict[int, tuple[float, float, int]] = {}
     x = RAND
-    for reihe in v.reihen:
+    for reihe in reihen:
         breiteste = max((l.da_anzahl for l in reihe.leisten), default=0)
         y = oben
         for leiste in reihe.leisten:
@@ -321,16 +358,16 @@ def verteilerbelegung(projekt: Projekt) -> Blatt:
     return blatt
 
 
-def _belegungsfaktor(v: Verteiler, platz_b: float, platz_h: float) -> float:
-    """Wie stark die Grundmasse vergroessert werden duerfen."""
-    if not v.reihen:
+def _belegungsfaktor(reihen: list[Reihe], platz_b: float, platz_h: float) -> float:
+    """Wie stark die Grundmasse auf diesem Blatt wachsen duerfen."""
+    if not reihen:
         return 1.0
     breite = sum(
         LEISTENLABEL_B + max((l.da_anzahl for l in r.leisten), default=0) * ZELLE_B
         + ABSTAND_REIHEN
-        for r in v.reihen
+        for r in reihen
     ) - ABSTAND_REIHEN
-    leisten = max(len(r.leisten) for r in v.reihen)
+    leisten = max(len(r.leisten) for r in reihen)
     hoehe = leisten * (ZELLE_H + ABSTAND_LEISTEN) - ABSTAND_LEISTEN
     # Kleiner als 1 bei sehr grossen Verteilern, sonst passt das Blatt nicht.
     return max(0.3, min(platz_b / breite, platz_h / hoehe, 3.0))
@@ -461,7 +498,7 @@ def _kabelklammern(
 
 def blaetter(projekt: Projekt) -> list[Blatt]:
     """Deckblatt, Verteilerbelegung, je Leiste ein Blatt."""
-    folge = [deckblatt(projekt), verteilerbelegung(projekt)]
+    folge = [deckblatt(projekt), *verteilerbelegungen(projekt)]
     for leiste in projekt.verteiler.alle_leisten:
         folge.append(leistenblatt(projekt, leiste.nummer))
     for i, blatt in enumerate(folge, 1):

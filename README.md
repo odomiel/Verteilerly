@@ -63,6 +63,12 @@ Leiste, fragt der Überlaufdialog nach der Fortsetzung. Rangierungen werden
 in die Spalte getippt (`3 2a`, zwei durch Leerraum getrennt); die
 Gegenstelle trägt sich selbst ein.
 
+Die Blattfolge ist Deckblatt, Verteilerbelegung, dann je Leiste ein Blatt.
+Bis zwei Reihen passt die Verteilerbelegung auf ein Blatt; ab der dritten
+Reihe bekommt je zwei Reihen ein eigenes, durchnummeriert als **Bucht 1**,
+**Bucht 2** und so weiter. Ein vierreihiger Verteiler ergibt also zwei
+Buchten — gequetscht wird nichts.
+
 Die Blätter entstehen in `layout.py` als Zeichenanweisungen in Millimetern
 — ohne Qt und ohne PDF-Bibliothek. Die Vorschau zeichnet dieses Modell mit
 QPainter, die PDF-Ausgabe mit ReportLab: eine einzige Quelle für das
