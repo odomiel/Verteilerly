@@ -13,6 +13,7 @@ from reportlab.lib.colors import HexColor
 from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.pdfgen import canvas
 
+from ..blattvorlagen import STANDARD, Blattvorlage
 from ..layout import MITTE, RECHTS, Blatt, Linie, Rechteck, Text, blaetter
 from ..modell import Projekt
 from ..version import VERSION
@@ -24,10 +25,12 @@ SCHRIFT_FETT = "Helvetica-Bold"
 KUERZUNG = "…"
 
 
-def pdf_schreiben(projekt: Projekt, ziel: pathlib.Path) -> pathlib.Path:
+def pdf_schreiben(
+    projekt: Projekt, ziel: pathlib.Path, vorlage: Blattvorlage = STANDARD
+) -> pathlib.Path:
     """Schreibt die vollstaendige Dokumentation als PDF."""
     ziel = pathlib.Path(ziel)
-    seiten = blaetter(projekt)
+    seiten = blaetter(projekt, vorlage)
     if not seiten:
         raise AusgabeFehler("Der Verteiler hat keine Blätter.")
 

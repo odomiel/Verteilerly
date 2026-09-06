@@ -1,0 +1,21 @@
+# Blattvorlage: das Rangierblatt. Ohne Bezeichnung und Bemerkung, dafuer
+# breite Spalten fuer Farbe, Rangierung und Kabel - fuer Verteiler, in
+# denen rangiert und nicht beschriftet wird.
+id: knapp
+name: "Knapp — nur Rangierung"
+beschreibung: "Ohne Bezeichnung und Bemerkung; für reine Rangierblätter."
+
+rand: 14
+zeilenhoehe_max: 11
+
+spalten:
+  - {feld: stift,      ueberschrift: "Stift",      anteil: 12, ausrichtung: mitte}
+  - {feld: ader,       ueberschrift: "",           anteil: 8,  ausrichtung: mitte}
+  - {feld: farbe,      ueberschrift: "Farbe",      anteil: 22}
+  - {feld: rangierung, ueberschrift: "Rangierung", anteil: 48}
+  - {feld: kabel,      ueberschrift: "Kabel",      anteil: 40}
+
+schriftfeld:
+  - [firma, kunde]
+  - [verteiler, verteilernummer, leiste, blatt]
+  - [erstellt, stand, geprueft, gezeichnet, eigene]

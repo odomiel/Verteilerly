@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 
 from .. import pfade, projektdatei
 from ..ausgabe import AusgabeFehler, csv_schreiben, pdf_schreiben, xlsx_schreiben
+from ..blattvorlagen import Blattvorlagen
 from ..farbcodes import Kabeltypen, farben_eintragen
 from ..modell import Kabelabschnitt, ModellFehler, Projekt, UeberlaufFehler, Verteiler
 from ..version import VERSION
@@ -49,6 +50,7 @@ class Hauptfenster(QMainWindow):
         self.einstellungen = QSettings("Verteilerly", "Verteilerly")
         self._grundausstattung_sichern()
         self.vorlagen = self._vorlagen_laden()
+        self.blattvorlagen = self._blattvorlagen_laden()
         self.kabeltypen = Kabeltypen.laden(pfade.kabeltypenordner())
 
         self.projekt: Projekt | None = None
@@ -100,6 +102,10 @@ class Hauptfenster(QMainWindow):
 
         # Die Vorschau steht neben der Eingabe, nicht hinter einem Export.
         self.vorschau = Vorschau()
+        self.vorschau.blattvorlagen_setzen(
+            self.blattvorlagen, str(self.einstellungen.value("blattvorlage", ""))
+        )
+        self.vorschau.blattvorlage_gewechselt.connect(self._blattvorlage_gemerkt)
         self.vorschau_takt = QTimer(self)
         self.vorschau_takt.setSingleShot(True)
         self.vorschau_takt.setInterval(VORSCHAU_VERZUG)
@@ -230,6 +236,12 @@ class Hauptfenster(QMainWindow):
         self.uebersicht.update()
         self._titel_setzen()
         self._vorschau_anstossen()
+
+    def _blattvorlage_gemerkt(self, kennung: str) -> None:
+        self.einstellungen.setValue("blattvorlage", kennung)
+        self.statusBar().showMessage(
+            f"Blattvorlage: {self.blattvorlagen.holen(kennung).name}", 6000
+        )
 
     def _leiste_gewechselt(self, nummer: int) -> None:
         """Die Vorschau folgt der bearbeiteten Leiste."""
@@ -362,7 +374,9 @@ class Hauptfenster(QMainWindow):
         ziel = self._ausgabeziel(".pdf", PDFFILTER)
         if ziel is None:
             return
-        self._ausgeben(lambda: pdf_schreiben(self.projekt, ziel), ziel)
+        self._ausgeben(
+            lambda: pdf_schreiben(self.projekt, ziel, self.vorschau.blattvorlage), ziel
+        )
 
     def xlsx_ausgeben(self) -> None:
         ziel = self._ausgabeziel(".xlsx", XLSXFILTER)
@@ -487,6 +501,14 @@ class Hauptfenster(QMainWindow):
             self.ausgelegt = pfade.grundausstattung_auslegen()
         except OSError:
             self.ausgelegt = []
+
+    def _blattvorlagen_laden(self) -> Blattvorlagen:
+        """Alle Blattvorlagen; eigene gehen vor mitgelieferten."""
+        try:
+            orte = list(reversed(pfade.blattvorlagenordner_alle()))
+        except OSError:
+            orte = []
+        return Blattvorlagen.aus_ordnern(orte)
 
     def _vorlagen_laden(self) -> Vorlagen:
         """Alle Vorlagenordner zusammen; eigene gehen vor mitgelieferten."""

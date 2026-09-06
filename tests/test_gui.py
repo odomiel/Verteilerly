@@ -123,6 +123,18 @@ class TestVorschau(unittest.TestCase):
         self.vorschau.aktualisieren()
         self.assertEqual(self.vorschau.auswahl.currentText(), "Leiste 2")
 
+    def test_blattvorlage_waehlen_zeichnet_neu(self):
+        """Die Vorschau folgt der gewählten Blattvorlage."""
+        from verteilerly.blattvorlagen import Blattvorlage, Blattvorlagen
+
+        knapp = Blattvorlage(id="knapp", name="Knapp", buchten_je_blatt=1)
+        self.vorschau.blattvorlagen_setzen(Blattvorlagen([knapp]))
+        self.assertEqual(self.vorschau.vorlagenwahl.count(), 2)
+        self.vorschau.vorlagenwahl.setCurrentIndex(
+            self.vorschau.vorlagenwahl.findData("knapp")
+        )
+        self.assertEqual(self.vorschau.blattvorlage.id, "knapp")
+
     def test_ohne_projekt_kein_blatt(self):
         self.vorschau.projekt_setzen(None)
         self.assertEqual(self.vorschau.auswahl.count(), 0)

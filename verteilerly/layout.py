@@ -4,20 +4,22 @@ Hier entsteht das Blatt einmal - in Millimetern, ohne Qt und ohne
 ReportLab. Vorschau und PDF zeichnen dasselbe Modell ab; sie koennen
 deshalb nicht auseinanderlaufen.
 
-Der Ursprung liegt oben links, x laeuft nach rechts, y nach unten.
+Wie das Blatt aussieht, sagt die Blattvorlage; was darauf steht, kommt
+aus dem Projekt. Der Ursprung liegt oben links, x laeuft nach rechts,
+y nach unten.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from .modell import Projekt, Bucht, Verteiler, adressen_schreiben
+from .blattvorlagen import LINKS, MITTE, RECHTS, STANDARD, Blattvorlage
+from .modell import Bucht, Projekt, Verteiler, adressen_schreiben
 
 # -- Papier ----------------------------------------------------------------
 
 A4_HOCH = (210.0, 297.0)
 A4_QUER = (297.0, 210.0)
-RAND = 12.0
 
 # -- Farben auf dem Papier -------------------------------------------------
 # Ein Blatt ist Papier, kein Fenster: schwarze Schrift, graue Linien,
@@ -29,15 +31,6 @@ LINIE = "#7A7A7A"
 LINIE_FEIN = "#B4B4B4"
 FUELLUNG_KOPF = "#E8E8E8"
 FUELLUNG_KABEL = "#EFEFEF"
-
-# -- Schriftgroessen in Punkt ----------------------------------------------
-
-GROSS = 20.0
-MITTEL = 11.0
-NORMAL = 8.5
-KLEIN = 7.0
-
-LINKS, MITTE, RECHTS = "links", "mitte", "rechts"
 
 
 # -- Zeichenanweisungen ----------------------------------------------------
@@ -73,7 +66,7 @@ class Text:
     breite: float
     hoehe: float
     text: str
-    groesse: float = NORMAL
+    groesse: float = 8.5
     ausrichtung: str = LINKS
     fett: bool = False
     farbe: str = TINTE
@@ -105,67 +98,25 @@ class Blatt:
 
 # -- Schriftfeld -----------------------------------------------------------
 
-SCHRIFTFELD_H = 26.0
+BESCHRIFTUNG = {
+    "firma": "Firma",
+    "kunde": "Kunde",
+    "anlagennummer": "Anlage",
+    "kundennummer": "Kunden-Nr.",
+    "verteiler": "Verteiler",
+    "verteilernummer": "Verteiler-Nr.",
+    "leiste": "Leiste",
+    "blatt": "Blatt",
+    "erstellt": "Erstellt",
+    "stand": "Stand",
+    "geprueft": "Geprüft",
+    "gezeichnet": "Gezeichnet",
+    "dokumenttitel": "Titel",
+}
 
 
 def _wert(projekt: Projekt, name: str, vorgabe: str = "") -> str:
     return projekt.feld(name, vorgabe)
-
-
-def schriftfeld(blatt: Blatt, projekt: Projekt, leiste: int | None = None) -> None:
-    """Der Kopf jedes Blattes, vollstaendig aus den Projektdaten.
-
-    Die Leistennummer kommt aus dem Aufruf, nicht aus einer Kopie des
-    Vorblatts - genau der Fehler, der in einer Mustertabelle steckt.
-    """
-    v = projekt.verteiler
-    oben = blatt.hoehe - RAND - SCHRIFTFELD_H
-    breite = blatt.breite - 2 * RAND
-
-    blatt.rechteck(RAND, oben, breite, SCHRIFTFELD_H, fuellung=None, staerke=0.4)
-
-    spalten = [
-        [
-            ("Firma", _wert(projekt, "firma")),
-            ("Kunde", _wert(projekt, "kunde")),
-            ("Anlage", _wert(projekt, "anlagennummer")),
-            ("Kunden-Nr.", _wert(projekt, "kundennummer")),
-        ],
-        [
-            ("Verteiler", v.name),
-            ("Verteiler-Nr.", v.nummer),
-            ("Leiste", "" if leiste is None else str(leiste)),
-            ("Blatt", blatt.titel),
-        ],
-        [
-            ("Erstellt", _paar(projekt, "erstellt")),
-            ("Stand", _paar(projekt, "stand")),
-            ("Geprüft", _paar(projekt, "geprueft")),
-            ("Gezeichnet", _paar(projekt, "gezeichnet")),
-        ],
-    ]
-    for name, wert in projekt.eigene_felder.items():
-        spalten[2].append((name, wert))
-
-    # Namen brauchen mehr Platz als Nummern - daher ungleiche Spalten.
-    anteile = (0.38, 0.26, 0.36)
-    x = RAND
-    for i, spalte in enumerate(spalten):
-        spaltenbreite = breite * anteile[i]
-        if i:
-            blatt.linie(x, oben, x, oben + SCHRIFTFELD_H, 0.2, LINIE_FEIN)
-        zeilenhoehe = SCHRIFTFELD_H / max(len(spalte), 4)
-        label_b = 20.0
-        for j, (name, wert) in enumerate(spalte):
-            y = oben + j * zeilenhoehe
-            blatt.text(
-                x + 2, y, label_b - 2, zeilenhoehe, name, KLEIN, LINKS, False, TINTE_LEISE
-            )
-            blatt.text(
-                x + label_b + 2, y, spaltenbreite - label_b - 4, zeilenhoehe, wert,
-                NORMAL, LINKS,
-            )
-        x += spaltenbreite
 
 
 def _paar(projekt: Projekt, vorsilbe: str) -> str:
@@ -178,30 +129,107 @@ def _paar(projekt: Projekt, vorsilbe: str) -> str:
     return " · ".join(t for t in (datum, name) if t)
 
 
-def _fusszeile(blatt: Blatt, nummer: int, gesamt: int) -> None:
-    y = blatt.hoehe - RAND + 1
+def _eintraege(
+    marke: str, projekt: Projekt, blatt: Blatt, leiste: int | None
+) -> list[tuple[str, str]]:
+    """Was hinter einer Marke des Schriftfeldes steht."""
+    v = projekt.verteiler
+    if marke == "eigene":
+        return list(projekt.eigene_felder.items())
+    if marke == "verteiler":
+        wert = v.name
+    elif marke == "verteilernummer":
+        wert = v.nummer
+    elif marke == "leiste":
+        wert = "" if leiste is None else str(leiste)
+    elif marke == "blatt":
+        wert = blatt.titel
+    elif marke in ("erstellt", "stand", "geprueft", "gezeichnet"):
+        wert = _paar(projekt, marke)
+    else:
+        wert = _wert(projekt, marke)
+    return [(BESCHRIFTUNG.get(marke, marke), wert)]
+
+
+def schriftfeld(
+    blatt: Blatt,
+    projekt: Projekt,
+    leiste: int | None = None,
+    vorlage: Blattvorlage = STANDARD,
+) -> None:
+    """Der Kopf jedes Blattes, vollstaendig aus den Projektdaten.
+
+    Die Leistennummer kommt aus dem Aufruf, nicht aus einer Kopie des
+    Vorblatts - genau der Fehler, der in einer Mustertabelle steckt.
+    """
+    rand = vorlage.rand
+    hoehe = vorlage.schriftfeld_hoehe
+    oben = blatt.hoehe - rand - hoehe
+    breite = blatt.breite - 2 * rand
+
+    blatt.rechteck(rand, oben, breite, hoehe, fuellung=None, staerke=0.4)
+
+    spalten = [
+        [eintrag
+         for marke in marken
+         for eintrag in _eintraege(marke, projekt, blatt, leiste)]
+        for marken in vorlage.schriftfeld
+    ]
+
+    # Namen brauchen mehr Platz als Nummern - daher ungleiche Spalten.
+    anteile = _schriftfeldanteile(len(spalten))
+    x = rand
+    for i, spalte in enumerate(spalten):
+        spaltenbreite = breite * anteile[i]
+        if i:
+            blatt.linie(x, oben, x, oben + hoehe, 0.2, LINIE_FEIN)
+        zeilenhoehe = hoehe / max(len(spalte), 4)
+        label_b = 20.0
+        for j, (name, wert) in enumerate(spalte):
+            y = oben + j * zeilenhoehe
+            blatt.text(
+                x + 2, y, label_b - 2, zeilenhoehe, name,
+                vorlage.schrift_klein, LINKS, False, TINTE_LEISE,
+            )
+            blatt.text(
+                x + label_b + 2, y, spaltenbreite - label_b - 4, zeilenhoehe, wert,
+                vorlage.schrift_normal, LINKS,
+            )
+        x += spaltenbreite
+
+
+def _schriftfeldanteile(anzahl: int) -> list[float]:
+    if anzahl == 3:
+        return [0.38, 0.26, 0.36]
+    return [1.0 / anzahl] * anzahl
+
+
+def _fusszeile(blatt: Blatt, nummer: int, gesamt: int, vorlage: Blattvorlage) -> None:
+    y = blatt.hoehe - vorlage.rand + 1
     blatt.text(
-        RAND, y, blatt.breite - 2 * RAND, 6,
-        f"Blatt {nummer} von {gesamt}", KLEIN, RECHTS, False, TINTE_LEISE,
+        vorlage.rand, y, blatt.breite - 2 * vorlage.rand, 6,
+        f"Blatt {nummer} von {gesamt}",
+        vorlage.schrift_klein, RECHTS, False, TINTE_LEISE,
     )
 
 
 # -- Deckblatt -------------------------------------------------------------
 
 
-def deckblatt(projekt: Projekt) -> Blatt:
+def deckblatt(projekt: Projekt, vorlage: Blattvorlage = STANDARD) -> Blatt:
     blatt = Blatt(*A4_HOCH, titel="Deckblatt")
     v = projekt.verteiler
-    breite = blatt.breite - 2 * RAND
+    rand = vorlage.rand
+    breite = blatt.breite - 2 * rand
     y = 55.0
 
     blatt.text(
-        RAND, y, breite, 14,
+        rand, y, breite, 14,
         _wert(projekt, "dokumenttitel", "Verteilerdokumentation"),
-        GROSS, LINKS, True,
+        vorlage.schrift_gross, LINKS, True,
     )
     y += 16
-    blatt.linie(RAND, y, RAND + breite, y, 0.6, TINTE)
+    blatt.linie(rand, y, rand + breite, y, 0.6, TINTE)
     y += 10
 
     zeilen = [
@@ -219,17 +247,20 @@ def deckblatt(projekt: Projekt) -> Blatt:
         ("Stand", _paar(projekt, "stand")),
         ("Geprüft", _paar(projekt, "geprueft")),
         ("Gezeichnet", _paar(projekt, "gezeichnet")),
+        ("Blattvorlage", vorlage.name if not vorlage.standard else ""),
     ]
     zeilen += list(projekt.eigene_felder.items())
 
     for name, wert in zeilen:
         if not str(wert).strip():
             continue
-        blatt.text(RAND, y, 46, 7, name, NORMAL, LINKS, False, TINTE_LEISE)
-        blatt.text(RAND + 48, y, breite - 48, 7, str(wert), MITTEL)
+        blatt.text(
+            rand, y, 46, 7, name, vorlage.schrift_normal, LINKS, False, TINTE_LEISE
+        )
+        blatt.text(rand + 48, y, breite - 48, 7, str(wert), vorlage.schrift_mittel)
         y += 7.6
 
-    schriftfeld(blatt, projekt)
+    schriftfeld(blatt, projekt, None, vorlage)
     return blatt
 
 
@@ -243,28 +274,25 @@ def _aufbau(v: Verteiler) -> str:
 
 # -- Verteilerbelegung -----------------------------------------------------
 
-ZELLE_B = 6.0
-ZELLE_H = 9.0
-LEISTENLABEL_B = 14.0
-ABSTAND_LEISTEN = 3.0
-ABSTAND_BUCHTEN = 12.0
-BUCHTEN_JE_BLATT = 2
 
-
-def verteilerbelegungen(projekt: Projekt) -> list[Blatt]:
+def verteilerbelegungen(
+    projekt: Projekt, vorlage: Blattvorlage = STANDARD
+) -> list[Blatt]:
     """Die Verteilerbelegung, bei Bedarf auf mehrere Blaetter verteilt.
 
-    Mehr als zwei Buchten nebeneinander waeren auf A4 quer nur noch
-    gequetscht. Ab der dritten Bucht bekommt deshalb je zwei Buchten ein
-    eigenes Blatt, benannt nach den Buchten, die darauf stehen.
+    Mehr Buchten nebeneinander, als die Vorlage zulaesst, waeren auf A4
+    quer nur noch gequetscht. Die weiteren bekommen deshalb eigene
+    Blaetter, benannt nach den Buchten, die darauf stehen.
     """
     alle = projekt.verteiler.buchten
-    gruppen = [
-        alle[i:i + BUCHTEN_JE_BLATT] for i in range(0, len(alle), BUCHTEN_JE_BLATT)
-    ] or [[]]
+    je_blatt = max(1, vorlage.buchten_je_blatt)
+    gruppen = [alle[i:i + je_blatt] for i in range(0, len(alle), je_blatt)] or [[]]
     if len(gruppen) == 1:
-        return [verteilerbelegung(projekt, gruppen[0])]
-    return [verteilerbelegung(projekt, gruppe, benennen=True) for gruppe in gruppen]
+        return [verteilerbelegung(projekt, gruppen[0], vorlage=vorlage)]
+    return [
+        verteilerbelegung(projekt, gruppe, benennen=True, vorlage=vorlage)
+        for gruppe in gruppen
+    ]
 
 
 def buchtnamen(buchten: list[Bucht]) -> str:
@@ -279,6 +307,7 @@ def verteilerbelegung(
     projekt: Projekt,
     buchten: list[Bucht] | None = None,
     benennen: bool = False,
+    vorlage: Blattvorlage = STANDARD,
 ) -> Blatt:
     """Jede Leiste ein Kasten aus DA-Zellen, Kabel als Block.
 
@@ -289,29 +318,28 @@ def verteilerbelegung(
     """
     v = projekt.verteiler
     buchten = list(v.buchten if buchten is None else buchten)
+    rand = vorlage.rand
 
     titel = buchtnamen(buchten) if benennen else "Verteilerbelegung"
     blatt = Blatt(*A4_QUER, titel=titel)
-    ueberschrift = (
-        f"Verteilerbelegung — {titel}" if benennen else "Verteilerbelegung"
-    )
-    blatt.text(RAND, RAND, 170, 8, ueberschrift, MITTEL, LINKS, True)
+    ueberschrift = f"Verteilerbelegung — {titel}" if benennen else "Verteilerbelegung"
+    blatt.text(rand, rand, 170, 8, ueberschrift, vorlage.schrift_mittel, LINKS, True)
 
-    oben = RAND + 12
-    platz_b = blatt.breite - 2 * RAND
-    platz_h = blatt.hoehe - RAND - SCHRIFTFELD_H - 6 - oben
-    faktor = _belegungsfaktor(buchten, platz_b, platz_h)
+    oben = rand + 12
+    platz_b = blatt.breite - 2 * rand
+    platz_h = blatt.hoehe - rand - vorlage.schriftfeld_hoehe - 6 - oben
+    faktor = _belegungsfaktor(buchten, platz_b, platz_h, vorlage)
 
-    zelle_b = ZELLE_B * faktor
-    zelle_h = ZELLE_H * faktor
+    zelle_b = vorlage.zelle_breite * faktor
+    zelle_h = vorlage.zelle_hoehe * faktor
     # Die Beschriftung waechst nur begrenzt mit - sonst frisst sie die Zellen.
-    label_b = LEISTENLABEL_B * min(faktor, 1.5)
-    luft_l = ABSTAND_LEISTEN * faktor
-    luft_r = ABSTAND_BUCHTEN * faktor
-    schrift = KLEIN if faktor < 1.4 else NORMAL
+    label_b = vorlage.leistenlabel * min(faktor, 1.5)
+    luft_l = vorlage.abstand_leisten * faktor
+    luft_r = vorlage.abstand_buchten * faktor
+    schrift = vorlage.schrift_klein if faktor < 1.4 else vorlage.schrift_normal
 
     kaesten: dict[int, tuple[float, float, int]] = {}
-    x = RAND
+    x = rand
     for bucht in buchten:
         breiteste = max((l.da_anzahl for l in bucht.leisten), default=0)
         y = oben
@@ -322,8 +350,7 @@ def verteilerbelegung(
 
     for nummer, (kx, ky, da) in kaesten.items():
         blatt.text(
-            kx - label_b, ky, label_b - 2, zelle_h,
-            f"Leiste {nummer}", schrift, RECHTS,
+            kx - label_b, ky, label_b - 2, zelle_h, f"Leiste {nummer}", schrift, RECHTS
         )
         blatt.rechteck(kx, ky, da * zelle_b, zelle_h, staerke=0.4)
         for i in range(1, da):
@@ -344,114 +371,128 @@ def verteilerbelegung(
             blatt.text(bx + 1, ky, bb - 2, zelle_h * 0.62, beschriftung, schrift)
 
     # Die DA-Nummern zuletzt, damit sie auch auf einem Kabelblock stehen.
-    for _, (kx, ky, da) in kaesten.items() if zelle_b >= 4.5 else ():
-        for i in range(da):
-            blatt.text(
-                kx + i * zelle_b, ky + zelle_h * 0.6, zelle_b, zelle_h * 0.4,
-                str(i + 1), KLEIN, MITTE, False, TINTE_LEISE,
-            )
+    if vorlage.da_nummern and zelle_b >= 4.5:
+        for _, (kx, ky, da) in kaesten.items():
+            for i in range(da):
+                blatt.text(
+                    kx + i * zelle_b, ky + zelle_h * 0.6, zelle_b, zelle_h * 0.4,
+                    str(i + 1), vorlage.schrift_klein, MITTE, False, TINTE_LEISE,
+                )
 
-    schriftfeld(blatt, projekt)
+    schriftfeld(blatt, projekt, None, vorlage)
     return blatt
 
 
-def _belegungsfaktor(buchten: list[Bucht], platz_b: float, platz_h: float) -> float:
+def _belegungsfaktor(
+    buchten: list[Bucht], platz_b: float, platz_h: float, vorlage: Blattvorlage
+) -> float:
     """Wie stark die Grundmasse auf diesem Blatt wachsen duerfen."""
     if not buchten:
         return 1.0
     breite = sum(
-        LEISTENLABEL_B + max((l.da_anzahl for l in r.leisten), default=0) * ZELLE_B
-        + ABSTAND_BUCHTEN
-        for r in buchten
-    ) - ABSTAND_BUCHTEN
-    leisten = max(len(r.leisten) for r in buchten)
-    hoehe = leisten * (ZELLE_H + ABSTAND_LEISTEN) - ABSTAND_LEISTEN
+        vorlage.leistenlabel
+        + max((l.da_anzahl for l in b.leisten), default=0) * vorlage.zelle_breite
+        + vorlage.abstand_buchten
+        for b in buchten
+    ) - vorlage.abstand_buchten
+    leisten = max(len(b.leisten) for b in buchten)
+    hoehe = (
+        leisten * (vorlage.zelle_hoehe + vorlage.abstand_leisten)
+        - vorlage.abstand_leisten
+    )
     # Kleiner als 1 bei sehr grossen Verteilern, sonst passt das Blatt nicht.
     return max(0.3, min(platz_b / breite, platz_h / hoehe, 3.0))
 
 
 # -- Leistenblatt ----------------------------------------------------------
 
-SPALTEN = (
-    ("Stift", 10.0, MITTE),
-    ("", 7.0, MITTE),
-    ("Farbe", 16.0, LINKS),
-    ("Bezeichnung", 46.0, LINKS),
-    ("Rangierung", 30.0, LINKS),
-    ("Bemerkung", 44.0, LINKS),
-    ("Kabel", 33.0, LINKS),
-)
-KOPF_H = 7.0
-ZEILE_H_MAX = 9.5
-ZEILE_H_MIN = 4.2
 
-
-def leistenblatt(projekt: Projekt, leiste_nr: int) -> Blatt:
+def leistenblatt(
+    projekt: Projekt, leiste_nr: int, vorlage: Blattvorlage = STANDARD
+) -> Blatt:
     v = projekt.verteiler
     leiste = v.leiste(leiste_nr)
     blatt = Blatt(*A4_HOCH, titel=f"Leiste {leiste_nr}")
+    rand = vorlage.rand
+    kopf_h = vorlage.kopfzeile_hoehe
 
-    blatt.text(RAND, RAND, 120, 8, f"Leiste {leiste_nr}", MITTEL, LINKS, True)
     blatt.text(
-        RAND, RAND, blatt.breite - 2 * RAND, 8,
-        f"{leiste.da_anzahl} DA", NORMAL, RECHTS, False, TINTE_LEISE,
+        rand, rand, 120, 8, f"Leiste {leiste_nr}", vorlage.schrift_mittel, LINKS, True
+    )
+    blatt.text(
+        rand, rand, blatt.breite - 2 * rand, 8,
+        f"{leiste.da_anzahl} DA", vorlage.schrift_normal, RECHTS, False, TINTE_LEISE,
     )
 
-    oben = RAND + 12
-    tabellenbreite = sum(b for _, b, _ in SPALTEN)
-    zeile_h = _zeilenhoehe(blatt, oben, leiste.da_anzahl)
+    oben = rand + 12
+    tabellenbreite = blatt.breite - 2 * rand
+    breiten = vorlage.breiten(tabellenbreite)
+    zeile_h = _zeilenhoehe(blatt, oben, leiste.da_anzahl, vorlage)
 
-    x = RAND
-    blatt.rechteck(RAND, oben, tabellenbreite, KOPF_H, fuellung=FUELLUNG_KOPF, staerke=0.4)
-    for name, breite, ausrichtung in SPALTEN:
-        blatt.text(x + 1.5, oben, breite - 3, KOPF_H, name, KLEIN, ausrichtung, True)
+    x = rand
+    blatt.rechteck(rand, oben, tabellenbreite, kopf_h, fuellung=FUELLUNG_KOPF, staerke=0.4)
+    for spalte, breite in zip(vorlage.spalten, breiten):
+        blatt.text(
+            x + 1.5, oben, breite - 3, kopf_h, spalte.ueberschrift,
+            vorlage.schrift_klein, spalte.ausrichtung, True,
+        )
         x += breite
 
-    y = oben + KOPF_H
+    y = oben + kopf_h
     for stift in leiste.stifte:
-        kabel = v.kabel_an(leiste_nr, stift.nummer)
         for seite in ("a", "b"):
             ader = stift.ader(seite)
-            ziele = v.ziele_von(_adresse(leiste_nr, stift.nummer, seite))
-            werte = [
-                str(stift.nummer) if seite == "a" else "",
-                seite,
-                ader.farbe,
-                ader.bezeichnung,
-                adressen_schreiben(ziele),
-                ader.bemerkung,
-                "",
-            ]
-            x = RAND
-            for (_, breite, ausrichtung), wert in zip(SPALTEN, werte):
-                blatt.text(x + 1.5, y, breite - 3, zeile_h, wert, NORMAL, ausrichtung)
+            werte = {
+                "stift": str(stift.nummer) if seite == "a" else "",
+                "ader": seite,
+                "farbe": ader.farbe,
+                "bezeichnung": ader.bezeichnung,
+                "rangierung": adressen_schreiben(
+                    v.ziele_von(_adresse(leiste_nr, stift.nummer, seite))
+                ),
+                "bemerkung": ader.bemerkung,
+                "kabel": "",
+            }
+            x = rand
+            for spalte, breite in zip(vorlage.spalten, breiten):
+                blatt.text(
+                    x + 1.5, y, breite - 3, zeile_h, werte.get(spalte.feld, ""),
+                    vorlage.schrift_normal, spalte.ausrichtung,
+                )
                 x += breite
             # Feine Linie zwischen a und b, kraeftige zwischen den Stiften.
             fein = seite == "a"
             blatt.linie(
-                RAND, y + zeile_h, RAND + tabellenbreite, y + zeile_h,
+                rand, y + zeile_h, rand + tabellenbreite, y + zeile_h,
                 0.15 if fein else 0.3, LINIE_FEIN if fein else LINIE,
             )
             y += zeile_h
 
-    _kabelklammern(blatt, v, leiste_nr, oben + KOPF_H, tabellenbreite, zeile_h)
+    _kabelklammern(blatt, v, leiste_nr, oben + kopf_h, breiten, zeile_h, vorlage)
 
-    x = RAND
-    unten = oben + KOPF_H + leiste.da_anzahl * 2 * zeile_h
-    for _, breite, _ in SPALTEN:
+    x = rand
+    unten = oben + kopf_h + leiste.da_anzahl * 2 * zeile_h
+    for breite in breiten:
         blatt.linie(x, oben, x, unten, 0.2, LINIE)
         x += breite
     blatt.linie(x, oben, x, unten, 0.2, LINIE)
-    blatt.rechteck(RAND, oben, tabellenbreite, unten - oben, staerke=0.4)
+    blatt.rechteck(rand, oben, tabellenbreite, unten - oben, staerke=0.4)
 
-    schriftfeld(blatt, projekt, leiste_nr)
+    schriftfeld(blatt, projekt, leiste_nr, vorlage)
     return blatt
 
 
-def _zeilenhoehe(blatt: Blatt, oben: float, da_anzahl: int) -> float:
+def _zeilenhoehe(
+    blatt: Blatt, oben: float, da_anzahl: int, vorlage: Blattvorlage
+) -> float:
     """Die Tabelle nutzt das Blatt aus - 20 DA sind 40 Zeilen und passen auch."""
-    platz = blatt.hoehe - RAND - SCHRIFTFELD_H - 6 - (oben + KOPF_H)
-    return max(ZEILE_H_MIN, min(ZEILE_H_MAX, platz / (da_anzahl * 2)))
+    platz = (
+        blatt.hoehe - vorlage.rand - vorlage.schriftfeld_hoehe - 6
+        - (oben + vorlage.kopfzeile_hoehe)
+    )
+    return max(
+        vorlage.zeilenhoehe_min, min(vorlage.zeilenhoehe_max, platz / (da_anzahl * 2))
+    )
 
 
 def _adresse(leiste: int, stift: int, seite: str):
@@ -465,12 +506,22 @@ def _kabelklammern(
     v: Verteiler,
     leiste_nr: int,
     oben: float,
-    tabellenbreite: float,
+    breiten: list[float],
     zeile_h: float,
+    vorlage: Blattvorlage,
 ) -> None:
-    """Die Klammer rechts umfasst genau die belegten Zeilen - 4 DA sind 8."""
-    breite = SPALTEN[-1][1]
-    x = RAND + tabellenbreite - breite
+    """Die Klammer umfasst genau die belegten Zeilen - 4 DA sind 8.
+
+    Fuehrt die Vorlage keine Kabelspalte, entfaellt die Klammer.
+    """
+    stelle = next(
+        (i for i, s in enumerate(vorlage.spalten) if s.feld == "kabel"), None
+    )
+    if stelle is None:
+        return
+    x = vorlage.rand + sum(breiten[:stelle])
+    breite = breiten[stelle]
+
     for kabel in v.kabel:
         for abschnitt in kabel.abschnitte:
             if abschnitt.leiste != leiste_nr:
@@ -480,24 +531,24 @@ def _kabelklammern(
             blatt.rechteck(x, y, breite, hoehe, fuellung=FUELLUNG_KABEL, staerke=0.4)
             blatt.text(
                 x + 1.5, y, breite - 3, min(hoehe, zeile_h * 2),
-                kabel.beschriftung, KLEIN,
+                kabel.beschriftung, vorlage.schrift_klein,
             )
             if kabel.gekuerzt and hoehe >= zeile_h * 2:
                 blatt.text(
                     x + 1.5, y + zeile_h * 2, breite - 3, zeile_h * 2,
                     f"gekürzt: {kabel.da_aufgelegt} von {kabel.da_gesamt} DA",
-                    KLEIN, LINKS, False, TINTE_LEISE,
+                    vorlage.schrift_klein, LINKS, False, TINTE_LEISE,
                 )
 
 
 # -- Blattfolge ------------------------------------------------------------
 
 
-def blaetter(projekt: Projekt) -> list[Blatt]:
+def blaetter(projekt: Projekt, vorlage: Blattvorlage = STANDARD) -> list[Blatt]:
     """Deckblatt, Verteilerbelegung, je Leiste ein Blatt."""
-    folge = [deckblatt(projekt), *verteilerbelegungen(projekt)]
+    folge = [deckblatt(projekt, vorlage), *verteilerbelegungen(projekt, vorlage)]
     for leiste in projekt.verteiler.alle_leisten:
-        folge.append(leistenblatt(projekt, leiste.nummer))
+        folge.append(leistenblatt(projekt, leiste.nummer, vorlage))
     for i, blatt in enumerate(folge, 1):
-        _fusszeile(blatt, i, len(folge))
+        _fusszeile(blatt, i, len(folge), vorlage)
     return folge

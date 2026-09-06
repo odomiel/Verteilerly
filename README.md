@@ -13,6 +13,7 @@ verteilerly/        Programmpaket
   vorlagen.py       Verteilervorlagen
   projektdatei.py   Projekt als JSON lesen und schreiben
   layout.py         Blätter als Zeichenanweisungen — Vorlage für Vorschau und PDF
+  blattvorlagen.py  Wie ein Blatt aussieht: Spalten, Ränder, Schriftgrößen
   ausgabe/          PDF, Excel und CSV
     pdf.py          Zeichnet das Layoutmodell mit ReportLab
     tabellen.py     Belegungsdaten je Ader als xlsx und csv
@@ -25,8 +26,9 @@ verteilerly/        Programmpaket
     dialoge.py      Neuer Verteiler, Kabel, Überlauf, Briefkopf
     thema.py        Farbsätze hell und dunkel
 daten/              Liegt neben dem Programm und ist frei erweiterbar
-  vorlagen/         Eine YAML-Datei je Vorlage, auch die selbst gesicherten
+  vorlagen/         Eine YAML-Datei je Verteilervorlage
   kabeltypen/       Farbfolgen der Kabeltypen
+  blattvorlagen/    Wie die Ausgabe aussieht
 werkzeuge/          Release und Verpacken
   bauen.py          Eine Datei je Plattform
   appimage.py       AppImage mit Python und Qt darin
@@ -80,6 +82,22 @@ Blätter — gequetscht wird nichts.
 Was das Programm **Bucht** nennt, hieß bis zur Umbenennung *Reihe*. Ältere
 Projektdateien und selbst geschriebene Vorlagen mit den alten Feldnamen
 werden weiter gelesen; geschrieben wird immer die neue Fassung.
+
+Wie das Blatt aussieht, sagt eine **Blattvorlage**; was darauf steht,
+kommt aus dem Projekt. Drei liegen bei — *Standard* mit allen Spalten,
+*Knapp* als reines Rangierblatt ohne Bezeichnung und Bemerkung, und
+*Ausführlich* mit großer Schrift, hohen Zeilen und einer Bucht je Blatt.
+Gewählt wird über der Vorschau; die Wahl gilt auch für die PDF-Ausgabe
+und wird gemerkt. Eine eigene Blattvorlage ist eine YAML-Datei in
+`blattvorlagen/`, die nur angibt, was sie anders will:
+
+```yaml
+id: eng
+name: "Eng"
+rand: 8
+zeilenhoehe_max: 7
+spalten: [stift, ader, farbe, rangierung]
+```
 
 Die Blätter entstehen in `layout.py` als Zeichenanweisungen in Millimetern
 — ohne Qt und ohne PDF-Bibliothek. Die Vorschau zeichnet dieses Modell mit

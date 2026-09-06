@@ -1,0 +1,17 @@
+# Blattvorlage: zum Nachtragen von Hand. Groessere Schrift, hohe Zeilen,
+# eine Bucht je Blatt in der Verteilerbelegung - dafuer mehr Blaetter.
+id: ausfuehrlich
+name: "Ausführlich"
+beschreibung: "Große Schrift und hohe Zeilen zum handschriftlichen Nachtragen."
+
+rand: 12
+zeilenhoehe_max: 12
+kopfzeile_hoehe: 8
+
+schrift:
+  gross: 22
+  mittel: 12
+  normal: 9.5
+  klein: 7.5
+
+buchten_je_blatt: 1

@@ -22,7 +22,7 @@ import shutil
 import sys
 
 DATENORDNER = "daten"
-UNTERORDNER = ("vorlagen", "kabeltypen")
+UNTERORDNER = ("vorlagen", "kabeltypen", "blattvorlagen")
 ANWENDUNG = "Verteilerly"
 
 
@@ -163,6 +163,19 @@ def vorlagenordner_alle() -> list[pathlib.Path]:
 
 def kabeltypenordner() -> pathlib.Path:
     return _unterordner("kabeltypen")
+
+
+def blattvorlagenordner() -> pathlib.Path:
+    return _unterordner("blattvorlagen")
+
+
+def blattvorlagenordner_alle() -> list[pathlib.Path]:
+    """Jeder Ort, an dem Blattvorlagen liegen koennen."""
+    return [
+        ort / "blattvorlagen"
+        for ort in datenordner_alle()
+        if (ort / "blattvorlagen").is_dir()
+    ]
 
 
 # -- Erstausstattung -------------------------------------------------------

@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ..blattvorlagen import STANDARD, Blattvorlage, Blattvorlagen
 from ..layout import Blatt, Linie, Rechteck, Text, blaetter
 from ..modell import Projekt
 from .thema import HELL, Farben
@@ -136,11 +137,21 @@ class Vorschau(QWidget):
     """Blattwahl und Blattflaeche."""
 
     blatt_gewechselt = Signal(int)
+    blattvorlage_gewechselt = Signal(str)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.projekt: Projekt | None = None
         self.blaetter: list[Blatt] = []
+        self.blattvorlagen = Blattvorlagen()
+        self.blattvorlage: Blattvorlage = STANDARD
+
+        self.vorlagenwahl = QComboBox()
+        self.vorlagenwahl.setToolTip(
+            "Wie das Blatt aussieht — Spalten, Schriftgrößen, Ränder. "
+            "Die Vorlagen liegen als YAML im Arbeitsordner."
+        )
+        self.vorlagenwahl.currentIndexChanged.connect(self._vorlage_gewechselt)
 
         self.auswahl = QComboBox()
         self.auswahl.currentIndexChanged.connect(self._gewechselt)
@@ -163,14 +174,46 @@ class Vorschau(QWidget):
         kopf.addWidget(self.vor)
         kopf.addWidget(self.zaehler)
 
+        zweite = QHBoxLayout()
+        zweite.setContentsMargins(0, 0, 0, 6)
+        zweite.addWidget(QLabel("Blattvorlage:"))
+        zweite.addWidget(self.vorlagenwahl, 1)
+
         self.flaeche = Blattflaeche()
 
         gesamt = QVBoxLayout(self)
         gesamt.setContentsMargins(8, 8, 8, 8)
         gesamt.addLayout(kopf)
+        gesamt.addLayout(zweite)
         gesamt.addWidget(self.flaeche, 1)
 
     # -- Zustand -----------------------------------------------------------
+
+    def blattvorlagen_setzen(self, vorlagen: Blattvorlagen, gewaehlt: str = "") -> None:
+        """Die zur Wahl stehenden Blattvorlagen."""
+        self.blattvorlagen = vorlagen
+        self.vorlagenwahl.blockSignals(True)
+        self.vorlagenwahl.clear()
+        for vorlage in vorlagen.alle:
+            self.vorlagenwahl.addItem(vorlage.name, vorlage.id)
+            if vorlage.beschreibung:
+                self.vorlagenwahl.setItemData(
+                    self.vorlagenwahl.count() - 1,
+                    vorlage.beschreibung,
+                    Qt.ItemDataRole.ToolTipRole,
+                )
+        stelle = self.vorlagenwahl.findData(gewaehlt or vorlagen.standard.id)
+        self.vorlagenwahl.setCurrentIndex(max(stelle, 0))
+        self.vorlagenwahl.blockSignals(False)
+        self.blattvorlage = vorlagen.holen(self.vorlagenwahl.currentData())
+
+    def _vorlage_gewechselt(self) -> None:
+        kennung = self.vorlagenwahl.currentData()
+        if not kennung:
+            return
+        self.blattvorlage = self.blattvorlagen.holen(kennung)
+        self.aktualisieren()
+        self.blattvorlage_gewechselt.emit(kennung)
 
     def projekt_setzen(self, projekt: Projekt | None) -> None:
         self.projekt = projekt
@@ -182,7 +225,7 @@ class Vorschau(QWidget):
     def aktualisieren(self, blatt_index: int | None = None) -> None:
         """Baut die Blaetter neu und haelt dabei die Stelle."""
         merker = self.auswahl.currentIndex() if blatt_index is None else blatt_index
-        self.blaetter = blaetter(self.projekt) if self.projekt else []
+        self.blaetter = blaetter(self.projekt, self.blattvorlage) if self.projekt else []
 
         self.auswahl.blockSignals(True)
         self.auswahl.clear()

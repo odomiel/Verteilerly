@@ -1,0 +1,42 @@
+# Blattvorlage: alle Spalten, wie in den Mustertabellen.
+# Alles Weggelassene bleibt bei der eingebauten Vorgabe.
+id: standard
+name: "Standard"
+beschreibung: "Alle Spalten, wie in den Mustertabellen."
+standard: true
+
+rand: 12
+schriftfeld_hoehe: 26
+kopfzeile_hoehe: 7
+zeilenhoehe_max: 9.5
+zeilenhoehe_min: 4.2
+
+schrift:
+  gross: 20
+  mittel: 11
+  normal: 8.5
+  klein: 7
+
+spalten:
+  - {feld: stift,       ueberschrift: "Stift",       anteil: 10, ausrichtung: mitte}
+  - {feld: ader,        ueberschrift: "",            anteil: 7,  ausrichtung: mitte}
+  - {feld: farbe,       ueberschrift: "Farbe",       anteil: 16}
+  - {feld: bezeichnung, ueberschrift: "Bezeichnung", anteil: 46}
+  - {feld: rangierung,  ueberschrift: "Rangierung",  anteil: 30}
+  - {feld: bemerkung,   ueberschrift: "Bemerkung",   anteil: 44}
+  - {feld: kabel,       ueberschrift: "Kabel",       anteil: 33}
+
+schriftfeld:
+  - [firma, kunde, anlagennummer, kundennummer]
+  - [verteiler, verteilernummer, leiste, blatt]
+  - [erstellt, stand, geprueft, gezeichnet, eigene]
+
+buchten_je_blatt: 2
+da_nummern: true
+
+belegung:
+  zelle_breite: 6
+  zelle_hoehe: 9
+  leistenlabel: 14
+  abstand_leisten: 3
+  abstand_buchten: 12

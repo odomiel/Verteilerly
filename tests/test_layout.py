@@ -2,10 +2,8 @@
 
 import unittest
 
+from verteilerly.blattvorlagen import STANDARD, Blattvorlage
 from verteilerly.layout import (
-    RAND,
-    BUCHTEN_JE_BLATT,
-    SCHRIFTFELD_H,
     Blatt,
     Rechteck,
     Text,
@@ -13,6 +11,9 @@ from verteilerly.layout import (
     leistenblatt,
     verteilerbelegungen,
 )
+
+RAND = STANDARD.rand
+SCHRIFTFELD_H = STANDARD.schriftfeld_hoehe
 from verteilerly.modell import Aderadresse, Projekt, Verteiler
 
 
@@ -78,7 +79,7 @@ class TestBlattfolge(unittest.TestCase):
         self.assertEqual(letztes.titel, "Bucht 3")
 
     def test_buchten_je_blatt_ist_die_grenze(self):
-        self.assertEqual(BUCHTEN_JE_BLATT, 2)
+        self.assertEqual(STANDARD.buchten_je_blatt, 2)
 
     def test_ausrichtung(self):
         """Leistenblätter hoch, die Verteilerbelegung quer."""
