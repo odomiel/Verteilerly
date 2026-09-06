@@ -51,13 +51,32 @@ def appimage() -> pathlib.Path | None:
 # -- Arbeitsordner ---------------------------------------------------------
 
 
+EINSTELLUNGSDATEI = f"{ANWENDUNG}.conf"
+
+
 def einstellungsordner() -> pathlib.Path:
-    """Wo Qt die Verteilerly.conf ablegt."""
+    """Der Ordner im Benutzerprofil - unter Linux auch der Arbeitsordner."""
     if sys.platform.startswith("win"):
         wurzel = os.environ.get("APPDATA") or pathlib.Path.home() / "AppData" / "Roaming"
     else:
         wurzel = os.environ.get("XDG_CONFIG_HOME") or pathlib.Path.home() / ".config"
     return pathlib.Path(wurzel) / ANWENDUNG
+
+
+def einstellungsdatei() -> pathlib.Path:
+    """Wo die Verteilerly.conf liegt.
+
+    Unter Windows neben dem Programm - eine Datei, ein Ordner, ein Stick,
+    und ohne Registry. Laesst sich dort nicht schreiben, weicht sie
+    ins Benutzerprofil aus. Unter Linux bleibt sie im Einstellungsordner,
+    wo Qt sie ohnehin ablegt; im AppImage waere neben dem Programm nichts
+    zu schreiben.
+    """
+    if sys.platform.startswith("win"):
+        neben_programm = programmordner() / EINSTELLUNGSDATEI
+        if _beschreibbar(neben_programm.parent):
+            return neben_programm
+    return einstellungsordner() / EINSTELLUNGSDATEI
 
 
 def benutzerdatenordner() -> pathlib.Path:

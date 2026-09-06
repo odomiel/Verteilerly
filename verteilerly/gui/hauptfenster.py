@@ -47,7 +47,11 @@ VORSCHAU_VERZUG = 250  # ms, damit das Tippen nicht stockt
 class Hauptfenster(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
-        self.einstellungen = QSettings("Verteilerly", "Verteilerly")
+        # Als Datei an einem bekannten Ort, nicht in der Registry:
+        # unter Windows liegt sie neben dem Programm.
+        self.einstellungen = QSettings(
+            str(pfade.einstellungsdatei()), QSettings.Format.IniFormat
+        )
         self._grundausstattung_sichern()
         self.vorlagen = self._vorlagen_laden()
         self.blattvorlagen = self._blattvorlagen_laden()

@@ -57,6 +57,44 @@ class TestArbeitsordner(unittest.TestCase):
         self.assertEqual(ziel, pfade.programmordner() / pfade.DATENORDNER)
 
 
+class TestEinstellungsdatei(unittest.TestCase):
+    """Eine Datei an einem bekannten Ort, keine Registry."""
+
+    def test_windows_neben_dem_programm(self):
+        with mock.patch.object(pfade.sys, "platform", "win32"):
+            self.assertEqual(
+                pfade.einstellungsdatei(),
+                pfade.programmordner() / "Verteilerly.conf",
+            )
+
+    def test_windows_weicht_aus_wenn_dort_nicht_zu_schreiben_ist(self):
+        """Im Programmverzeichnis darf nicht immer geschrieben werden."""
+        with tempfile.TemporaryDirectory() as ort:
+            gesperrt = pathlib.Path(ort) / "programme"
+            gesperrt.mkdir()
+            gesperrt.chmod(0o555)
+            try:
+                with mock.patch.object(pfade.sys, "platform", "win32"), \
+                     mock.patch.object(pfade, "programmordner", return_value=gesperrt), \
+                     mock.patch.dict(os.environ, {"APPDATA": ort}):
+                    ziel = pfade.einstellungsdatei()
+            finally:
+                gesperrt.chmod(0o755)
+        self.assertEqual(
+            ziel, pathlib.Path(ort) / "Verteilerly" / "Verteilerly.conf"
+        )
+
+    def test_linux_bleibt_im_einstellungsordner(self):
+        """Genau die Datei, die Qt dort ohnehin angelegt hat."""
+        with tempfile.TemporaryDirectory() as heim:
+            with mock.patch.dict(os.environ, {"XDG_CONFIG_HOME": heim}), \
+                 mock.patch.object(pfade.sys, "platform", "linux"):
+                self.assertEqual(
+                    pfade.einstellungsdatei(),
+                    pathlib.Path(heim) / "Verteilerly" / "Verteilerly.conf",
+                )
+
+
 class TestDatensuche(unittest.TestCase):
     def test_quellbaum_wird_gefunden(self):
         self.assertTrue(pfade.vorlagenordner().is_dir())

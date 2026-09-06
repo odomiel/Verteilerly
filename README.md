@@ -187,6 +187,11 @@ einem Arbeitsordner aus:
 | Windows | `<Programmordner>/daten/` — eine Datei, ein Ordner, ein Stick |
 | Linux | `~/.config/Verteilerly/` — dort liegt auch die `Verteilerly.conf` |
 
+Die Einstellungen (Erscheinungsbild, gewählte Blattvorlage) stehen in
+`Verteilerly.conf` — unter Windows **neben dem Programm**, sodass ein
+Stick alles beisammen hat und nichts auf dem Rechner zurückbleibt; unter
+Linux im Einstellungsordner. Eine Registry wird nie beschrieben.
+
 Kopiert wird nur, was dort noch nicht liegt: eigene Änderungen bleiben,
 und eine spätere Fassung bringt ihre neuen Dateien nach. Dorthin wird
 auch geschrieben, wenn eine Vorlage gesichert wird.

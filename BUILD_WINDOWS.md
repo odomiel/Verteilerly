@@ -54,8 +54,12 @@ gebaut wird, schreibt sie den Bericht nach `bau\selbsttest.txt`.
   spätere Fassung bringt ihre neuen Dateien nach. Unter Linux ist das
   `~/.config/Verteilerly`, weil im AppImage neben dem Programm nicht
   geschrieben werden kann.
-- Die Einstellungen (Erscheinungsbild, gewählte Blattvorlage) legt Qt unter
-  `%APPDATA%\Verteilerly` ab.
+- **Die Einstellungen liegen neben dem Programm** als `Verteilerly.conf`
+  (Erscheinungsbild, gewählte Blattvorlage) — nicht in der Registry und nicht
+  im Benutzerprofil. Zusammen mit `daten\` und der `.exe` ist damit alles in
+  einem Ordner: ein Stick, ein Verzeichnis, nichts bleibt auf dem Rechner
+  zurück. Lässt sich dort nicht schreiben — etwa unter `C:\Programme` —
+  weicht die Datei nach `%APPDATA%\Verteilerly` aus.
 - Das Symbol liegt als `assets\Verteilerly.ico` bei und wird aus der Zeichnung
   im Programm erzeugt (`werkzeuge\symboldatei.py`). Fehlt die Datei, baut
   PyInstaller ohne eigenes Icon.

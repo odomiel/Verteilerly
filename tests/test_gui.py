@@ -142,6 +142,25 @@ class TestVorschau(unittest.TestCase):
 
 
 @unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
+class TestEinstellungen(unittest.TestCase):
+    """Die Einstellungen liegen als Datei, nicht in der Registry."""
+
+    def test_hauptfenster_schreibt_in_die_vorgesehene_datei(self):
+        from verteilerly import pfade
+        from verteilerly.gui.hauptfenster import Hauptfenster
+
+        fenster = Hauptfenster()
+        self.assertEqual(
+            pathlib.Path(fenster.einstellungen.fileName()), pfade.einstellungsdatei()
+        )
+        from PySide6.QtCore import QSettings
+
+        self.assertEqual(
+            fenster.einstellungen.format(), QSettings.Format.IniFormat
+        )
+
+
+@unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
 class TestNeuerVerteilerDialog(unittest.TestCase):
     """Vorlage wählen, eigene Geometrie angeben, Vorlage sichern."""
 
