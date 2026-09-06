@@ -47,6 +47,7 @@ class Hauptfenster(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.einstellungen = QSettings("Verteilerly", "Verteilerly")
+        self._grundausstattung_sichern()
         self.vorlagen = self._vorlagen_laden()
         self.kabeltypen = Kabeltypen.laden(pfade.kabeltypenordner())
 
@@ -60,6 +61,12 @@ class Hauptfenster(QMainWindow):
         self._aktionen_bauen()
         self.thema_anwenden(self.thema_name)
         self._projekt_setzen(None, None)
+        if self.ausgelegt:
+            self.statusBar().showMessage(
+                f"{len(self.ausgelegt)} Dateien nach {pfade.eigener_datenordner()} "
+                "ausgelegt — dort sind sie änderbar",
+                12000,
+            )
 
     # -- Aufbau ------------------------------------------------------------
 
@@ -469,6 +476,17 @@ class Hauptfenster(QMainWindow):
         self._kabel_angeklickt(kabel)
 
     # -- Sonstiges ---------------------------------------------------------
+
+    def _grundausstattung_sichern(self) -> None:
+        """Beim ersten Start die mitgelieferten Dateien auslegen.
+
+        Erst danach sind Vorlagen und Kabeltypen fuer den Anwender
+        erreichbar - im AppImage liegen sie sonst im Nur-Lese-Abbild.
+        """
+        try:
+            self.ausgelegt = pfade.grundausstattung_auslegen()
+        except OSError:
+            self.ausgelegt = []
 
     def _vorlagen_laden(self) -> Vorlagen:
         """Alle Vorlagenordner zusammen; eigene gehen vor mitgelieferten."""

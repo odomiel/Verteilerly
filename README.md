@@ -60,13 +60,8 @@ Ein neuer Verteiler entsteht aus einer Vorlage oder aus eigenen Angaben;
 die DA je Leiste stehen dort als 8, 10 und 20 DA zur Wahl, alles andere
 wird eingetippt. Eine so gebaute Grundstruktur lässt sich als Vorlage
 ablegen — im Dialog selbst oder später über *Bearbeiten ▸ Als Vorlage
-speichern*. Sie landet als YAML-Datei neben dem Programm und steht sofort
-im Menü. Läuft das Programm als AppImage, liegen die
-mitgelieferten Vorlagen in einem Nur-Lese-Abbild; dann wird neben die
-AppImage-Datei geschrieben und, wenn auch das nicht geht, nach
-`~/.local/share/verteilerly/daten/vorlagen` (Windows: `%APPDATA%`).
-Gelesen werden alle diese Orte, eigene Vorlagen gehen vor
-mitgelieferten.
+speichern*. Sie landet als YAML-Datei im Arbeitsordner (siehe
+*Verpacken ▸ Daten*) und steht sofort im Menü.
 
 Der Editor zeigt links die Verteilerübersicht und rechts die Belegung der
 gewählten Leiste. Ein Doppelklick auf eine freie Doppelader legt ein Kabel
@@ -144,12 +139,25 @@ wirklich das eingebaute Paket und die mitgelieferten Daten benutzt werden
 werden `pip install pyinstaller` und die Python-Bibliothek als `.so`
 gebraucht (`sudo apt install libpython3.14` unter Debian und Ubuntu).
 
-**Daten.** Der Ordner `daten/` steckt im AppImage und wird zusätzlich
-neben die ausführbare Datei gelegt. Gesucht wird in dieser Reihenfolge:
-neben der AppImage-Datei (der Stick des Anwenders), neben dem Programm,
-im AppImage selbst, zuletzt im Quellbaum. Wer Vorlagen oder Kabeltypen
-ändern will, legt den Ordner also einfach neben die Datei — ohne
-Auspacken.
+**Daten.** Vorlagen und Kabeltypen sollen ohne Auspacken änderbar sein.
+Beim ersten Start legt das Programm die mitgelieferten Dateien deshalb in
+einem Arbeitsordner aus:
+
+| Plattform | Arbeitsordner |
+|---|---|
+| Windows | `<Programmordner>/daten/` — eine Datei, ein Ordner, ein Stick |
+| Linux | `~/.config/Verteilerly/` — dort liegt auch die `Verteilerly.conf` |
+
+Kopiert wird nur, was dort noch nicht liegt: eigene Änderungen bleiben,
+und eine spätere Fassung bringt ihre neuen Dateien nach. Dorthin wird
+auch geschrieben, wenn eine Vorlage gesichert wird.
+
+Gelesen wird darüber hinaus aus allen Orten, an denen Daten liegen
+können — ein Ordner `daten/` **neben der AppImage-Datei** geht dabei vor,
+damit ein vollständig portabler Stick möglich bleibt, dann der
+Arbeitsordner, zuletzt das Mitgelieferte im Abbild. Eine eigene Vorlage
+geht vor einer mitgelieferten gleicher Kennung, ohne dass die
+mitgelieferte Datei angefasst wird.
 
 ## Versionen
 
