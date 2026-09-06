@@ -39,6 +39,11 @@ class UeberlaufFehler(ModellFehler):
 # --------------------------------------------------------------------------
 
 _ADRESSE = re.compile(r"^\s*(\d+)\s+(\d+)\s*([ab])\s*$", re.IGNORECASE)
+_ADRESSE_IM_TEXT = re.compile(r"(\d+)\s+(\d+)\s*([ab])", re.IGNORECASE)
+
+# Zwei Rangierungen stehen nebeneinander ohne Trennzeichen,
+# allein durch Abstand getrennt.
+RANGIERUNG_TRENNER = "   "
 
 
 @dataclass(frozen=True, order=True)
@@ -458,6 +463,87 @@ class Verteiler:
                 self.rangierungen.remove(rangierung)
                 return
         raise ModellFehler(f"Die Rangierung {von} - {nach} gibt es nicht")
+
+
+    def rangierungen_setzen(
+        self, adresse: Aderadresse, ziele: list[Aderadresse]
+    ) -> None:
+        """Setzt die Rangierungen einer Ader auf genau ``ziele``.
+
+        Das ist die Form, in der die Oberflaeche arbeitet: der Anwender
+        tippt den Inhalt des Feldes, das Modell gleicht ab. Wegfallende
+        Rangierungen verschwinden dabei an beiden Enden.
+
+        Es wird erst geprueft und dann geaendert - schlaegt eine Pruefung
+        fehl, bleibt der bisherige Stand unangetastet.
+        """
+        if len(ziele) > MAX_RANGIERUNGEN_JE_ADER:
+            raise ModellFehler(
+                f"{adresse} kann hoechstens {MAX_RANGIERUNGEN_JE_ADER} "
+                f"Rangierungen tragen, angegeben sind {len(ziele)}"
+            )
+        if len(set(ziele)) != len(ziele):
+            raise ModellFehler("Dieselbe Gegenstelle ist zweimal angegeben")
+
+        bisher = self.ziele_von(adresse)
+        entfallen = [z for z in bisher if z not in ziele]
+        neu = [z for z in ziele if z not in bisher]
+
+        # Vorpruefung auf einer Kopie, damit nichts halb angewandt wird.
+        probe = list(self.rangierungen)
+        for ziel in entfallen:
+            for rangierung in probe:
+                if rangierung.beruehrt(adresse) and rangierung.beruehrt(ziel):
+                    probe.remove(rangierung)
+                    break
+        for ziel in neu:
+            if ziel == adresse:
+                raise ModellFehler(
+                    f"Eine Rangierung kann nicht auf sich selbst zeigen ({ziel})"
+                )
+            if not self.kennt(ziel):
+                raise ModellFehler(f"{ziel} gibt es in diesem Verteiler nicht")
+            belegt = sum(1 for r in probe if r.beruehrt(ziel))
+            if belegt >= MAX_RANGIERUNGEN_JE_ADER:
+                raise ModellFehler(
+                    f"{ziel} traegt bereits {belegt} Rangierungen - "
+                    f"mehr als {MAX_RANGIERUNGEN_JE_ADER} sind nicht vorgesehen"
+                )
+            probe.append(Rangierung(adresse, ziel))
+
+        self.rangierungen = probe
+
+
+# --------------------------------------------------------------------------
+# Rangierungen als Text
+# --------------------------------------------------------------------------
+
+
+def adressen_lesen(text: str) -> list[Aderadresse]:
+    """Liest ein Rangierungsfeld - eine oder zwei Adressen.
+
+    Erlaubt ist, was der Anwender tippt: "3 2a" oder "3 2a   5 4a".
+    """
+    if not text or not text.strip():
+        return []
+    treffer = _ADRESSE_IM_TEXT.findall(text)
+    if not treffer:
+        raise ModellFehler(
+            f"Rangierung {text.strip()!r} nicht lesbar - erwartet wird z.B. '3 2a'"
+        )
+    # Alles, was nicht zu einer Adresse gehoert, waere ein Tippfehler.
+    rest = _ADRESSE_IM_TEXT.sub("", text).strip()
+    if rest:
+        raise ModellFehler(f"In der Rangierung steht ueberzaehliger Text: {rest!r}")
+    return [
+        Aderadresse(int(leiste), int(stift), seite.lower())
+        for leiste, stift, seite in treffer
+    ]
+
+
+def adressen_schreiben(adressen: list[Aderadresse]) -> str:
+    """Stellt Rangierungen fuer die Anzeige zusammen."""
+    return RANGIERUNG_TRENNER.join(str(a) for a in adressen)
 
 
 # --------------------------------------------------------------------------

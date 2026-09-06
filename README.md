@@ -12,6 +12,13 @@ verteilerly/        Programmpaket
   farbcodes.py      Kabeltypen und Adernfarben
   vorlagen.py       Verteilervorlagen
   projektdatei.py   Projekt als JSON lesen und schreiben
+  pfade.py          Wo die Daten liegen - entpackt wie gepackt
+  gui/              Oberfläche
+    hauptfenster.py Fenster, Menüs, Datei- und Kabelbefehle
+    uebersicht.py   Verteilerübersicht, gezeichnet wie im Beispiel
+    leistenansicht.py  Belegung einer Leiste als Tabelle
+    dialoge.py      Neuer Verteiler, Kabel, Überlauf, Briefkopf
+    thema.py        Farbsätze hell und dunkel
 daten/              Liegt neben dem Programm und ist frei erweiterbar
   vorlagen/         Eine YAML-Datei je Vorlage
   kabeltypen/       Farbfolgen der Kabeltypen
@@ -32,11 +39,22 @@ Tests:
 .venv/bin/python3 -m unittest discover -s tests -t .
 ```
 
+Programm starten:
+
+```bash
+.venv/bin/python3 -m verteilerly
+```
+
 ## Stand
 
-Offen sind Editor, Layoutmodell und Vorschau,
-PDF-Ausgabe, Excel und CSV sowie das Verpacken als
-AppImage und `.exe`.
+Der Editor zeigt links die Verteilerübersicht und rechts die Belegung der
+gewählten Leiste. Ein Doppelklick auf eine freie Doppelader legt ein Kabel
+auf, einer auf ein Kabel öffnet es; passt ein Kabel nicht mehr auf die
+Leiste, fragt der Überlaufdialog nach der Fortsetzung. Rangierungen werden
+in die Spalte getippt (`3 2a`, zwei durch Leerraum getrennt); die
+Gegenstelle trägt sich selbst ein.
+
+Offen sind Layoutmodell und Vorschau, PDF-Ausgabe, Excel und CSV sowie das Verpacken als AppImage und `.exe`.
 
 Zurückgestellt: Widerstandssymbol,
 Pluginschnittstelle, Blatt „Änderungen“, Strichregel.

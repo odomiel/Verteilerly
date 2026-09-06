@@ -1,0 +1,369 @@
+"""Dialoge: neuer Verteiler, Kabel anlegen, Überlauf, Briefkopf.
+"""
+
+from __future__ import annotations
+
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
+    QComboBox,
+    QDialog,
+    QDialogButtonBox,
+    QFormLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QRadioButton,
+    QSpinBox,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
+)
+
+from ..farbcodes import Kabeltypen
+from ..modell import BRIEFKOPF_FELDER, Projekt, Verteiler
+from ..vorlagen import Vorlagen
+
+BRIEFKOPF_BESCHRIFTUNG = {
+    "dokumenttitel": "Dokumenttitel",
+    "firma": "Firma",
+    "kunde": "Kunde",
+    "anlagennummer": "Anlagennummer",
+    "kundennummer": "Kundennummer",
+    "gezeichnet_am": "Gezeichnet am",
+    "gezeichnet_von": "Gezeichnet von",
+    "kuerzel": "Kürzel",
+    "erstellt_am": "Erstellt am",
+    "erstellt_von": "Erstellt von",
+    "stand_am": "Stand am",
+    "stand_von": "Stand von",
+    "geprueft_am": "Geprüft am",
+    "geprueft_von": "Geprüft von",
+}
+
+
+def _knopfleiste(dialog: QDialog) -> QDialogButtonBox:
+    knoepfe = QDialogButtonBox(
+        QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+    )
+    knoepfe.button(QDialogButtonBox.StandardButton.Ok).setText("Übernehmen")
+    knoepfe.button(QDialogButtonBox.StandardButton.Cancel).setText("Abbrechen")
+    knoepfe.accepted.connect(dialog.accept)
+    knoepfe.rejected.connect(dialog.reject)
+    return knoepfe
+
+
+class NeuerVerteilerDialog(QDialog):
+    """Vorlage wählen oder eigene Geometrie angeben."""
+
+    def __init__(self, vorlagen: Vorlagen, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Neuer Verteiler")
+        self.vorlagen = vorlagen
+
+        self.name = QLineEdit()
+        self.name.setPlaceholderText("z. B. Verteiler Keller")
+        self.nummer = QLineEdit()
+        self.nummer.setPlaceholderText("z. B. 1.1")
+
+        stammdaten = QFormLayout()
+        stammdaten.addRow("Verteilername:", self.name)
+        stammdaten.addRow("Verteilernummer:", self.nummer)
+
+        # Vorlage
+        self.aus_vorlage = QRadioButton("Aus Vorlage")
+        self.aus_vorlage.setChecked(True)
+        self.vorlagenwahl = QComboBox()
+        for vorlage in vorlagen.alle:
+            self.vorlagenwahl.addItem(str(vorlage), vorlage.id)
+        stelle = self.vorlagenwahl.findData(vorlagen.standard.id)
+        if stelle >= 0:
+            self.vorlagenwahl.setCurrentIndex(stelle)
+        self.vorlagenwahl.currentIndexChanged.connect(self._beschreibung_zeigen)
+        self.beschreibung = QLabel()
+        self.beschreibung.setWordWrap(True)
+
+        vorlagenblock = QVBoxLayout()
+        vorlagenblock.addWidget(self.vorlagenwahl)
+        vorlagenblock.addWidget(self.beschreibung)
+        vorlagenkasten = QGroupBox()
+        vorlagenkasten.setLayout(vorlagenblock)
+
+        # Eigene Geometrie
+        self.eigen = QRadioButton("Benutzerdefiniert")
+        self.reihen = QSpinBox()
+        self.reihen.setRange(1, 20)
+        self.leisten = QSpinBox()
+        self.leisten.setRange(1, 60)
+        self.leisten.setValue(4)
+        self.da = QSpinBox()
+        self.da.setRange(1, 100)
+        self.da.setValue(10)
+        for feld in (self.reihen, self.leisten, self.da):
+            feld.valueChanged.connect(self._summe_zeigen)
+        self.summe = QLabel()
+
+        eigenform = QFormLayout()
+        eigenform.addRow("Reihen:", self.reihen)
+        eigenform.addRow("Leisten je Reihe:", self.leisten)
+        eigenform.addRow("DA je Leiste:", self.da)
+        eigenform.addRow("", self.summe)
+        eigenkasten = QGroupBox()
+        eigenkasten.setLayout(eigenform)
+
+        self.aus_vorlage.toggled.connect(vorlagenkasten.setEnabled)
+        self.aus_vorlage.toggled.connect(lambda an: eigenkasten.setEnabled(not an))
+        eigenkasten.setEnabled(False)
+
+        aufbau = QVBoxLayout(self)
+        aufbau.addLayout(stammdaten)
+        aufbau.addSpacing(6)
+        aufbau.addWidget(self.aus_vorlage)
+        aufbau.addWidget(vorlagenkasten)
+        aufbau.addWidget(self.eigen)
+        aufbau.addWidget(eigenkasten)
+        aufbau.addWidget(_knopfleiste(self))
+
+        self._beschreibung_zeigen()
+        self._summe_zeigen()
+
+    def _beschreibung_zeigen(self) -> None:
+        kennung = self.vorlagenwahl.currentData()
+        if kennung:
+            vorlage = self.vorlagen.holen(kennung)
+            self.beschreibung.setText(
+                f"{vorlage.beschreibung}\n"
+                f"{vorlage.leisten_gesamt} Leisten, {vorlage.da_gesamt} DA"
+            )
+
+    def _summe_zeigen(self) -> None:
+        gesamt = self.reihen.value() * self.leisten.value() * self.da.value()
+        leisten = self.reihen.value() * self.leisten.value()
+        self.summe.setText(f"ergibt {leisten} Leisten, {gesamt} DA")
+
+    def verteiler(self) -> Verteiler:
+        name, nummer = self.name.text().strip(), self.nummer.text().strip()
+        if self.aus_vorlage.isChecked():
+            return self.vorlagen.holen(self.vorlagenwahl.currentData()).verteiler(
+                name, nummer
+            )
+        return Verteiler.aus_geometrie(
+            self.reihen.value(), self.leisten.value(), self.da.value(), name, nummer
+        )
+
+
+class KabelDialog(QDialog):
+    """Ein Kabel auflegen."""
+
+    def __init__(
+        self,
+        verteiler: Verteiler,
+        kabeltypen: Kabeltypen,
+        leiste: int,
+        start_da: int,
+        parent: QWidget | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Kabel auflegen")
+        self.verteiler = verteiler
+
+        self.beschriftung = QLineEdit()
+        self.beschriftung.setPlaceholderText("z. B. 4DA Leitung zu Wohnzimmer")
+
+        self.leiste = QComboBox()
+        for l in verteiler.alle_leisten:
+            self.leiste.addItem(f"Leiste {l.nummer}  ({l.da_anzahl} DA)", l.nummer)
+        stelle = self.leiste.findData(leiste)
+        if stelle >= 0:
+            self.leiste.setCurrentIndex(stelle)
+
+        self.start = QSpinBox()
+        self.start.setRange(1, 100)
+        self.start.setValue(start_da)
+
+        self.kabel_da = QSpinBox()
+        self.kabel_da.setRange(1, 200)
+        self.kabel_da.setValue(4)
+        self.kabel_da.setSuffix(" DA")
+
+        self.auflegen_da = QSpinBox()
+        self.auflegen_da.setRange(1, 200)
+        self.auflegen_da.setValue(4)
+        self.auflegen_da.setSuffix(" DA")
+        self.kabel_da.valueChanged.connect(self._kabelgroesse_geaendert)
+
+        self.kabeltyp = QComboBox()
+        self.kabeltyp.addItem("— ohne, Farben von Hand —", None)
+        for typ in kabeltypen.alle:
+            self.kabeltyp.addItem(typ.name, typ.id)
+
+        self.kuerzungshinweis = QLabel()
+        self.kuerzungshinweis.setWordWrap(True)
+        self.auflegen_da.valueChanged.connect(self._kuerzung_zeigen)
+
+        form = QFormLayout()
+        form.addRow("Beschriftung:", self.beschriftung)
+        form.addRow("Leiste:", self.leiste)
+        form.addRow("Ab Doppelader:", self.start)
+        form.addRow("Kabelgröße:", self.kabel_da)
+        form.addRow("Davon auflegen:", self.auflegen_da)
+        form.addRow("Kabeltyp:", self.kabeltyp)
+        form.addRow("", self.kuerzungshinweis)
+
+        aufbau = QVBoxLayout(self)
+        aufbau.addLayout(form)
+        aufbau.addWidget(_knopfleiste(self))
+        self._kuerzung_zeigen()
+
+    def _kabelgroesse_geaendert(self, wert: int) -> None:
+        if self.auflegen_da.value() > wert:
+            self.auflegen_da.setValue(wert)
+        self.auflegen_da.setMaximum(wert)
+        self._kuerzung_zeigen()
+
+    def _kuerzung_zeigen(self) -> None:
+        rest = self.kabel_da.value() - self.auflegen_da.value()
+        if rest > 0:
+            self.kuerzungshinweis.setText(
+                f"Das Kabel wird gekürzt: {rest} DA bleiben unaufgelegt."
+            )
+        else:
+            self.kuerzungshinweis.setText("")
+
+    def angaben(self) -> dict:
+        return {
+            "beschriftung": self.beschriftung.text().strip(),
+            "leiste": self.leiste.currentData(),
+            "start_da": self.start.value(),
+            "anzahl_da": self.auflegen_da.value(),
+            "da_gesamt": self.kabel_da.value(),
+            "kabeltyp": self.kabeltyp.currentData(),
+        }
+
+
+class UeberlaufDialog(QDialog):
+    """Was mit dem Rest geschieht, wenn ein Kabel nicht ganz passt."""
+
+    FORTSETZEN = "fortsetzen"
+    VERFAELLT = "verfaellt"
+
+    def __init__(
+        self,
+        verteiler: Verteiler,
+        passend: int,
+        rest: int,
+        parent: QWidget | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Kabel passt nicht vollständig")
+
+        erklaerung = QLabel(
+            f"Von diesem Kabel passen {passend} DA auf die gewählte Leiste, "
+            f"{rest} DA bleiben übrig."
+        )
+        erklaerung.setWordWrap(True)
+
+        self.fortsetzen = QRadioButton("Auf einer anderen Leiste fortsetzen")
+        self.fortsetzen.setChecked(True)
+        self.verfaellt = QRadioButton(f"Rest verfällt — nur {passend} DA auflegen")
+
+        self.leiste = QComboBox()
+        for l in verteiler.alle_leisten:
+            self.leiste.addItem(f"Leiste {l.nummer}  ({l.da_anzahl} DA)", l.nummer)
+        self.start = QSpinBox()
+        self.start.setRange(1, 100)
+        self.start.setValue(1)
+
+        fortsetzung = QFormLayout()
+        fortsetzung.addRow("Weiter auf:", self.leiste)
+        fortsetzung.addRow("Ab Doppelader:", self.start)
+        kasten = QGroupBox()
+        kasten.setLayout(fortsetzung)
+        self.fortsetzen.toggled.connect(kasten.setEnabled)
+
+        aufbau = QVBoxLayout(self)
+        aufbau.addWidget(erklaerung)
+        aufbau.addSpacing(6)
+        aufbau.addWidget(self.fortsetzen)
+        aufbau.addWidget(kasten)
+        aufbau.addWidget(self.verfaellt)
+        aufbau.addWidget(_knopfleiste(self))
+
+    def entscheidung(self) -> tuple[str, int, int]:
+        if self.verfaellt.isChecked():
+            return self.VERFAELLT, 0, 0
+        return self.FORTSETZEN, self.leiste.currentData(), self.start.value()
+
+
+class BriefkopfDialog(QDialog):
+    """Briefkopf und eigene Felder zentral pflegen."""
+
+    def __init__(self, projekt: Projekt, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Briefkopf und eigene Felder")
+        self.resize(560, 620)
+        self.projekt = projekt
+
+        self.felder: dict[str, QLineEdit] = {}
+        form = QFormLayout()
+        for name in BRIEFKOPF_FELDER:
+            feld = QLineEdit(projekt.briefkopf.get(name, ""))
+            self.felder[name] = feld
+            form.addRow(BRIEFKOPF_BESCHRIFTUNG.get(name, name) + ":", feld)
+        briefkopf = QGroupBox("Briefkopf — steht auf jedem Blatt")
+        briefkopf.setLayout(form)
+
+        self.eigene = QTableWidget(0, 2)
+        self.eigene.setHorizontalHeaderLabels(["Feldname", "Inhalt"])
+        self.eigene.horizontalHeader().setStretchLastSection(True)
+        for name, wert in projekt.eigene_felder.items():
+            self._zeile_anhaengen(name, wert)
+
+        hinzu = QPushButton("Feld hinzufügen")
+        hinzu.clicked.connect(lambda: self._zeile_anhaengen("", ""))
+        weg = QPushButton("Feld entfernen")
+        weg.clicked.connect(self._zeile_entfernen)
+        knoepfe = QHBoxLayout()
+        knoepfe.addWidget(hinzu)
+        knoepfe.addWidget(weg)
+        knoepfe.addStretch(1)
+
+        eigenblock = QVBoxLayout()
+        eigenblock.addWidget(self.eigene)
+        eigenblock.addLayout(knoepfe)
+        eigene = QGroupBox("Eigene Felder")
+        eigene.setLayout(eigenblock)
+
+        aufbau = QVBoxLayout(self)
+        aufbau.addWidget(briefkopf)
+        aufbau.addWidget(eigene)
+        aufbau.addWidget(_knopfleiste(self))
+
+    def _zeile_anhaengen(self, name: str, wert: str) -> None:
+        zeile = self.eigene.rowCount()
+        self.eigene.insertRow(zeile)
+        self.eigene.setItem(zeile, 0, QTableWidgetItem(name))
+        self.eigene.setItem(zeile, 1, QTableWidgetItem(wert))
+
+    def _zeile_entfernen(self) -> None:
+        zeile = self.eigene.currentRow()
+        if zeile >= 0:
+            self.eigene.removeRow(zeile)
+
+    def uebernehmen(self) -> None:
+        """Schreibt die Eingaben ins Projekt."""
+        self.projekt.briefkopf = {
+            name: feld.text().strip()
+            for name, feld in self.felder.items()
+            if feld.text().strip()
+        }
+        eigene: dict[str, str] = {}
+        for zeile in range(self.eigene.rowCount()):
+            name = self.eigene.item(zeile, 0)
+            wert = self.eigene.item(zeile, 1)
+            if name and name.text().strip():
+                eigene[name.text().strip()] = wert.text().strip() if wert else ""
+        self.projekt.eigene_felder = eigene
