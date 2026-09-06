@@ -135,6 +135,36 @@ class TestSchriftfeld(unittest.TestCase):
                 self.assertNotIn("Keller", _texte(blatt))
         self.assertEqual(self.projekt.briefkopf["firma"], "Musterfirma")
 
+    def test_mit_dem_feld_geht_auch_die_beschriftung(self):
+        """Eine Zeile „Kunde“ ohne Kunden wäre schlimmer als gar keine."""
+        self.projekt.briefkopf["kunde"] = "Kunde AG"
+        self.projekt.sichtbarkeit_setzen("kunde", False)
+        self.projekt.sichtbarkeit_setzen("Standort", False)
+        for blatt in blaetter(self.projekt):
+            with self.subTest(blatt=blatt.titel):
+                self.assertNotIn("Kunde", _texte(blatt))
+                self.assertNotIn("Standort", _texte(blatt))
+
+    def test_leeres_feld_behaelt_seine_beschriftung(self):
+        """Angewählt und leer heißt: hier wird von Hand eingetragen."""
+        texte = _texte(leistenblatt(self.projekt, 1))
+        self.assertIn("Geprüft", texte)          # im Briefkopf nicht gefüllt
+        self.assertIn("Stand", texte)
+
+    def test_paar_faellt_erst_weg_wenn_beide_haelften_weg_sind(self):
+        self.projekt.sichtbarkeit_setzen("geprueft_am", False)
+        self.assertIn("Geprüft", _texte(leistenblatt(self.projekt, 1)))
+        self.projekt.sichtbarkeit_setzen("geprueft_von", False)
+        self.assertNotIn("Geprüft", _texte(leistenblatt(self.projekt, 1)))
+
+    def test_blatteigene_marken_bleiben_immer(self):
+        """Verteiler, Leiste und Blatt gehören zum Blatt, nicht zum Briefkopf."""
+        for name in ("verteiler", "verteilernummer", "leiste", "blatt"):
+            self.projekt.sichtbarkeit_setzen(name, False)
+        texte = _texte(leistenblatt(self.projekt, 1))
+        self.assertIn("Verteiler", texte)
+        self.assertIn("Leiste", texte)
+
     def test_halb_abgewaehltes_paar(self):
         """Erstellt am/von: fällt eine Hälfte weg, bleibt die andere."""
         self.projekt.briefkopf["erstellt_von"] = "T. Mirik"

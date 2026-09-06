@@ -66,8 +66,9 @@ Programm starten:
 ## Stand
 
 Im Briefkopfdialog hat jedes Feld ein Häkchen — Standardfelder wie eigene
-gleichermaßen. Ein abgewähltes Feld erscheint auf keinem Blatt, **behält
-aber seinen Inhalt**: wer die Anlagennummer nur für diesen Ausdruck
+gleichermaßen. Ein abgewähltes Feld verschwindet vom Blatt **mitsamt seiner
+Beschriftung** — eine Zeile „Kunde" ohne Kunden wäre schlimmer als gar
+keine — und **behält seinen Inhalt**: wer die Anlagennummer nur für diesen Ausdruck
 weglassen will, muss sie nicht löschen. Die Auswahl steht in der
 Projektdatei.
 

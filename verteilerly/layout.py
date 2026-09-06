@@ -130,6 +130,33 @@ def _paar(projekt: Projekt, vorsilbe: str) -> str:
     return " · ".join(t for t in (datum, name) if t)
 
 
+# Marken, die kein Briefkopffeld sind - sie gehoeren zum Blatt selbst und
+# lassen sich nicht abwaehlen.
+BLATTMARKEN = ("verteiler", "verteilernummer", "leiste", "blatt")
+# Marken, die aus mehreren Feldern zusammengesetzt sind.
+PAARMARKEN = {
+    "erstellt": ("erstellt_am", "erstellt_von"),
+    "stand": ("stand_am", "stand_von"),
+    "geprueft": ("geprueft_am", "geprueft_von"),
+    "gezeichnet": ("gezeichnet_am", "gezeichnet_von", "kuerzel"),
+}
+
+
+def _marke_sichtbar(marke: str, projekt: Projekt) -> bool:
+    """Soll diese Zeile des Schriftfeldes ueberhaupt erscheinen?
+
+    Ein abgewaehltes Feld verschwindet mitsamt seiner Beschriftung - eine
+    Zeile „Kunde“ ohne Kunden waere schlimmer als gar keine. Ein leeres,
+    aber angewaehltes Feld bleibt dagegen stehen: die Beschriftung ist
+    dann die Zeile, in die von Hand eingetragen wird.
+    """
+    if marke in BLATTMARKEN:
+        return True
+    if marke in PAARMARKEN:
+        return any(projekt.sichtbar(teil) for teil in PAARMARKEN[marke])
+    return projekt.sichtbar(marke)
+
+
 def _eintraege(
     marke: str, projekt: Projekt, blatt: Blatt, leiste: int | None
 ) -> list[tuple[str, str]]:
@@ -137,6 +164,8 @@ def _eintraege(
     v = projekt.verteiler
     if marke == "eigene":
         return list(projekt.sichtbare_eigene_felder().items())
+    if not _marke_sichtbar(marke, projekt):
+        return []
     if marke == "verteiler":
         wert = v.name
     elif marke == "verteilernummer":
