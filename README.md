@@ -12,6 +12,7 @@ verteilerly/        Programmpaket
   farbcodes.py      Kabeltypen und Adernfarben
   vorlagen.py       Verteilervorlagen
   projektdatei.py   Projekt als JSON lesen und schreiben
+  einstellungen.py  Briefkopf als Vorgabe in der Verteilerly.conf
   layout.py         Blätter als Zeichenanweisungen — Vorlage für Vorschau und PDF
   blattvorlagen.py  Wie ein Blatt aussieht: Spalten, Ränder, Schriftgrößen
   ausgabe/          PDF, Excel und CSV
@@ -69,6 +70,12 @@ gleichermaßen. Ein abgewähltes Feld erscheint auf keinem Blatt, **behält
 aber seinen Inhalt**: wer die Anlagennummer nur für diesen Ausdruck
 weglassen will, muss sie nicht löschen. Die Auswahl steht in der
 Projektdatei.
+
+Briefkopf und eigene Felder werden zugleich in der `Verteilerly.conf`
+gemerkt und in jeden **neuen** Verteiler übernommen — Firma, Kürzel und
+Kunde wiederholen sich von Verteiler zu Verteiler. Was im Projekt schon
+steht, bleibt dabei stehen; die Vorgabe überschreibt nie eine Eingabe.
+
 
 Ein neuer Verteiler entsteht aus einer Vorlage oder aus eigenen Angaben;
 die DA je Leiste stehen dort als 8, 10 und 20 DA zur Wahl, alles andere

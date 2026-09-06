@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from .. import einstellungen as einstellungsspeicher
 from .. import pfade, projektdatei
 from ..ausgabe import AusgabeFehler, csv_schreiben, pdf_schreiben, xlsx_schreiben
 from ..blattvorlagen import Blattvorlagen
@@ -360,11 +361,25 @@ class Hauptfenster(QMainWindow):
         )
         if dialog.exec() != NeuerVerteilerDialog.DialogCode.Accepted:
             return
-        self._projekt_setzen(Projekt(verteiler=dialog.verteiler()), None)
+        projekt = self.neues_projekt(dialog.verteiler())
+        self._projekt_setzen(projekt, None)
+        uebernommen = len(projekt.briefkopf) + len(projekt.eigene_felder)
         self.statusBar().showMessage(
             f"Neuer Verteiler: {self.projekt.verteiler.da_gesamt} DA auf "
             f"{len(self.projekt.verteiler.alle_leisten)} Leisten"
+            + (f", Briefkopf mit {uebernommen} Feldern übernommen" if uebernommen else "")
         )
+
+    def neues_projekt(self, verteiler: Verteiler) -> Projekt:
+        """Ein frisches Projekt mit dem gemerkten Briefkopf."""
+        return einstellungsspeicher.briefkopf_uebernehmen(
+            self.einstellungen, Projekt(verteiler=verteiler)
+        )
+
+    def briefkopf_merken(self) -> None:
+        """Die Angaben wiederholen sich von Verteiler zu Verteiler."""
+        if self.projekt is not None:
+            einstellungsspeicher.briefkopf_sichern(self.einstellungen, self.projekt)
 
     def oeffnen(self) -> None:
         if not self._darf_verwerfen():
@@ -615,8 +630,13 @@ class Hauptfenster(QMainWindow):
         dialog = BriefkopfDialog(self.projekt, self)
         if dialog.exec() == BriefkopfDialog.DialogCode.Accepted:
             dialog.uebernehmen()
+            # Die Angaben wiederholen sich von Verteiler zu Verteiler -
+            # sie werden deshalb in der Verteilerly.conf gemerkt.
+            self.briefkopf_merken()
             self._belegung_geaendert()
-            self.statusBar().showMessage("Briefkopf übernommen")
+            self.statusBar().showMessage(
+                "Briefkopf übernommen und als Vorgabe gemerkt"
+            )
 
     def ueber(self) -> None:
         QMessageBox.about(
