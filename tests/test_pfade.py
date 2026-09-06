@@ -89,16 +89,46 @@ class TestDatensuche(unittest.TestCase):
     def test_unterordner_nimmt_den_ort_der_ihn_hat(self):
         """Ein halb gefüllter Arbeitsordner darf die Kabeltypen nicht verdecken."""
         with tempfile.TemporaryDirectory() as heim:
-            (pathlib.Path(heim) / "Verteilerly" / "vorlagen").mkdir(parents=True)
+            eigene = pathlib.Path(heim) / "Verteilerly" / "vorlagen"
+            eigene.mkdir(parents=True)
+            (eigene / "eigen.yaml").write_text(
+                "id: eigen\nname: Eigen\nbuchten: 1\n"
+                "leisten_je_bucht: 1\nda_je_leiste: 8\n",
+                encoding="utf-8",
+            )
             with mock.patch.dict(os.environ, {"XDG_CONFIG_HOME": heim}), \
                  mock.patch.object(pfade.sys, "platform", "linux"):
-                self.assertEqual(
-                    pfade.vorlagenordner(), pathlib.Path(heim) / "Verteilerly" / "vorlagen"
-                )
+                self.assertEqual(pfade.vorlagenordner(), eigene)
                 self.assertIn(
                     "standard.yaml",
                     [d.name for d in pfade.kabeltypenordner().iterdir()],
                 )
+
+    def test_leerer_ordner_verdeckt_die_daten_nicht(self):
+        """Ein übriggebliebenes, leeres daten/vorlagen neben der AppImage-Datei.
+
+        Genau das ließ den Probelauf des AppImage-Baus scheitern: der leere
+        Ordner gewann, und plötzlich gab es keine einzige Vorlage.
+        """
+        with tempfile.TemporaryDirectory() as stick:
+            leer = pathlib.Path(stick) / "daten" / "vorlagen"
+            leer.mkdir(parents=True)
+            with mock.patch.dict(
+                os.environ, {"APPIMAGE": str(pathlib.Path(stick) / "V.AppImage")}
+            ):
+                gefunden = pfade.vorlagenordner()
+        self.assertNotEqual(gefunden, leer)
+        self.assertTrue(any(gefunden.glob("*.yaml")))
+
+    def test_leerer_ordner_gilt_wenn_es_nichts_anderes_gibt(self):
+        """Ohne gefüllten Ordner bleibt der leere - sonst gäbe es gar keinen."""
+        with tempfile.TemporaryDirectory() as ort:
+            leer = pathlib.Path(ort) / "vorlagen"
+            leer.mkdir()
+            with mock.patch.object(
+                pfade, "_kandidaten", return_value=[pathlib.Path(ort)]
+            ):
+                self.assertEqual(pfade.vorlagenordner(), leer)
 
     def test_fehlermeldung_nennt_die_gesuchten_orte(self):
         with mock.patch.object(pfade, "_kandidaten", return_value=[pathlib.Path("/nix")]):

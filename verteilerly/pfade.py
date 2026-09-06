@@ -145,11 +145,21 @@ def datenordner() -> pathlib.Path:
 
 
 def _unterordner(name: str) -> pathlib.Path:
-    """Der erste Datenordner, der diesen Unterordner wirklich enthaelt."""
+    """Der erste Datenordner, der diesen Unterordner gefuellt enthaelt.
+
+    Ein leerer Ordner zaehlt nicht: ein uebriggebliebenes, leeres
+    ``daten/vorlagen`` neben der AppImage-Datei wuerde sonst die
+    mitgelieferten Dateien verdecken - und zwar lautlos.
+    """
+    vorhanden = None
     for ort in _kandidaten():
-        if (ort / name).is_dir():
-            return ort / name
-    return datenordner() / name
+        wenn = ort / name
+        if not wenn.is_dir():
+            continue
+        if any(wenn.glob("*.yaml")):
+            return wenn
+        vorhanden = vorhanden or wenn
+    return vorhanden or datenordner() / name
 
 
 def vorlagenordner() -> pathlib.Path:
