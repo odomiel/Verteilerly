@@ -94,10 +94,16 @@ Grafiktreiber des Rechners beißen. Alles andere, was Qt braucht und was
 oft fehlt (`libxcb-cursor`, `libxkbcommon` und die übrigen xcb-Helfer),
 liegt im AppImage.
 
-Der Bau meldet am Ende, welche glibc-Fassung das Ergebnis verlangt und
-welche Bibliothek diese Untergrenze setzt. Sie stammt aus den
-mitgenommenen Systembibliotheken des Baurechners: Wer ältere Systeme
-bedienen will, baut auf einer älteren Verteilung.
+Diese Bibliotheken kommen **nicht vom Baurechner**, sondern aus Debian 12
+(bookworm): eine Bibliothek dieses Rechners verlangte dessen glibc und
+schnitte damit alles Ältere ab. Das Bauskript holt die Pakete selbst aus
+dem Debian-Archiv und packt nur die benötigte `.so` ein.
+
+Damit verlangt das Ergebnis **glibc 2.34 oder neuer** — das ist die
+Untergrenze des Qt-Rads selbst und deckt Ubuntu 22.04, Debian 12, RHEL 9
+und Fedora 35 aufwärts ab. Der Bau meldet den Wert und nennt die
+Bibliothek, die ihn setzt. Noch tiefer käme man nur mit einem älteren Qt
+(PySide6 6.5 ist gegen glibc 2.17 gebaut).
 
 Damit die Datei klein bleibt, fliegt heraus, was die Oberfläche nicht
 anfasst — Qt Quick, QML, WebEngine, Multimedia, das GTK-Thema (es zöge die
@@ -105,9 +111,10 @@ halbe GTK-Welt nach), das Drucksteckmodul (gedruckt wird über das PDF) und
 die ungenutzten Teile der Standardbibliothek. Aus gut 300 MB werden so
 rund 57 MB.
 
-Nach dem Bauen startet das fertige AppImage einmal ohne Bildschirm, legt
-ein PDF an und prüft, dass dabei wirklich das eingebaute Paket und die
-mitgelieferten Daten benutzt werden — nicht der Quellbaum daneben.
+Nach dem Bauen startet das fertige AppImage einmal ohne Bildschirm, lädt
+die mitgenommenen Bibliotheken, legt ein PDF an und prüft, dass dabei
+wirklich das eingebaute Paket und die mitgelieferten Daten benutzt werden
+— nicht der Quellbaum daneben.
 
 **Windows — `.exe`.** `werkzeuge/bauen.py` ruft dort PyInstaller mit
 `--onefile` auf. Unter Linux geht das mit `--nur-exe` ebenfalls; dafür

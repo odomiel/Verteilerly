@@ -48,8 +48,58 @@ WERKZEUG_URL = (
     "appimagetool-x86_64.AppImage"
 )
 
+# Die mitgenommenen Systembibliotheken kommen nicht vom Baurechner,
+# sondern aus einer aelteren Verteilung: sonst verlangte das fertige
+# AppImage die glibc des Rechners, auf dem gebaut wurde.
+DEBIAN = "bookworm"          # Debian 12, glibc 2.36
+DEBIAN_SPIEGEL = "https://deb.debian.org/debian/"
+DEBIAN_INDEX = (
+    f"{DEBIAN_SPIEGEL}dists/{DEBIAN}/main/binary-amd64/Packages.gz"
+)
+# Welche Bibliothek in welchem Debian-Paket steckt.
+DEBIAN_PAKETE = {
+    "libX11-xcb.so.1": "libx11-xcb1",
+    "libXau.so.6": "libxau6",
+    "libXcursor.so.1": "libxcursor1",
+    "libXdmcp.so.6": "libxdmcp6",
+    "libXext.so.6": "libxext6",
+    "libXfixes.so.3": "libxfixes3",
+    "libXi.so.6": "libxi6",
+    "libXrandr.so.2": "libxrandr2",
+    "libatomic.so.1": "libatomic1",
+    "libb2.so.1": "libb2-1",
+    "libbrotlicommon.so.1": "libbrotli1",
+    "libbrotlidec.so.1": "libbrotli1",
+    "libbz2.so.1.0": "libbz2-1.0",
+    "libdouble-conversion.so.3": "libdouble-conversion3",
+    "libgraphite2.so.3": "libgraphite2-3",
+    "libgthread-2.0.so.0": "libglib2.0-0",
+    "libmd4c.so.0": "libmd4c0",
+    "libpcre2-16.so.0": "libpcre2-16-0",
+    "libpcre2-8.so.0": "libpcre2-8-0",
+    "libpng16.so.16": "libpng16-16",
+    "libxcb-cursor.so.0": "libxcb-cursor0",
+    "libxcb-glx.so.0": "libxcb-glx0",
+    "libxcb-icccm.so.4": "libxcb-icccm4",
+    "libxcb-image.so.0": "libxcb-image0",
+    "libxcb-keysyms.so.1": "libxcb-keysyms1",
+    "libxcb-randr.so.0": "libxcb-randr0",
+    "libxcb-render-util.so.0": "libxcb-render-util0",
+    "libxcb-render.so.0": "libxcb-render0",
+    "libxcb-shape.so.0": "libxcb-shape0",
+    "libxcb-shm.so.0": "libxcb-shm0",
+    "libxcb-sync.so.1": "libxcb-sync1",
+    "libxcb-util.so.1": "libxcb-util1",
+    "libxcb-xfixes.so.0": "libxcb-xfixes0",
+    "libxcb-xkb.so.1": "libxcb-xkb1",
+    "libxkbcommon-x11.so.0": "libxkbcommon-x11-0",
+    "libxkbcommon.so.0": "libxkbcommon0",
+    "libzstd.so.1": "libzstd1",
+}
+
 BAUORDNER = WURZEL / "bau"
 BASISORDNER = BAUORDNER / "basis"
+DEBIANORDNER = BASISORDNER / DEBIAN
 APPDIR = BAUORDNER / f"{ANZEIGENAME}.AppDir"
 ZIELORDNER = WURZEL / "auslieferung"
 DATEN = WURZEL / "daten"
@@ -248,11 +298,15 @@ def verwaiste_entfernen() -> list[str]:
 
 
 def systembibliotheken_mitnehmen() -> list[str]:
-    """Kopiert die Bibliotheken, die Qt braucht und die oft fehlen.
+    """Nimmt die Bibliotheken mit, die Qt braucht und die oft fehlen.
 
     Der Kern des Zielsystems bleibt draussen (glibc, libGL, X11) - den
     bringt jede Arbeitsumgebung mit, und eine mitgelieferte Fassung
     wuerde sich mit dem Treiber des Rechners beissen.
+
+    Geholt wird aus Debian und nicht vom Baurechner: eine Bibliothek
+    dieses Rechners verlangte die glibc dieses Rechners und schnitte
+    damit alles Aeltere ab.
     """
     lib = APPDIR / "usr" / "lib"
     lib.mkdir(parents=True, exist_ok=True)
@@ -260,7 +314,7 @@ def systembibliotheken_mitnehmen() -> list[str]:
     kandidaten = list((pyside / "Qt" / "lib").glob("libQt6*.so*"))
     kandidaten += list((pyside / "Qt" / "plugins").rglob("*.so"))
 
-    mitgenommen: list[str] = []
+    gebraucht: dict[str, pathlib.Path] = {}
     for datei in kandidaten:
         for name, ort in _ldd(datei):
             if name in NIE_MITNEHMEN or not ort:
@@ -269,11 +323,77 @@ def systembibliotheken_mitnehmen() -> list[str]:
                 continue
             if str(ort).startswith(str(APPDIR)):
                 continue
+            gebraucht.setdefault(name, ort)
+
+    aus_debian, vom_rechner = [], []
+    for name, ort in sorted(gebraucht.items()):
+        fremd = _aus_debian(name)
+        if fremd:
+            shutil.copy2(fremd, lib / name)
+            aus_debian.append(name)
+        else:
             shutil.copy2(ort, lib / name)
-            mitgenommen.append(name)
-    if mitgenommen:
-        melden(f"mitgenommen: {', '.join(sorted(set(mitgenommen)))}")
-    return sorted(set(mitgenommen))
+            vom_rechner.append(name)
+
+    if aus_debian:
+        melden(f"aus Debian {DEBIAN}: {', '.join(aus_debian)}")
+    if vom_rechner:
+        melden(f"vom Baurechner (setzt die glibc-Untergrenze): "
+               f"{', '.join(vom_rechner)}")
+    return sorted(gebraucht)
+
+
+def _debian_index() -> dict[str, str]:
+    """Paketname zum Ort im Debian-Archiv."""
+    import gzip
+
+    datei = holen(DEBIAN_INDEX, DEBIANORDNER / "Packages.gz")
+    gesucht = set(DEBIAN_PAKETE.values())
+    orte: dict[str, str] = {}
+    paket = ""
+    with gzip.open(datei, "rt", encoding="utf-8", errors="replace") as index:
+        for zeile in index:
+            if zeile.startswith("Package: "):
+                paket = zeile[9:].strip()
+            elif zeile.startswith("Filename: ") and paket in gesucht:
+                orte[paket] = zeile[10:].strip()
+    return orte
+
+
+_INDEX: dict[str, str] | None = None
+
+
+def _aus_debian(name: str) -> pathlib.Path | None:
+    """Holt eine Bibliothek aus dem Debian-Paket und gibt die Datei zurueck."""
+    global _INDEX
+
+    paket = DEBIAN_PAKETE.get(name)
+    if not paket:
+        return None
+    ausgepackt = DEBIANORDNER / paket
+    treffer = _bibliothek_finden(ausgepackt, name)
+    if treffer:
+        return treffer
+
+    if _INDEX is None:
+        _INDEX = _debian_index()
+    ort = _INDEX.get(paket)
+    if not ort:
+        return None
+
+    deb = holen(DEBIAN_SPIEGEL + ort, DEBIANORDNER / ort.rsplit("/", 1)[-1])
+    ausgepackt.mkdir(parents=True, exist_ok=True)
+    subprocess.run(["dpkg-deb", "-x", str(deb), str(ausgepackt)], check=True)
+    return _bibliothek_finden(ausgepackt, name)
+
+
+def _bibliothek_finden(ordner: pathlib.Path, name: str) -> pathlib.Path | None:
+    """Die echte Datei hinter dem Namen - Debian legt Verweise an."""
+    if not ordner.is_dir():
+        return None
+    for datei in ordner.rglob(name):
+        return datei.resolve()
+    return None
 
 
 def _ldd(datei: pathlib.Path) -> list[tuple[str, pathlib.Path | None]]:
@@ -410,7 +530,11 @@ def probelauf(programm: pathlib.Path) -> bool:
     Python sonst das Paket daneben statt das eingebaute.
     """
     pruefung = (
-        "import pathlib, tempfile, sys, verteilerly;"
+        "import ctypes, pathlib, tempfile, sys, verteilerly;"
+        # Die mitgenommenen Bibliotheken muessen sich mit der glibc des
+        # Rechners vertragen, auf dem gestartet wird.
+        "[ctypes.CDLL(n) for n in "
+        "('libxcb-cursor.so.0','libxkbcommon-x11.so.0','libxcb-icccm.so.4')];"
         "from verteilerly.ausgabe import pdf_schreiben;"
         "from verteilerly.modell import Projekt, Verteiler;"
         "from verteilerly.pfade import datenordner;"
