@@ -23,7 +23,11 @@ if ($Bump) {
 }
 # Einzige Quelle der Wahrheit: verteilerly/version.py (dieselbe, die auch die
 # Spec liest - ein direkter PyInstaller-Aufruf benennt die Datei also genauso).
-$Version = (py -3 -c "import re,pathlib; print(re.search('VERSION = \"([^\"]+)\"', pathlib.Path('verteilerly/version.py').read_text()).group(1))").Trim()
+$Version = [regex]::Match(
+    (Get-Content -Raw -Path "verteilerly/version.py"),
+    'VERSION\s*=\s*"([^"]+)"'
+).Groups[1].Value
+if (-not $Version) { throw "Keine VERSION in verteilerly/version.py gefunden." }
 
 Write-Host "==== Abhaengigkeiten sicherstellen ===="
 py -3 -m pip install --upgrade pip pyinstaller

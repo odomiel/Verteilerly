@@ -64,7 +64,9 @@ excludes = [
     "PySide6.QtSql",
     "PySide6.QtTest",
     "tkinter",
-    "PIL",
+    # PIL/Pillow NICHT ausschliessen: reportlab.lib.utils importiert es beim
+    # Laden von reportlab.lib.colors - ohne Pillow bricht die .exe beim ersten
+    # Import des Hauptfensters ab (ModuleNotFoundError: No module named 'PIL').
     "numpy",
     "pytest",
     "pip",

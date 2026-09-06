@@ -101,6 +101,28 @@ class TestSpec(unittest.TestCase):
                 self.assertIn(modul, heraus)
         self.assertNotIn("PySide6.QtWidgets", heraus)
 
+    def test_pillow_bleibt_drin(self):
+        """Beim Windows-Build gefunden: ohne Pillow startet die .exe nicht.
+
+        reportlab.lib.colors zieht über reportlab.lib.utils PIL nach - wird
+        es ausgeschlossen, bricht der erste Import des Hauptfensters mit
+        ModuleNotFoundError ab.
+        """
+        self.assertNotIn("PIL", self.aufrufe["analysis"]["excludes"])
+        self.assertNotIn("Pillow", self.aufrufe["analysis"]["excludes"])
+
+    def test_reportlab_zieht_pillow_wirklich_nach(self):
+        """Die Begründung für den Test darüber - nicht nur behauptet."""
+        import subprocess
+
+        ergebnis = subprocess.run(
+            [sys.executable, "-c",
+             "import sys; from reportlab.lib.colors import HexColor;"
+             "print(any(m.startswith('PIL') for m in sys.modules))"],
+            capture_output=True, text=True, cwd=str(WURZEL),
+        )
+        self.assertEqual(ergebnis.stdout.strip(), "True", ergebnis.stderr)
+
 
 class TestPowershellSkript(unittest.TestCase):
     @classmethod
@@ -141,6 +163,16 @@ class TestWindowsangaben(unittest.TestCase):
 
 class TestSelbstbericht(unittest.TestCase):
     """Den liest der Probelauf des Bauskripts."""
+
+    def test_startmodul_nutzt_absolute_importe(self):
+        """Beim Windows-Build gefunden: relative Importe tragen im Bundle nicht.
+
+        PyInstaller startet __main__.py als Skript, nicht als Teil des
+        Pakets - „from .pfade import …“ scheitert dann.
+        """
+        quelle = (WURZEL / "verteilerly" / "__main__.py").read_text(encoding="utf-8")
+        self.assertNotIn("from .", quelle)
+        self.assertIn("from verteilerly import pfade", quelle)
 
     def test_bericht_nennt_fassung_und_bestand(self):
         with tempfile.TemporaryDirectory() as ordner:

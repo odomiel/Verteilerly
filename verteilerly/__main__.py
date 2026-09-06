@@ -13,11 +13,11 @@ def selbsttest(ziel: pathlib.Path | None = None) -> int:
     gebaut. Der Bericht geht deshalb in eine Datei, damit das Bauskript
     das fertige Programm einmal wirklich starten und nachsehen kann.
     """
-    from . import pfade
-    from .blattvorlagen import Blattvorlagen
-    from .farbcodes import Kabeltypen
-    from .version import VERSION
-    from .vorlagen import Vorlagen
+    from verteilerly import pfade
+    from verteilerly.blattvorlagen import Blattvorlagen
+    from verteilerly.farbcodes import Kabeltypen
+    from verteilerly.version import VERSION
+    from verteilerly.vorlagen import Vorlagen
 
     zeilen = [f"version={VERSION}", f"python={sys.version.split()[0]}"]
     try:
@@ -55,8 +55,8 @@ def main() -> int:
 
     from PySide6.QtWidgets import QApplication
 
-    from .gui.hauptfenster import Hauptfenster
-    from .version import VERSION
+    from verteilerly.gui.hauptfenster import Hauptfenster
+    from verteilerly.version import VERSION
 
     anwendung = QApplication(sys.argv)
     anwendung.setApplicationName("Verteilerly")
