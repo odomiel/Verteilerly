@@ -29,11 +29,15 @@ daten/              Liegt neben dem Programm und ist frei erweiterbar
   vorlagen/         Eine YAML-Datei je Verteilervorlage
   kabeltypen/       Farbfolgen der Kabeltypen
   blattvorlagen/    Wie die Ausgabe aussieht
+build_windows.ps1   Windows: eine einzelne .exe
+Verteilerly.spec    Das Rezept dafür — PyInstaller liest es
+BUILD_WINDOWS.md    Voraussetzungen und Ablauf des Windows-Builds
+assets/             Programmsymbol als .ico und .png
 werkzeuge/          Release und Verpacken
   bauen.py          Ein Aufruf, zwei Plattformen
-  exe.py            Windows: eine einzelne .exe
-  bauen.bat         Dasselbe per Doppelklick unter Windows
   appimage.py       Linux: AppImage mit Python und Qt darin
+  symboldatei.py    Zeichnet das Symbol in assets/
+  windowsangaben.py Was Windows unter Eigenschaften anzeigt
   release.py        Nächste Version aus den Git-Tags
 tests/              unittest, offscreen - kein pytest, kein Linter
 ```
@@ -154,28 +158,25 @@ die mitgenommenen Bibliotheken, legt ein PDF an und prüft, dass dabei
 wirklich das eingebaute Paket und die mitgelieferten Daten benutzt werden
 — nicht der Quellbaum daneben.
 
-**Windows — eine einzelne `.exe`.** `werkzeuge/exe.py` packt mit
-PyInstaller `--onefile --windowed`: keine Installation, keine
-Laufzeitumgebung daneben, kein Konsolenfenster, keine Registry-Einträge.
-Python, Qt und die mitgelieferten Vorlagen stecken in der
-Datei; beim ersten Start legt das Programm sie in einen Ordner `daten/`
-neben der `.exe`, wo sie ohne Auspacken änderbar sind.
+**Windows — eine einzelne `.exe`.** Gebaut wird über
+`build_windows.ps1`, das Rezept steht in `Verteilerly.spec`:
+`--onefile`, ohne Konsolenfenster, keine Installation, keine
+Registry-Einträge. Ausführlich in **`BUILD_WINDOWS.md`**.
 
-```bat
-py -m pip install -r requirements.txt pyinstaller
-py werkzeuge\exe.py                  ::  oder werkzeuge\bauen.bat doppelklicken
+```powershell
+powershell -ExecutionPolicy Bypass -File build_windows.ps1
+powershell -ExecutionPolicy Bypass -File build_windows.ps1 -Bump   # Version vorher erhöhen
 ```
 
-Die Datei trägt Symbol und Versionsangaben, sodass unter *Eigenschaften*
-ablesbar ist, welcher Stand weitergegeben wurde. Nach dem Bauen startet
-das Skript die `.exe` einmal mit `--selbsttest` und liest ihren Bericht:
-Fassung, Qt-Version, Arbeitsordner und die Zahl der gefundenen Vorlagen,
-Blattvorlagen und Kabeltypen.
+Heraus kommt `auslieferung\Verteilerly_<Version>.exe`. Die Version im
+Namen liest die Spec selbst aus `verteilerly/version.py` — ein direkter
+PyInstaller-Aufruf benennt die Datei also genauso. Symbol und
+Versionsangaben sind eingebettet, sodass unter *Eigenschaften* ablesbar
+ist, welcher Stand weitergegeben wurde. Nach dem Bauen startet das Skript
+die `.exe` einmal mit `--selbsttest` und liest ihren Bericht.
 
 Gebaut werden muss **unter Windows** — PyInstaller packt den Python, der
 es aufruft, und übersetzt nicht über die Plattform hinweg.
-`werkzeuge/exe.py --zeigen` führt den Aufruf auch anderswo vor, ohne zu
-bauen.
 
 **Daten.** Vorlagen und Kabeltypen sollen ohne Auspacken änderbar sein.
 Beim ersten Start legt das Programm die mitgelieferten Dateien deshalb in

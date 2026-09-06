@@ -8,7 +8,7 @@ Ein Aufruf, zwei Plattformen - der Unterschied liegt nur im Verpacken:
     python3 werkzeuge/bauen.py --appimage erzwingt den Linux-Weg
     python3 werkzeuge/bauen.py --sauber   Bau- und Zielordner vorher leeren
 
-Windows: werkzeuge/exe.py baut eine einzelne .exe mit PyInstaller.
+Windows: build_windows.ps1 baut ueber Verteilerly.spec eine einzelne .exe.
 Linux:   werkzeuge/appimage.py baut ein AppImage, das Python und Qt selbst
          mitbringt.
 
@@ -33,9 +33,27 @@ BAUORDNER = WURZEL / "bau"
 ZIELORDNER = WURZEL / "auslieferung"
 
 
-def weiterreichen(skript: str, argumente: list[str]) -> int:
+def appimage_bauen(argumente: list[str]) -> int:
     return subprocess.run(
-        [sys.executable, str(WURZEL / "werkzeuge" / skript), *argumente]
+        [sys.executable, str(WURZEL / "werkzeuge" / "appimage.py"), *argumente]
+    ).returncode
+
+
+def exe_bauen(argumente: list[str]) -> int:
+    """Reicht an das PowerShell-Skript weiter - dort steht das Rezept."""
+    skript = WURZEL / "build_windows.ps1"
+    if not sys.platform.startswith("win"):
+        print(
+            "Die .exe muss unter Windows gebaut werden - PyInstaller packt den\n"
+            "Python, der es aufruft, und übersetzt nicht über die Plattform\n"
+            "hinweg. Dort dann:\n"
+            f"    powershell -ExecutionPolicy Bypass -File {skript.name}\n"
+            "Siehe BUILD_WINDOWS.md.",
+            file=sys.stderr,
+        )
+        return 1
+    return subprocess.run(
+        ["powershell", "-ExecutionPolicy", "Bypass", "-File", str(skript), *argumente]
     ).returncode
 
 
@@ -56,7 +74,7 @@ def main() -> int:
         not argumente.appimage and sys.platform.startswith("win")
     )
     print(f"Verteilerly {VERSION} — {'Windows-.exe' if windows else 'AppImage'}")
-    return weiterreichen("exe.py" if windows else "appimage.py", rest)
+    return exe_bauen(rest) if windows else appimage_bauen(rest)
 
 
 if __name__ == "__main__":
