@@ -10,7 +10,14 @@ import unittest
 
 from verteilerly.farbcodes import KabeltypFehler, Kabeltypen, farben_eintragen
 from verteilerly.modell import Verteiler
-from verteilerly.vorlagen import Vorlagen, VorlagenFehler, vorlage_aus_yaml
+from verteilerly.vorlagen import (
+    Vorlage,
+    Vorlagen,
+    VorlagenFehler,
+    kennung_bilden,
+    vorlage_aus_yaml,
+    vorlage_speichern,
+)
 
 DATEN = pathlib.Path(__file__).resolve().parent.parent / "daten"
 
@@ -63,6 +70,57 @@ class TestVorlagen(unittest.TestCase):
             )
             geladen = Vorlagen.laden(pathlib.Path(ordner))
             self.assertEqual(geladen.holen("eigen").da_gesamt, 120)
+
+
+class TestVorlageSpeichern(unittest.TestCase):
+    """Eine eigene Grundstruktur wird zur Vorlage."""
+
+    def setUp(self):
+        self.ordner = tempfile.TemporaryDirectory()
+        self.addCleanup(self.ordner.cleanup)
+        self.ziel = pathlib.Path(self.ordner.name)
+
+    def test_kennung_aus_dem_namen(self):
+        self.assertEqual(kennung_bilden("120 DA — Bucht Süd (groß)"), "120-da-bucht-sued-gross")
+        self.assertEqual(kennung_bilden("  "), "vorlage")
+
+    def test_geometrie_eines_verteilers_wird_vorlage(self):
+        v = Verteiler.aus_geometrie(2, 6, 10)
+        vorlage = Vorlage.aus_verteiler(v, "Keller")
+        self.assertEqual(
+            (vorlage.reihen, vorlage.leisten_je_reihe, vorlage.da_je_leiste), (2, 6, 10)
+        )
+        self.assertEqual(vorlage.id, "keller")
+
+    def test_ungleicher_verteiler_taugt_nicht(self):
+        """Drei Zahlen beschreiben keine ungleich besetzten Reihen."""
+        v = Verteiler.aus_geometrie(2, 6, 10)
+        v.reihen[1].leisten.pop()
+        with self.assertRaises(VorlagenFehler):
+            Vorlage.aus_verteiler(v, "Krumm")
+
+    def test_gespeicherte_vorlage_wird_wieder_gelesen(self):
+        vorlage = Vorlage.aus_verteiler(
+            Verteiler.aus_geometrie(3, 4, 8), "Werkstatt", beschreibung="Halle 2"
+        )
+        datei = vorlage_speichern(vorlage, self.ziel)
+        self.assertTrue(datei.exists())
+        zurueck = Vorlagen.laden(self.ziel).holen("werkstatt")
+        self.assertEqual(zurueck, vorlage)
+
+    def test_vorhandene_vorlage_nur_auf_ansage_ueberschreiben(self):
+        vorlage = Vorlage.aus_verteiler(Verteiler.aus_geometrie(1, 4, 10), "Keller")
+        vorlage_speichern(vorlage, self.ziel)
+        with self.assertRaises(VorlagenFehler):
+            vorlage_speichern(vorlage, self.ziel)
+        self.assertTrue(vorlage_speichern(vorlage, self.ziel, ueberschreiben=True))
+
+    def test_aufnehmen_zeigt_die_vorlage_sofort(self):
+        vorlagen = Vorlagen.laden(self.ziel)
+        vorlage = Vorlage.aus_verteiler(Verteiler.aus_geometrie(1, 2, 20), "Klein")
+        vorlagen.aufnehmen(vorlage)
+        self.assertIn("klein", vorlagen)
+        self.assertEqual(vorlagen.holen("klein"), vorlage)
 
 
 class TestKabeltypen(unittest.TestCase):

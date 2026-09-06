@@ -28,6 +28,7 @@ from .dialoge import (
     KabelDialog,
     NeuerVerteilerDialog,
     UeberlaufDialog,
+    als_vorlage_speichern,
 )
 from .leistenansicht import LeistenAnsicht
 from .symbol import symbol_icon
@@ -143,6 +144,9 @@ class Hauptfenster(QMainWindow):
         self.aktion_kabel_weg = aktion(
             "Kabel &entfernen", self.kabel_entfernen, "Ctrl+Shift+K", True, bearbeiten
         )
+        self.aktion_vorlage = aktion(
+            "Als &Vorlage speichern…", self.vorlage_ablegen, menue=bearbeiten
+        )
         bearbeiten.addSeparator()
         aktion(
             "&Briefkopf und eigene Felder…",
@@ -257,6 +261,7 @@ class Hauptfenster(QMainWindow):
             self.aktion_pdf,
             self.aktion_xlsx,
             self.aktion_csv,
+            self.aktion_vorlage,
         ):
             handlung.setEnabled(projekt is not None)
         self._titel_setzen()
@@ -279,7 +284,9 @@ class Hauptfenster(QMainWindow):
     def neuer_verteiler(self) -> None:
         if not self._darf_verwerfen():
             return
-        dialog = NeuerVerteilerDialog(self.vorlagen, self)
+        dialog = NeuerVerteilerDialog(
+            self.vorlagen, self, self._vorlagenordner()
+        )
         if dialog.exec() != NeuerVerteilerDialog.DialogCode.Accepted:
             return
         self._projekt_setzen(Projekt(verteiler=dialog.verteiler()), None)
@@ -462,6 +469,27 @@ class Hauptfenster(QMainWindow):
         self._kabel_angeklickt(kabel)
 
     # -- Sonstiges ---------------------------------------------------------
+
+    def _vorlagenordner(self):
+        """Wohin eigene Vorlagen kommen - None, wenn dort nichts geht."""
+        try:
+            return pfade.vorlagenordner()
+        except OSError:
+            return None
+
+    def vorlage_ablegen(self) -> None:
+        """Die Geometrie des offenen Verteilers als Vorlage sichern."""
+        if self.projekt is None:
+            return
+        verteiler = self.projekt.verteiler
+        als_vorlage_speichern(
+            self,
+            verteiler,
+            self.vorlagen,
+            self._vorlagenordner(),
+            vorschlag=verteiler.name or f"{verteiler.da_gesamt} DA",
+            beschreibung=f"Nach dem Verteiler {verteiler.name}." if verteiler.name else "",
+        )
 
     def briefkopf_bearbeiten(self) -> None:
         if self.projekt is None:

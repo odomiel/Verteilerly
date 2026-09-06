@@ -25,7 +25,7 @@ verteilerly/        Programmpaket
     dialoge.py      Neuer Verteiler, Kabel, Überlauf, Briefkopf
     thema.py        Farbsätze hell und dunkel
 daten/              Liegt neben dem Programm und ist frei erweiterbar
-  vorlagen/         Eine YAML-Datei je Vorlage
+  vorlagen/         Eine YAML-Datei je Vorlage, auch die selbst gesicherten
   kabeltypen/       Farbfolgen der Kabeltypen
 werkzeuge/          Release und Verpacken
   bauen.py          Eine Datei je Plattform
@@ -55,6 +55,13 @@ Programm starten:
 ```
 
 ## Stand
+
+Ein neuer Verteiler entsteht aus einer Vorlage oder aus eigenen Angaben;
+die DA je Leiste stehen dort als 8, 10 und 20 DA zur Wahl, alles andere
+wird eingetippt. Eine so gebaute Grundstruktur lässt sich als Vorlage
+ablegen — im Dialog selbst oder später über *Bearbeiten ▸ Als Vorlage
+speichern*. Sie landet als YAML-Datei im Vorlagenordner und steht sofort
+im Menü.
 
 Der Editor zeigt links die Verteilerübersicht und rechts die Belegung der
 gewählten Leiste. Ein Doppelklick auf eine freie Doppelader legt ein Kabel

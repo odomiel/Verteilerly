@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QGroupBox,
     QHBoxLayout,
+    QInputDialog,
     QLabel,
     QLineEdit,
     QMessageBox,
@@ -30,7 +31,11 @@ from ..modell import (
     Projekt,
     Verteiler,
 )
-from ..vorlagen import Vorlagen
+from ..vorlagen import Vorlage, VorlagenFehler, Vorlagen, vorlage_speichern
+
+
+# Die gebraeuchlichen Leistengroessen; alles andere wird eingetippt.
+DA_VORGABEN = (8, 10, 20)
 
 
 def _knopfleiste(dialog: QDialog) -> QDialogButtonBox:
@@ -44,13 +49,71 @@ def _knopfleiste(dialog: QDialog) -> QDialogButtonBox:
     return knoepfe
 
 
+def als_vorlage_speichern(
+    parent: QWidget,
+    verteiler: Verteiler,
+    vorlagen: Vorlagen,
+    ordner,
+    vorschlag: str = "",
+    beschreibung: str = "",
+) -> Vorlage | None:
+    """Fragt nach einem Namen und legt die Geometrie als Vorlage ab.
+
+    Gibt die gespeicherte Vorlage zurueck oder None, wenn abgebrochen
+    wurde oder etwas nicht ging.
+    """
+    if ordner is None:
+        return None
+    try:
+        Vorlage.aus_verteiler(verteiler, "Probe")
+    except VorlagenFehler as fehler:
+        QMessageBox.warning(parent, "Nicht als Vorlage geeignet", str(fehler))
+        return None
+
+    name, gewaehlt = QInputDialog.getText(
+        parent, "Als Vorlage speichern", "Name der Vorlage:", text=vorschlag
+    )
+    if not gewaehlt or not name.strip():
+        return None
+
+    vorlage = Vorlage.aus_verteiler(verteiler, name.strip(), beschreibung=beschreibung)
+    ueberschreiben = False
+    if vorlage.id in vorlagen:
+        antwort = QMessageBox.question(
+            parent,
+            "Vorlage überschreiben?",
+            f"Es gibt schon eine Vorlage „{vorlagen.holen(vorlage.id).name}“. "
+            "Soll sie ersetzt werden?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if antwort != QMessageBox.StandardButton.Yes:
+            return None
+        ueberschreiben = True
+
+    try:
+        ziel = vorlage_speichern(vorlage, ordner, ueberschreiben)
+    except VorlagenFehler as fehler:
+        QMessageBox.warning(parent, "Vorlage nicht gespeichert", str(fehler))
+        return None
+
+    vorlagen.aufnehmen(vorlage)
+    QMessageBox.information(parent, "Vorlage gespeichert", f"{vorlage.name}\n{ziel}")
+    return vorlage
+
+
 class NeuerVerteilerDialog(QDialog):
     """Vorlage wählen oder eigene Geometrie angeben."""
 
-    def __init__(self, vorlagen: Vorlagen, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        vorlagen: Vorlagen,
+        parent: QWidget | None = None,
+        vorlagenordner=None,
+    ) -> None:
         super().__init__(parent)
         self.setWindowTitle("Neuer Verteiler")
         self.vorlagen = vorlagen
+        self.vorlagenordner = vorlagenordner
 
         self.name = QLineEdit()
         self.name.setPlaceholderText("z. B. Verteiler Keller")
@@ -87,18 +150,44 @@ class NeuerVerteilerDialog(QDialog):
         self.leisten = QSpinBox()
         self.leisten.setRange(1, 60)
         self.leisten.setValue(4)
+        self.dawahl = QComboBox()
+        for anzahl in DA_VORGABEN:
+            self.dawahl.addItem(f"{anzahl} DA", anzahl)
+        self.dawahl.addItem("Benutzerdefiniert", 0)
+        self.dawahl.setCurrentIndex(DA_VORGABEN.index(10))
+        self.dawahl.currentIndexChanged.connect(self._da_wahl_gewechselt)
+
         self.da = QSpinBox()
         self.da.setRange(1, 100)
         self.da.setValue(10)
+        self.da.setSuffix(" DA")
+        self.da.setVisible(False)
+
+        dazeile = QHBoxLayout()
+        dazeile.setContentsMargins(0, 0, 0, 0)
+        dazeile.addWidget(self.dawahl)
+        dazeile.addWidget(self.da)
+        dablock = QWidget()
+        dablock.setLayout(dazeile)
+
         for feld in (self.reihen, self.leisten, self.da):
             feld.valueChanged.connect(self._summe_zeigen)
         self.summe = QLabel()
 
+        self.als_vorlage = QPushButton("Als Vorlage speichern…")
+        self.als_vorlage.setToolTip(
+            "Legt diese Geometrie als Vorlage ab, damit sie beim nächsten "
+            "Verteiler oben zur Wahl steht."
+        )
+        self.als_vorlage.clicked.connect(self.vorlage_ablegen)
+        self.als_vorlage.setEnabled(vorlagenordner is not None)
+
         eigenform = QFormLayout()
         eigenform.addRow("Reihen:", self.reihen)
         eigenform.addRow("Leisten je Reihe:", self.leisten)
-        eigenform.addRow("DA je Leiste:", self.da)
+        eigenform.addRow("DA je Leiste:", dablock)
         eigenform.addRow("", self.summe)
+        eigenform.addRow("", self.als_vorlage)
         eigenkasten = QGroupBox()
         eigenkasten.setLayout(eigenform)
 
@@ -127,10 +216,59 @@ class NeuerVerteilerDialog(QDialog):
                 f"{vorlage.leisten_gesamt} Leisten, {vorlage.da_gesamt} DA"
             )
 
+    def _da_wahl_gewechselt(self) -> None:
+        """„Benutzerdefiniert“ blendet das Zahlenfeld ein."""
+        eigen = not self.dawahl.currentData()
+        self.da.setVisible(eigen)
+        if not eigen:
+            self.da.setValue(self.dawahl.currentData())
+        self._summe_zeigen()
+
+    def da_je_leiste(self) -> int:
+        return self.dawahl.currentData() or self.da.value()
+
     def _summe_zeigen(self) -> None:
-        gesamt = self.reihen.value() * self.leisten.value() * self.da.value()
+        gesamt = self.reihen.value() * self.leisten.value() * self.da_je_leiste()
         leisten = self.reihen.value() * self.leisten.value()
         self.summe.setText(f"ergibt {leisten} Leisten, {gesamt} DA")
+
+    def vorlage_ablegen(self) -> None:
+        """Sichert die eingestellte Geometrie als Vorlage."""
+        da = self.da_je_leiste()
+        vorlage = als_vorlage_speichern(
+            self,
+            self.geometrie(),
+            self.vorlagen,
+            self.vorlagenordner,
+            vorschlag=(
+                f"{self.reihen.value() * self.leisten.value() * da} DA - "
+                f"{self.leisten.value()} Leisten zu {da} DA"
+            ),
+            beschreibung=(
+                f"{self.reihen.value()} Reihen zu je {self.leisten.value()} "
+                f"Leisten mit {da} Doppeladern."
+            ),
+        )
+        if vorlage is not None:
+            self._vorlagenliste_auffrischen(vorlage.id)
+
+    def _vorlagenliste_auffrischen(self, auswahl: str) -> None:
+        self.vorlagenwahl.blockSignals(True)
+        self.vorlagenwahl.clear()
+        for vorlage in self.vorlagen.alle:
+            self.vorlagenwahl.addItem(str(vorlage), vorlage.id)
+        stelle = self.vorlagenwahl.findData(auswahl)
+        if stelle >= 0:
+            self.vorlagenwahl.setCurrentIndex(stelle)
+        self.vorlagenwahl.blockSignals(False)
+        self._beschreibung_zeigen()
+
+    def geometrie(self, name: str = "", nummer: str = "") -> Verteiler:
+        """Der Verteiler aus den eigenen Angaben, ohne Vorlage."""
+        return Verteiler.aus_geometrie(
+            self.reihen.value(), self.leisten.value(), self.da_je_leiste(),
+            name, nummer,
+        )
 
     def verteiler(self) -> Verteiler:
         name, nummer = self.name.text().strip(), self.nummer.text().strip()
@@ -138,9 +276,7 @@ class NeuerVerteilerDialog(QDialog):
             return self.vorlagen.holen(self.vorlagenwahl.currentData()).verteiler(
                 name, nummer
             )
-        return Verteiler.aus_geometrie(
-            self.reihen.value(), self.leisten.value(), self.da.value(), name, nummer
-        )
+        return self.geometrie(name, nummer)
 
 
 class KabelDialog(QDialog):

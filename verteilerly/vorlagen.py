@@ -8,7 +8,10 @@ durch Ablegen einer Datei, ohne dass am Programm etwas zu aendern ist.
 
 from __future__ import annotations
 
+import datetime
 import pathlib
+import re
+import unicodedata
 from dataclasses import dataclass
 
 import yaml
@@ -53,8 +56,88 @@ class Vorlage:
     def __str__(self) -> str:
         return f"{self.name} ({self.da_gesamt} DA)"
 
+    @classmethod
+    def aus_verteiler(
+        cls,
+        verteiler: Verteiler,
+        name: str,
+        kennung: str = "",
+        beschreibung: str = "",
+    ) -> Vorlage:
+        """Nimmt die Geometrie eines vorhandenen Verteilers als Vorlage.
+
+        Eine Vorlage sind drei Zahlen - ein Verteiler mit ungleich
+        besetzten Reihen laesst sich damit nicht beschreiben.
+        """
+        if not verteiler.reihen:
+            raise VorlagenFehler("Der Verteiler hat keine Reihen")
+        leisten = {len(r.leisten) for r in verteiler.reihen}
+        da = {l.da_anzahl for l in verteiler.alle_leisten}
+        if len(leisten) > 1 or len(da) > 1:
+            raise VorlagenFehler(
+                "Der Verteiler ist nicht gleichmäßig aufgebaut und taugt "
+                "deshalb nicht als Vorlage"
+            )
+        return cls(
+            id=kennung or kennung_bilden(name),
+            name=name,
+            reihen=len(verteiler.reihen),
+            leisten_je_reihe=leisten.pop(),
+            da_je_leiste=da.pop(),
+            beschreibung=beschreibung,
+        )
+
 
 PFLICHTFELDER = ("id", "name", "reihen", "leisten_je_reihe", "da_je_leiste")
+
+_UMLAUTE = {"ä": "ae", "ö": "oe", "ü": "ue", "ß": "ss"}
+
+
+def kennung_bilden(name: str) -> str:
+    """Aus einem Namen einen brauchbaren Dateinamen machen."""
+    text = name.strip().lower()
+    for zeichen, ersatz in _UMLAUTE.items():
+        text = text.replace(zeichen, ersatz)
+    text = unicodedata.normalize("NFKD", text)
+    text = "".join(z for z in text if not unicodedata.combining(z))
+    text = re.sub(r"[^a-z0-9]+", "-", text).strip("-")
+    return text or "vorlage"
+
+
+def vorlage_als_yaml(vorlage: Vorlage) -> str:
+    """Die Vorlage als Datei, wie sie ein Mensch auch von Hand schriebe."""
+    heute = datetime.date.today().strftime("%d.%m.%Y")
+    inhalt = {
+        "id": vorlage.id,
+        "name": vorlage.name,
+        "beschreibung": vorlage.beschreibung,
+        "reihen": vorlage.reihen,
+        "leisten_je_reihe": vorlage.leisten_je_reihe,
+        "da_je_leiste": vorlage.da_je_leiste,
+    }
+    if vorlage.standard:
+        inhalt["standard"] = True
+    kopf = (
+        f"# Vorlage: {vorlage.leisten_gesamt} Leisten, {vorlage.da_gesamt} DA.\n"
+        f"# Von Verteilerly angelegt am {heute}.\n"
+    )
+    return kopf + yaml.safe_dump(inhalt, allow_unicode=True, sort_keys=False)
+
+
+def vorlage_speichern(
+    vorlage: Vorlage, ordner: pathlib.Path, ueberschreiben: bool = False
+) -> pathlib.Path:
+    """Legt die Vorlage als YAML-Datei im Vorlagenordner ab."""
+    ordner = pathlib.Path(ordner)
+    ziel = ordner / f"{vorlage.id}.yaml"
+    if ziel.exists() and not ueberschreiben:
+        raise VorlagenFehler(f"Es gibt schon eine Vorlage {vorlage.id!r}")
+    try:
+        ordner.mkdir(parents=True, exist_ok=True)
+        ziel.write_text(vorlage_als_yaml(vorlage), encoding="utf-8")
+    except OSError as fehler:
+        raise VorlagenFehler(f"Vorlage nicht gespeichert: {fehler}") from fehler
+    return ziel
 
 
 def vorlage_aus_yaml(inhalt: dict, herkunft: str = "") -> Vorlage:
@@ -96,6 +179,10 @@ class Vorlagen:
             inhalt = yaml.safe_load(datei.read_text(encoding="utf-8")) or {}
             gefunden.append(vorlage_aus_yaml(inhalt, datei.name))
         return cls(gefunden)
+
+    def aufnehmen(self, vorlage: Vorlage) -> None:
+        """Nimmt eine Vorlage in die laufende Sitzung auf."""
+        self._vorlagen[vorlage.id] = vorlage
 
     def __len__(self) -> int:
         return len(self._vorlagen)
