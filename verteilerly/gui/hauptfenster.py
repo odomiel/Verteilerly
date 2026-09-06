@@ -435,9 +435,30 @@ class Hauptfenster(QMainWindow):
         gefuellt = farben_eintragen(verteiler, kabel, self.kabeltypen)
         self._belegung_geaendert()
         self.leistenansicht.aktualisieren()
-        self.statusBar().showMessage(
-            f"Kabel aufgelegt: {kabel.da_aufgelegt} DA"
-            + (f", {gefuellt} Adernfarben eingetragen" if gefuellt else "")
+
+        meldung = f"Kabel aufgelegt: {kabel.da_aufgelegt} DA"
+        if gefuellt:
+            meldung += f", {gefuellt} Adernfarben eingetragen"
+        meldung += self._lagenhinweis(kabel)
+        self.statusBar().showMessage(meldung, 12000)
+
+    def _lagenhinweis(self, kabel) -> str:
+        """Warnt, wenn die Lagenaufteilung dieser Kabelgröße fehlt.
+
+        Sonst bliebe unbemerkt, dass ab der zweiten Lage keine rote a-Ader
+        gesetzt wurde - eine falsche Farbe fällt auf dem Blatt niemandem auf.
+        """
+        if not kabel.kabeltyp:
+            return ""
+        try:
+            typ = self.kabeltypen.holen(kabel.kabeltyp)
+        except ModellFehler:
+            return ""
+        if typ.lagen_bekannt(kabel.da_gesamt):
+            return ""
+        return (
+            f" — Achtung: für {kabel.da_gesamt or kabel.da_aufgelegt} DA ist keine "
+            "Lagenaufteilung hinterlegt, nur die erste Doppelader ist rot"
         )
 
     def _ueberlauf_klaeren(self, angaben: dict, ueberlauf: UeberlaufFehler):

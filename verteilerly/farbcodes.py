@@ -48,18 +48,56 @@ class Kabeltyp:
     # -- Regeln ------------------------------------------------------------
 
     def _lagen(self, kabel_da: int, da_gesamt: int | None) -> tuple[str, str]:
+        """Lagenverseilung: die b-Ader laeuft durch, die a-Ader markiert die Lage.
+
+        Die b-Ader wiederholt ihre Folge endlos - bl, ge, gn, br, sw und
+        wieder von vorn. Die a-Ader ist weiss, ausser bei der ersten
+        Doppelader einer Lage; dort ist sie rot. Wo eine Lage beginnt,
+        haengt an der Groesse des Kabels und steht in der Tabelle
+        ``lagenbeginn``: beim 10x2 sind das die Doppeladern 1 und 9, beim
+        16x2 die 1 und 12. Eine feste Lagenlaenge gibt es nicht.
+        """
         folge = self.daten["b_folge"]
-        lagenlaenge = int(self.daten.get("lagenlaenge", len(folge)))
-        stelle = (kabel_da - 1) % lagenlaenge
+        b = folge[(kabel_da - 1) % len(folge)]
+        a = self.daten.get("a_farbe") or self.daten.get("a_sonst", "")
+        if kabel_da in self.lagenbeginn(da_gesamt):
+            a = self.daten["a_lagenbeginn"]
 
-        a = self.daten["a_lagenbeginn"] if stelle == 0 else self.daten["a_sonst"]
-        b = folge[stelle % len(folge)]
-
-        # Sonderfall 2x2: die erste b-Ader ist schwarz statt blau.
-        sonderfall = self.daten.get("b_erste_bei_2da")
-        if sonderfall and da_gesamt == 2 and kabel_da == 1:
-            b = sonderfall
+        ausnahme = self._ausnahme(kabel_da, da_gesamt)
+        if ausnahme:
+            a, b = ausnahme[0] or a, ausnahme[1] or b
         return a, b
+
+    def lagenbeginn(self, da_gesamt: int | None) -> set[int]:
+        """Bei welchen Doppeladern dieses Kabels eine Lage beginnt."""
+        tabelle = self.daten.get("lagenbeginn") or {}
+        try:
+            return set(tabelle[int(da_gesamt)])
+        except (KeyError, TypeError, ValueError):
+            return {1}
+
+    def lagen_bekannt(self, da_gesamt: int | None) -> bool:
+        """Ist die Lagenaufteilung fuer diese Kabelgroesse hinterlegt?
+
+        Ist sie es nicht, bleibt nur die erste Doppelader rot - geraten
+        wird nicht, denn eine falsche Farbe faellt niemandem auf.
+        """
+        if self.regel != "lagen":
+            return True
+        tabelle = self.daten.get("lagenbeginn") or {}
+        try:
+            return int(da_gesamt) in tabelle
+        except (TypeError, ValueError):
+            return False
+
+    def _ausnahme(self, kabel_da: int, da_gesamt: int | None) -> list | None:
+        """Einzelne Doppeladern, die aus der Regel fallen (etwa das 2x2)."""
+        alle = self.daten.get("ausnahmen") or {}
+        try:
+            eintrag = alle[int(da_gesamt)][kabel_da]
+        except (KeyError, TypeError, ValueError):
+            return None
+        return list(eintrag) if isinstance(eintrag, (list, tuple)) else None
 
     def _sternvierer(self, kabel_da: int) -> tuple[str, str]:
         grundfarben = self.daten["grundfarben"]

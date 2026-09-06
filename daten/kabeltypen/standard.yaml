@@ -4,8 +4,9 @@
 # Eigene Typen einfach ergaenzen - eine Programmaenderung ist nicht noetig.
 #
 # Regeln:
-#   lagen        - Lagenverseilung: a-Ader zu Lagenbeginn eine eigene Farbe,
-#                  sonst Grundfarbe; b-Ader laeuft eine feste Folge durch.
+#   lagen        - Lagenverseilung: die b-Ader laeuft ihre Folge endlos
+#                  durch, die a-Ader ist nur zu Lagenbeginn rot. Wo eine
+#                  Lage beginnt, haengt an der Kabelgroesse (Tabelle).
 #   sternvierer  - Grundfarbe je Vierer, Adern durch Ringe unterschieden.
 #   liste        - feste Adernliste, paarweise auf a und b verteilt.
 
@@ -26,17 +27,38 @@ kuerzel:
 kabeltypen:
 
   - id: jystyv
-    name: "J-Y(St)Y (Lagenverseilung)"
+    name: "J-Y(St)Y / I-Y(St)Y (Lagenverseilung)"
     beschreibung: >-
       Fernmelde-Installationskabel. Die b-Ader laeuft bl - ge - gn - br - sw
-      und wiederholt sich je Lage; die a-Ader ist zu Lagenbeginn rot, sonst
-      weiss. Beim 2x2-Kabel ist die erste b-Ader abweichend schwarz.
+      endlos durch; die a-Ader ist weiss, ausser bei der ersten Doppelader
+      einer Lage - dort ist sie rot. Eine Lage ist nicht fuenf Doppeladern
+      lang: beim 10x2 beginnt die zweite Lage bei der 9., beim 16x2 bei der
+      12. Doppelader. Quelle: Elektronik-Kompendium, "Installationskabel
+      auszaehlen".
     regel: lagen
-    lagenlaenge: 5
     a_lagenbeginn: rt
-    a_sonst: ws
+    a_farbe: ws
     b_folge: [bl, ge, gn, br, sw]
-    b_erste_bei_2da: sw
+
+    # Bei welcher Doppelader eine Lage beginnt - je Kabelgroesse.
+    # Je nach Hersteller kann die Aufteilung abweichen; dann hier aendern.
+    lagenbeginn:
+      2:  [1]
+      4:  [1]
+      6:  [1]
+      10: [1, 9]
+      16: [1, 12]
+      20: [1, 14]
+      24: [1, 15, 23]
+      50: [1, 22, 37, 47]
+
+    # Einzelne Doppeladern, die aus der Regel fallen.
+    # Leerer Eintrag heisst: bleibt, wie die Regel es sagt.
+    ausnahmen:
+      2:                       # das 2x2 ist die bekannte Ausnahme
+        1: [rt, sw]
+      20:
+        20: ["rt/ws", ""]      # letzte Doppelader rot-weiss
 
   - id: fernmeldekabel
     name: "Fernmeldekabel (Sternvierer, buendelverseilt)"

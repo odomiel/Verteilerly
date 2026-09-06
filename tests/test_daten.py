@@ -146,7 +146,7 @@ class TestKabeltypen(unittest.TestCase):
         """Leiste 1 aus der rangierten Mustertabelle."""
         typ = self.typen.holen("jystyv")
         self.assertEqual(
-            [typ.farben(da, 8) for da in range(1, 5)],
+            [typ.farben(da, 4) for da in range(1, 5)],
             [("rt", "bl"), ("ws", "ge"), ("ws", "gn"), ("ws", "br")],
         )
 
@@ -158,10 +158,69 @@ class TestKabeltypen(unittest.TestCase):
             [("rt", "sw"), ("ws", "ge")],
         )
 
-    def test_jystyv_zweite_lage_wiederholt_sich(self):
+    def test_jystyv_ganze_tabelle(self):
+        """Die Farbtabelle des Elektronik-Kompendiums, Größe für Größe.
+
+        Die b-Ader läuft endlos durch; rot ist die a-Ader nur, wo eine
+        neue Lage beginnt - beim 10x2 also bei der 9., nicht bei der 6.
+        Doppelader.
+        """
         typ = self.typen.holen("jystyv")
-        self.assertEqual(typ.farben(6, 20), ("rt", "bl"))
-        self.assertEqual(typ.farben(10, 20), ("ws", "sw"))
+        erwartet = {
+            2: [("rt", "sw"), ("ws", "ge")],
+            4: [("rt", "bl"), ("ws", "ge"), ("ws", "gn"), ("ws", "br")],
+            6: [("rt", "bl"), ("ws", "ge"), ("ws", "gn"), ("ws", "br"),
+                ("ws", "sw"), ("ws", "bl")],
+            10: [("rt", "bl"), ("ws", "ge"), ("ws", "gn"), ("ws", "br"),
+                 ("ws", "sw"), ("ws", "bl"), ("ws", "ge"), ("ws", "gn"),
+                 ("rt", "br"), ("ws", "sw")],
+            16: [("rt", "bl"), ("ws", "ge"), ("ws", "gn"), ("ws", "br"),
+                 ("ws", "sw"), ("ws", "bl"), ("ws", "ge"), ("ws", "gn"),
+                 ("ws", "br"), ("ws", "sw"), ("ws", "bl"), ("rt", "ge"),
+                 ("ws", "gn"), ("ws", "br"), ("ws", "sw"), ("ws", "bl")],
+            20: [("rt", "bl"), ("ws", "ge"), ("ws", "gn"), ("ws", "br"),
+                 ("ws", "sw"), ("ws", "bl"), ("ws", "ge"), ("ws", "gn"),
+                 ("ws", "br"), ("ws", "sw"), ("ws", "bl"), ("ws", "ge"),
+                 ("ws", "gn"), ("rt", "br"), ("ws", "sw"), ("ws", "bl"),
+                 ("ws", "ge"), ("ws", "gn"), ("ws", "br"), ("rt/ws", "sw")],
+        }
+        for gesamt, farben in erwartet.items():
+            for da, (a, b) in enumerate(farben, 1):
+                with self.subTest(kabel=f"{gesamt}x2", da=da):
+                    self.assertEqual(typ.farben(da, gesamt), (a, b))
+
+    def test_jystyv_die_sechste_ist_nicht_rot(self):
+        """Der gemeldete Fehler: beim 10x2 ging es bei DA 6 mit rt/bl weiter."""
+        typ = self.typen.holen("jystyv")
+        self.assertEqual(typ.farben(6, 10), ("ws", "bl"))
+        self.assertEqual(typ.farben(9, 10), ("rt", "br"))
+
+    def test_jystyv_grosse_kabel(self):
+        typ = self.typen.holen("jystyv")
+        self.assertEqual(typ.farben(15, 24), ("rt", "sw"))
+        self.assertEqual(typ.farben(23, 24), ("rt", "gn"))
+        for da in (22, 37, 47):
+            with self.subTest(da=da):
+                self.assertEqual(typ.farben(da, 50), ("rt", "ge"))
+
+    def test_lagenbeginn_haengt_an_der_kabelgroesse(self):
+        typ = self.typen.holen("jystyv")
+        self.assertEqual(typ.lagenbeginn(10), {1, 9})
+        self.assertEqual(typ.lagenbeginn(16), {1, 12})
+        self.assertEqual(typ.lagenbeginn(50), {1, 22, 37, 47})
+
+    def test_unbekannte_groesse_wird_nicht_geraten(self):
+        """Lieber nur die erste Doppelader rot als eine falsche."""
+        typ = self.typen.holen("jystyv")
+        self.assertFalse(typ.lagen_bekannt(12))
+        self.assertEqual(typ.lagenbeginn(12), {1})
+        self.assertEqual(typ.farben(9, 12), ("ws", "br"))
+        self.assertTrue(typ.lagen_bekannt(10))
+
+    def test_ohne_kabelgroesse_nur_die_erste_lage(self):
+        typ = self.typen.holen("jystyv")
+        self.assertEqual(typ.farben(1, None), ("rt", "bl"))
+        self.assertEqual(typ.farben(9, None), ("ws", "br"))
 
     def test_sternvierer_ringe(self):
         typ = self.typen.holen("fernmeldekabel")

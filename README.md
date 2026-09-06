@@ -203,6 +203,14 @@ python3 werkzeuge/release.py --setzen   # version.py schreiben, committen, Tag s
 
 ## Kabeltyp ergänzen
 
-Eine Datei in `daten/kabeltypen/` anlegen oder erweitern — am Programm ist
-nichts zu ändern. Drei Regeln stehen zur Verfügung: `lagen` (J-Y(St)Y),
-`sternvierer` (Fernmeldekabel mit Ringmarkierung) und `liste` (DIN 47100).
+Eine Datei in `kabeltypen/` im Arbeitsordner anlegen oder erweitern — am
+Programm ist nichts zu ändern. Drei Regeln stehen zur Verfügung: `lagen`
+(J-Y(St)Y), `sternvierer` (Fernmeldekabel mit Ringmarkierung) und `liste`
+(DIN 47100).
+
+Bei `lagen` läuft die b-Ader ihre Folge endlos durch; die a-Ader ist nur
+zu Beginn einer Lage rot. **Eine Lage ist nicht fünf Doppeladern lang** —
+wo sie beginnt, hängt an der Kabelgröße und steht als Tabelle in der
+Datei (10×2: DA 1 und 9; 16×2: DA 1 und 12). Für eine nicht hinterlegte
+Größe bleibt nur die erste Doppelader rot, und das Programm sagt es beim
+Auflegen.
