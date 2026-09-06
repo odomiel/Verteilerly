@@ -567,6 +567,23 @@ BRIEFKOPF_FELDER = (
     "dokumenttitel",
 )
 
+BRIEFKOPF_BESCHRIFTUNG = {
+    "dokumenttitel": "Dokumenttitel",
+    "firma": "Firma",
+    "kunde": "Kunde",
+    "anlagennummer": "Anlagennummer",
+    "kundennummer": "Kundennummer",
+    "gezeichnet_am": "Gezeichnet am",
+    "gezeichnet_von": "Gezeichnet von",
+    "kuerzel": "Kürzel",
+    "erstellt_am": "Erstellt am",
+    "erstellt_von": "Erstellt von",
+    "stand_am": "Stand am",
+    "stand_von": "Stand von",
+    "geprueft_am": "Geprüft am",
+    "geprueft_von": "Geprüft von",
+}
+
 
 @dataclass
 class Projekt:

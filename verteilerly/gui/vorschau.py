@@ -144,10 +144,13 @@ class Vorschau(QWidget):
 
         self.auswahl = QComboBox()
         self.auswahl.currentIndexChanged.connect(self._gewechselt)
-        self.zurueck = QPushButton("<")
-        self.vor = QPushButton(">")
+        self.zurueck = QPushButton("‹")
+        self.vor = QPushButton("›")
         for knopf in (self.zurueck, self.vor):
-            knopf.setFixedWidth(28)
+            knopf.setFixedWidth(30)
+            # Das Stilblatt polstert Knöpfe breit; hier bliebe sonst nichts
+            # vom Pfeil übrig.
+            knopf.setStyleSheet("padding: 4px 0;")
         self.zurueck.clicked.connect(lambda: self._schieben(-1))
         self.vor.clicked.connect(lambda: self._schieben(1))
         self.zaehler = QLabel("")

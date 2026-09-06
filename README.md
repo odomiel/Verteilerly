@@ -13,6 +13,9 @@ verteilerly/        Programmpaket
   vorlagen.py       Verteilervorlagen
   projektdatei.py   Projekt als JSON lesen und schreiben
   layout.py         Blätter als Zeichenanweisungen — Vorlage für Vorschau und PDF
+  ausgabe/          PDF, Excel und CSV
+    pdf.py          Zeichnet das Layoutmodell mit ReportLab
+    tabellen.py     Belegungsdaten je Ader als xlsx und csv
   pfade.py          Wo die Daten liegen - entpackt wie gepackt
   gui/              Oberfläche
     hauptfenster.py Fenster, Menüs, Datei- und Kabelbefehle
@@ -61,8 +64,11 @@ Die Blätter entstehen in `layout.py` als Zeichenanweisungen in Millimetern
 QPainter ab; die PDF-Ausgabe wird dasselbe Modell mit ReportLab zeichnen.
 Es gibt damit nur eine Quelle für das Blattbild.
 
-Offen sind PDF-Ausgabe, Excel und CSV sowie das Verpacken als
-AppImage und `.exe`.
+Das PDF entsteht aus demselben Layoutmodell wie die Vorschau; Excel und
+CSV geben nicht das Blatt, sondern die Belegungsdaten je Ader aus — eine
+Zeile je Ader, filter- und sortierbar.
+
+Offen ist das Verpacken als AppImage und `.exe`.
 
 Zurückgestellt: Widerstandssymbol,
 Pluginschnittstelle, Blatt „Änderungen“, Strichregel.

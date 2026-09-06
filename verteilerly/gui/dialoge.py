@@ -24,25 +24,13 @@ from PySide6.QtWidgets import (
 )
 
 from ..farbcodes import Kabeltypen
-from ..modell import BRIEFKOPF_FELDER, Projekt, Verteiler
+from ..modell import (
+    BRIEFKOPF_BESCHRIFTUNG,
+    BRIEFKOPF_FELDER,
+    Projekt,
+    Verteiler,
+)
 from ..vorlagen import Vorlagen
-
-BRIEFKOPF_BESCHRIFTUNG = {
-    "dokumenttitel": "Dokumenttitel",
-    "firma": "Firma",
-    "kunde": "Kunde",
-    "anlagennummer": "Anlagennummer",
-    "kundennummer": "Kundennummer",
-    "gezeichnet_am": "Gezeichnet am",
-    "gezeichnet_von": "Gezeichnet von",
-    "kuerzel": "Kürzel",
-    "erstellt_am": "Erstellt am",
-    "erstellt_von": "Erstellt von",
-    "stand_am": "Stand am",
-    "stand_von": "Stand von",
-    "geprueft_am": "Geprüft am",
-    "geprueft_von": "Geprüft von",
-}
 
 
 def _knopfleiste(dialog: QDialog) -> QDialogButtonBox:

@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from .. import pfade, projektdatei
+from ..ausgabe import AusgabeFehler, csv_schreiben, pdf_schreiben, xlsx_schreiben
 from ..farbcodes import Kabeltypen, farben_eintragen
 from ..modell import Kabelabschnitt, ModellFehler, Projekt, UeberlaufFehler, Verteiler
 from ..version import VERSION
@@ -34,6 +35,9 @@ from .uebersicht import Uebersicht
 from .vorschau import Vorschau
 
 DATEIFILTER = "Verteilerly-Projekt (*.vtly.json);;Alle Dateien (*)"
+PDFFILTER = "PDF (*.pdf)"
+XLSXFILTER = "Excel-Arbeitsmappe (*.xlsx)"
+CSVFILTER = "CSV, Semikolon getrennt (*.csv)"
 VORSCHAU_VERZUG = 250  # ms, damit das Tippen nicht stockt
 
 
@@ -122,6 +126,10 @@ class Hauptfenster(QMainWindow):
         aktion("Ö&ffnen…", self.oeffnen, "Ctrl+O", True)
         aktion("&Speichern", self.speichern, "Ctrl+S", True)
         aktion("Speichern &unter…", self.speichern_unter, "Ctrl+Shift+S")
+        datei.addSeparator()
+        self.aktion_pdf = aktion("Als &PDF…", self.pdf_ausgeben, "Ctrl+E", True)
+        self.aktion_xlsx = aktion("Als &Excel-Mappe…", self.xlsx_ausgeben)
+        self.aktion_csv = aktion("Als &CSV…", self.csv_ausgeben)
         datei.addSeparator()
         aktion("&Beenden", self.close, "Ctrl+Q")
 
@@ -241,7 +249,13 @@ class Hauptfenster(QMainWindow):
         self.uebersicht.verteiler_setzen(verteiler)
         self.leistenansicht.verteiler_setzen(verteiler)
         self.vorschau.projekt_setzen(projekt)
-        for handlung in (self.aktion_kabel, self.aktion_kabel_weg):
+        for handlung in (
+            self.aktion_kabel,
+            self.aktion_kabel_weg,
+            self.aktion_pdf,
+            self.aktion_xlsx,
+            self.aktion_csv,
+        ):
             handlung.setEnabled(projekt is not None)
         self._titel_setzen()
 
@@ -312,6 +326,49 @@ class Hauptfenster(QMainWindow):
             return False
         self.pfad = pathlib.Path(name)
         return self.speichern()
+
+    # -- Ausgabe -----------------------------------------------------------
+
+    def _ausgabeziel(self, endung: str, filter_: str) -> pathlib.Path | None:
+        """Schlaegt den Projektnamen als Dateinamen vor."""
+        if self.projekt is None:
+            return None
+        stamm = self.pfad.name.split(".")[0] if self.pfad else ""
+        stamm = stamm or self.projekt.verteiler.name or "verteiler"
+        ordner = self.pfad.parent if self.pfad else pathlib.Path.home()
+        name, _ = QFileDialog.getSaveFileName(
+            self, "Ausgeben nach", str(ordner / f"{stamm}{endung}"), filter_
+        )
+        return pathlib.Path(name) if name else None
+
+    def pdf_ausgeben(self) -> None:
+        """PDF ist das Pflichtformat."""
+        ziel = self._ausgabeziel(".pdf", PDFFILTER)
+        if ziel is None:
+            return
+        self._ausgeben(lambda: pdf_schreiben(self.projekt, ziel), ziel)
+
+    def xlsx_ausgeben(self) -> None:
+        ziel = self._ausgabeziel(".xlsx", XLSXFILTER)
+        if ziel is None:
+            return
+        self._ausgeben(
+            lambda: xlsx_schreiben(self.projekt, ziel), ziel
+        )
+
+    def csv_ausgeben(self) -> None:
+        ziel = self._ausgabeziel(".csv", CSVFILTER)
+        if ziel is None:
+            return
+        self._ausgeben(lambda: csv_schreiben(self.projekt, ziel), ziel)
+
+    def _ausgeben(self, arbeit, ziel: pathlib.Path) -> None:
+        try:
+            arbeit()
+        except (AusgabeFehler, OSError) as fehler:
+            QMessageBox.critical(self, "Ausgabe fehlgeschlagen", str(fehler))
+            return
+        self.statusBar().showMessage(f"Geschrieben: {ziel}")
 
     # -- Kabel -------------------------------------------------------------
 
