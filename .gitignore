@@ -3,3 +3,7 @@ __pycache__/
 *.pyc
 build/
 dist/
+
+# Verpacken
+/bau/
+/auslieferung/

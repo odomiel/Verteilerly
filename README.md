@@ -27,6 +27,7 @@ verteilerly/        Programmpaket
 daten/              Liegt neben dem Programm und ist frei erweiterbar
   vorlagen/         Eine YAML-Datei je Vorlage
   kabeltypen/       Farbfolgen der Kabeltypen
+werkzeuge/          Release und Verpacken
 tests/              unittest, offscreen - kein pytest, kein Linter
 ```
 
@@ -61,17 +62,32 @@ Gegenstelle trägt sich selbst ein.
 
 Die Blätter entstehen in `layout.py` als Zeichenanweisungen in Millimetern
 — ohne Qt und ohne PDF-Bibliothek. Die Vorschau zeichnet dieses Modell mit
-QPainter ab; die PDF-Ausgabe wird dasselbe Modell mit ReportLab zeichnen.
-Es gibt damit nur eine Quelle für das Blattbild.
-
-Das PDF entsteht aus demselben Layoutmodell wie die Vorschau; Excel und
-CSV geben nicht das Blatt, sondern die Belegungsdaten je Ader aus — eine
+QPainter, die PDF-Ausgabe mit ReportLab: eine einzige Quelle für das
+Blattbild, Vorschau und Ausdruck können nicht auseinanderlaufen.
+Excel und CSV geben nicht das Blatt aus, sondern die Belegungsdaten — eine
 Zeile je Ader, filter- und sortierbar.
-
-Offen ist das Verpacken als AppImage und `.exe`.
 
 Zurückgestellt: Widerstandssymbol,
 Pluginschnittstelle, Blatt „Änderungen“, Strichregel.
+
+## Verpacken
+
+```bash
+.venv/bin/python3 werkzeuge/bauen.py            # für die laufende Plattform
+.venv/bin/python3 werkzeuge/bauen.py --nur-exe  # ohne AppImage
+```
+
+Heraus kommt eine einzelne ausführbare Datei in `auslieferung/`, daneben
+der Ordner `daten/` — Vorlagen und Kabeltypen bleiben so ohne Auspacken
+änderbar. Eine Kopie steckt zusätzlich im Programm, damit eine
+allein weitergegebene Datei lauffähig bleibt.
+
+Voraussetzungen unter Linux: `pip install pyinstaller` und die Python-
+Bibliothek als `.so` (`sudo apt install libpython3.14` unter Debian und
+Ubuntu — ohne sie bricht PyInstaller ab). Für das AppImage muss
+`appimagetool` im `PATH` liegen; fehlt es, bleibt das fertige AppDir unter
+`bau/` liegen. Die Windows-`.exe` entsteht mit demselben Aufruf unter
+Windows.
 
 ## Versionen
 

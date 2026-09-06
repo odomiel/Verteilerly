@@ -30,6 +30,7 @@ from .dialoge import (
     UeberlaufDialog,
 )
 from .leistenansicht import LeistenAnsicht
+from .symbol import symbol_icon
 from .thema import SAETZE, anwenden
 from .uebersicht import Uebersicht
 from .vorschau import Vorschau
@@ -53,6 +54,7 @@ class Hauptfenster(QMainWindow):
         self.veraendert = False
         self.thema_name = str(self.einstellungen.value("thema", "hell"))
 
+        self.setWindowIcon(symbol_icon())
         self._oberflaeche_bauen()
         self._aktionen_bauen()
         self.thema_anwenden(self.thema_name)
