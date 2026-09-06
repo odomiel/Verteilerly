@@ -116,7 +116,8 @@ BESCHRIFTUNG = {
 
 
 def _wert(projekt: Projekt, name: str, vorgabe: str = "") -> str:
-    return projekt.feld(name, vorgabe)
+    """Der Wert eines Feldes - abgewaehlte Felder bleiben leer."""
+    return projekt.anzeigewert(name, vorgabe)
 
 
 def _paar(projekt: Projekt, vorsilbe: str) -> str:
@@ -135,7 +136,7 @@ def _eintraege(
     """Was hinter einer Marke des Schriftfeldes steht."""
     v = projekt.verteiler
     if marke == "eigene":
-        return list(projekt.eigene_felder.items())
+        return list(projekt.sichtbare_eigene_felder().items())
     if marke == "verteiler":
         wert = v.name
     elif marke == "verteilernummer":
@@ -249,7 +250,7 @@ def deckblatt(projekt: Projekt, vorlage: Blattvorlage = STANDARD) -> Blatt:
         ("Gezeichnet", _paar(projekt, "gezeichnet")),
         ("Blattvorlage", vorlage.name if not vorlage.standard else ""),
     ]
-    zeilen += list(projekt.eigene_felder.items())
+    zeilen += list(projekt.sichtbare_eigene_felder().items())
 
     for name, wert in zeilen:
         if not str(wert).strip():

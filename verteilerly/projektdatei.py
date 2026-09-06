@@ -25,10 +25,11 @@ from .modell import (
 )
 
 DATEIKENNUNG = "verteilerly-projekt"
-FORMATVERSION = 2
-# Fassung 1 nannte die Buchten noch Reihen. Solche Dateien werden weiter
-# gelesen; geschrieben wird immer die neue Fassung.
-LESBARE_VERSIONEN = (1, 2)
+FORMATVERSION = 3
+# Fassung 1 nannte die Buchten noch Reihen, Fassung 2 kannte noch keine
+# abgewaehlten Felder. Solche Dateien werden weiter gelesen; geschrieben
+# wird immer die neue Fassung.
+LESBARE_VERSIONEN = (1, 2, 3)
 
 
 class ProjektdateiFehler(ModellFehler):
@@ -102,6 +103,9 @@ def als_dict(projekt: Projekt) -> dict[str, Any]:
         "formatversion": FORMATVERSION,
         "briefkopf": dict(projekt.briefkopf),
         "eigene_felder": dict(projekt.eigene_felder),
+        # Abgewaehlte Felder behalten ihren Inhalt - nur die Auswahl wird
+        # vermerkt.
+        "ausgeblendet": sorted(projekt.ausgeblendet),
         "verteiler": _verteiler_raus(projekt.verteiler),
     }
 
@@ -189,6 +193,7 @@ def aus_dict(daten: dict[str, Any]) -> Projekt:
         verteiler=_verteiler_rein(daten.get("verteiler", {})),
         briefkopf=dict(daten.get("briefkopf") or {}),
         eigene_felder=dict(daten.get("eigene_felder") or {}),
+        ausgeblendet=set(daten.get("ausgeblendet") or ()),
     )
 
 

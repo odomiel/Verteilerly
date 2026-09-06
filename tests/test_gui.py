@@ -230,6 +230,75 @@ class TestMenuezustaende(unittest.TestCase):
 
 
 @unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
+class TestBriefkopfDialog(unittest.TestCase):
+    """Felder an- und abwählen, ohne sie zu löschen."""
+
+    def setUp(self):
+        from verteilerly.gui.dialoge import BriefkopfDialog
+
+        self.projekt = Projekt(
+            verteiler=Verteiler.aus_geometrie(1, 4, 10, name="Probe"),
+            briefkopf={"firma": "Musterfirma", "kundennummer": "K-1"},
+            eigene_felder={"Standort": "Keller", "Vertrag": "bis 2028"},
+        )
+        self.projekt.sichtbarkeit_setzen("kundennummer", False)
+        self.projekt.sichtbarkeit_setzen("Vertrag", False)
+        self.dialog = BriefkopfDialog(self.projekt)
+
+    def _zeile(self, name):
+        for i in range(self.dialog.eigene.rowCount()):
+            if self.dialog.eigene.item(i, 0).text() == name:
+                return self.dialog.eigene.item(i, 0)
+        raise AssertionError(f"Zeile {name} fehlt")
+
+    def test_haken_zeigen_den_stand(self):
+        self.assertTrue(self.dialog.haken["firma"].isChecked())
+        self.assertFalse(self.dialog.haken["kundennummer"].isChecked())
+        self.assertEqual(
+            self._zeile("Standort").checkState(), Qt.CheckState.Checked
+        )
+        self.assertEqual(
+            self._zeile("Vertrag").checkState(), Qt.CheckState.Unchecked
+        )
+
+    def test_abgewaehltes_feld_zeigt_seinen_inhalt_weiter(self):
+        """Nicht löschen heißt: der Wert steht noch da, nur grau."""
+        self.assertEqual(self.dialog.felder["kundennummer"].text(), "K-1")
+        self.assertFalse(self.dialog.felder["kundennummer"].isEnabled())
+
+    def test_abwaehlen_loescht_nichts(self):
+        self.dialog.haken["firma"].setChecked(False)
+        self.dialog.uebernehmen()
+        self.assertIn("firma", self.projekt.ausgeblendet)
+        self.assertEqual(self.projekt.briefkopf["firma"], "Musterfirma")
+        self.assertFalse(self.projekt.sichtbar("firma"))
+
+    def test_wieder_anwaehlen(self):
+        self.dialog.haken["kundennummer"].setChecked(True)
+        self._zeile("Vertrag").setCheckState(Qt.CheckState.Checked)
+        self.dialog.uebernehmen()
+        self.assertTrue(self.projekt.sichtbar("kundennummer"))
+        self.assertTrue(self.projekt.sichtbar("Vertrag"))
+        self.assertEqual(self.projekt.ausgeblendet, set())
+
+    def test_eigenes_feld_abwaehlen_behaelt_den_wert(self):
+        self._zeile("Standort").setCheckState(Qt.CheckState.Unchecked)
+        self.dialog.uebernehmen()
+        self.assertIn("Standort", self.projekt.ausgeblendet)
+        self.assertEqual(self.projekt.eigene_felder["Standort"], "Keller")
+
+    def test_alle_und_keine(self):
+        self.dialog._alle_haken(False)
+        self.assertFalse(any(h.isChecked() for h in self.dialog.haken.values()))
+        self.dialog._alle_haken(True)
+        self.assertTrue(all(h.isChecked() for h in self.dialog.haken.values()))
+
+    def test_neues_feld_ist_zunaechst_angewaehlt(self):
+        self.dialog._zeile_anhaengen("Neu", "Wert")
+        self.assertEqual(self._zeile("Neu").checkState(), Qt.CheckState.Checked)
+
+
+@unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
 class TestEinstellungen(unittest.TestCase):
     """Die Einstellungen liegen als Datei, nicht in der Registry."""
 

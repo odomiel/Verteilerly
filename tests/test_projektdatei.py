@@ -127,6 +127,33 @@ class TestProjektdatei(unittest.TestCase):
         self.assertEqual(self.pfad.read_text(encoding="utf-8"), vorher)
 
 
+class TestFeldauswahl(unittest.TestCase):
+    """Die Auswahl übersteht das Speichern."""
+
+    def setUp(self):
+        self.ordner = tempfile.TemporaryDirectory()
+        self.addCleanup(self.ordner.cleanup)
+        self.ziel = pathlib.Path(self.ordner.name) / "p.vtly.json"
+
+    def test_ausgeblendete_felder_kommen_zurueck(self):
+        projekt = beispielprojekt()
+        projekt.briefkopf["firma"] = "Musterfirma"
+        projekt.eigene_felder["Standort"] = "Keller"
+        projekt.sichtbarkeit_setzen("firma", False)
+        projekt.sichtbarkeit_setzen("Standort", False)
+        projektdatei.speichern(projekt, self.ziel)
+
+        zurueck = projektdatei.laden(self.ziel)
+        self.assertEqual(zurueck.ausgeblendet, {"firma", "Standort"})
+        self.assertEqual(zurueck.briefkopf["firma"], "Musterfirma")
+        self.assertEqual(zurueck.eigene_felder["Standort"], "Keller")
+
+    def test_datei_ohne_auswahl_zeigt_alles(self):
+        daten = projektdatei.als_dict(beispielprojekt())
+        del daten["ausgeblendet"]
+        self.assertEqual(projektdatei.aus_dict(daten).ausgeblendet, set())
+
+
 class TestAeltereDateien(unittest.TestCase):
     """Fassung 1 nannte die Buchten noch Reihen."""
 

@@ -222,5 +222,39 @@ class TestRangierungenSetzen(unittest.TestCase):
         self.assertEqual(self.v.ziele_von(self.a), [Aderadresse.parse("3 2a")])
 
 
+class TestFeldauswahl(unittest.TestCase):
+    """Felder abwählen, ohne sie zu löschen."""
+
+    def setUp(self):
+        from verteilerly.modell import Projekt
+
+        self.projekt = Projekt(
+            briefkopf={"firma": "Musterfirma", "kunde": "Kunde AG"},
+            eigene_felder={"Standort": "Keller"},
+        )
+
+    def test_zunaechst_ist_alles_sichtbar(self):
+        self.assertTrue(self.projekt.sichtbar("firma"))
+        self.assertTrue(self.projekt.sichtbar("Standort"))
+        self.assertEqual(self.projekt.ausgeblendet, set())
+
+    def test_abwaehlen_behaelt_den_wert(self):
+        self.projekt.sichtbarkeit_setzen("firma", False)
+        self.assertFalse(self.projekt.sichtbar("firma"))
+        self.assertEqual(self.projekt.feld("firma"), "Musterfirma")
+        self.assertEqual(self.projekt.anzeigewert("firma"), "")
+
+    def test_wieder_anwaehlen(self):
+        self.projekt.sichtbarkeit_setzen("firma", False)
+        self.projekt.sichtbarkeit_setzen("firma", True)
+        self.assertEqual(self.projekt.anzeigewert("firma"), "Musterfirma")
+
+    def test_eigene_felder_werden_gefiltert(self):
+        self.assertEqual(self.projekt.sichtbare_eigene_felder(), {"Standort": "Keller"})
+        self.projekt.sichtbarkeit_setzen("Standort", False)
+        self.assertEqual(self.projekt.sichtbare_eigene_felder(), {})
+        self.assertEqual(self.projekt.eigene_felder, {"Standort": "Keller"})
+
+
 if __name__ == "__main__":
     unittest.main()

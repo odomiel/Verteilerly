@@ -596,8 +596,32 @@ class Projekt:
     verteiler: Verteiler = field(default_factory=Verteiler)
     briefkopf: dict[str, str] = field(default_factory=dict)
     eigene_felder: dict[str, str] = field(default_factory=dict)
+    # Felder, die auf den Blaettern nicht erscheinen sollen. Der Inhalt
+    # bleibt erhalten - abwaehlen ist kein Loeschen.
+    ausgeblendet: set[str] = field(default_factory=set)
 
     def feld(self, name: str, vorgabe: str = "") -> str:
         if name in self.briefkopf:
             return self.briefkopf[name]
         return self.eigene_felder.get(name, vorgabe)
+
+    def sichtbar(self, name: str) -> bool:
+        """Soll dieses Feld auf den Blaettern erscheinen?"""
+        return name not in self.ausgeblendet
+
+    def sichtbarkeit_setzen(self, name: str, an: bool) -> None:
+        if an:
+            self.ausgeblendet.discard(name)
+        else:
+            self.ausgeblendet.add(name)
+
+    def anzeigewert(self, name: str, vorgabe: str = "") -> str:
+        """Der Wert, sofern das Feld sichtbar ist - sonst nichts."""
+        return self.feld(name, vorgabe) if self.sichtbar(name) else ""
+
+    def sichtbare_eigene_felder(self) -> dict[str, str]:
+        return {
+            name: wert
+            for name, wert in self.eigene_felder.items()
+            if self.sichtbar(name)
+        }

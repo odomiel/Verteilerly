@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QDialog,
     QDialogButtonBox,
@@ -423,31 +424,67 @@ class UeberlaufDialog(QDialog):
 
 
 class BriefkopfDialog(QDialog):
-    """Briefkopf und eigene Felder zentral pflegen."""
+    """Briefkopf und eigene Felder zentral pflegen.
+
+    Jedes Feld hat ein Haken davor: abgewaehlte Felder erscheinen auf
+    keinem Blatt, behalten ihren Inhalt aber. Wer eine Anlagennummer nur
+    fuer diesen Ausdruck weglassen will, muss sie nicht loeschen.
+    """
 
     def __init__(self, projekt: Projekt, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setWindowTitle("Briefkopf und eigene Felder")
-        self.resize(560, 620)
+        self.resize(620, 700)
         self.projekt = projekt
 
         self.felder: dict[str, QLineEdit] = {}
+        self.haken: dict[str, QCheckBox] = {}
         form = QFormLayout()
         for name in BRIEFKOPF_FELDER:
             feld = QLineEdit(projekt.briefkopf.get(name, ""))
+            haken = QCheckBox(BRIEFKOPF_BESCHRIFTUNG.get(name, name) + ":")
+            haken.setChecked(projekt.sichtbar(name))
+            haken.setToolTip(
+                "Ohne Haken bleibt der Inhalt erhalten, erscheint aber auf "
+                "keinem Blatt."
+            )
+            # Der Haken ist zugleich die Beschriftung der Zeile.
+            haken.toggled.connect(feld.setEnabled)
+            feld.setEnabled(haken.isChecked())
             self.felder[name] = feld
-            form.addRow(BRIEFKOPF_BESCHRIFTUNG.get(name, name) + ":", feld)
+            self.haken[name] = haken
+            form.addRow(haken, feld)
+
+        alle_an = QPushButton("Alle")
+        alle_an.clicked.connect(lambda: self._alle_haken(True))
+        alle_aus = QPushButton("Keine")
+        alle_aus.clicked.connect(lambda: self._alle_haken(False))
+        schnell = QHBoxLayout()
+        schnell.addWidget(QLabel("Auswahl:"))
+        schnell.addWidget(alle_an)
+        schnell.addWidget(alle_aus)
+        schnell.addStretch(1)
+
+        briefkopfblock = QVBoxLayout()
+        briefkopfblock.addLayout(form)
+        briefkopfblock.addLayout(schnell)
         briefkopf = QGroupBox("Briefkopf — steht auf jedem Blatt")
-        briefkopf.setLayout(form)
+        briefkopf.setLayout(briefkopfblock)
 
         self.eigene = QTableWidget(0, 2)
         self.eigene.setHorizontalHeaderLabels(["Feldname", "Inhalt"])
         self.eigene.horizontalHeader().setStretchLastSection(True)
+        self.eigene.setToolTip(
+            "Das Häkchen am Feldnamen entscheidet, ob das Feld auf den "
+            "Blättern erscheint."
+        )
+        self.eigene.verticalHeader().setVisible(False)
+        self.eigene.setMinimumHeight(150)
         for name, wert in projekt.eigene_felder.items():
-            self._zeile_anhaengen(name, wert)
+            self._zeile_anhaengen(name, wert, projekt.sichtbar(name))
 
         hinzu = QPushButton("Feld hinzufügen")
-        hinzu.clicked.connect(lambda: self._zeile_anhaengen("", ""))
+        hinzu.clicked.connect(lambda: self._zeile_anhaengen("", "", True))
         weg = QPushButton("Feld entfernen")
         weg.clicked.connect(self._zeile_entfernen)
         knoepfe = QHBoxLayout()
@@ -466,10 +503,19 @@ class BriefkopfDialog(QDialog):
         aufbau.addWidget(eigene)
         aufbau.addWidget(_knopfleiste(self))
 
-    def _zeile_anhaengen(self, name: str, wert: str) -> None:
+    def _alle_haken(self, an: bool) -> None:
+        for haken in self.haken.values():
+            haken.setChecked(an)
+
+    def _zeile_anhaengen(self, name: str, wert: str, sichtbar: bool = True) -> None:
         zeile = self.eigene.rowCount()
         self.eigene.insertRow(zeile)
-        self.eigene.setItem(zeile, 0, QTableWidgetItem(name))
+        feldname = QTableWidgetItem(name)
+        feldname.setFlags(feldname.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+        feldname.setCheckState(
+            Qt.CheckState.Checked if sichtbar else Qt.CheckState.Unchecked
+        )
+        self.eigene.setItem(zeile, 0, feldname)
         self.eigene.setItem(zeile, 1, QTableWidgetItem(wert))
 
     def _zeile_entfernen(self) -> None:
@@ -478,16 +524,27 @@ class BriefkopfDialog(QDialog):
             self.eigene.removeRow(zeile)
 
     def uebernehmen(self) -> None:
-        """Schreibt die Eingaben ins Projekt."""
+        """Schreibt die Eingaben ins Projekt - samt der Auswahl."""
+        ausgeblendet: set[str] = set()
+
         self.projekt.briefkopf = {
             name: feld.text().strip()
             for name, feld in self.felder.items()
             if feld.text().strip()
         }
+        for name, haken in self.haken.items():
+            if not haken.isChecked():
+                ausgeblendet.add(name)
+
         eigene: dict[str, str] = {}
         for zeile in range(self.eigene.rowCount()):
             name = self.eigene.item(zeile, 0)
             wert = self.eigene.item(zeile, 1)
-            if name and name.text().strip():
-                eigene[name.text().strip()] = wert.text().strip() if wert else ""
+            if not name or not name.text().strip():
+                continue
+            schluessel = name.text().strip()
+            eigene[schluessel] = wert.text().strip() if wert else ""
+            if name.checkState() != Qt.CheckState.Checked:
+                ausgeblendet.add(schluessel)
         self.projekt.eigene_felder = eigene
+        self.projekt.ausgeblendet = ausgeblendet

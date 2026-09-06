@@ -64,6 +64,12 @@ Programm starten:
 
 ## Stand
 
+Im Briefkopfdialog hat jedes Feld ein Häkchen — Standardfelder wie eigene
+gleichermaßen. Ein abgewähltes Feld erscheint auf keinem Blatt, **behält
+aber seinen Inhalt**: wer die Anlagennummer nur für diesen Ausdruck
+weglassen will, muss sie nicht löschen. Die Auswahl steht in der
+Projektdatei.
+
 Ein neuer Verteiler entsteht aus einer Vorlage oder aus eigenen Angaben;
 die DA je Leiste stehen dort als 8, 10 und 20 DA zur Wahl, alles andere
 wird eingetippt. Eine so gebaute Grundstruktur lässt sich als Vorlage

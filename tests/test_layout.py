@@ -125,6 +125,24 @@ class TestSchriftfeld(unittest.TestCase):
     def test_eigene_felder_erscheinen(self):
         self.assertIn("Keller", _texte(blaetter(self.projekt)[0]))
 
+    def test_abgewaehltes_feld_steht_auf_keinem_blatt(self):
+        """Der Wert bleibt im Projekt, das Blatt zeigt ihn nicht."""
+        self.projekt.sichtbarkeit_setzen("firma", False)
+        self.projekt.sichtbarkeit_setzen("Standort", False)
+        for blatt in blaetter(self.projekt):
+            with self.subTest(blatt=blatt.titel):
+                self.assertNotIn("Musterfirma", _texte(blatt))
+                self.assertNotIn("Keller", _texte(blatt))
+        self.assertEqual(self.projekt.briefkopf["firma"], "Musterfirma")
+
+    def test_halb_abgewaehltes_paar(self):
+        """Erstellt am/von: fällt eine Hälfte weg, bleibt die andere."""
+        self.projekt.briefkopf["erstellt_von"] = "T. Mirik"
+        self.projekt.sichtbarkeit_setzen("erstellt_am", False)
+        texte = " ".join(_texte(blaetter(self.projekt)[0]))
+        self.assertIn("T. Mirik", texte)
+        self.assertNotIn("01.09.2026", texte)
+
     def test_leere_felder_bleiben_leer(self):
         """Ein nicht gefuelltes Feld erzeugt keinen leeren Text."""
         for blatt in blaetter(self.projekt):
