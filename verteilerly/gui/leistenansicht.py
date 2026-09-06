@@ -7,7 +7,7 @@ Kabelspalte rechts zeigt, welches Kabel die Doppelader belegt.
 
 from __future__ import annotations
 
-from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt, Signal
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, QRect, Qt, Signal
 from PySide6.QtGui import QColor, QFont
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -256,6 +256,33 @@ class LeistenModell(QAbstractTableModel):
         return True
 
 
+class ZusammengefassteKopfzeile(QHeaderView):
+    """Kopfzeile, in der eine Ueberschrift ueber mehrere Spalten reicht.
+
+    Qt kennt keine verbundenen Kopffelder. Die zusammengefassten Spalten
+    werden deshalb selbst gezeichnet: die erste bekommt die Breite aller,
+    die uebrigen zeichnen nichts - so steht „Rangierung“ mittig ueber
+    beiden Feldern statt nur ueber dem ersten.
+    """
+
+    def __init__(self, gruppen: tuple[tuple[int, ...], ...], parent=None) -> None:
+        super().__init__(Qt.Orientation.Horizontal, parent)
+        self.gruppen = gruppen
+        self._erste = {gruppe[0]: gruppe for gruppe in gruppen}
+        self._weitere = {
+            spalte for gruppe in gruppen for spalte in gruppe[1:]
+        }
+
+    def paintSection(self, maler, rechteck, spalte: int) -> None:
+        if spalte in self._weitere:
+            return                      # gehoert zur Ueberschrift links davon
+        gruppe = self._erste.get(spalte)
+        if gruppe:
+            breite = sum(self.sectionSize(teil) for teil in gruppe)
+            rechteck = QRect(rechteck.x(), rechteck.y(), breite, rechteck.height())
+        super().paintSection(maler, rechteck, spalte)
+
+
 class LeistenAnsicht(QWidget):
     """Leistenauswahl und Tabelle."""
 
@@ -294,6 +321,10 @@ class LeistenAnsicht(QWidget):
         )
         self.tabelle.setAlternatingRowColors(False)
 
+        # „Rangierung“ steht über beiden Rangierfeldern.
+        self.tabelle.setHorizontalHeader(
+            ZusammengefassteKopfzeile((RANGIERSPALTEN,), self.tabelle)
+        )
         kopfzeile = self.tabelle.horizontalHeader()
         for spalte, breite in (
             (SPALTE_STIFT, 46),

@@ -26,7 +26,9 @@ try:
         SPALTE_RANGIERUNG_2,
         SPALTE_STIFT,
         UEBERSCHRIFTEN,
+        LeistenAnsicht,
         LeistenModell,
+        ZusammengefassteKopfzeile,
     )
 
     ANWENDUNG = QApplication.instance() or QApplication([])
@@ -111,6 +113,15 @@ class TestLeistenModell(unittest.TestCase):
         self.assertEqual(
             self.v.ziele_von(Aderadresse.parse("3 2a")), []
         )
+
+    def test_die_ueberschrift_reicht_ueber_beide_felder(self):
+        """Eine Kopfzeile über den zwei Rangierfeldern, kein Strich dazwischen."""
+        ansicht = LeistenAnsicht()
+        kopf = ansicht.tabelle.horizontalHeader()
+        self.assertIsInstance(kopf, ZusammengefassteKopfzeile)
+        self.assertIn(SPALTE_RANGIERUNG, kopf._erste)
+        self.assertIn(SPALTE_RANGIERUNG_2, kopf._weitere)
+        self.assertNotIn(SPALTE_FARBE, kopf._weitere)
 
     def test_die_alte_schreibweise_geht_weiter(self):
         """„3 2a   4 5b“ in ein Feld getippt verteilt sich auf beide."""
