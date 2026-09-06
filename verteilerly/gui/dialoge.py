@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from .. import pfade
 from ..farbcodes import Kabeltypen
 from ..modell import (
     BRIEFKOPF_BESCHRIFTUNG,
@@ -97,8 +98,23 @@ def als_vorlage_speichern(
         return None
 
     vorlagen.aufnehmen(vorlage)
-    QMessageBox.information(parent, "Vorlage gespeichert", f"{vorlage.name}\n{ziel}")
+    hinweis = f"{vorlage.name}\n{ziel}"
+    if _im_benutzerordner(ziel):
+        hinweis += (
+            "\n\nNeben dem Programm ließ sich nicht schreiben — im AppImage "
+            "liegen die mitgelieferten Vorlagen in einem Nur-Lese-Abbild. "
+            "Die Vorlage steht deshalb im Benutzerverzeichnis und wird von "
+            "dort geladen."
+        )
+    QMessageBox.information(parent, "Vorlage gespeichert", hinweis)
     return vorlage
+
+
+def _im_benutzerordner(ziel) -> bool:
+    try:
+        return str(ziel).startswith(str(pfade.benutzerordner()))
+    except OSError:
+        return False
 
 
 class NeuerVerteilerDialog(QDialog):

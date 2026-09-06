@@ -47,7 +47,7 @@ class Hauptfenster(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.einstellungen = QSettings("Verteilerly", "Verteilerly")
-        self.vorlagen = Vorlagen.laden(pfade.vorlagenordner())
+        self.vorlagen = self._vorlagen_laden()
         self.kabeltypen = Kabeltypen.laden(pfade.kabeltypenordner())
 
         self.projekt: Projekt | None = None
@@ -470,10 +470,18 @@ class Hauptfenster(QMainWindow):
 
     # -- Sonstiges ---------------------------------------------------------
 
+    def _vorlagen_laden(self) -> Vorlagen:
+        """Alle Vorlagenordner zusammen; eigene gehen vor mitgelieferten."""
+        try:
+            orte = list(reversed(pfade.vorlagenordner_alle()))
+        except OSError:
+            orte = []
+        return Vorlagen.aus_ordnern(orte)
+
     def _vorlagenordner(self):
         """Wohin eigene Vorlagen kommen - None, wenn dort nichts geht."""
         try:
-            return pfade.vorlagenordner()
+            return pfade.eigener_vorlagenordner()
         except OSError:
             return None
 

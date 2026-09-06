@@ -60,8 +60,13 @@ Ein neuer Verteiler entsteht aus einer Vorlage oder aus eigenen Angaben;
 die DA je Leiste stehen dort als 8, 10 und 20 DA zur Wahl, alles andere
 wird eingetippt. Eine so gebaute Grundstruktur lässt sich als Vorlage
 ablegen — im Dialog selbst oder später über *Bearbeiten ▸ Als Vorlage
-speichern*. Sie landet als YAML-Datei im Vorlagenordner und steht sofort
-im Menü.
+speichern*. Sie landet als YAML-Datei neben dem Programm und steht sofort
+im Menü. Läuft das Programm als AppImage, liegen die
+mitgelieferten Vorlagen in einem Nur-Lese-Abbild; dann wird neben die
+AppImage-Datei geschrieben und, wenn auch das nicht geht, nach
+`~/.local/share/verteilerly/daten/vorlagen` (Windows: `%APPDATA%`).
+Gelesen werden alle diese Orte, eigene Vorlagen gehen vor
+mitgelieferten.
 
 Der Editor zeigt links die Verteilerübersicht und rechts die Belegung der
 gewählten Leiste. Ein Doppelklick auf eine freie Doppelader legt ein Kabel

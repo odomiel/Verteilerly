@@ -183,9 +183,23 @@ class Vorlagen:
     @classmethod
     def laden(cls, ordner: pathlib.Path) -> Vorlagen:
         gefunden: list[Vorlage] = []
-        for datei in sorted(ordner.glob("*.yaml")):
+        for datei in sorted(pathlib.Path(ordner).glob("*.yaml")):
             inhalt = yaml.safe_load(datei.read_text(encoding="utf-8")) or {}
             gefunden.append(vorlage_aus_yaml(inhalt, datei.name))
+        return cls(gefunden)
+
+    @classmethod
+    def aus_ordnern(cls, ordner) -> Vorlagen:
+        """Aus mehreren Ordnern; bei gleicher Kennung gilt der letzte.
+
+        So kann eine eigene Vorlage eine mitgelieferte ersetzen, ohne
+        dass die mitgelieferte Datei angefasst wird.
+        """
+        gefunden: list[Vorlage] = []
+        for ort in ordner:
+            ort = pathlib.Path(ort)
+            if ort.is_dir():
+                gefunden += cls.laden(ort).alle
         return cls(gefunden)
 
     def aufnehmen(self, vorlage: Vorlage) -> None:
