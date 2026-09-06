@@ -8,7 +8,7 @@ kopierten Tabellenblättern.
 
 ```
 verteilerly/        Programmpaket
-  modell.py         Verteiler, Reihe, Leiste, Stift, Ader, Kabel, Rangierung
+  modell.py         Verteiler, Bucht, Leiste, Stift, Ader, Kabel, Rangierung
   farbcodes.py      Kabeltypen und Adernfarben
   vorlagen.py       Verteilervorlagen
   projektdatei.py   Projekt als JSON lesen und schreiben
@@ -71,10 +71,15 @@ in die Spalte getippt (`3 2a`, zwei durch Leerraum getrennt); die
 Gegenstelle trägt sich selbst ein.
 
 Die Blattfolge ist Deckblatt, Verteilerbelegung, dann je Leiste ein Blatt.
-Bis zwei Reihen passt die Verteilerbelegung auf ein Blatt; ab der dritten
-Reihe bekommt je zwei Reihen ein eigenes, durchnummeriert als **Bucht 1**,
-**Bucht 2** und so weiter. Ein vierreihiger Verteiler ergibt also zwei
-Buchten — gequetscht wird nichts.
+Bis zwei Buchten passt die Verteilerbelegung auf ein Blatt; ab der dritten
+Bucht bekommt je zwei Buchten ein eigenes Blatt, benannt nach dem, was
+darauf steht: **Buchten 1 und 2**, **Buchten 3 und 4**, bei einer
+einzelnen **Bucht 5**. Ein Verteiler mit vier Buchten ergibt also zwei
+Blätter — gequetscht wird nichts.
+
+Was das Programm **Bucht** nennt, hieß bis zur Umbenennung *Reihe*. Ältere
+Projektdateien und selbst geschriebene Vorlagen mit den alten Feldnamen
+werden weiter gelesen; geschrieben wird immer die neue Fassung.
 
 Die Blätter entstehen in `layout.py` als Zeichenanweisungen in Millimetern
 — ohne Qt und ohne PDF-Bibliothek. Die Vorschau zeichnet dieses Modell mit

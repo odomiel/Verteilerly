@@ -55,8 +55,8 @@ class TestVorlagen(unittest.TestCase):
     def test_unsinnige_masse_abgelehnt(self):
         with self.assertRaises(VorlagenFehler):
             vorlage_aus_yaml(
-                {"id": "x", "name": "X", "reihen": 0,
-                 "leisten_je_reihe": 4, "da_je_leiste": 10}
+                {"id": "x", "name": "X", "buchten": 0,
+                 "leisten_je_bucht": 4, "da_je_leiste": 10}
             )
 
     def test_eigene_vorlage_aus_dem_ordner(self):
@@ -64,8 +64,8 @@ class TestVorlagen(unittest.TestCase):
         with tempfile.TemporaryDirectory() as ordner:
             pfad = pathlib.Path(ordner) / "eigen.yaml"
             pfad.write_text(
-                "id: eigen\nname: Eigener\nreihen: 3\n"
-                "leisten_je_reihe: 2\nda_je_leiste: 20\n",
+                "id: eigen\nname: Eigener\nbuchten: 3\n"
+                "leisten_je_bucht: 2\nda_je_leiste: 20\n",
                 encoding="utf-8",
             )
             geladen = Vorlagen.laden(pathlib.Path(ordner))
@@ -88,14 +88,14 @@ class TestVorlageSpeichern(unittest.TestCase):
         v = Verteiler.aus_geometrie(2, 6, 10)
         vorlage = Vorlage.aus_verteiler(v, "Keller")
         self.assertEqual(
-            (vorlage.reihen, vorlage.leisten_je_reihe, vorlage.da_je_leiste), (2, 6, 10)
+            (vorlage.buchten, vorlage.leisten_je_bucht, vorlage.da_je_leiste), (2, 6, 10)
         )
         self.assertEqual(vorlage.id, "keller")
 
     def test_ungleicher_verteiler_taugt_nicht(self):
-        """Drei Zahlen beschreiben keine ungleich besetzten Reihen."""
+        """Drei Zahlen beschreiben keine ungleich besetzten Buchten."""
         v = Verteiler.aus_geometrie(2, 6, 10)
-        v.reihen[1].leisten.pop()
+        v.buchten[1].leisten.pop()
         with self.assertRaises(VorlagenFehler):
             Vorlage.aus_verteiler(v, "Krumm")
 
@@ -114,6 +114,21 @@ class TestVorlageSpeichern(unittest.TestCase):
         with self.assertRaises(VorlagenFehler):
             vorlage_speichern(vorlage, self.ziel)
         self.assertTrue(vorlage_speichern(vorlage, self.ziel, ueberschreiben=True))
+
+    def test_vorlage_mit_alten_feldnamen(self):
+        """Vor der Umbenennung hießen die Buchten Reihen."""
+        vorlage = vorlage_aus_yaml(
+            {
+                "id": "alt",
+                "name": "Alte Vorlage",
+                "reihen": 2,
+                "leisten_je_reihe": 6,
+                "da_je_leiste": 10,
+            },
+            "alt.yaml",
+        )
+        self.assertEqual((vorlage.buchten, vorlage.leisten_je_bucht), (2, 6))
+        self.assertEqual(vorlage.da_gesamt, 120)
 
     def test_aufnehmen_zeigt_die_vorlage_sofort(self):
         vorlagen = Vorlagen.laden(self.ziel)

@@ -1,7 +1,7 @@
 """Verteilervorlagen.
 
-Eine Vorlage ist nichts weiter als die drei Kennzahlen Reihen, Leisten je
-Reihe und DA je Leiste - dazu ein Name. Sie liegt als YAML-Datei im
+Eine Vorlage ist nichts weiter als die drei Kennzahlen Buchten, Leisten je
+Bucht und DA je Leiste - dazu ein Name. Sie liegt als YAML-Datei im
 Vorlagenordner neben dem Programm; eine neue Vorlage entsteht
 durch Ablegen einer Datei, ohne dass am Programm etwas zu aendern ist.
 """
@@ -29,25 +29,25 @@ class Vorlage:
 
     id: str
     name: str
-    reihen: int
-    leisten_je_reihe: int
+    buchten: int
+    leisten_je_bucht: int
     da_je_leiste: int
     beschreibung: str = ""
     standard: bool = False
 
     @property
     def da_gesamt(self) -> int:
-        return self.reihen * self.leisten_je_reihe * self.da_je_leiste
+        return self.buchten * self.leisten_je_bucht * self.da_je_leiste
 
     @property
     def leisten_gesamt(self) -> int:
-        return self.reihen * self.leisten_je_reihe
+        return self.buchten * self.leisten_je_bucht
 
     def verteiler(self, name: str = "", nummer: str = "") -> Verteiler:
         """Baut einen leeren Verteiler nach dieser Vorlage."""
         return Verteiler.aus_geometrie(
-            self.reihen,
-            self.leisten_je_reihe,
+            self.buchten,
+            self.leisten_je_bucht,
             self.da_je_leiste,
             name=name,
             nummer=nummer,
@@ -67,11 +67,11 @@ class Vorlage:
         """Nimmt die Geometrie eines vorhandenen Verteilers als Vorlage.
 
         Eine Vorlage sind drei Zahlen - ein Verteiler mit ungleich
-        besetzten Reihen laesst sich damit nicht beschreiben.
+        besetzten Buchten laesst sich damit nicht beschreiben.
         """
-        if not verteiler.reihen:
-            raise VorlagenFehler("Der Verteiler hat keine Reihen")
-        leisten = {len(r.leisten) for r in verteiler.reihen}
+        if not verteiler.buchten:
+            raise VorlagenFehler("Der Verteiler hat keine Buchten")
+        leisten = {len(r.leisten) for r in verteiler.buchten}
         da = {l.da_anzahl for l in verteiler.alle_leisten}
         if len(leisten) > 1 or len(da) > 1:
             raise VorlagenFehler(
@@ -81,14 +81,22 @@ class Vorlage:
         return cls(
             id=kennung or kennung_bilden(name),
             name=name,
-            reihen=len(verteiler.reihen),
-            leisten_je_reihe=leisten.pop(),
+            buchten=len(verteiler.buchten),
+            leisten_je_bucht=leisten.pop(),
             da_je_leiste=da.pop(),
             beschreibung=beschreibung,
         )
 
 
-PFLICHTFELDER = ("id", "name", "reihen", "leisten_je_reihe", "da_je_leiste")
+PFLICHTFELDER = ("id", "name", "buchten", "leisten_je_bucht", "da_je_leiste")
+# Vor der Umbenennung hiessen die Buchten Reihen - alte Dateien gelten weiter.
+FRUEHERE_NAMEN = {"buchten": "reihen", "leisten_je_bucht": "leisten_je_reihe"}
+
+
+def _feld(inhalt: dict, name: str):
+    if name in inhalt:
+        return inhalt[name]
+    return inhalt.get(FRUEHERE_NAMEN.get(name, name))
 
 _UMLAUTE = {"ä": "ae", "ö": "oe", "ü": "ue", "ß": "ss"}
 
@@ -111,8 +119,8 @@ def vorlage_als_yaml(vorlage: Vorlage) -> str:
         "id": vorlage.id,
         "name": vorlage.name,
         "beschreibung": vorlage.beschreibung,
-        "reihen": vorlage.reihen,
-        "leisten_je_reihe": vorlage.leisten_je_reihe,
+        "buchten": vorlage.buchten,
+        "leisten_je_bucht": vorlage.leisten_je_bucht,
         "da_je_leiste": vorlage.da_je_leiste,
     }
     if vorlage.standard:
@@ -141,18 +149,18 @@ def vorlage_speichern(
 
 
 def vorlage_aus_yaml(inhalt: dict, herkunft: str = "") -> Vorlage:
-    fehlend = [feld for feld in PFLICHTFELDER if feld not in inhalt]
+    fehlend = [feld for feld in PFLICHTFELDER if _feld(inhalt, feld) is None]
     if fehlend:
         wo = f"{herkunft}: " if herkunft else ""
         raise VorlagenFehler(f"{wo}Vorlage ohne {', '.join(fehlend)}")
 
     try:
         vorlage = Vorlage(
-            id=str(inhalt["id"]),
-            name=str(inhalt["name"]),
-            reihen=int(inhalt["reihen"]),
-            leisten_je_reihe=int(inhalt["leisten_je_reihe"]),
-            da_je_leiste=int(inhalt["da_je_leiste"]),
+            id=str(_feld(inhalt, "id")),
+            name=str(_feld(inhalt, "name")),
+            buchten=int(_feld(inhalt, "buchten")),
+            leisten_je_bucht=int(_feld(inhalt, "leisten_je_bucht")),
+            da_je_leiste=int(_feld(inhalt, "da_je_leiste")),
             beschreibung=str(inhalt.get("beschreibung", "")),
             standard=bool(inhalt.get("standard", False)),
         )
@@ -160,9 +168,9 @@ def vorlage_aus_yaml(inhalt: dict, herkunft: str = "") -> Vorlage:
         wo = f"{herkunft}: " if herkunft else ""
         raise VorlagenFehler(f"{wo}Zahlenangabe nicht lesbar - {fehler}") from None
 
-    if min(vorlage.reihen, vorlage.leisten_je_reihe, vorlage.da_je_leiste) < 1:
+    if min(vorlage.buchten, vorlage.leisten_je_bucht, vorlage.da_je_leiste) < 1:
         wo = f"{herkunft}: " if herkunft else ""
-        raise VorlagenFehler(f"{wo}Reihen, Leisten und DA muessen mindestens 1 sein")
+        raise VorlagenFehler(f"{wo}Buchten, Leisten und DA muessen mindestens 1 sein")
     return vorlage
 
 

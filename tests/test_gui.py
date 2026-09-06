@@ -172,7 +172,7 @@ class TestNeuerVerteilerDialog(unittest.TestCase):
 
     def test_verteiler_folgt_der_wahl(self):
         self.dialog.dawahl.setCurrentIndex(2)      # 20 DA
-        self.dialog.reihen.setValue(2)
+        self.dialog.buchten.setValue(2)
         self.dialog.leisten.setValue(3)
         verteiler = self.dialog.verteiler()
         self.assertEqual(verteiler.da_gesamt, 120)

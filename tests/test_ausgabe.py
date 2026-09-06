@@ -45,7 +45,7 @@ class TestPdf(unittest.TestCase):
         self.assertEqual(len(seiten), 6)
 
     def test_buchten_landen_als_eigene_seiten_im_pdf(self):
-        """Ab drei Reihen bekommt je Bucht eine eigene Seite."""
+        """Ab drei Buchten bekommt je Bucht eine eigene Seite."""
         projekt = _projekt()
         projekt.verteiler = Verteiler.aus_geometrie(4, 4, 10, name="Groß")
         pdf_schreiben(projekt, self.ziel)
@@ -54,8 +54,8 @@ class TestPdf(unittest.TestCase):
         seiten = PdfReader(str(self.ziel)).pages
         self.assertEqual(len(seiten), 1 + 2 + 16)
         kopf = "\n".join(s.extract_text() for s in seiten[1:3])
-        self.assertIn("Bucht 1", kopf)
-        self.assertIn("Bucht 2", kopf)
+        self.assertIn("Buchten 1 und 2", kopf)
+        self.assertIn("Buchten 3 und 4", kopf)
 
     def test_hoch_und_querformat(self):
         """Die Verteilerbelegung liegt quer, die Leistenblätter hoch."""

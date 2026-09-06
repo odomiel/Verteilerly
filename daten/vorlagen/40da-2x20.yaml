@@ -2,7 +2,7 @@
 # Entspricht der Mustertabelle mit zwei Leisten.
 id: 40da-2x20
 name: "40 DA - 2 Leisten zu 20 DA"
-beschreibung: "Zwei Leisten in einer Reihe, je 20 Doppeladern."
-reihen: 1
-leisten_je_reihe: 2
+beschreibung: "Zwei Leisten in einer Bucht, je 20 Doppeladern."
+buchten: 1
+leisten_je_bucht: 2
 da_je_leiste: 20

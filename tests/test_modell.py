@@ -16,21 +16,21 @@ from verteilerly.modell import (
 class TestGeometrie(unittest.TestCase):
     def test_mustermasse(self):
         """Die drei Muster ergeben ihre bekannte DA-Zahl."""
-        for reihen, leisten, da, erwartet in [
+        for buchten, leisten, da, erwartet in [
             (1, 4, 10, 40),   # 40 DA in vier Leisten
             (1, 2, 20, 40),   # 40 DA in zwei Leisten
             (2, 6, 10, 120),  # 120 DA in zwei Buchten
         ]:
-            with self.subTest(geometrie=(reihen, leisten, da)):
+            with self.subTest(geometrie=(buchten, leisten, da)):
                 self.assertEqual(
-                    Verteiler.aus_geometrie(reihen, leisten, da).da_gesamt, erwartet
+                    Verteiler.aus_geometrie(buchten, leisten, da).da_gesamt, erwartet
                 )
 
-    def test_leisten_laufen_ueber_reihen_durch(self):
-        """Reihe 1 traegt Leiste 1-6, Reihe 2 die Leisten 7-12."""
+    def test_leisten_laufen_ueber_buchten_durch(self):
+        """Bucht 1 traegt Leiste 1-6, Bucht 2 die Leisten 7-12."""
         v = Verteiler.aus_geometrie(2, 6, 10)
-        self.assertEqual([l.nummer for l in v.reihen[0].leisten], list(range(1, 7)))
-        self.assertEqual([l.nummer for l in v.reihen[1].leisten], list(range(7, 13)))
+        self.assertEqual([l.nummer for l in v.buchten[0].leisten], list(range(1, 7)))
+        self.assertEqual([l.nummer for l in v.buchten[1].leisten], list(range(7, 13)))
 
     def test_leere_geometrie_abgelehnt(self):
         with self.assertRaises(ModellFehler):

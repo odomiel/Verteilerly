@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from .modell import Projekt, Reihe, Verteiler, adressen_schreiben
+from .modell import Projekt, Bucht, Verteiler, adressen_schreiben
 
 # -- Papier ----------------------------------------------------------------
 
@@ -234,11 +234,11 @@ def deckblatt(projekt: Projekt) -> Blatt:
 
 
 def _aufbau(v: Verteiler) -> str:
-    if not v.reihen:
+    if not v.buchten:
         return ""
-    leisten = len(v.reihen[0].leisten)
-    da = v.reihen[0].leisten[0].da_anzahl if leisten else 0
-    return f"{len(v.reihen)} Reihen × {leisten} Leisten × {da} DA"
+    leisten = len(v.buchten[0].leisten)
+    da = v.buchten[0].leisten[0].da_anzahl if leisten else 0
+    return f"{len(v.buchten)} Buchten × {leisten} Leisten × {da} DA"
 
 
 # -- Verteilerbelegung -----------------------------------------------------
@@ -247,78 +247,75 @@ ZELLE_B = 6.0
 ZELLE_H = 9.0
 LEISTENLABEL_B = 14.0
 ABSTAND_LEISTEN = 3.0
-ABSTAND_REIHEN = 12.0
-REIHEN_JE_BLATT = 2
+ABSTAND_BUCHTEN = 12.0
+BUCHTEN_JE_BLATT = 2
 
 
 def verteilerbelegungen(projekt: Projekt) -> list[Blatt]:
-    """Die Verteilerbelegung, bei Bedarf auf mehrere Buchten verteilt.
+    """Die Verteilerbelegung, bei Bedarf auf mehrere Blaetter verteilt.
 
-    Mehr als zwei Reihen nebeneinander waeren auf A4 quer nur noch
-    gequetscht. Ab der dritten Reihe bekommt deshalb je zwei Reihen ein
-    eigenes Blatt, durchnummeriert als Bucht 1, Bucht 2 und so weiter.
+    Mehr als zwei Buchten nebeneinander waeren auf A4 quer nur noch
+    gequetscht. Ab der dritten Bucht bekommt deshalb je zwei Buchten ein
+    eigenes Blatt, benannt nach den Buchten, die darauf stehen.
     """
-    reihen = projekt.verteiler.reihen
-    buchten = [
-        reihen[i:i + REIHEN_JE_BLATT] for i in range(0, len(reihen), REIHEN_JE_BLATT)
+    alle = projekt.verteiler.buchten
+    gruppen = [
+        alle[i:i + BUCHTEN_JE_BLATT] for i in range(0, len(alle), BUCHTEN_JE_BLATT)
     ] or [[]]
-    if len(buchten) == 1:
-        return [verteilerbelegung(projekt, buchten[0])]
-    return [
-        verteilerbelegung(projekt, bucht, nummer)
-        for nummer, bucht in enumerate(buchten, 1)
-    ]
+    if len(gruppen) == 1:
+        return [verteilerbelegung(projekt, gruppen[0])]
+    return [verteilerbelegung(projekt, gruppe, benennen=True) for gruppe in gruppen]
+
+
+def buchtnamen(buchten: list[Bucht]) -> str:
+    """Wie das Blatt heisst, das diese Buchten traegt."""
+    if not buchten:
+        return "Verteilerbelegung"
+    erste, letzte = buchten[0].nummer, buchten[-1].nummer
+    return f"Bucht {erste}" if erste == letzte else f"Buchten {erste} und {letzte}"
 
 
 def verteilerbelegung(
     projekt: Projekt,
-    reihen: list[Reihe] | None = None,
-    bucht: int | None = None,
+    buchten: list[Bucht] | None = None,
+    benennen: bool = False,
 ) -> Blatt:
     """Jede Leiste ein Kasten aus DA-Zellen, Kabel als Block.
 
-    Querformat, weil zwei Reihen im Hochformat nicht nebeneinander
+    Querformat, weil zwei Buchten im Hochformat nicht nebeneinander
     passen. Die Zellen werden so weit vergroessert, wie das Blatt
     es hergibt - ein 40-DA-Verteiler soll die Seite nicht als Briefmarke
     in der Ecke fuellen.
     """
     v = projekt.verteiler
-    reihen = list(v.reihen if reihen is None else reihen)
+    buchten = list(v.buchten if buchten is None else buchten)
 
-    titel = "Verteilerbelegung" if bucht is None else f"Bucht {bucht}"
+    titel = buchtnamen(buchten) if benennen else "Verteilerbelegung"
     blatt = Blatt(*A4_QUER, titel=titel)
     ueberschrift = (
-        "Verteilerbelegung" if bucht is None
-        else f"Verteilerbelegung — Bucht {bucht}"
+        f"Verteilerbelegung — {titel}" if benennen else "Verteilerbelegung"
     )
-    blatt.text(RAND, RAND, 150, 8, ueberschrift, MITTEL, LINKS, True)
-    if bucht is not None:
-        erste, letzte = reihen[0].nummer, reihen[-1].nummer
-        blatt.text(
-            RAND, RAND, blatt.breite - 2 * RAND,
-            8, f"Reihe {erste}" if erste == letzte else f"Reihen {erste} und {letzte}",
-            NORMAL, RECHTS, False, TINTE_LEISE,
-        )
+    blatt.text(RAND, RAND, 170, 8, ueberschrift, MITTEL, LINKS, True)
 
     oben = RAND + 12
     platz_b = blatt.breite - 2 * RAND
     platz_h = blatt.hoehe - RAND - SCHRIFTFELD_H - 6 - oben
-    faktor = _belegungsfaktor(reihen, platz_b, platz_h)
+    faktor = _belegungsfaktor(buchten, platz_b, platz_h)
 
     zelle_b = ZELLE_B * faktor
     zelle_h = ZELLE_H * faktor
     # Die Beschriftung waechst nur begrenzt mit - sonst frisst sie die Zellen.
     label_b = LEISTENLABEL_B * min(faktor, 1.5)
     luft_l = ABSTAND_LEISTEN * faktor
-    luft_r = ABSTAND_REIHEN * faktor
+    luft_r = ABSTAND_BUCHTEN * faktor
     schrift = KLEIN if faktor < 1.4 else NORMAL
 
     kaesten: dict[int, tuple[float, float, int]] = {}
     x = RAND
-    for reihe in reihen:
-        breiteste = max((l.da_anzahl for l in reihe.leisten), default=0)
+    for bucht in buchten:
+        breiteste = max((l.da_anzahl for l in bucht.leisten), default=0)
         y = oben
-        for leiste in reihe.leisten:
+        for leiste in bucht.leisten:
             kaesten[leiste.nummer] = (x + label_b, y, leiste.da_anzahl)
             y += zelle_h + luft_l
         x += label_b + breiteste * zelle_b + luft_r
@@ -358,16 +355,16 @@ def verteilerbelegung(
     return blatt
 
 
-def _belegungsfaktor(reihen: list[Reihe], platz_b: float, platz_h: float) -> float:
+def _belegungsfaktor(buchten: list[Bucht], platz_b: float, platz_h: float) -> float:
     """Wie stark die Grundmasse auf diesem Blatt wachsen duerfen."""
-    if not reihen:
+    if not buchten:
         return 1.0
     breite = sum(
         LEISTENLABEL_B + max((l.da_anzahl for l in r.leisten), default=0) * ZELLE_B
-        + ABSTAND_REIHEN
-        for r in reihen
-    ) - ABSTAND_REIHEN
-    leisten = max(len(r.leisten) for r in reihen)
+        + ABSTAND_BUCHTEN
+        for r in buchten
+    ) - ABSTAND_BUCHTEN
+    leisten = max(len(r.leisten) for r in buchten)
     hoehe = leisten * (ZELLE_H + ABSTAND_LEISTEN) - ABSTAND_LEISTEN
     # Kleiner als 1 bei sehr grossen Verteilern, sonst passt das Blatt nicht.
     return max(0.3, min(platz_b / breite, platz_h / hoehe, 3.0))

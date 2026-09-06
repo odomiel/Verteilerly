@@ -2,7 +2,7 @@
 
 Eine Zelle entspricht einer Doppelader, ein Kabel einem zusammenhängenden
 Block über die von ihm belegten Doppeladern - genau wie in den
-Mustertabellen. Reihen stehen nebeneinander.
+Mustertabellen. Buchten stehen nebeneinander.
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ ZELLE_H = 32
 LABEL_B = 32
 RAND = 14
 ABSTAND_LEISTEN = 9
-ABSTAND_REIHEN = 30
+ABSTAND_BUCHTEN = 30
 
 
 class Uebersicht(QWidget):
@@ -66,15 +66,15 @@ class Uebersicht(QWidget):
             return kaesten
 
         x = RAND
-        for reihe in self.verteiler.reihen:
-            breiteste = max((l.da_anzahl for l in reihe.leisten), default=0)
+        for bucht in self.verteiler.buchten:
+            breiteste = max((l.da_anzahl for l in bucht.leisten), default=0)
             y = RAND
-            for leiste in reihe.leisten:
+            for leiste in bucht.leisten:
                 kaesten[leiste.nummer] = QRect(
                     x + LABEL_B, y, leiste.da_anzahl * ZELLE_B, ZELLE_H
                 )
                 y += ZELLE_H + ABSTAND_LEISTEN
-            x += LABEL_B + breiteste * ZELLE_B + ABSTAND_REIHEN
+            x += LABEL_B + breiteste * ZELLE_B + ABSTAND_BUCHTEN
         return kaesten
 
     def sizeHint(self) -> QSize:

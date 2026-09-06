@@ -1,7 +1,7 @@
 """Datenmodell eines LSA+-Verteilers.
 
-Ein Verteiler besteht aus Reihen,
-eine Reihe aus Leisten, eine Leiste aus Stiften, ein Stift aus den beiden
+Ein Verteiler besteht aus Buchten,
+eine Bucht aus Leisten, eine Leiste aus Stiften, ein Stift aus den beiden
 Adern a und b. Kabel und Rangierungen liegen quer dazu und haengen am
 Verteiler, nicht an der einzelnen Ader.
 """
@@ -112,7 +112,7 @@ class Stift:
 
 @dataclass
 class Leiste:
-    """Eine LSA-Leiste. Die Nummer laeuft ueber alle Reihen durch."""
+    """Eine LSA-Leiste. Die Nummer laeuft ueber alle Buchten durch."""
 
     nummer: int
     stifte: list[Stift]
@@ -135,8 +135,8 @@ class Leiste:
 
 
 @dataclass
-class Reihe:
-    """Eine Montagereihe im Verteiler; ordnet nur an."""
+class Bucht:
+    """Eine Montagebucht im Verteiler; ordnet nur an."""
 
     nummer: int
     leisten: list[Leiste]
@@ -243,7 +243,7 @@ class Verteiler:
 
     name: str = ""
     nummer: str = ""
-    reihen: list[Reihe] = field(default_factory=list)
+    buchten: list[Bucht] = field(default_factory=list)
     kabel: list[Kabel] = field(default_factory=list)
     rangierungen: list[Rangierung] = field(default_factory=list)
 
@@ -252,36 +252,36 @@ class Verteiler:
     @classmethod
     def aus_geometrie(
         cls,
-        reihen: int,
-        leisten_je_reihe: int,
+        buchten: int,
+        leisten_je_bucht: int,
         da_je_leiste: int,
         name: str = "",
         nummer: str = "",
     ) -> Verteiler:
         """Baut einen Verteiler aus den drei Kennzahlen.
 
-        Die Leisten werden ueber alle Reihen hinweg durchlaufend
-        nummeriert: bei 2 Reihen zu 6 Leisten traegt Reihe 1 die
-        Leisten 1 bis 6 und Reihe 2 die Leisten 7 bis 12.
+        Die Leisten werden ueber alle Buchten hinweg durchlaufend
+        nummeriert: bei 2 Buchten zu 6 Leisten traegt Bucht 1 die
+        Leisten 1 bis 6 und Bucht 2 die Leisten 7 bis 12.
         """
-        if min(reihen, leisten_je_reihe, da_je_leiste) < 1:
-            raise ModellFehler("Reihen, Leisten und DA muessen mindestens 1 sein")
+        if min(buchten, leisten_je_bucht, da_je_leiste) < 1:
+            raise ModellFehler("Buchten, Leisten und DA muessen mindestens 1 sein")
 
-        aufbau: list[Reihe] = []
+        aufbau: list[Bucht] = []
         naechste_leiste = 1
-        for reihen_nr in range(1, reihen + 1):
+        for buchten_nr in range(1, buchten + 1):
             leisten = []
-            for _ in range(leisten_je_reihe):
+            for _ in range(leisten_je_bucht):
                 leisten.append(Leiste.neu(naechste_leiste, da_je_leiste))
                 naechste_leiste += 1
-            aufbau.append(Reihe(reihen_nr, leisten))
-        return cls(name=name, nummer=nummer, reihen=aufbau)
+            aufbau.append(Bucht(buchten_nr, leisten))
+        return cls(name=name, nummer=nummer, buchten=aufbau)
 
     # -- Zugriff -----------------------------------------------------------
 
     @property
     def alle_leisten(self) -> list[Leiste]:
-        return [leiste for reihe in self.reihen for leiste in reihe.leisten]
+        return [leiste for bucht in self.buchten for leiste in bucht.leisten]
 
     @property
     def da_gesamt(self) -> int:

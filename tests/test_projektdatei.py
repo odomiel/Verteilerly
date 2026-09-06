@@ -127,5 +127,38 @@ class TestProjektdatei(unittest.TestCase):
         self.assertEqual(self.pfad.read_text(encoding="utf-8"), vorher)
 
 
+class TestAeltereDateien(unittest.TestCase):
+    """Fassung 1 nannte die Buchten noch Reihen."""
+
+    def setUp(self):
+        self.ordner = tempfile.TemporaryDirectory()
+        self.addCleanup(self.ordner.cleanup)
+        self.ziel = pathlib.Path(self.ordner.name) / "alt.vtly.json"
+
+        daten = projektdatei.als_dict(beispielprojekt())
+        daten["formatversion"] = 1
+        daten["verteiler"]["reihen"] = daten["verteiler"].pop("buchten")
+        self.ziel.write_text(json.dumps(daten), encoding="utf-8")
+
+    def test_alte_datei_wird_weiter_gelesen(self):
+        projekt = projektdatei.laden(self.ziel)
+        self.assertEqual(len(projekt.verteiler.buchten), 1)
+        self.assertEqual(projekt.verteiler.da_gesamt, 40)
+        self.assertEqual(len(projekt.verteiler.kabel), 2)
+
+    def test_geschrieben_wird_die_neue_fassung(self):
+        projekt = projektdatei.laden(self.ziel)
+        neu = projektdatei.als_dict(projekt)
+        self.assertEqual(neu["formatversion"], projektdatei.FORMATVERSION)
+        self.assertIn("buchten", neu["verteiler"])
+        self.assertNotIn("reihen", neu["verteiler"])
+
+    def test_unbekannte_fassung_wird_abgewiesen(self):
+        daten = projektdatei.als_dict(beispielprojekt())
+        daten["formatversion"] = 99
+        with self.assertRaises(ProjektdateiFehler):
+            projektdatei.aus_dict(daten)
+
+
 if __name__ == "__main__":
     unittest.main()

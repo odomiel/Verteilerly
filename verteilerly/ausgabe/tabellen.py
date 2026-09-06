@@ -19,7 +19,7 @@ from ..modell import (
 from . import AusgabeFehler
 
 SPALTEN = (
-    "Reihe",
+    "Bucht",
     "Leiste",
     "Stift",
     "Ader",
@@ -45,13 +45,13 @@ TRENNER = ";"  # deutsches Excel oeffnet CSV so ohne Rueckfrage
 def belegungszeilen(projekt: Projekt) -> list[list]:
     """Eine Zeile je Ader, in der Reihenfolge des Verteilers.
 
-    Reihe, Leiste und Stift bleiben Zahlen, damit in Excel richtig
+    Bucht, Leiste und Stift bleiben Zahlen, damit in Excel richtig
     sortiert wird und nicht 10 vor 2 steht.
     """
     v = projekt.verteiler
     zeilen: list[list] = []
-    for reihe in v.reihen:
-        for leiste in reihe.leisten:
+    for bucht in v.buchten:
+        for leiste in bucht.leisten:
             for stift in leiste.stifte:
                 kabel = v.kabel_an(leiste.nummer, stift.nummer)
                 for seite in ("a", "b"):
@@ -59,7 +59,7 @@ def belegungszeilen(projekt: Projekt) -> list[list]:
                     adresse = Aderadresse(leiste.nummer, stift.nummer, seite)
                     zeilen.append(
                         [
-                            reihe.nummer,
+                            bucht.nummer,
                             leiste.nummer,
                             stift.nummer,
                             seite,

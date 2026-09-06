@@ -18,14 +18,17 @@ from .modell import (
     ModellFehler,
     Projekt,
     Rangierung,
-    Reihe,
+    Bucht,
     Leiste,
     Stift,
     Verteiler,
 )
 
 DATEIKENNUNG = "verteilerly-projekt"
-FORMATVERSION = 1
+FORMATVERSION = 2
+# Fassung 1 nannte die Buchten noch Reihen. Solche Dateien werden weiter
+# gelesen; geschrieben wird immer die neue Fassung.
+LESBARE_VERSIONEN = (1, 2)
 
 
 class ProjektdateiFehler(ModellFehler):
@@ -51,9 +54,9 @@ def _verteiler_raus(verteiler: Verteiler) -> dict[str, Any]:
     return {
         "name": verteiler.name,
         "nummer": verteiler.nummer,
-        "reihen": [
+        "buchten": [
             {
-                "nummer": reihe.nummer,
+                "nummer": bucht.nummer,
                 "leisten": [
                     {
                         "nummer": leiste.nummer,
@@ -66,10 +69,10 @@ def _verteiler_raus(verteiler: Verteiler) -> dict[str, Any]:
                             for stift in leiste.stifte
                         ],
                     }
-                    for leiste in reihe.leisten
+                    for leiste in bucht.leisten
                 ],
             }
-            for reihe in verteiler.reihen
+            for bucht in verteiler.buchten
         ],
         "kabel": [
             {
@@ -131,10 +134,10 @@ def _ader_rein(daten: dict[str, Any], seite: str) -> Ader:
 
 
 def _verteiler_rein(daten: dict[str, Any]) -> Verteiler:
-    reihen = []
-    for reihe in daten.get("reihen", []):
+    buchten = []
+    for bucht in daten.get("buchten") or daten.get("reihen") or []:
         leisten = []
-        for leiste in reihe.get("leisten", []):
+        for leiste in bucht.get("leisten", []):
             stifte = [
                 Stift(
                     nummer=stift["nummer"],
@@ -144,7 +147,7 @@ def _verteiler_rein(daten: dict[str, Any]) -> Verteiler:
                 for stift in leiste.get("stifte", [])
             ]
             leisten.append(Leiste(nummer=leiste["nummer"], stifte=stifte))
-        reihen.append(Reihe(nummer=reihe["nummer"], leisten=leisten))
+        buchten.append(Bucht(nummer=bucht["nummer"], leisten=leisten))
 
     kabel = [
         Kabel(
@@ -167,7 +170,7 @@ def _verteiler_rein(daten: dict[str, Any]) -> Verteiler:
     return Verteiler(
         name=daten.get("name", ""),
         nummer=daten.get("nummer", ""),
-        reihen=reihen,
+        buchten=buchten,
         kabel=kabel,
         rangierungen=rangierungen,
     )
@@ -177,10 +180,10 @@ def aus_dict(daten: dict[str, Any]) -> Projekt:
     if daten.get("dateikennung") != DATEIKENNUNG:
         raise ProjektdateiFehler("Das ist keine Verteilerly-Projektdatei")
     version = daten.get("formatversion")
-    if version != FORMATVERSION:
+    if version not in LESBARE_VERSIONEN:
+        lesbar = ", ".join(str(v) for v in LESBARE_VERSIONEN)
         raise ProjektdateiFehler(
-            f"Formatversion {version} wird nicht unterstuetzt "
-            f"(erwartet: {FORMATVERSION})"
+            f"Formatversion {version} wird nicht unterstuetzt (lesbar: {lesbar})"
         )
     return Projekt(
         verteiler=_verteiler_rein(daten.get("verteiler", {})),

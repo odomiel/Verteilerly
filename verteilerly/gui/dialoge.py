@@ -145,8 +145,8 @@ class NeuerVerteilerDialog(QDialog):
 
         # Eigene Geometrie
         self.eigen = QRadioButton("Benutzerdefiniert")
-        self.reihen = QSpinBox()
-        self.reihen.setRange(1, 20)
+        self.buchten = QSpinBox()
+        self.buchten.setRange(1, 20)
         self.leisten = QSpinBox()
         self.leisten.setRange(1, 60)
         self.leisten.setValue(4)
@@ -170,7 +170,7 @@ class NeuerVerteilerDialog(QDialog):
         dablock = QWidget()
         dablock.setLayout(dazeile)
 
-        for feld in (self.reihen, self.leisten, self.da):
+        for feld in (self.buchten, self.leisten, self.da):
             feld.valueChanged.connect(self._summe_zeigen)
         self.summe = QLabel()
 
@@ -183,8 +183,8 @@ class NeuerVerteilerDialog(QDialog):
         self.als_vorlage.setEnabled(vorlagenordner is not None)
 
         eigenform = QFormLayout()
-        eigenform.addRow("Reihen:", self.reihen)
-        eigenform.addRow("Leisten je Reihe:", self.leisten)
+        eigenform.addRow("Buchten:", self.buchten)
+        eigenform.addRow("Leisten je Bucht:", self.leisten)
         eigenform.addRow("DA je Leiste:", dablock)
         eigenform.addRow("", self.summe)
         eigenform.addRow("", self.als_vorlage)
@@ -228,8 +228,8 @@ class NeuerVerteilerDialog(QDialog):
         return self.dawahl.currentData() or self.da.value()
 
     def _summe_zeigen(self) -> None:
-        gesamt = self.reihen.value() * self.leisten.value() * self.da_je_leiste()
-        leisten = self.reihen.value() * self.leisten.value()
+        gesamt = self.buchten.value() * self.leisten.value() * self.da_je_leiste()
+        leisten = self.buchten.value() * self.leisten.value()
         self.summe.setText(f"ergibt {leisten} Leisten, {gesamt} DA")
 
     def vorlage_ablegen(self) -> None:
@@ -241,11 +241,11 @@ class NeuerVerteilerDialog(QDialog):
             self.vorlagen,
             self.vorlagenordner,
             vorschlag=(
-                f"{self.reihen.value() * self.leisten.value() * da} DA - "
+                f"{self.buchten.value() * self.leisten.value() * da} DA - "
                 f"{self.leisten.value()} Leisten zu {da} DA"
             ),
             beschreibung=(
-                f"{self.reihen.value()} Reihen zu je {self.leisten.value()} "
+                f"{self.buchten.value()} Buchten zu je {self.leisten.value()} "
                 f"Leisten mit {da} Doppeladern."
             ),
         )
@@ -266,7 +266,7 @@ class NeuerVerteilerDialog(QDialog):
     def geometrie(self, name: str = "", nummer: str = "") -> Verteiler:
         """Der Verteiler aus den eigenen Angaben, ohne Vorlage."""
         return Verteiler.aus_geometrie(
-            self.reihen.value(), self.leisten.value(), self.da_je_leiste(),
+            self.buchten.value(), self.leisten.value(), self.da_je_leiste(),
             name, nummer,
         )
 

@@ -2,8 +2,8 @@
 # Entspricht der Mustertabelle mit vier Leisten.
 id: 40da-4x10
 name: "40 DA - 4 Leisten zu 10 DA"
-beschreibung: "Vier Leisten in einer Reihe, je 10 Doppeladern."
-reihen: 1
-leisten_je_reihe: 4
+beschreibung: "Vier Leisten in einer Bucht, je 10 Doppeladern."
+buchten: 1
+leisten_je_bucht: 4
 da_je_leiste: 10
 standard: true
