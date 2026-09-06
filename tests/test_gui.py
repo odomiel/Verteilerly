@@ -23,7 +23,9 @@ try:
         SPALTE_FARBE,
         SPALTE_KABEL,
         SPALTE_RANGIERUNG,
+        SPALTE_RANGIERUNG_2,
         SPALTE_STIFT,
+        UEBERSCHRIFTEN,
         LeistenModell,
     )
 
@@ -76,9 +78,45 @@ class TestLeistenModell(unittest.TestCase):
         self.assertEqual(self._text(0, SPALTE_RANGIERUNG), "3 2a")
         self.assertEqual(self.v.ziele_von(Aderadresse.parse("3 2a")), [Aderadresse.parse("1 1a")])
 
-    def test_zwei_rangierungen_je_feld(self):
+    def test_je_rangierung_ein_feld(self):
+        """Zwei Ziele, zwei Zellen - eine Überschrift darüber."""
+        self.assertTrue(self._setzen(0, SPALTE_RANGIERUNG, "3 2a"))
+        self.assertTrue(self._setzen(0, SPALTE_RANGIERUNG_2, "4 5b"))
+        self.assertEqual(self._text(0, SPALTE_RANGIERUNG), "3 2a")
+        self.assertEqual(self._text(0, SPALTE_RANGIERUNG_2), "4 5b")
+        self.assertEqual(UEBERSCHRIFTEN[SPALTE_RANGIERUNG], "Rangierung")
+        self.assertEqual(UEBERSCHRIFTEN[SPALTE_RANGIERUNG_2], "")
+
+    def test_das_zweite_feld_laesst_das_erste_stehen(self):
+        self._setzen(0, SPALTE_RANGIERUNG, "3 2a")
+        self._setzen(0, SPALTE_RANGIERUNG_2, "4 5b")
+        self._setzen(0, SPALTE_RANGIERUNG_2, "2 1a")
+        self.assertEqual(self._text(0, SPALTE_RANGIERUNG), "3 2a")
+        self.assertEqual(self._text(0, SPALTE_RANGIERUNG_2), "2 1a")
+
+    def test_geaendertes_erstes_feld_bleibt_das_erste(self):
+        """Sonst sprängen die beiden Einträge beim Tippen hin und her."""
+        self._setzen(0, SPALTE_RANGIERUNG, "3 2a")
+        self._setzen(0, SPALTE_RANGIERUNG_2, "4 5b")
+        self._setzen(0, SPALTE_RANGIERUNG, "2 1a")
+        self.assertEqual(self._text(0, SPALTE_RANGIERUNG), "2 1a")
+        self.assertEqual(self._text(0, SPALTE_RANGIERUNG_2), "4 5b")
+
+    def test_ein_feld_leeren_loescht_nur_dieses(self):
+        self._setzen(0, SPALTE_RANGIERUNG, "3 2a")
+        self._setzen(0, SPALTE_RANGIERUNG_2, "4 5b")
+        self._setzen(0, SPALTE_RANGIERUNG, "")
+        self.assertEqual(self._text(0, SPALTE_RANGIERUNG), "4 5b")
+        self.assertEqual(self._text(0, SPALTE_RANGIERUNG_2), "")
+        self.assertEqual(
+            self.v.ziele_von(Aderadresse.parse("3 2a")), []
+        )
+
+    def test_die_alte_schreibweise_geht_weiter(self):
+        """„3 2a   4 5b“ in ein Feld getippt verteilt sich auf beide."""
         self.assertTrue(self._setzen(0, SPALTE_RANGIERUNG, "3 2a   4 5b"))
-        self.assertEqual(self._text(0, SPALTE_RANGIERUNG), "3 2a   4 5b")
+        self.assertEqual(self._text(0, SPALTE_RANGIERUNG), "3 2a")
+        self.assertEqual(self._text(0, SPALTE_RANGIERUNG_2), "4 5b")
 
     def test_fehlerhafte_eingabe_meldet_und_aendert_nichts(self):
         gemeldet = []

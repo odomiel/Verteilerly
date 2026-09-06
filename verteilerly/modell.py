@@ -476,6 +476,10 @@ class Verteiler:
 
         Es wird erst geprueft und dann geaendert - schlaegt eine Pruefung
         fehl, bleibt der bisherige Stand unangetastet.
+
+        Die angegebene Folge ist auch die Anzeigefolge: wer im ersten
+        Feld etwas anderes eintraegt, findet es hinterher wieder im
+        ersten Feld und nicht im zweiten.
         """
         if len(ziele) > MAX_RANGIERUNGEN_JE_ADER:
             raise ModellFehler(
@@ -486,23 +490,20 @@ class Verteiler:
             raise ModellFehler("Dieselbe Gegenstelle ist zweimal angegeben")
 
         bisher = self.ziele_von(adresse)
-        entfallen = [z for z in bisher if z not in ziele]
-        neu = [z for z in ziele if z not in bisher]
 
         # Vorpruefung auf einer Kopie, damit nichts halb angewandt wird.
-        probe = list(self.rangierungen)
-        for ziel in entfallen:
-            for rangierung in probe:
-                if rangierung.beruehrt(adresse) and rangierung.beruehrt(ziel):
-                    probe.remove(rangierung)
-                    break
-        for ziel in neu:
+        # Erst fliegen alle Rangierungen dieser Ader heraus, dann kommen
+        # sie in der angegebenen Folge zurueck - so bleibt die Reihenfolge
+        # die des Anwenders.
+        probe = [r for r in self.rangierungen if not r.beruehrt(adresse)]
+        for ziel in ziele:
             if ziel == adresse:
                 raise ModellFehler(
                     f"Eine Rangierung kann nicht auf sich selbst zeigen ({ziel})"
                 )
             if not self.kennt(ziel):
                 raise ModellFehler(f"{ziel} gibt es in diesem Verteiler nicht")
+            # Die eigenen sind oben herausgenommen und zaehlen nicht mit.
             belegt = sum(1 for r in probe if r.beruehrt(ziel))
             if belegt >= MAX_RANGIERUNGEN_JE_ADER:
                 raise ModellFehler(

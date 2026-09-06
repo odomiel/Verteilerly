@@ -89,8 +89,11 @@ Der Editor zeigt links die Verteilerübersicht und rechts die Belegung der
 gewählten Leiste. Ein Doppelklick auf eine freie Doppelader legt ein Kabel
 auf, einer auf ein Kabel öffnet es; passt ein Kabel nicht mehr auf die
 Leiste, fragt der Überlaufdialog nach der Fortsetzung. Rangierungen werden
-in die Spalte getippt (`3 2a`, zwei durch Leerraum getrennt); die
-Gegenstelle trägt sich selbst ein.
+in zwei Felder getippt — je Rangierung eines, mit einer Überschrift
+darüber; die Gegenstelle trägt sich selbst ein. Wer beide in ein Feld
+tippt (`3 2a   5 4a`), bekommt sie auf beide verteilt. Auf dem Blatt
+stehen sie nebeneinander in einer Zelle — dort soll nicht zu sehen sein,
+dass es zwei Felder sind.
 
 Menüeinträge, die gerade nichts bewirken können, sind ausgegraut: ohne
 Verteiler die ganze Ausgabe, *Kabel entfernen* nur dort, wo wirklich ein

@@ -214,6 +214,19 @@ class TestRangierungenSetzen(unittest.TestCase):
         with self.assertRaises(ModellFehler):
             self.v.rangierungen_setzen(self.a, adressen_lesen("2 1a   3 1a   4 1a"))
 
+    def test_die_folge_bleibt_wie_angegeben(self):
+        """Wer das erste Feld ändert, findet es hinterher im ersten."""
+        erst, dann = adressen_lesen("3 2a   4 5b")
+        self.v.rangierungen_setzen(self.a, [erst, dann])
+        self.assertEqual(self.v.ziele_von(self.a), [erst, dann])
+
+        neu = adressen_lesen("2 1a")[0]
+        self.v.rangierungen_setzen(self.a, [neu, dann])
+        self.assertEqual(self.v.ziele_von(self.a), [neu, dann])
+
+        self.v.rangierungen_setzen(self.a, [dann, neu])
+        self.assertEqual(self.v.ziele_von(self.a), [dann, neu])
+
     def test_nichts_wird_halb_uebernommen(self):
         """Scheitert eine Angabe, bleibt der alte Stand vollstaendig stehen."""
         self.v.rangierungen_setzen(self.a, adressen_lesen("3 2a"))

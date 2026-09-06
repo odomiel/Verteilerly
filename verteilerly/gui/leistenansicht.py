@@ -20,33 +20,40 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ..modell import (
-    Aderadresse,
-    ModellFehler,
-    Verteiler,
-    adressen_lesen,
-    adressen_schreiben,
-)
+from ..modell import Aderadresse, ModellFehler, Verteiler, adressen_lesen
 from .thema import HELL, Farben
 
 SPALTE_STIFT = 0
 SPALTE_ADER = 1
 SPALTE_FARBE = 2
 SPALTE_BEZEICHNUNG = 3
+# Je Rangierung ein Feld: getippt wird in zwei getrennte Zellen,
+# auf dem Blatt stehen beide nebeneinander in einer.
 SPALTE_RANGIERUNG = 4
-SPALTE_BEMERKUNG = 5
-SPALTE_KABEL = 6
+SPALTE_RANGIERUNG_2 = 5
+SPALTE_BEMERKUNG = 6
+SPALTE_KABEL = 7
+
+RANGIERSPALTEN = (SPALTE_RANGIERUNG, SPALTE_RANGIERUNG_2)
 
 UEBERSCHRIFTEN = [
     "Stift",
     "",
     "Farbe",
     "Bezeichnung",
+    # Eine Überschrift über beiden Feldern - die zweite bleibt leer.
     "Rangierung",
+    "",
     "Bemerkung",
     "Kabel",
 ]
-AENDERBAR = {SPALTE_FARBE, SPALTE_BEZEICHNUNG, SPALTE_RANGIERUNG, SPALTE_BEMERKUNG}
+AENDERBAR = {
+    SPALTE_FARBE,
+    SPALTE_BEZEICHNUNG,
+    SPALTE_RANGIERUNG,
+    SPALTE_RANGIERUNG_2,
+    SPALTE_BEMERKUNG,
+}
 
 
 class LeistenModell(QAbstractTableModel):
@@ -136,8 +143,10 @@ class LeistenModell(QAbstractTableModel):
                 return ader.farbe
             if spalte == SPALTE_BEZEICHNUNG:
                 return ader.bezeichnung
-            if spalte == SPALTE_RANGIERUNG:
-                return adressen_schreiben(self.verteiler.ziele_von(self.adresse(zeile)))
+            if spalte in RANGIERSPALTEN:
+                ziele = self.verteiler.ziele_von(self.adresse(zeile))
+                stelle = RANGIERSPALTEN.index(spalte)
+                return str(ziele[stelle]) if stelle < len(ziele) else ""
             if spalte == SPALTE_BEMERKUNG:
                 return ader.bemerkung
             if spalte == SPALTE_KABEL:
@@ -149,14 +158,14 @@ class LeistenModell(QAbstractTableModel):
             return int(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
 
         if rolle == Qt.ItemDataRole.FontRole:
-            if spalte in (SPALTE_STIFT, SPALTE_ADER, SPALTE_FARBE, SPALTE_RANGIERUNG):
+            if spalte in (SPALTE_STIFT, SPALTE_ADER, SPALTE_FARBE, *RANGIERSPALTEN):
                 schrift = QFont()
                 schrift.setStyleHint(QFont.StyleHint.Monospace)
                 schrift.setFamilies(["IBM Plex Mono", "DejaVu Sans Mono", "monospace"])
                 return schrift
 
         if rolle == Qt.ItemDataRole.ForegroundRole:
-            if spalte == SPALTE_RANGIERUNG:
+            if spalte in RANGIERSPALTEN:
                 return QColor(self.farben.akzent)
             if spalte in (SPALTE_ADER, SPALTE_KABEL):
                 return QColor(self.farben.schrift_leise)
@@ -192,22 +201,8 @@ class LeistenModell(QAbstractTableModel):
         ader = self._leiste.stift(stift_nr).ader(seite)
         text = str(wert).strip()
 
-        if spalte == SPALTE_RANGIERUNG:
-            try:
-                self.verteiler.rangierungen_setzen(
-                    self.adresse(zeile), adressen_lesen(text)
-                )
-            except ModellFehler as fehler:
-                self.fehler_gemeldet.emit(str(fehler))
-                return False
-            # Die Gegenstelle steht auf einer anderen Leiste - die ganze
-            # Spalte kann sich geaendert haben.
-            self.dataChanged.emit(
-                self.index(0, SPALTE_RANGIERUNG),
-                self.index(self.rowCount() - 1, SPALTE_RANGIERUNG),
-            )
-            self.belegung_geaendert.emit()
-            return True
+        if spalte in RANGIERSPALTEN:
+            return self._rangierung_setzen(zeile, spalte, text)
 
         if spalte == SPALTE_FARBE:
             ader.farbe = text
@@ -219,6 +214,44 @@ class LeistenModell(QAbstractTableModel):
             return False
 
         self.dataChanged.emit(index, index)
+        self.belegung_geaendert.emit()
+        return True
+
+    def _rangierung_setzen(self, zeile: int, spalte: int, text: str) -> bool:
+        """Setzt eine der beiden Rangierungen; die andere bleibt stehen.
+
+        Wer zwei Ziele in ein Feld tippt, bekommt sie auf beide verteilt -
+        die alte Schreibweise „3 2a   5 4a“ funktioniert also weiter.
+        """
+        adresse = self.adresse(zeile)
+        bisher = self.verteiler.ziele_von(adresse)
+        stelle = RANGIERSPALTEN.index(spalte)
+
+        try:
+            neue = adressen_lesen(text)
+        except ModellFehler as fehler:
+            self.fehler_gemeldet.emit(str(fehler))
+            return False
+
+        if len(neue) > 1 and stelle == 0:
+            ziele = neue                      # beide Felder auf einmal
+        else:
+            ziele = list(bisher) + [None] * (len(RANGIERSPALTEN) - len(bisher))
+            ziele[stelle] = neue[0] if neue else None
+            ziele = [ziel for ziel in ziele if ziel is not None]
+
+        try:
+            self.verteiler.rangierungen_setzen(adresse, ziele)
+        except ModellFehler as fehler:
+            self.fehler_gemeldet.emit(str(fehler))
+            return False
+
+        # Die Gegenstelle steht auf einer anderen Leiste - beide Spalten
+        # koennen sich geaendert haben.
+        self.dataChanged.emit(
+            self.index(0, RANGIERSPALTEN[0]),
+            self.index(self.rowCount() - 1, RANGIERSPALTEN[-1]),
+        )
         self.belegung_geaendert.emit()
         return True
 
@@ -266,7 +299,10 @@ class LeistenAnsicht(QWidget):
             (SPALTE_STIFT, 46),
             (SPALTE_ADER, 32),
             (SPALTE_FARBE, 66),
-            (SPALTE_RANGIERUNG, 120),
+            # Beide gleich breit; die Überschrift „Rangierung“ muss in
+            # die erste hineinpassen, sonst wird sie beschnitten.
+            (SPALTE_RANGIERUNG, 96),
+            (SPALTE_RANGIERUNG_2, 96),
         ):
             kopfzeile.setSectionResizeMode(spalte, QHeaderView.ResizeMode.Fixed)
             self.tabelle.setColumnWidth(spalte, breite)
