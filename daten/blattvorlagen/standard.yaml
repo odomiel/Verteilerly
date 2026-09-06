@@ -34,6 +34,10 @@ schriftfeld:
 buchten_je_blatt: 2
 da_nummern: true
 
+# Die Rangierspalte in zwei gleich grosse Felder teilen - je eines fuer
+# eine Rangierung. Die Ueberschrift steht ungeteilt ueber beiden.
+rangierung_geteilt: true
+
 belegung:
   zelle_breite: 6
   zelle_hoehe: 9
