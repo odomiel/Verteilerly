@@ -472,25 +472,23 @@ def leistenblatt(
     for stift in leiste.stifte:
         for seite in ("a", "b"):
             ader = stift.ader(seite)
-            ziele = v.ziele_von(_adresse(leiste_nr, stift.nummer, seite))
             werte = {
                 "stift": str(stift.nummer) if seite == "a" else "",
                 "ader": seite,
                 "farbe": ader.farbe,
                 "bezeichnung": ader.bezeichnung,
-                "rangierung": adressen_schreiben(ziele),
+                "rangierung": adressen_schreiben(
+                    v.ziele_von(_adresse(leiste_nr, stift.nummer, seite))
+                ),
                 "bemerkung": ader.bemerkung,
                 "kabel": "",
             }
             x = rand
             for spalte, breite in zip(vorlage.spalten, breiten):
-                if spalte.feld == "rangierung" and vorlage.rangierung_geteilt:
-                    _rangierfelder(blatt, x, y, breite, zeile_h, ziele, vorlage, spalte)
-                else:
-                    blatt.text(
-                        x + 1.5, y, breite - 3, zeile_h, werte.get(spalte.feld, ""),
-                        vorlage.schrift_normal, spalte.ausrichtung,
-                    )
+                blatt.text(
+                    x + 1.5, y, breite - 3, zeile_h, werte.get(spalte.feld, ""),
+                    vorlage.schrift_normal, spalte.ausrichtung,
+                )
                 x += breite
             # Feine Linie zwischen a und b, kraeftige zwischen den Stiften.
             fein = seite == "a"
@@ -504,44 +502,14 @@ def leistenblatt(
 
     x = rand
     unten = oben + kopf_h + leiste.da_anzahl * 2 * zeile_h
-    for spalte, breite in zip(vorlage.spalten, breiten):
+    for breite in breiten:
         blatt.linie(x, oben, x, unten, 0.2, LINIE)
-        if spalte.feld == "rangierung" and vorlage.rangierung_geteilt:
-            # Nur durch die Zeilen, nicht durch die Kopfzeile - die
-            # Ueberschrift „Rangierung“ steht ueber beiden Feldern.
-            mitte = x + breite / 2
-            blatt.linie(mitte, oben + kopf_h, mitte, unten, 0.2, LINIE_FEIN)
         x += breite
     blatt.linie(x, oben, x, unten, 0.2, LINIE)
     blatt.rechteck(rand, oben, tabellenbreite, unten - oben, staerke=0.4)
 
     schriftfeld(blatt, projekt, leiste_nr, vorlage)
     return blatt
-
-
-def _rangierfelder(
-    blatt: Blatt,
-    x: float,
-    y: float,
-    breite: float,
-    zeile_h: float,
-    ziele: list,
-    vorlage: Blattvorlage,
-    spalte,
-) -> None:
-    """Zwei gleich grosse Felder, je eines fuer eine Rangierung.
-
-    Eine Ader kann auf zwei Ziele gehen; zwei getrennte Felder sagen
-    das dem Blatt an, statt beide in eine Zelle zu schreiben - und auf
-    einem Ausdruck laesst sich das zweite von Hand nachtragen.
-    """
-    haelfte = breite / 2
-    for stelle in range(2):
-        wert = str(ziele[stelle]) if stelle < len(ziele) else ""
-        blatt.text(
-            x + stelle * haelfte + 1.5, y, haelfte - 3, zeile_h, wert,
-            vorlage.schrift_normal, spalte.ausrichtung,
-        )
 
 
 def _zeilenhoehe(

@@ -5,7 +5,6 @@ import unittest
 from verteilerly.blattvorlagen import STANDARD, Blattvorlage
 from verteilerly.layout import (
     Blatt,
-    Linie,
     Rechteck,
     Text,
     blaetter,
@@ -223,67 +222,6 @@ class TestLeistenblatt(unittest.TestCase):
             if isinstance(e, Rechteck) and e.y < grenze
         ]
         self.assertLessEqual(max(tabelle), grenze)
-
-
-class TestRangierfelder(unittest.TestCase):
-    """Je Rangierung ein eigenes Feld, eine Überschrift."""
-
-    def setUp(self):
-        self.v = Verteiler.aus_geometrie(1, 4, 10, name="Muster")
-        self.v.rangierung_anlegen(
-            Aderadresse.parse("1 1a"), Aderadresse.parse("3 2a")
-        )
-        self.v.rangierung_anlegen(
-            Aderadresse.parse("1 1a"), Aderadresse.parse("4 5b")
-        )
-        self.v.rangierung_anlegen(
-            Aderadresse.parse("1 2a"), Aderadresse.parse("3 3a")
-        )
-        self.projekt = Projekt(verteiler=self.v)
-        self.blatt = leistenblatt(self.projekt, 1)
-
-    def _feld(self, text):
-        for element in self.blatt.elemente:
-            if isinstance(element, Text) and element.text == text:
-                return element
-        raise AssertionError(f"{text!r} steht nicht auf dem Blatt")
-
-    def test_zwei_gleich_grosse_felder(self):
-        erstes, zweites = self._feld("3 2a"), self._feld("4 5b")
-        self.assertAlmostEqual(erstes.breite, zweites.breite)
-        self.assertGreater(zweites.x, erstes.x)
-        # Zusammen so breit wie die Spalte laut Überschrift.
-        spalte = self._feld("Rangierung")
-        self.assertAlmostEqual(erstes.breite * 2, spalte.breite, delta=3.1)
-
-    def test_eine_rangierung_steht_im_ersten_feld(self):
-        einzeln = self._feld("3 3a")
-        self.assertAlmostEqual(einzeln.x, self._feld("3 2a").x)
-
-    def test_die_ueberschrift_bleibt_ungeteilt(self):
-        """Eine Überschrift über beiden Feldern, nicht zwei halbe."""
-        ueberschriften = [
-            e for e in self.blatt.elemente
-            if isinstance(e, Text) and e.text == "Rangierung"
-        ]
-        self.assertEqual(len(ueberschriften), 1)
-
-    def test_der_trennstrich_beginnt_unter_der_kopfzeile(self):
-        spalte = self._feld("Rangierung")
-        mitte = spalte.x - 1.5 + spalte.breite / 2 + 1.5
-        striche = [
-            e for e in self.blatt.elemente
-            if isinstance(e, Linie) and abs(e.x1 - mitte) < 1.0 and e.x1 == e.x2
-        ]
-        self.assertTrue(striche, "kein Trennstrich in der Rangierspalte")
-        strich = striche[0]
-        self.assertGreater(strich.y1, STANDARD.rand + 12)   # unter der Kopfzeile
-
-    def test_ungeteilt_bleibt_alles_in_einer_zelle(self):
-        ohne = Blattvorlage(rangierung_geteilt=False)
-        texte = _texte(leistenblatt(self.projekt, 1, ohne))
-        self.assertIn("3 2a   4 5b", texte)
-        self.assertNotIn("3 2a", texte)
 
 
 if __name__ == "__main__":

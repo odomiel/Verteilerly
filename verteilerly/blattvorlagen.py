@@ -113,9 +113,6 @@ class Blattvorlage:
 
     buchten_je_blatt: int = 2
     da_nummern: bool = True
-    # Die Rangierspalte in zwei gleich grosse Felder teilen - je eines
-    # fuer eine Rangierung. Die Ueberschrift bleibt ganz.
-    rangierung_geteilt: bool = True
     zelle_breite: float = 6.0
     zelle_hoehe: float = 9.0
     leistenlabel: float = 14.0
@@ -246,9 +243,6 @@ def blattvorlage_aus_yaml(inhalt: dict, herkunft: str = "") -> Blattvorlage:
             _zahl(inhalt, "buchten_je_blatt", STANDARD.buchten_je_blatt, wo)
         ),
         da_nummern=bool(inhalt.get("da_nummern", STANDARD.da_nummern)),
-        rangierung_geteilt=bool(
-            inhalt.get("rangierung_geteilt", STANDARD.rangierung_geteilt)
-        ),
         zelle_breite=_zahl(belegung, "zelle_breite", STANDARD.zelle_breite, wo),
         zelle_hoehe=_zahl(belegung, "zelle_hoehe", STANDARD.zelle_hoehe, wo),
         leistenlabel=_zahl(belegung, "leistenlabel", STANDARD.leistenlabel, wo),

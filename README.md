@@ -90,10 +90,7 @@ gewählten Leiste. Ein Doppelklick auf eine freie Doppelader legt ein Kabel
 auf, einer auf ein Kabel öffnet es; passt ein Kabel nicht mehr auf die
 Leiste, fragt der Überlaufdialog nach der Fortsetzung. Rangierungen werden
 in die Spalte getippt (`3 2a`, zwei durch Leerraum getrennt); die
-Gegenstelle trägt sich selbst ein. Auf dem Leistenblatt bekommt jede
-Rangierung ein eigenes, gleich großes Feld — die Überschrift steht
-ungeteilt über beiden, und auf einem Ausdruck lässt sich die zweite von
-Hand nachtragen.
+Gegenstelle trägt sich selbst ein.
 
 Menüeinträge, die gerade nichts bewirken können, sind ausgegraut: ohne
 Verteiler die ganze Ausgabe, *Kabel entfernen* nur dort, wo wirklich ein
