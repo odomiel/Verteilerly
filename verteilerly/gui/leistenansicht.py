@@ -228,6 +228,7 @@ class LeistenAnsicht(QWidget):
 
     belegung_geaendert = Signal()
     fehler_gemeldet = Signal(str)
+    leiste_gewechselt = Signal(int)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -307,6 +308,8 @@ class LeistenAnsicht(QWidget):
         nummer = self.auswahl.currentData()
         self.modell.setzen(self.verteiler, nummer)
         self._hinweis_setzen()
+        if nummer is not None:
+            self.leiste_gewechselt.emit(nummer)
 
     def _hinweis_setzen(self) -> None:
         nummer = self.auswahl.currentData()

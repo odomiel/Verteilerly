@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pathlib
 
-from PySide6.QtCore import QSettings, Qt
+from PySide6.QtCore import QSettings, Qt, QTimer
 from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import (
     QFileDialog,
@@ -31,8 +31,10 @@ from .dialoge import (
 from .leistenansicht import LeistenAnsicht
 from .thema import SAETZE, anwenden
 from .uebersicht import Uebersicht
+from .vorschau import Vorschau
 
 DATEIFILTER = "Verteilerly-Projekt (*.vtly.json);;Alle Dateien (*)"
+VORSCHAU_VERZUG = 250  # ms, damit das Tippen nicht stockt
 
 
 class Hauptfenster(QMainWindow):
@@ -73,6 +75,7 @@ class Hauptfenster(QMainWindow):
         self.leistenansicht = LeistenAnsicht()
         self.leistenansicht.belegung_geaendert.connect(self._belegung_geaendert)
         self.leistenansicht.fehler_gemeldet.connect(self._fehler_zeigen)
+        self.leistenansicht.leiste_gewechselt.connect(self._leiste_gewechselt)
 
         self.teiler = QSplitter(Qt.Orientation.Vertical)
         self.teiler.addWidget(oben)
@@ -81,9 +84,23 @@ class Hauptfenster(QMainWindow):
         self.teiler.setStretchFactor(1, 1)
         self.teiler.setSizes([230, 470])
 
-        self.setCentralWidget(self.teiler)
+        # Die Vorschau steht neben der Eingabe, nicht hinter einem Export.
+        self.vorschau = Vorschau()
+        self.vorschau_takt = QTimer(self)
+        self.vorschau_takt.setSingleShot(True)
+        self.vorschau_takt.setInterval(VORSCHAU_VERZUG)
+        self.vorschau_takt.timeout.connect(self._vorschau_auffrischen)
+
+        self.hauptteiler = QSplitter(Qt.Orientation.Horizontal)
+        self.hauptteiler.addWidget(self.teiler)
+        self.hauptteiler.addWidget(self.vorschau)
+        self.hauptteiler.setStretchFactor(0, 3)
+        self.hauptteiler.setStretchFactor(1, 2)
+        self.hauptteiler.setSizes([760, 520])
+
+        self.setCentralWidget(self.hauptteiler)
         self.statusBar().showMessage("Bereit")
-        self.resize(1080, 760)
+        self.resize(1320, 820)
 
     def _aktionen_bauen(self) -> None:
         datei = self.menuBar().addMenu("&Datei")
@@ -135,6 +152,18 @@ class Hauptfenster(QMainWindow):
         )
         ansicht.addAction(self.aktion_thema)
 
+        self.aktion_vorschau = QAction("&Vorschau anzeigen", self)
+        self.aktion_vorschau.setCheckable(True)
+        self.aktion_vorschau.setShortcut(QKeySequence("F9"))
+        self.aktion_vorschau.setChecked(
+            self.einstellungen.value("vorschau", True, type=bool)
+        )
+        self.aktion_vorschau.triggered.connect(self.vorschau_zeigen)
+        ansicht.addAction(self.aktion_vorschau)
+        werkzeuge.addSeparator()
+        werkzeuge.addAction(self.aktion_vorschau)
+        self.vorschau_zeigen(self.aktion_vorschau.isChecked())
+
         hilfe = self.menuBar().addMenu("&Hilfe")
         aktion("Ü&ber Verteilerly", self.ueber, menue=hilfe)
 
@@ -149,6 +178,7 @@ class Hauptfenster(QMainWindow):
         anwenden(QApplication.instance(), farben)
         self.uebersicht.farben_setzen(farben)
         self.leistenansicht.farben_setzen(farben)
+        self.vorschau.farben_setzen(farben)
         self.einstellungen.setValue("thema", self.thema_name)
 
     def _titel_setzen(self) -> None:
@@ -178,6 +208,28 @@ class Hauptfenster(QMainWindow):
         self.veraendert = True
         self.uebersicht.update()
         self._titel_setzen()
+        self._vorschau_anstossen()
+
+    def _leiste_gewechselt(self, nummer: int) -> None:
+        """Die Vorschau folgt der bearbeiteten Leiste."""
+        self.vorschau.blatt_zeigen(f"Leiste {nummer}")
+
+    def vorschau_zeigen(self, an: bool) -> None:
+        self.vorschau.setVisible(an)
+        self.einstellungen.setValue("vorschau", bool(an))
+        if an:
+            self._vorschau_auffrischen()
+
+    def _vorschau_anstossen(self) -> None:
+        """Sammelt schnelle Aenderungen, statt bei jedem Tastendruck neu zu bauen."""
+        if self.vorschau.isVisible():
+            self.vorschau_takt.start()
+
+    def _vorschau_auffrischen(self) -> None:
+        self.vorschau.aktualisieren()
+        nummer = self.leistenansicht.modell.leiste_nr
+        if nummer is not None:
+            self.vorschau.blatt_zeigen(f"Leiste {nummer}")
 
     # -- Projekt -----------------------------------------------------------
 
@@ -188,6 +240,7 @@ class Hauptfenster(QMainWindow):
         verteiler = projekt.verteiler if projekt else None
         self.uebersicht.verteiler_setzen(verteiler)
         self.leistenansicht.verteiler_setzen(verteiler)
+        self.vorschau.projekt_setzen(projekt)
         for handlung in (self.aktion_kabel, self.aktion_kabel_weg):
             handlung.setEnabled(projekt is not None)
         self._titel_setzen()

@@ -13,6 +13,7 @@ try:
     from PySide6.QtCore import Qt
     from PySide6.QtWidgets import QApplication
 
+    from verteilerly.gui.vorschau import Vorschau
     from verteilerly.gui.leistenansicht import (
         SPALTE_ADER,
         SPALTE_BEMERKUNG,
@@ -27,7 +28,7 @@ try:
 except ImportError:  # ohne Qt laufen wenigstens die uebrigen Tests
     ANWENDUNG = None
 
-from verteilerly.modell import Aderadresse, Verteiler
+from verteilerly.modell import Aderadresse, Projekt, Verteiler
 
 
 @unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
@@ -92,6 +93,36 @@ class TestLeistenModell(unittest.TestCase):
     def test_leere_leiste_hat_keine_zeilen(self):
         self.m.setzen(None, None)
         self.assertEqual(self.m.rowCount(), 0)
+
+
+@unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
+class TestVorschau(unittest.TestCase):
+    """Die Vorschau haelt sich an dieselbe Blattfolge wie das PDF."""
+
+    def setUp(self):
+        self.v = Verteiler.aus_geometrie(1, 4, 10, name="Muster")
+        self.vorschau = Vorschau()
+        self.vorschau.projekt_setzen(Projekt(verteiler=self.v))
+
+    def test_blattfolge_steht_zur_wahl(self):
+        self.assertEqual(self.vorschau.auswahl.count(), 6)
+        self.assertEqual(self.vorschau.auswahl.itemText(0), "Deckblatt")
+
+    def test_sprung_zur_leiste(self):
+        self.vorschau.blatt_zeigen("Leiste 3")
+        self.assertEqual(self.vorschau.auswahl.currentText(), "Leiste 3")
+        self.assertEqual(self.vorschau.flaeche.blatt.titel, "Leiste 3")
+
+    def test_auffrischen_haelt_die_stelle(self):
+        self.vorschau.blatt_zeigen("Leiste 2")
+        self.v.kabel_anlegen("Leitung", 2, 1, 4)
+        self.vorschau.aktualisieren()
+        self.assertEqual(self.vorschau.auswahl.currentText(), "Leiste 2")
+
+    def test_ohne_projekt_kein_blatt(self):
+        self.vorschau.projekt_setzen(None)
+        self.assertEqual(self.vorschau.auswahl.count(), 0)
+        self.assertIsNone(self.vorschau.flaeche.blatt)
 
 
 if __name__ == "__main__":

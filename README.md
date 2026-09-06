@@ -12,11 +12,13 @@ verteilerly/        Programmpaket
   farbcodes.py      Kabeltypen und Adernfarben
   vorlagen.py       Verteilervorlagen
   projektdatei.py   Projekt als JSON lesen und schreiben
+  layout.py         Blätter als Zeichenanweisungen — Vorlage für Vorschau und PDF
   pfade.py          Wo die Daten liegen - entpackt wie gepackt
   gui/              Oberfläche
     hauptfenster.py Fenster, Menüs, Datei- und Kabelbefehle
     uebersicht.py   Verteilerübersicht, gezeichnet wie im Beispiel
     leistenansicht.py  Belegung einer Leiste als Tabelle
+    vorschau.py     Zeichnet die Blätter neben der Eingabe
     dialoge.py      Neuer Verteiler, Kabel, Überlauf, Briefkopf
     thema.py        Farbsätze hell und dunkel
 daten/              Liegt neben dem Programm und ist frei erweiterbar
@@ -54,7 +56,13 @@ Leiste, fragt der Überlaufdialog nach der Fortsetzung. Rangierungen werden
 in die Spalte getippt (`3 2a`, zwei durch Leerraum getrennt); die
 Gegenstelle trägt sich selbst ein.
 
-Offen sind Layoutmodell und Vorschau, PDF-Ausgabe, Excel und CSV sowie das Verpacken als AppImage und `.exe`.
+Die Blätter entstehen in `layout.py` als Zeichenanweisungen in Millimetern
+— ohne Qt und ohne PDF-Bibliothek. Die Vorschau zeichnet dieses Modell mit
+QPainter ab; die PDF-Ausgabe wird dasselbe Modell mit ReportLab zeichnen.
+Es gibt damit nur eine Quelle für das Blattbild.
+
+Offen sind PDF-Ausgabe, Excel und CSV sowie das Verpacken als
+AppImage und `.exe`.
 
 Zurückgestellt: Widerstandssymbol,
 Pluginschnittstelle, Blatt „Änderungen“, Strichregel.
