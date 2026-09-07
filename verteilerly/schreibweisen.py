@@ -2,11 +2,11 @@
 
 Welche Adresse gemeint ist, steht fest: Leiste, Stift, Ader. Wie sie
 geschrieben wird, ist Hausbrauch - der eine schreibt ``1 1a``, der
-naechste ``L1 1a``, der dritte ``L1-1a``. Darum steht die Schreibweise
-hier als eigene Sache und nicht im Datenmodell.
+naechste ``1-1a``, der dritte ``L1 1a``, der vierte ``L1-1a``. Darum
+steht die Schreibweise hier als eigene Sache und nicht im Datenmodell.
 
 Gelesen wird immer alles: wer die Anzeige umstellt, muss seine alten
-Projekte nicht anfassen, und getippt werden darf jede der drei Formen,
+Projekte nicht anfassen, und getippt werden darf jede dieser Formen,
 gleich welche gerade eingestellt ist.
 """
 
@@ -35,6 +35,9 @@ class Schreibweise:
 EINFACH = Schreibweise(
     "einfach", "{leiste} {stift}{seite}", "Leiste und Stift, nur durch Abstand getrennt"
 )
+STRICH = Schreibweise(
+    "strich", "{leiste}-{stift}{seite}", "Leiste und Stift, getrennt durch Strich"
+)
 MIT_L = Schreibweise(
     "mit_l", "L{leiste} {stift}{seite}", "Die Leiste mit einem L davor"
 )
@@ -42,7 +45,7 @@ MIT_STRICH = Schreibweise(
     "mit_strich", "L{leiste}-{stift}{seite}", "Die Leiste mit L, getrennt durch Strich"
 )
 
-SCHREIBWEISEN = (EINFACH, MIT_L, MIT_STRICH)
+SCHREIBWEISEN = (EINFACH, STRICH, MIT_L, MIT_STRICH)
 STANDARD = EINFACH
 
 

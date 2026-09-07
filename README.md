@@ -102,13 +102,14 @@ Schreibweise der Rangierungen* steht zur Wahl:
 | Schreibweise | Beispiel |
 |---|---|
 | ohne Kürzel | `1 1a` |
+| mit Bindestrich | `1-1a` |
 | mit L vor der Leiste | `L1 1a` |
 | mit L und Bindestrich | `L1-1a` |
 
 Die Wahl gilt für den Editor, das Blatt und die Ausgabe nach Excel und
 CSV; sie steht in der `Verteilerly.conf` und gilt damit für alle
-Verteiler. **Gelesen wird immer alles**: getippt werden darf jede der
-drei Formen, gleich welche gerade eingestellt ist, und in der
+Verteiler. **Gelesen wird immer alles**: getippt werden darf jede dieser
+Formen, gleich welche gerade eingestellt ist, und in der
 Projektdatei steht die Adresse unverändert als `1 1a`. Wer umstellt, muss
 also weder seine Projekte noch seine Gewohnheiten anfassen.
 

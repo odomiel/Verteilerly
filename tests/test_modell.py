@@ -65,6 +65,7 @@ class TestAderadresse(unittest.TestCase):
     def test_schreibt_in_der_gewaehlten_schreibweise(self):
         adresse = Aderadresse(3, 2, "a")
         self.assertEqual(adresse.anzeige(schreibweisen.EINFACH), "3 2a")
+        self.assertEqual(adresse.anzeige(schreibweisen.STRICH), "3-2a")
         self.assertEqual(adresse.anzeige(schreibweisen.MIT_L), "L3 2a")
         self.assertEqual(adresse.anzeige(schreibweisen.MIT_STRICH), "L3-2a")
         # Ohne Angabe bleibt es bei der Grundform - so steht es auch in

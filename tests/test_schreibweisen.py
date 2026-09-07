@@ -21,7 +21,7 @@ def _texte(blatt) -> list[str]:
 class TestSchreibweisen(unittest.TestCase):
     def test_jede_hat_ihr_beispiel(self):
         beispiele = [w.beispiel for w in schreibweisen.SCHREIBWEISEN]
-        self.assertEqual(beispiele, ["1 1a", "L1 1a", "L1-1a"])
+        self.assertEqual(beispiele, ["1 1a", "1-1a", "L1 1a", "L1-1a"])
 
     def test_kennungen_sind_eindeutig(self):
         kennungen = [w.id for w in schreibweisen.SCHREIBWEISEN]
@@ -47,6 +47,7 @@ class TestSchreibweiseImProjekt(unittest.TestCase):
     def test_blatt_folgt_der_schreibweise(self):
         for kennung, erwartet in [
             ("einfach", "3 2a"),
+            ("strich", "3-2a"),
             ("mit_l", "L3 2a"),
             ("mit_strich", "L3-2a"),
         ]:
