@@ -43,6 +43,19 @@ for beigabe in ("README.md"):
     if os.path.exists(pfad):
         datas.append((pfad, "."))
 
+# Qts deutsche Uebersetzung mitnehmen: sie beschriftet die Datei- und
+# Rueckfragedialoge, die Qt selbst zeichnet. Ohne sie stuenden dort
+# "Save" und "Cancel" mitten im deutschen Programm.
+try:
+    from PySide6.QtCore import QLibraryInfo
+
+    _uebersetzungen = QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)
+    _deutsch = os.path.join(_uebersetzungen, "qtbase_de.qm")
+    if os.path.exists(_deutsch):
+        datas.append((_deutsch, os.path.join("PySide6", "Qt", "translations")))
+except Exception:  # noqa: BLE001 - ohne Qt wird eben nichts mitgenommen
+    pass
+
 # Das eigene Paket vollstaendig einsammeln - die Oberflaeche laedt Teile erst
 # beim Aufruf (gui.dialoge, ausgabe.pdf), die eine Analyse sonst uebersieht.
 hiddenimports = collect_submodules("verteilerly")

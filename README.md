@@ -27,6 +27,7 @@ verteilerly/        Programmpaket
     vorschau.py     Zeichnet die Blätter neben der Eingabe
     dialoge.py      Neuer Verteiler, Kabel, Überlauf, Briefkopf
     thema.py        Farbsätze hell und dunkel
+    sprache.py      Deutsche Beschriftung der Qt-Dialoge
 daten/              Liegt neben dem Programm und ist frei erweiterbar
   vorlagen/         Eine YAML-Datei je Verteilervorlage
   kabeltypen/       Farbfolgen der Kabeltypen
@@ -112,6 +113,14 @@ Verteiler. **Gelesen wird immer alles**: getippt werden darf jede dieser
 Formen, gleich welche gerade eingestellt ist, und in der
 Projektdatei steht die Adresse unverändert als `1 1a`. Wer umstellt, muss
 also weder seine Projekte noch seine Gewohnheiten anfassen.
+
+**Die Oberfläche ist durchweg deutsch** — auch die Knöpfe, die Qt selbst
+beschriftet. Beim Schließen mit ungesicherten Änderungen stehen dort
+*Speichern*, *Verwerfen* und *Abbrechen* statt „Save", „Discard" und
+„Cancel". Unsere eigenen Rückfragen beschriftet `gui/sprache.py` von Hand;
+für die Dialoge, die Qt selbst zeichnet — Datei öffnen, Datei speichern —
+wird beim Start Qts deutsche Übersetzung (`qtbase_de.qm`) geladen, die
+darum mit ins AppImage und in die .exe wandert.
 
 Menüeinträge, die gerade nichts bewirken können, sind ausgegraut: ohne
 Verteiler die ganze Ausgabe, *Kabel entfernen* nur dort, wo wirklich ein

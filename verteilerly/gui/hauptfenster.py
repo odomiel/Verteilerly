@@ -33,6 +33,7 @@ from .dialoge import (
     als_vorlage_speichern,
 )
 from .leistenansicht import LeistenAnsicht
+from .sprache import frage
 from .symbol import symbol_icon
 from .thema import SAETZE, anwenden
 from .uebersicht import Uebersicht
@@ -389,13 +390,14 @@ class Hauptfenster(QMainWindow):
     def _darf_verwerfen(self) -> bool:
         if not self.veraendert:
             return True
-        antwort = QMessageBox.question(
+        antwort = frage(
             self,
             "Änderungen verwerfen?",
             "Der Verteiler wurde geändert und noch nicht gespeichert.",
             QMessageBox.StandardButton.Save
             | QMessageBox.StandardButton.Discard
             | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Save,
         )
         if antwort == QMessageBox.StandardButton.Save:
             return self.speichern()
@@ -603,12 +605,13 @@ class Hauptfenster(QMainWindow):
             return None
 
     def _kabel_angeklickt(self, kabel) -> None:
-        antwort = QMessageBox.question(
+        antwort = frage(
             self,
             "Kabel entfernen?",
             f"Das Kabel „{kabel.beschriftung}“ von der Leiste nehmen?\n"
             "Die Adernfarben bleiben stehen.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
         )
         if antwort == QMessageBox.StandardButton.Yes:
             self.projekt.verteiler.kabel_entfernen(kabel)

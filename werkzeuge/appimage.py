@@ -115,10 +115,12 @@ PLUGINS_BEHALTEN = {
     "platforminputcontexts", "styles",
 }
 PLATTFORMEN_BEHALTEN = {"libqxcb", "libqminimal", "libqoffscreen"}
+# Von Qts Uebersetzungen bleibt die deutsche - sie beschriftet die
+# Datei- und Rueckfragedialoge. Der Rest waere Ballast.
+UEBERSETZUNGEN_BEHALTEN = {"qtbase_de.qm"}
 # Ordner in der PySide6-Auslieferung, die die Oberflaeche nicht anfasst.
 PYSIDE_WEG = (
     "Qt/qml",
-    "Qt/translations",
     "Qt/resources",
     "Qt/libexec",
     "Qt/plugins/multimedia",
@@ -240,6 +242,11 @@ def qt_abspecken() -> int:
 
     for teil in PYSIDE_WEG:
         shutil.rmtree(pyside / teil, ignore_errors=True)
+
+    uebersetzungen = pyside / "Qt" / "translations"
+    for datei in list(uebersetzungen.glob("*")):
+        if datei.name not in UEBERSETZUNGEN_BEHALTEN:
+            shutil.rmtree(datei, ignore_errors=True) if datei.is_dir() else datei.unlink()
 
     for datei in list((pyside / "Qt" / "lib").glob("libQt6*.so*")):
         modul = datei.name.split(".")[0].removeprefix("libQt6")

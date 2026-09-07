@@ -399,6 +399,60 @@ class TestBriefkopfDialog(unittest.TestCase):
 
 
 @unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
+class TestDeutscheDialoge(unittest.TestCase):
+    """Kein englischer Knopf in einem deutschen Programm."""
+
+    def test_rueckfrage_ist_durchweg_deutsch(self):
+        from PySide6.QtWidgets import QMessageBox
+
+        from verteilerly.gui.sprache import fragekasten
+
+        kasten = fragekasten(
+            None,
+            "Änderungen verwerfen?",
+            "Der Verteiler wurde geändert.",
+            QMessageBox.StandardButton.Save
+            | QMessageBox.StandardButton.Discard
+            | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Save,
+        )
+        self.assertEqual(
+            sorted(b.text() for b in kasten.buttons()),
+            ["Abbrechen", "Speichern", "Verwerfen"],
+        )
+        self.assertEqual(
+            kasten.standardButton(kasten.defaultButton()),
+            QMessageBox.StandardButton.Save,
+        )
+
+    def test_ja_und_nein(self):
+        from PySide6.QtWidgets import QMessageBox
+
+        from verteilerly.gui.sprache import fragekasten
+
+        kasten = fragekasten(
+            None, "Kabel entfernen?", "Wirklich?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        self.assertEqual(
+            sorted(b.text() for b in kasten.buttons()), ["Ja", "Nein"]
+        )
+
+    def test_qt_spricht_deutsch(self):
+        """Auch die Dialoge, die Qt selbst zeichnet - etwa der Dateidialog."""
+        from PySide6.QtWidgets import QMessageBox
+
+        from verteilerly.gui.sprache import deutsch_einrichten
+
+        self.assertTrue(deutsch_einrichten(ANWENDUNG))
+        kasten = QMessageBox()
+        kasten.setStandardButtons(QMessageBox.StandardButton.Cancel)
+        self.assertEqual(
+            kasten.button(QMessageBox.StandardButton.Cancel).text(), "Abbrechen"
+        )
+
+
+@unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
 class TestEinstellungen(unittest.TestCase):
     """Die Einstellungen liegen als Datei, nicht in der Registry."""
 

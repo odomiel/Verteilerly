@@ -33,6 +33,7 @@ from ..modell import (
     Verteiler,
 )
 from ..vorlagen import Vorlage, VorlagenFehler, Vorlagen, vorlage_speichern
+from .sprache import frage
 
 
 # Die gebraeuchlichen Leistengroessen; alles andere wird eingetippt.
@@ -80,12 +81,13 @@ def als_vorlage_speichern(
     vorlage = Vorlage.aus_verteiler(verteiler, name.strip(), beschreibung=beschreibung)
     ueberschreiben = False
     if vorlage.id in vorlagen:
-        antwort = QMessageBox.question(
+        antwort = frage(
             parent,
             "Vorlage überschreiben?",
             f"Es gibt schon eine Vorlage „{vorlagen.holen(vorlage.id).name}“. "
             "Soll sie ersetzt werden?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
         )
         if antwort != QMessageBox.StandardButton.Yes:
             return None

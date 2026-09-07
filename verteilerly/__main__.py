@@ -56,12 +56,15 @@ def main() -> int:
     from PySide6.QtWidgets import QApplication
 
     from verteilerly.gui.hauptfenster import Hauptfenster
+    from verteilerly.gui.sprache import deutsch_einrichten
     from verteilerly.version import VERSION
 
     anwendung = QApplication(sys.argv)
     anwendung.setApplicationName("Verteilerly")
     anwendung.setApplicationVersion(VERSION)
     anwendung.setOrganizationName("Verteilerly")
+    # Damit auch Qts eigene Dialoge deutsch sprechen.
+    deutsch_einrichten(anwendung)
 
     fenster = Hauptfenster()
     fenster.show()
