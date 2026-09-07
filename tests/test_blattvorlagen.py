@@ -13,7 +13,7 @@ from verteilerly.blattvorlagen import (
 )
 from verteilerly.layout import Rechteck, Text, blaetter, leistenblatt
 from verteilerly.modell import Projekt, Verteiler
-from verteilerly.pfade import blattvorlagenordner
+from verteilerly.pfade import blattvorlagenordner, mitgeliefert
 
 
 def _texte(blatt) -> list[str]:
@@ -105,11 +105,26 @@ class TestMitgelieferte(unittest.TestCase):
         self.assertEqual(self.vorlagen.alle[0].id, "standard")
 
     def test_standard_entspricht_den_vorgaben(self):
-        """Die mitgelieferte Datei darf das eingebaute Blatt nicht verändern."""
-        datei = self.vorlagen.holen("standard")
+        """Die mitgelieferte Datei darf das eingebaute Blatt nicht verändern.
+
+        Geprüft wird die beiliegende Datei, nicht die im Arbeitsordner:
+        die darf der Anwender ändern, ohne dass ein Test darüber klagt.
+        """
+        beiliegend = Blattvorlagen.laden(mitgeliefert() / "blattvorlagen")
+        datei = beiliegend.holen("standard")
         for feld in ("rand", "schriftfeld_hoehe", "zeilenhoehe_max", "schrift_normal"):
             self.assertEqual(getattr(datei, feld), getattr(STANDARD, feld), feld)
         self.assertEqual(datei.spalten, STANDARD.spalten)
+
+    def test_kabelspalte_steht_quer_und_schmal(self):
+        """Die Kabelspalte ist schmal - der Name steht quer darin."""
+        beiliegend = Blattvorlagen.laden(mitgeliefert() / "blattvorlagen")
+        standard = beiliegend.holen("standard")
+        self.assertTrue(standard.kabel_gedreht)
+        self.assertLess(standard.spalte("kabel").anteil,
+                        standard.spalte("bezeichnung").anteil / 2)
+        # Wo die Spalte breit ist, bleibt der Name waagerecht.
+        self.assertFalse(beiliegend.holen("knapp").kabel_gedreht)
 
     def test_die_eingebaute_ist_immer_dabei(self):
         with tempfile.TemporaryDirectory() as leer:

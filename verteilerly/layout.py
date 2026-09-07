@@ -59,7 +59,13 @@ class Rechteck:
 
 @dataclass(frozen=True)
 class Text:
-    """Text in einem Kasten, senkrecht mittig."""
+    """Text in einem Kasten, senkrecht mittig.
+
+    ``drehung`` ist der Winkel gegen den Uhrzeigersinn: 90 laesst den Text
+    von unten nach oben laufen, wie in schmalen Spalten technischer
+    Zeichnungen ueblich. Der Kasten bleibt derselbe - gedreht wird nur,
+    was darin steht, und dann ist seine Hoehe die Laenge der Zeile.
+    """
 
     x: float
     y: float
@@ -70,6 +76,12 @@ class Text:
     ausrichtung: str = LINKS
     fett: bool = False
     farbe: str = TINTE
+    drehung: float = 0.0
+
+    @property
+    def zeilenlaenge(self) -> float:
+        """Wie viel Platz die Zeile hat - quer gedreht ist das die Hoehe."""
+        return self.hoehe if self.drehung else self.breite
 
 
 @dataclass
@@ -559,15 +571,30 @@ def _kabelklammern(
             y = oben + (abschnitt.start_da - 1) * 2 * zeile_h
             hoehe = abschnitt.anzahl_da * 2 * zeile_h
             blatt.rechteck(x, y, breite, hoehe, fuellung=FUELLUNG_KABEL, staerke=0.4)
+            beschriftung = kabel.beschriftung
+            if kabel.gekuerzt:
+                zusatz = f"gekürzt: {kabel.da_aufgelegt} von {kabel.da_gesamt} DA"
+
+            if vorlage.kabel_gedreht:
+                # Quer gelesen ist die Klammer so lang wie das Kabel hoch
+                # ist - ein langer Name passt hier hinein, waagerecht
+                # muesste er in die schmale Spalte gequetscht werden.
+                if kabel.gekuerzt:
+                    beschriftung = f"{beschriftung} ({zusatz})"
+                blatt.text(
+                    x, y + 1.5, breite, hoehe - 3, beschriftung,
+                    vorlage.schrift_klein, MITTE, drehung=90,
+                )
+                continue
+
             blatt.text(
                 x + 1.5, y, breite - 3, min(hoehe, zeile_h * 2),
-                kabel.beschriftung, vorlage.schrift_klein,
+                beschriftung, vorlage.schrift_klein,
             )
             if kabel.gekuerzt and hoehe >= zeile_h * 2:
                 blatt.text(
                     x + 1.5, y + zeile_h * 2, breite - 3, zeile_h * 2,
-                    f"gekürzt: {kabel.da_aufgelegt} von {kabel.da_gesamt} DA",
-                    vorlage.schrift_klein, LINKS, False, TINTE_LEISE,
+                    zusatz, vorlage.schrift_klein, LINKS, False, TINTE_LEISE,
                 )
 
 

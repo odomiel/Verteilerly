@@ -148,6 +148,14 @@ Was das Programm **Bucht** nennt, hieß bis zur Umbenennung *Reihe*. Ältere
 Projektdateien und selbst geschriebene Vorlagen mit den alten Feldnamen
 werden weiter gelesen; geschrieben wird immer die neue Fassung.
 
+In der Standardvorlage ist die **Kabelspalte schmal**, und der Kabelname
+steht **quer** darin — von unten nach oben zu lesen, wie in technischen
+Zeichnungen üblich. Quer ist die Klammer so lang, wie das Kabel Zeilen
+belegt: ein langer Name passt dort hinein, statt in einer breiten Spalte
+Platz zu fressen, den Bezeichnung und Bemerkung besser brauchen können.
+Steuern lässt sich das je Blattvorlage über `kabel_gedreht`; die Vorlage
+*Knapp* hat eine breite Kabelspalte und lässt den Namen waagerecht.
+
 Wie das Blatt aussieht, sagt eine **Blattvorlage**; was darauf steht,
 kommt aus dem Projekt. Drei liegen bei — *Standard* mit allen Spalten,
 *Knapp* als reines Rangierblatt ohne Bezeichnung und Bemerkung, und
@@ -259,9 +267,15 @@ Die Einstellungen (Erscheinungsbild, gewählte Blattvorlage) stehen in
 Stick alles beisammen hat und nichts auf dem Rechner zurückbleibt; unter
 Linux im Einstellungsordner. Eine Registry wird nie beschrieben.
 
-Kopiert wird nur, was dort noch nicht liegt: eigene Änderungen bleiben,
-und eine spätere Fassung bringt ihre neuen Dateien nach. Dorthin wird
-auch geschrieben, wenn eine Vorlage gesichert wird.
+Angelegt wird, was dort noch fehlt — eine spätere Fassung bringt ihre
+neuen Dateien so nach. **Aufgefrischt** wird eine Datei nur dann, wenn
+sie noch genau so daliegt, wie sie ausgelegt wurde: dann hat niemand sie
+angefasst, und eine Verbesserung der mitgelieferten Vorlage darf
+ankommen. Sobald jemand eine Zeile geändert hat, bleibt die Datei
+unangetastet — eigene Änderungen wiegen schwerer als jede Vorgabe. Wer
+was mitgebracht hat, steht im Merkzettel `.ausgelegt.json` daneben; ohne
+ihn (Arbeitsordner aus einer älteren Fassung) wird nichts aufgefrischt.
+Dorthin wird auch geschrieben, wenn eine Vorlage gesichert wird.
 
 Gelesen wird darüber hinaus aus allen Orten, an denen Daten liegen
 können — ein Ordner `daten/` **neben der AppImage-Datei** geht dabei vor,

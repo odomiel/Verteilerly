@@ -15,6 +15,9 @@ spalten:
   - {feld: rangierung, ueberschrift: "Rangierung", anteil: 48}
   - {feld: kabel,      ueberschrift: "Kabel",      anteil: 40}
 
+# Hier ist die Spalte breit genug - der Kabelname bleibt waagerecht.
+kabel_gedreht: false
+
 schriftfeld:
   - [firma, kunde]
   - [verteiler, verteilernummer, leiste, blatt]

@@ -79,7 +79,7 @@ class Hauptfenster(QMainWindow):
         if self.ausgelegt:
             self.statusBar().showMessage(
                 f"{len(self.ausgelegt)} Dateien nach {pfade.eigener_datenordner()} "
-                "ausgelegt — dort sind sie änderbar",
+                "gelegt — dort sind sie änderbar",
                 12000,
             )
 

@@ -16,6 +16,8 @@ vor, damit ein vollstaendig portabler Stick weiter moeglich ist.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import os
 import pathlib
 import shutil
@@ -24,6 +26,9 @@ import sys
 DATENORDNER = "daten"
 UNTERORDNER = ("vorlagen", "kabeltypen", "blattvorlagen")
 ANWENDUNG = "Verteilerly"
+# Merkzettel im Arbeitsordner: welche Datei mit welchem Inhalt ausgelegt
+# wurde. Daran ist spaeter zu erkennen, ob der Anwender sie angefasst hat.
+MERKZETTEL = ".ausgelegt.json"
 
 
 def gepackt() -> bool:
@@ -210,19 +215,46 @@ def blattvorlagenordner_alle() -> list[pathlib.Path]:
 # -- Erstausstattung -------------------------------------------------------
 
 
+def _fingerabdruck(datei: pathlib.Path) -> str:
+    return hashlib.sha256(datei.read_bytes()).hexdigest()
+
+
+def _merkzettel_lesen(ordner: pathlib.Path) -> dict[str, str]:
+    try:
+        return dict(json.loads((ordner / MERKZETTEL).read_text(encoding="utf-8")))
+    except (OSError, ValueError):
+        return {}
+
+
+def _merkzettel_schreiben(ordner: pathlib.Path, stand: dict[str, str]) -> None:
+    try:
+        (ordner / MERKZETTEL).write_text(
+            json.dumps(stand, indent=2, sort_keys=True), encoding="utf-8"
+        )
+    except OSError:
+        # Ohne Merkzettel wird spaeter eben nichts aufgefrischt - das ist
+        # kein Grund, den Start abzubrechen.
+        pass
+
+
 def grundausstattung_auslegen() -> list[pathlib.Path]:
     """Legt die mitgelieferten Dateien in den Arbeitsordner.
 
-    Kopiert wird nur, was dort noch nicht liegt: eigene Aenderungen
-    bleiben unangetastet, und eine spaetere Fassung bringt ihre neuen
-    Dateien nach. Zurueckgegeben wird, was tatsaechlich angelegt wurde.
+    Angelegt wird, was dort noch fehlt. Aufgefrischt wird eine Datei nur
+    dann, wenn sie noch genau so daliegt, wie sie ausgelegt wurde: dann
+    hat niemand sie angefasst, und eine spaetere Fassung darf sie
+    verbessern. Sobald jemand eine Zeile geaendert hat, bleibt sie
+    unangetastet - eigene Aenderungen wiegen schwerer als jede Vorgabe.
+
+    Zurueckgegeben wird, was angelegt oder aufgefrischt wurde.
     """
     quelle = mitgeliefert()
     ziel = eigener_datenordner()
     if quelle is None or quelle == ziel or not _beschreibbar(ziel):
         return []
 
-    angelegt: list[pathlib.Path] = []
+    merkzettel = _merkzettel_lesen(ziel)
+    geschrieben: list[pathlib.Path] = []
     for name in UNTERORDNER:
         von = quelle / name
         if not von.is_dir():
@@ -231,7 +263,16 @@ def grundausstattung_auslegen() -> list[pathlib.Path]:
         nach.mkdir(parents=True, exist_ok=True)
         for datei in sorted(von.glob("*.yaml")):
             fertig = nach / datei.name
-            if not fertig.exists():
-                shutil.copy2(datei, fertig)
-                angelegt.append(fertig)
-    return angelegt
+            marke = f"{name}/{datei.name}"
+            mitgebracht = _fingerabdruck(datei)
+            if fertig.exists():
+                unberuehrt = merkzettel.get(marke) == _fingerabdruck(fertig)
+                if not unberuehrt or merkzettel.get(marke) == mitgebracht:
+                    continue
+            shutil.copy2(datei, fertig)
+            merkzettel[marke] = mitgebracht
+            geschrieben.append(fertig)
+
+    if geschrieben:
+        _merkzettel_schreiben(ziel, merkzettel)
+    return geschrieben

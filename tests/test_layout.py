@@ -226,3 +226,37 @@ class TestLeistenblatt(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestKabelspalte(unittest.TestCase):
+    """Schmale Kabelspalte, Beschriftung quer darin."""
+
+    def _kabeltexte(self, vorlage):
+        v = Verteiler.aus_geometrie(1, 2, 10)
+        v.kabel_anlegen("Linie 1 — Melderkreis Erdgeschoss West", 1, 1, 5)
+        blatt = leistenblatt(Projekt(verteiler=v), 1, vorlage)
+        return [
+            e for e in blatt.elemente
+            if isinstance(e, Text) and "Melderkreis" in e.text
+        ]
+
+    def test_beschriftung_steht_quer(self):
+        gedreht = self._kabeltexte(STANDARD)
+        self.assertEqual(len(gedreht), 1)
+        self.assertEqual(gedreht[0].drehung, 90)
+        # Quer gelesen ist die Hoehe der Klammer die Laenge der Zeile.
+        self.assertEqual(gedreht[0].zeilenlaenge, gedreht[0].hoehe)
+        self.assertGreater(gedreht[0].hoehe, gedreht[0].breite)
+
+    def test_waagerecht_bleibt_waagerecht(self):
+        waagerecht = self._kabeltexte(STANDARD.mit(kabel_gedreht=False))
+        self.assertEqual(waagerecht[0].drehung, 0)
+        self.assertEqual(waagerecht[0].zeilenlaenge, waagerecht[0].breite)
+
+    def test_gekuerztes_kabel_sagt_es_auch_quer(self):
+        v = Verteiler.aus_geometrie(1, 2, 10)
+        v.kabel_anlegen("Zuleitung BMZ", 1, 1, 3, da_gesamt=4)
+        blatt = leistenblatt(Projekt(verteiler=v), 1)
+        quer = [e for e in blatt.elemente if isinstance(e, Text) and e.drehung]
+        self.assertEqual(len(quer), 1)
+        self.assertIn("gekürzt: 3 von 4 DA", quer[0].text)

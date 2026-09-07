@@ -78,7 +78,7 @@ STANDARDSPALTEN = (
     Spalte("bezeichnung", "Bezeichnung", 46.0),
     Spalte("rangierung", "Rangierung", 30.0),
     Spalte("bemerkung", "Bemerkung", 44.0),
-    Spalte("kabel", "Kabel", 33.0),
+    Spalte("kabel", "Kabel", 12.0),
 )
 
 STANDARDSCHRIFTFELD = (
@@ -113,6 +113,9 @@ class Blattvorlage:
 
     buchten_je_blatt: int = 2
     da_nummern: bool = True
+    # Die Kabelspalte ist schmal; quer gelesen passt der Name trotzdem
+    # hinein, statt auf Winzigkeit zu schrumpfen.
+    kabel_gedreht: bool = True
     zelle_breite: float = 6.0
     zelle_hoehe: float = 9.0
     leistenlabel: float = 14.0
@@ -243,6 +246,7 @@ def blattvorlage_aus_yaml(inhalt: dict, herkunft: str = "") -> Blattvorlage:
             _zahl(inhalt, "buchten_je_blatt", STANDARD.buchten_je_blatt, wo)
         ),
         da_nummern=bool(inhalt.get("da_nummern", STANDARD.da_nummern)),
+        kabel_gedreht=bool(inhalt.get("kabel_gedreht", STANDARD.kabel_gedreht)),
         zelle_breite=_zahl(belegung, "zelle_breite", STANDARD.zelle_breite, wo),
         zelle_hoehe=_zahl(belegung, "zelle_hoehe", STANDARD.zelle_hoehe, wo),
         leistenlabel=_zahl(belegung, "leistenlabel", STANDARD.leistenlabel, wo),

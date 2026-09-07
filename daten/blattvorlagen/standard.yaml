@@ -24,7 +24,7 @@ spalten:
   - {feld: bezeichnung, ueberschrift: "Bezeichnung", anteil: 46}
   - {feld: rangierung,  ueberschrift: "Rangierung",  anteil: 30}
   - {feld: bemerkung,   ueberschrift: "Bemerkung",   anteil: 44}
-  - {feld: kabel,       ueberschrift: "Kabel",       anteil: 33}
+  - {feld: kabel,       ueberschrift: "Kabel",       anteil: 12}
 
 schriftfeld:
   - [firma, kunde, anlagennummer, kundennummer]
@@ -33,6 +33,8 @@ schriftfeld:
 
 buchten_je_blatt: 2
 da_nummern: true
+# Der Kabelname steht quer in der schmalen Spalte, von unten nach oben.
+kabel_gedreht: true
 
 belegung:
   zelle_breite: 6

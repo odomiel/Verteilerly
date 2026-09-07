@@ -2,6 +2,7 @@
 
 import os
 import pathlib
+import shutil
 import tempfile
 import unittest
 from unittest import mock
@@ -182,11 +183,25 @@ class TestGrundausstattung(unittest.TestCase):
         self.ordner = tempfile.TemporaryDirectory()
         self.addCleanup(self.ordner.cleanup)
         self.ziel = pathlib.Path(self.ordner.name) / "Verteilerly"
-        self.zielsetzer = mock.patch.object(
-            pfade, "eigener_datenordner", return_value=self.ziel
+
+        # Das Mitgelieferte als Kopie: so lässt sich eine neue Fassung
+        # nachstellen, ohne im Quellbaum zu schreiben.
+        self.quelle = pathlib.Path(self.ordner.name) / "beiliegend"
+        shutil.copytree(pfade.mitgeliefert(), self.quelle)
+
+        for name, wert in (("eigener_datenordner", self.ziel),
+                           ("mitgeliefert", self.quelle)):
+            setzer = mock.patch.object(pfade, name, return_value=wert)
+            setzer.start()
+            self.addCleanup(setzer.stop)
+
+    def _neue_fassung(self, unterordner: str, name: str) -> None:
+        """Stellt nach, dass eine spätere Programmfassung die Datei ändert."""
+        datei = self.quelle / unterordner / name
+        datei.write_text(
+            datei.read_text(encoding="utf-8") + "\n# neue Fassung\n",
+            encoding="utf-8",
         )
-        self.zielsetzer.start()
-        self.addCleanup(self.zielsetzer.stop)
 
     def test_vorlagen_und_kabeltypen_landen_im_arbeitsordner(self):
         angelegt = pfade.grundausstattung_auslegen()
@@ -213,6 +228,44 @@ class TestGrundausstattung(unittest.TestCase):
         (self.ziel / "vorlagen" / "40da-4x10.yaml").unlink()
         angelegt = pfade.grundausstattung_auslegen()
         self.assertEqual([d.name for d in angelegt], ["40da-4x10.yaml"])
+
+    def test_unberuehrte_datei_wird_aufgefrischt(self):
+        """Eine spätere Fassung darf verbessern, was niemand angefasst hat."""
+        pfade.grundausstattung_auslegen()
+        datei = self.ziel / "blattvorlagen" / "standard.yaml"
+        vorher = datei.read_text(encoding="utf-8")
+
+        # Die mitgelieferte Datei ändert sich - so, wie es eine neue
+        # Programmfassung täte.
+        self._neue_fassung("blattvorlagen", "standard.yaml")
+        aufgefrischt = pfade.grundausstattung_auslegen()
+
+        self.assertEqual([d.name for d in aufgefrischt], ["standard.yaml"])
+        self.assertIn("# neue Fassung", datei.read_text(encoding="utf-8"))
+        self.assertNotEqual(vorher, datei.read_text(encoding="utf-8"))
+
+    def test_bearbeitete_datei_wird_nicht_aufgefrischt(self):
+        """Wer eine Zeile geändert hat, behält sie - auch gegen eine Neufassung."""
+        pfade.grundausstattung_auslegen()
+        datei = self.ziel / "blattvorlagen" / "standard.yaml"
+        datei.write_text("id: standard\nname: Meins\n", encoding="utf-8")
+
+        self._neue_fassung("blattvorlagen", "standard.yaml")
+        self.assertEqual(pfade.grundausstattung_auslegen(), [])
+        self.assertEqual(
+            datei.read_text(encoding="utf-8"), "id: standard\nname: Meins\n"
+        )
+
+    def test_ohne_merkzettel_wird_nichts_angetastet(self):
+        """Ein Arbeitsordner aus einer Fassung ohne Merkzettel bleibt, wie er ist."""
+        pfade.grundausstattung_auslegen()
+        (self.ziel / pfade.MERKZETTEL).unlink()
+        datei = self.ziel / "blattvorlagen" / "standard.yaml"
+        vorher = datei.read_text(encoding="utf-8")
+
+        self._neue_fassung("blattvorlagen", "standard.yaml")
+        self.assertEqual(pfade.grundausstattung_auslegen(), [])
+        self.assertEqual(datei.read_text(encoding="utf-8"), vorher)
 
     def test_ohne_mitgeliefertes_passiert_nichts(self):
         with mock.patch.object(pfade, "mitgeliefert", return_value=None):

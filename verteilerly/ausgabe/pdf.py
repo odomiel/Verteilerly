@@ -105,20 +105,25 @@ def _linie(blech: canvas.Canvas, element: Linie, hoehe_pt: float) -> None:
 
 def _text(blech: canvas.Canvas, element: Text, hoehe_pt: float) -> None:
     schrift = SCHRIFT_FETT if element.fett else SCHRIFT
-    breite_pt = element.breite * PT_JE_MM
-    groesse = _passende_groesse(str(element.text), schrift, element.groesse, breite_pt)
-    text = _einpassen(str(element.text), schrift, groesse, breite_pt)
+    laenge_pt = element.zeilenlaenge * PT_JE_MM
+    groesse = _passende_groesse(str(element.text), schrift, element.groesse, laenge_pt)
+    text = _einpassen(str(element.text), schrift, groesse, laenge_pt)
     if not text:
         return
 
     blech.setFont(schrift, groesse)
     blech.setFillColor(HexColor(element.farbe))
 
+    if element.drehung:
+        _text_gedreht(blech, element, text, schrift, groesse, hoehe_pt)
+        return
+
     # Senkrecht mittig: die Grundlinie liegt um die halbe Versalhoehe
     # unter der Mitte des Kastens.
     mitte = _y(element.y + element.hoehe / 2, hoehe_pt)
     grundlinie = mitte - groesse * 0.35
     x = element.x * PT_JE_MM
+    breite_pt = element.breite * PT_JE_MM
 
     if element.ausrichtung == RECHTS:
         blech.drawRightString(x + breite_pt, grundlinie, text)
@@ -126,6 +131,39 @@ def _text(blech: canvas.Canvas, element: Text, hoehe_pt: float) -> None:
         blech.drawCentredString(x + breite_pt / 2, grundlinie, text)
     else:
         blech.drawString(x, grundlinie, text)
+
+
+def _text_gedreht(
+    blech: canvas.Canvas,
+    element: Text,
+    text: str,
+    schrift: str,
+    groesse: float,
+    hoehe_pt: float,
+) -> None:
+    """Text quer im Kasten - von unten nach oben zu lesen.
+
+    Gedreht wird das Blatt, nicht der Text: nach ``rotate`` laeuft die
+    Zeile nach oben, und was danach gezeichnet wird, rechnet wieder in
+    gewoehnlichen Koordinaten.
+    """
+    breite_pt = element.breite * PT_JE_MM
+    unten = _y(element.y + element.hoehe, hoehe_pt)
+    laenge_pt = element.hoehe * PT_JE_MM
+    # Die Grundlinie liegt um die halbe Versalhoehe neben der Mitte des
+    # Kastens - beim gedrehten Text heisst "neben" nach rechts.
+    grundlinie = element.x * PT_JE_MM + breite_pt / 2 + groesse * 0.35
+
+    blech.saveState()
+    blech.translate(grundlinie, unten)
+    blech.rotate(element.drehung)
+    if element.ausrichtung == RECHTS:
+        blech.drawRightString(laenge_pt, 0, text)
+    elif element.ausrichtung == MITTE:
+        blech.drawCentredString(laenge_pt / 2, 0, text)
+    else:
+        blech.drawString(0, 0, text)
+    blech.restoreState()
 
 
 def _passende_groesse(

@@ -117,25 +117,37 @@ class Blattflaeche(QWidget):
         umriss = maler.transform().mapRect(
             QRectF(element.x, element.y, element.breite, element.hoehe)
         )
+        # Quer gedreht ist die Hoehe des Kastens die Laenge der Zeile.
+        laenge = umriss.height() if element.drehung else umriss.width()
         schrift = QFont(self.font())
         schrift.setBold(element.fett)
-        schrift.setPixelSize(self._passende_pixel(element, umriss.width(), skala))
+        schrift.setPixelSize(self._passende_pixel(element, laenge, skala))
         masse = QFontMetricsF(schrift)
         # Was auch bei kleinster Schrift nicht hineinpasst, wird gekuerzt -
         # sonst schnitte Qt mitten im Buchstaben ab. Genau wie im PDF.
         text = str(element.text)
-        if masse.horizontalAdvance(text) > umriss.width():
-            text = masse.elidedText(
-                text, Qt.TextElideMode.ElideRight, umriss.width()
-            )
+        if masse.horizontalAdvance(text) > laenge:
+            text = masse.elidedText(text, Qt.TextElideMode.ElideRight, laenge)
+
         maler.save()
         maler.resetTransform()
         maler.setFont(schrift)
         maler.setPen(QColor(element.farbe))
-        maler.drawText(umriss, self._flagge(element.ausrichtung), text)
+        if element.drehung:
+            # Um die Mitte des Kastens drehen; Qt zaehlt den Winkel im
+            # Uhrzeigersinn, das Layoutmodell dagegen.
+            maler.translate(umriss.center())
+            maler.rotate(-element.drehung)
+            kasten = QRectF(
+                -umriss.height() / 2, -umriss.width() / 2,
+                umriss.height(), umriss.width(),
+            )
+            maler.drawText(kasten, self._flagge(element.ausrichtung), text)
+        else:
+            maler.drawText(umriss, self._flagge(element.ausrichtung), text)
         maler.restore()
 
-    def _passende_pixel(self, element: Text, breite_px: float, skala: float) -> int:
+    def _passende_pixel(self, element: Text, laenge_px: float, skala: float) -> int:
         """Die Pixelgroesse, mit der der Text in sein Feld passt.
 
         Dasselbe Vorgehen wie im PDF, nur mit den Massen von Qt: gemessen
@@ -146,7 +158,7 @@ class Blattflaeche(QWidget):
         gewuenscht = max(1, round(element.groesse * PUNKT_IN_MM * skala))
         kleinste = max(1, int(KLEINSTE_SCHRIFT * PUNKT_IN_MM * skala))
         text = str(element.text)
-        if not text.strip() or breite_px <= 0:
+        if not text.strip() or laenge_px <= 0:
             return gewuenscht
 
         schrift = QFont(self.font())
@@ -155,11 +167,11 @@ class Blattflaeche(QWidget):
         while groesse > kleinste:
             schrift.setPixelSize(groesse)
             gebraucht = QFontMetricsF(schrift).horizontalAdvance(text)
-            if gebraucht <= breite_px or gebraucht <= 0:
+            if gebraucht <= laenge_px or gebraucht <= 0:
                 break
             # Der Dreisatz bringt uns in einem Schritt fast ans Ziel, das
             # -1 sorgt dafuer, dass die Schleife auf jeden Fall endet.
-            geschaetzt = int(groesse * breite_px / gebraucht)
+            geschaetzt = int(groesse * laenge_px / gebraucht)
             groesse = max(kleinste, min(groesse - 1, geschaetzt))
         return max(kleinste, groesse)
 

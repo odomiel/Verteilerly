@@ -136,6 +136,39 @@ class TestSchriftgroessen(unittest.TestCase):
         self.assertEqual(klein, KLEINSTE_SCHRIFT)
         self.assertTrue(_einpassen(endlos, SCHRIFT, klein, breite).endswith("…"))
 
+    def test_quer_gesetzter_text_misst_sich_an_der_hoehe(self):
+        """Ein langer Kabelname passt quer in die schmale Spalte."""
+        from verteilerly.layout import Text
+
+        lang = "Linie 1 — Melderkreis Erdgeschoss West"
+        quer = Text(0, 0, 12, 90, lang, 7.0, drehung=90)
+        laengs = Text(0, 0, 12, 90, lang, 7.0)
+        self.assertEqual(quer.zeilenlaenge, 90)
+        self.assertEqual(laengs.zeilenlaenge, 12)
+        # Quer bleibt die Schrift, wie sie ist; waagerecht müsste sie
+        # bis zur Untergrenze schrumpfen und würde dann noch gekürzt.
+        self.assertEqual(
+            _passende_groesse(lang, SCHRIFT, 7.0, quer.zeilenlaenge * PT_JE_MM), 7.0
+        )
+        self.assertEqual(
+            _passende_groesse(lang, SCHRIFT, 7.0, laengs.zeilenlaenge * PT_JE_MM),
+            KLEINSTE_SCHRIFT,
+        )
+
+    def test_quer_gesetzter_text_steht_im_pdf(self):
+        ordner = tempfile.TemporaryDirectory()
+        self.addCleanup(ordner.cleanup)
+        ziel = Path(ordner.name) / "quer.pdf"
+
+        v = Verteiler.aus_geometrie(1, 2, 10, name="Probe")
+        v.kabel_anlegen("Linie 1 — Melderkreis Erdgeschoss West", 1, 1, 5)
+        pdf_schreiben(Projekt(verteiler=v), ziel)
+
+        from pypdf import PdfReader
+
+        text = "\n".join(s.extract_text() for s in PdfReader(str(ziel)).pages)
+        self.assertIn("Melderkreis Erdgeschoss West", text)
+
     def test_kein_text_eines_blattes_laeuft_ueber(self):
         """Die Probe aufs Ganze: jedes Feld jedes Blattes nachgemessen."""
         v = Verteiler.aus_geometrie(2, 4, 10, name="Hauptverteiler Technikzentrale")
@@ -152,7 +185,7 @@ class TestSchriftgroessen(unittest.TestCase):
                 if not isinstance(element, Text) or not element.text.strip():
                     continue
                 schrift = SCHRIFT_FETT if element.fett else SCHRIFT
-                breite = element.breite * PT_JE_MM
+                breite = element.zeilenlaenge * PT_JE_MM
                 groesse = _passende_groesse(
                     element.text, schrift, element.groesse, breite
                 )
