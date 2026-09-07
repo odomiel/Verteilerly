@@ -5,6 +5,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from reportlab.pdfbase.pdfmetrics import stringWidth
+
 from verteilerly.ausgabe import (
     AusgabeFehler,
     belegungszeilen,
@@ -13,8 +15,16 @@ from verteilerly.ausgabe import (
     pdf_schreiben,
     xlsx_schreiben,
 )
-from verteilerly.ausgabe.pdf import PT_JE_MM, SCHRIFT, _einpassen
+from verteilerly.ausgabe.pdf import (
+    KLEINSTE_SCHRIFT,
+    PT_JE_MM,
+    SCHRIFT,
+    SCHRIFT_FETT,
+    _einpassen,
+    _passende_groesse,
+)
 from verteilerly.ausgabe.tabellen import SPALTEN
+from verteilerly.layout import Text, blaetter
 from verteilerly.modell import Aderadresse, Projekt, Verteiler
 
 
@@ -99,6 +109,56 @@ class TestPdf(unittest.TestCase):
         lang = _einpassen("Leitung zum Nebengebäude Ost", SCHRIFT, 8.5, 30)
         self.assertTrue(lang.endswith("…"))
         self.assertLess(len(lang), len("Leitung zum Nebengebäude Ost"))
+
+
+class TestSchriftgroessen(unittest.TestCase):
+    """Die Schrift passt sich dem Feld an."""
+
+    def test_langer_text_wird_kleiner_statt_gekuerzt(self):
+        lang = "geprüft am 07.09.2026, Schleifenwiderstand i.O."
+        breite = 41 * PT_JE_MM
+        klein = _passende_groesse(lang, SCHRIFT, 8.5, breite)
+        self.assertLess(klein, 8.5)
+        self.assertGreaterEqual(klein, KLEINSTE_SCHRIFT)
+        self.assertLessEqual(stringWidth(lang, SCHRIFT, klein), breite)
+        # Verkleinert reicht der Platz - gekuerzt wird dann nicht mehr.
+        self.assertEqual(_einpassen(lang, SCHRIFT, klein, breite), lang)
+
+    def test_passender_text_behaelt_seine_groesse(self):
+        self.assertEqual(
+            _passende_groesse("Melder 1a", SCHRIFT, 8.5, 43 * PT_JE_MM), 8.5
+        )
+
+    def test_unter_der_untergrenze_wird_gekuerzt(self):
+        endlos = "Verteiler " * 30
+        breite = 30 * PT_JE_MM
+        klein = _passende_groesse(endlos, SCHRIFT, 8.5, breite)
+        self.assertEqual(klein, KLEINSTE_SCHRIFT)
+        self.assertTrue(_einpassen(endlos, SCHRIFT, klein, breite).endswith("…"))
+
+    def test_kein_text_eines_blattes_laeuft_ueber(self):
+        """Die Probe aufs Ganze: jedes Feld jedes Blattes nachgemessen."""
+        v = Verteiler.aus_geometrie(2, 4, 10, name="Hauptverteiler Technikzentrale")
+        v.kabel_anlegen("Linie 1 — Melderkreis Erdgeschoss West", 1, 1, 5)
+        for da in range(1, 6):
+            for seite in ("a", "b"):
+                ader = v.ader(Aderadresse(1, da, seite))
+                ader.bezeichnung = f"Melder {da}{seite} Treppenhaus Ost"
+                ader.bemerkung = "geprüft am 07.09.2026, Schleifenwiderstand i.O."
+        projekt = Projekt(verteiler=v, briefkopf={"firma": "Musterfirma GmbH & Co. KG"})
+
+        for blatt in blaetter(projekt):
+            for element in blatt.elemente:
+                if not isinstance(element, Text) or not element.text.strip():
+                    continue
+                schrift = SCHRIFT_FETT if element.fett else SCHRIFT
+                breite = element.breite * PT_JE_MM
+                groesse = _passende_groesse(
+                    element.text, schrift, element.groesse, breite
+                )
+                text = _einpassen(element.text, schrift, groesse, breite)
+                with self.subTest(blatt=blatt.titel, text=element.text):
+                    self.assertLessEqual(stringWidth(text, schrift, groesse), breite)
 
 
 class TestTabellen(unittest.TestCase):

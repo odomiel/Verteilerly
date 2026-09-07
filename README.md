@@ -135,6 +135,14 @@ Blattbild, Vorschau und Ausdruck können nicht auseinanderlaufen.
 Excel und CSV geben nicht das Blatt aus, sondern die Belegungsdaten — eine
 Zeile je Ader, filter- und sortierbar.
 
+**Kein Text läuft über sein Feld hinaus.** Passt eine Bezeichnung, eine
+Bemerkung oder ein Kabelname nicht in seine Spalte, wird die Schrift dafür
+verkleinert — nur für dieses eine Feld, der Rest des Blattes behält seine
+Größe. Erst unterhalb von 5 pt hört das auf, denn kleiner liest es niemand
+mehr; dann wird gekürzt und ein „…“ zeigt an, dass noch etwas folgt.
+Vorschau und PDF rechnen dabei gleich, jedes mit den Maßen seiner eigenen
+Schrift-Engine — was in der Vorschau passt, passt auch im Ausdruck.
+
 Zurückgestellt: Widerstandssymbol,
 Pluginschnittstelle, Blatt „Änderungen“, Strichregel.
 

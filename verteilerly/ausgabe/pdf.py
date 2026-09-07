@@ -23,6 +23,10 @@ PT_JE_MM = 72.0 / 25.4
 SCHRIFT = "Helvetica"
 SCHRIFT_FETT = "Helvetica-Bold"
 KUERZUNG = "…"
+# Wie weit ein Text schrumpfen darf, damit er in sein Feld passt. Unter
+# 5 pt liest es niemand mehr - dann wird lieber gekuerzt.
+KLEINSTE_SCHRIFT = 5.0
+SCHRITT = 0.25
 
 
 def pdf_schreiben(
@@ -102,17 +106,18 @@ def _linie(blech: canvas.Canvas, element: Linie, hoehe_pt: float) -> None:
 def _text(blech: canvas.Canvas, element: Text, hoehe_pt: float) -> None:
     schrift = SCHRIFT_FETT if element.fett else SCHRIFT
     breite_pt = element.breite * PT_JE_MM
-    text = _einpassen(str(element.text), schrift, element.groesse, breite_pt)
+    groesse = _passende_groesse(str(element.text), schrift, element.groesse, breite_pt)
+    text = _einpassen(str(element.text), schrift, groesse, breite_pt)
     if not text:
         return
 
-    blech.setFont(schrift, element.groesse)
+    blech.setFont(schrift, groesse)
     blech.setFillColor(HexColor(element.farbe))
 
     # Senkrecht mittig: die Grundlinie liegt um die halbe Versalhoehe
     # unter der Mitte des Kastens.
     mitte = _y(element.y + element.hoehe / 2, hoehe_pt)
-    grundlinie = mitte - element.groesse * 0.35
+    grundlinie = mitte - groesse * 0.35
     x = element.x * PT_JE_MM
 
     if element.ausrichtung == RECHTS:
@@ -121,6 +126,27 @@ def _text(blech: canvas.Canvas, element: Text, hoehe_pt: float) -> None:
         blech.drawCentredString(x + breite_pt / 2, grundlinie, text)
     else:
         blech.drawString(x, grundlinie, text)
+
+
+def _passende_groesse(
+    text: str, schrift: str, groesse: float, breite_pt: float
+) -> float:
+    """Verkleinert die Schrift, bis der Text in sein Feld passt.
+
+    Ein langer Kabelname soll lesbar bleiben, statt abgeschnitten zu
+    werden. Unter KLEINSTE_SCHRIFT wird nicht weiter verkleinert - dann
+    kuerzt _einpassen, denn winzige Schrift hilft auch niemandem.
+    """
+    if not text.strip() or breite_pt <= 0:
+        return groesse
+    breite = stringWidth(text, schrift, groesse)
+    if breite <= breite_pt:
+        return groesse
+    # Ein Schritt unter die rechnerische Groesse, damit Rundungen nicht
+    # doch noch ueber den Rand laufen.
+    passend = groesse * breite_pt / breite
+    passend = max(KLEINSTE_SCHRIFT, (passend // SCHRITT) * SCHRITT)
+    return min(groesse, passend)
 
 
 def _einpassen(text: str, schrift: str, groesse: float, breite_pt: float) -> str:

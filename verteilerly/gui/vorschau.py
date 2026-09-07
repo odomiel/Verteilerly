@@ -8,7 +8,7 @@ Schrift, auch im dunklen Farbsatz.
 from __future__ import annotations
 
 from PySide6.QtCore import QRectF, Qt, Signal
-from PySide6.QtGui import QColor, QFont, QPainter, QPen
+from PySide6.QtGui import QColor, QFont, QFontMetricsF, QPainter, QPen
 from PySide6.QtWidgets import (
     QComboBox,
     QHBoxLayout,
@@ -26,6 +26,9 @@ from .thema import HELL, Farben
 
 PUNKT_IN_MM = 25.4 / 72.0
 PAPIERRAND = 10  # Pixel um das Blatt herum
+# So weit darf die Schrift schrumpfen, damit ein Text in sein Feld passt -
+# dieselbe Untergrenze wie im PDF (ausgabe/pdf.py).
+KLEINSTE_SCHRIFT = 5.0
 
 
 class Blattflaeche(QWidget):
@@ -109,20 +112,56 @@ class Blattflaeche(QWidget):
         return stift
 
     def _text_zeichnen(self, maler: QPainter, element: Text, skala: float) -> None:
-        schrift = QFont(self.font())
-        schrift.setBold(element.fett)
-        schrift.setPixelSize(max(1, round(element.groesse * PUNKT_IN_MM * skala)))
         # Der Text wird in Geraetekoordinaten gesetzt: so franst die Schrift
         # beim Skalieren nicht aus und bleibt bei kleiner Vorschau lesbar.
         umriss = maler.transform().mapRect(
             QRectF(element.x, element.y, element.breite, element.hoehe)
         )
+        schrift = QFont(self.font())
+        schrift.setBold(element.fett)
+        schrift.setPixelSize(self._passende_pixel(element, umriss.width(), skala))
+        masse = QFontMetricsF(schrift)
+        # Was auch bei kleinster Schrift nicht hineinpasst, wird gekuerzt -
+        # sonst schnitte Qt mitten im Buchstaben ab. Genau wie im PDF.
+        text = str(element.text)
+        if masse.horizontalAdvance(text) > umriss.width():
+            text = masse.elidedText(
+                text, Qt.TextElideMode.ElideRight, umriss.width()
+            )
         maler.save()
         maler.resetTransform()
         maler.setFont(schrift)
         maler.setPen(QColor(element.farbe))
-        maler.drawText(umriss, self._flagge(element.ausrichtung), element.text)
+        maler.drawText(umriss, self._flagge(element.ausrichtung), text)
         maler.restore()
+
+    def _passende_pixel(self, element: Text, breite_px: float, skala: float) -> int:
+        """Die Pixelgroesse, mit der der Text in sein Feld passt.
+
+        Dasselbe Vorgehen wie im PDF, nur mit den Massen von Qt: gemessen
+        wird die Schrift so, wie sie gezeichnet wird - in Bildpunkten.
+        Qt kennt nur ganze Pixel, darum wird abgerundet und nachgemessen;
+        eine aufgerundete Groesse liefe sonst doch ueber den Rand.
+        """
+        gewuenscht = max(1, round(element.groesse * PUNKT_IN_MM * skala))
+        kleinste = max(1, int(KLEINSTE_SCHRIFT * PUNKT_IN_MM * skala))
+        text = str(element.text)
+        if not text.strip() or breite_px <= 0:
+            return gewuenscht
+
+        schrift = QFont(self.font())
+        schrift.setBold(element.fett)
+        groesse = gewuenscht
+        while groesse > kleinste:
+            schrift.setPixelSize(groesse)
+            gebraucht = QFontMetricsF(schrift).horizontalAdvance(text)
+            if gebraucht <= breite_px or gebraucht <= 0:
+                break
+            # Der Dreisatz bringt uns in einem Schritt fast ans Ziel, das
+            # -1 sorgt dafuer, dass die Schleife auf jeden Fall endet.
+            geschaetzt = int(groesse * breite_px / gebraucht)
+            groesse = max(kleinste, min(groesse - 1, geschaetzt))
+        return max(kleinste, groesse)
 
     def _flagge(self, ausrichtung: str) -> int:
         waagerecht = {
