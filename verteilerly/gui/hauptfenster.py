@@ -5,7 +5,7 @@ from __future__ import annotations
 import pathlib
 
 from PySide6.QtCore import QSettings, Qt, QTimer
-from PySide6.QtGui import QAction, QKeySequence
+from PySide6.QtGui import QAction, QActionGroup, QKeySequence
 from PySide6.QtWidgets import (
     QFileDialog,
     QMainWindow,
@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from .. import einstellungen as einstellungsspeicher
-from .. import pfade, projektdatei
+from .. import pfade, projektdatei, schreibweisen
 from ..ausgabe import AusgabeFehler, csv_schreiben, pdf_schreiben, xlsx_schreiben
 from ..blattvorlagen import Blattvorlagen
 from ..farbcodes import Kabeltypen, farben_eintragen
@@ -62,6 +62,11 @@ class Hauptfenster(QMainWindow):
         self.pfad: pathlib.Path | None = None
         self.veraendert = False
         self.thema_name = str(self.einstellungen.value("thema", "hell"))
+        # Wie Rangierungen geschrieben werden - eine Anzeigesache,
+        # darum in der Einstellungsdatei und nicht in der Projektdatei.
+        self.schreibweise = schreibweisen.holen(
+            self.einstellungen.value("schreibweise", schreibweisen.STANDARD.id)
+        )
 
         self.setWindowIcon(symbol_icon())
         self._oberflaeche_bauen()
@@ -204,6 +209,23 @@ class Hauptfenster(QMainWindow):
         )
         ansicht.addAction(self.aktion_thema)
 
+        rangierungen = ansicht.addMenu("Schreibweise der &Rangierungen")
+        rangierungen.setToolTipsVisible(True)
+        self.schreibweisen_gruppe = QActionGroup(self)
+        self.schreibweisen_gruppe.setExclusive(True)
+        for weise in schreibweisen.SCHREIBWEISEN:
+            handlung = QAction(weise.beispiel, self)
+            handlung.setCheckable(True)
+            handlung.setChecked(weise.id == self.schreibweise.id)
+            handlung.setData(weise.id)
+            handlung.setStatusTip(weise.beschreibung)
+            handlung.setToolTip(weise.beschreibung)
+            handlung.triggered.connect(
+                lambda _an=False, kennung=weise.id: self.schreibweise_waehlen(kennung)
+            )
+            self.schreibweisen_gruppe.addAction(handlung)
+            rangierungen.addAction(handlung)
+
         self.aktion_vorschau = QAction("&Vorschau anzeigen", self)
         self.aktion_vorschau.setCheckable(True)
         self.aktion_vorschau.setShortcut(QKeySequence("F9"))
@@ -232,6 +254,29 @@ class Hauptfenster(QMainWindow):
         self.leistenansicht.farben_setzen(farben)
         self.vorschau.farben_setzen(farben)
         self.einstellungen.setValue("thema", self.thema_name)
+
+    def schreibweise_waehlen(self, kennung: str) -> None:
+        """Stellt um, wie Rangierungen geschrieben werden.
+
+        Getippt werden darf weiter jede Form; nur die Anzeige folgt der
+        Wahl - im Editor, auf dem Blatt und in Excel und CSV.
+        """
+        self.schreibweise = schreibweisen.holen(kennung)
+        self.einstellungen.setValue("schreibweise", self.schreibweise.id)
+        self._schreibweise_anwenden()
+        self.statusBar().showMessage(
+            f"Rangierungen werden als {self.schreibweise.beispiel} geschrieben", 6000
+        )
+
+    def _schreibweise_anwenden(self) -> None:
+        # Der Haken folgt dem Zustand, nicht dem Klick: so stimmt das
+        # Menue auch, wenn die Schreibweise von anderswo gesetzt wird.
+        for handlung in self.schreibweisen_gruppe.actions():
+            handlung.setChecked(handlung.data() == self.schreibweise.id)
+        self.leistenansicht.schreibweise_setzen(self.schreibweise)
+        if self.projekt is not None:
+            self.projekt.rangierung_schreibweise = self.schreibweise.id
+        self._vorschau_anstossen()
 
     def _titel_setzen(self) -> None:
         teile = ["Verteilerly"]
@@ -299,8 +344,11 @@ class Hauptfenster(QMainWindow):
         self.pfad = pfad
         self.veraendert = False
         verteiler = projekt.verteiler if projekt else None
+        if projekt is not None:
+            projekt.rangierung_schreibweise = self.schreibweise.id
         self.uebersicht.verteiler_setzen(verteiler)
         self.leistenansicht.verteiler_setzen(verteiler)
+        self.leistenansicht.schreibweise_setzen(self.schreibweise)
         self.vorschau.projekt_setzen(projekt)
         self.aktionen_auffrischen()
         self._titel_setzen()

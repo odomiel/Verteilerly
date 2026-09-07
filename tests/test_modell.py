@@ -2,6 +2,7 @@
 
 import unittest
 
+from verteilerly import schreibweisen
 from verteilerly.modell import (
     Aderadresse,
     Kabelabschnitt,
@@ -54,8 +55,24 @@ class TestAderadresse(unittest.TestCase):
     def test_toleriert_leerraum_und_grossschreibung(self):
         self.assertEqual(str(Aderadresse.parse("  12   7B ")), "12 7b")
 
+    def test_liest_jede_schreibweise(self):
+        """Getippt werden darf jede Form, gleich welche eingestellt ist."""
+        gemeint = Aderadresse(3, 2, "a")
+        for text in ["3 2a", "L3 2a", "L3-2a", "l3-2a", "3-2a"]:
+            with self.subTest(text=text):
+                self.assertEqual(Aderadresse.parse(text), gemeint)
+
+    def test_schreibt_in_der_gewaehlten_schreibweise(self):
+        adresse = Aderadresse(3, 2, "a")
+        self.assertEqual(adresse.anzeige(schreibweisen.EINFACH), "3 2a")
+        self.assertEqual(adresse.anzeige(schreibweisen.MIT_L), "L3 2a")
+        self.assertEqual(adresse.anzeige(schreibweisen.MIT_STRICH), "L3-2a")
+        # Ohne Angabe bleibt es bei der Grundform - so steht es auch in
+        # der Projektdatei.
+        self.assertEqual(adresse.anzeige(), str(adresse))
+
     def test_unlesbares_abgelehnt(self):
-        for text in ["", "3", "3 2c", "abc", "3-2a"]:
+        for text in ["", "3", "3 2c", "abc", "L 2a", "3 2a x"]:
             with self.subTest(text=text), self.assertRaises(ModellFehler):
                 Aderadresse.parse(text)
 

@@ -20,7 +20,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from .. import schreibweisen
 from ..modell import Aderadresse, ModellFehler, Verteiler, adressen_lesen
+from ..schreibweisen import Schreibweise
 from .thema import HELL, Farben
 
 SPALTE_STIFT = 0
@@ -67,6 +69,16 @@ class LeistenModell(QAbstractTableModel):
         self.verteiler: Verteiler | None = None
         self.leiste_nr: int | None = None
         self.farben: Farben = HELL
+        self.schreibweise: Schreibweise = schreibweisen.STANDARD
+
+    def schreibweise_setzen(self, schreibweise: Schreibweise) -> None:
+        """Wie Rangierungen in den beiden Feldern stehen."""
+        self.schreibweise = schreibweise
+        if self.rowCount():
+            self.dataChanged.emit(
+                self.index(0, RANGIERSPALTEN[0]),
+                self.index(self.rowCount() - 1, RANGIERSPALTEN[-1]),
+            )
 
     def setzen(self, verteiler: Verteiler | None, leiste_nr: int | None) -> None:
         self.beginResetModel()
@@ -146,7 +158,9 @@ class LeistenModell(QAbstractTableModel):
             if spalte in RANGIERSPALTEN:
                 ziele = self.verteiler.ziele_von(self.adresse(zeile))
                 stelle = RANGIERSPALTEN.index(spalte)
-                return str(ziele[stelle]) if stelle < len(ziele) else ""
+                if stelle >= len(ziele):
+                    return ""
+                return ziele[stelle].anzeige(self.schreibweise)
             if spalte == SPALTE_BEMERKUNG:
                 return ader.bemerkung
             if spalte == SPALTE_KABEL:
@@ -348,6 +362,9 @@ class LeistenAnsicht(QWidget):
 
     def farben_setzen(self, farben) -> None:
         self.modell.farben_setzen(farben)
+
+    def schreibweise_setzen(self, schreibweise: Schreibweise) -> None:
+        self.modell.schreibweise_setzen(schreibweise)
 
     def verteiler_setzen(self, verteiler: Verteiler | None) -> None:
         self.verteiler = verteiler

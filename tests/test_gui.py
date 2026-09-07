@@ -129,6 +129,25 @@ class TestLeistenModell(unittest.TestCase):
         self.assertEqual(self._text(0, SPALTE_RANGIERUNG), "3 2a")
         self.assertEqual(self._text(0, SPALTE_RANGIERUNG_2), "4 5b")
 
+    def test_felder_folgen_der_schreibweise(self):
+        """Umgestellt wird die Anzeige, getippt werden darf alles."""
+        from verteilerly import schreibweisen
+
+        self._setzen(0, SPALTE_RANGIERUNG, "3 2a")
+        self.m.schreibweise_setzen(schreibweisen.MIT_STRICH)
+        self.assertEqual(self._text(0, SPALTE_RANGIERUNG), "L3-2a")
+
+        # In der neuen Schreibweise getippt landet dieselbe Ader im Modell.
+        self._setzen(0, SPALTE_RANGIERUNG, "L4-5b")
+        self.assertEqual(self._text(0, SPALTE_RANGIERUNG), "L4-5b")
+        self.assertEqual(
+            self.v.ziele_von(Aderadresse(4, 5, "b")), [Aderadresse(1, 1, "a")]
+        )
+
+        # Und die alte Form bleibt lesbar, gleich was eingestellt ist.
+        self._setzen(0, SPALTE_RANGIERUNG, "2 1a")
+        self.assertEqual(self._text(0, SPALTE_RANGIERUNG), "L2-1a")
+
     def test_fehlerhafte_eingabe_meldet_und_aendert_nichts(self):
         gemeldet = []
         self.m.fehler_gemeldet.connect(gemeldet.append)
@@ -267,6 +286,38 @@ class TestMenuezustaende(unittest.TestCase):
                      "aktion_kabel_weg", "aktion_vorlage", "aktion_briefkopf"):
             with self.subTest(aktion=name):
                 self.assertTrue(getattr(self.fenster, name).statusTip())
+
+    def test_schreibweise_wirkt_und_wird_gemerkt(self):
+        """Die Wahl gilt für Editor, Blatt und Ausgabe."""
+        from verteilerly import schreibweisen
+
+        f = self.fenster
+        self._projekt()
+        f.schreibweise_waehlen("mit_strich")
+        self.assertIs(f.schreibweise, schreibweisen.MIT_STRICH)
+        self.assertIs(f.leistenansicht.modell.schreibweise, schreibweisen.MIT_STRICH)
+        self.assertEqual(f.projekt.rangierung_schreibweise, "mit_strich")
+        self.assertEqual(f.einstellungen.value("schreibweise"), "mit_strich")
+        angehakt = [e for e in f.schreibweisen_gruppe.actions() if e.isChecked()]
+        self.assertEqual([e.data() for e in angehakt], ["mit_strich"])
+
+        # Auch ein danach geöffnetes Projekt folgt der Wahl.
+        self._projekt()
+        self.assertEqual(f.projekt.rangierung_schreibweise, "mit_strich")
+        f.schreibweise_waehlen("einfach")
+
+    def test_jede_schreibweise_steht_im_menue(self):
+        from verteilerly import schreibweisen
+
+        eintraege = self.fenster.schreibweisen_gruppe.actions()
+        self.assertEqual(
+            [e.text() for e in eintraege],
+            [w.beispiel for w in schreibweisen.SCHREIBWEISEN],
+        )
+        # Genau einer ist angehakt - die eingestellte Schreibweise.
+        angehakt = [e for e in eintraege if e.isChecked()]
+        self.assertEqual(len(angehakt), 1)
+        self.assertEqual(angehakt[0].data(), self.fenster.schreibweise.id)
 
     def test_leere_auswahlfelder_sind_aus(self):
         f = self.fenster

@@ -11,6 +11,9 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
+from . import schreibweisen
+from .schreibweisen import Schreibweise
+
 SEITEN = ("a", "b")
 
 
@@ -38,8 +41,12 @@ class UeberlaufFehler(ModellFehler):
 # Adressierung
 # --------------------------------------------------------------------------
 
-_ADRESSE = re.compile(r"^\s*(\d+)\s+(\d+)\s*([ab])\s*$", re.IGNORECASE)
-_ADRESSE_IM_TEXT = re.compile(r"(\d+)\s+(\d+)\s*([ab])", re.IGNORECASE)
+# Gelesen wird jede Schreibweise: "3 2a", "L3 2a" und "L3-2a"
+# meinen dieselbe Ader. Das L ist ein Zierat, der Strich ein Trenner wie
+# der Abstand.
+_ADRESSMUSTER = r"[Ll]?\s*(\d+)\s*(?:-|\s+)\s*(\d+)\s*([ab])"
+_ADRESSE = re.compile(rf"^\s*{_ADRESSMUSTER}\s*$", re.IGNORECASE)
+_ADRESSE_IM_TEXT = re.compile(_ADRESSMUSTER, re.IGNORECASE)
 
 # Zwei Rangierungen stehen nebeneinander ohne Trennzeichen,
 # allein durch Abstand getrennt.
@@ -51,6 +58,8 @@ class Aderadresse:
     """Zeigt auf genau eine Ader im Verteiler.
 
     Schreibweise: "<Leiste> <Stift><Ader>", also "3 2a".
+    So steht die Adresse auch in der Projektdatei. Wie sie dem Anwender
+    gezeigt wird, sagt ``anzeige``.
     """
 
     leiste: int
@@ -66,13 +75,19 @@ class Aderadresse:
         treffer = _ADRESSE.match(text)
         if not treffer:
             raise ModellFehler(
-                f"Rangierung {text!r} nicht lesbar - erwartet wird z.B. '3 2a'"
+                f"Rangierung {text!r} nicht lesbar - erwartet wird "
+                "z.B. '3 2a', 'L3 2a' oder 'L3-2a'"
             )
         leiste, stift, seite = treffer.groups()
         return cls(int(leiste), int(stift), seite.lower())
 
     def __str__(self) -> str:
         return f"{self.leiste} {self.stift}{self.seite}"
+
+    def anzeige(self, schreibweise: Schreibweise | None = None) -> str:
+        """Die Adresse in der eingestellten Schreibweise."""
+        weise = schreibweise or schreibweisen.STANDARD
+        return weise.schreiben(self.leiste, self.stift, self.seite)
 
 
 # --------------------------------------------------------------------------
@@ -523,14 +538,16 @@ class Verteiler:
 def adressen_lesen(text: str) -> list[Aderadresse]:
     """Liest ein Rangierungsfeld - eine oder zwei Adressen.
 
-    Erlaubt ist, was der Anwender tippt: "3 2a" oder "3 2a   5 4a".
+    Erlaubt ist, was der Anwender tippt: "3 2a" oder "3 2a   5 4a",
+    in jeder Schreibweise - "L3-2a" meint dieselbe Ader.
     """
     if not text or not text.strip():
         return []
     treffer = _ADRESSE_IM_TEXT.findall(text)
     if not treffer:
         raise ModellFehler(
-            f"Rangierung {text.strip()!r} nicht lesbar - erwartet wird z.B. '3 2a'"
+            f"Rangierung {text.strip()!r} nicht lesbar - erwartet wird "
+            "z.B. '3 2a', 'L3 2a' oder 'L3-2a'"
         )
     # Alles, was nicht zu einer Adresse gehoert, waere ein Tippfehler.
     rest = _ADRESSE_IM_TEXT.sub("", text).strip()
@@ -542,9 +559,11 @@ def adressen_lesen(text: str) -> list[Aderadresse]:
     ]
 
 
-def adressen_schreiben(adressen: list[Aderadresse]) -> str:
+def adressen_schreiben(
+    adressen: list[Aderadresse], schreibweise: Schreibweise | None = None
+) -> str:
     """Stellt Rangierungen fuer die Anzeige zusammen."""
-    return RANGIERUNG_TRENNER.join(str(a) for a in adressen)
+    return RANGIERUNG_TRENNER.join(a.anzeige(schreibweise) for a in adressen)
 
 
 # --------------------------------------------------------------------------
@@ -600,6 +619,13 @@ class Projekt:
     # Felder, die auf den Blaettern nicht erscheinen sollen. Der Inhalt
     # bleibt erhalten - abwaehlen ist kein Loeschen.
     ausgeblendet: set[str] = field(default_factory=set)
+    # Wie Rangierungen geschrieben werden. Eine Anzeigesache: die
+    # Projektdatei haelt Adressen immer in der Grundform fest.
+    rangierung_schreibweise: str = schreibweisen.STANDARD.id
+
+    @property
+    def schreibweise(self) -> Schreibweise:
+        return schreibweisen.holen(self.rangierung_schreibweise)
 
     def feld(self, name: str, vorgabe: str = "") -> str:
         if name in self.briefkopf:

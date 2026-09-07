@@ -10,6 +10,7 @@ kopierten Tabellenblättern.
 verteilerly/        Programmpaket
   modell.py         Verteiler, Bucht, Leiste, Stift, Ader, Kabel, Rangierung
   farbcodes.py      Kabeltypen und Adernfarben
+  schreibweisen.py  Wie eine Rangierungsadresse geschrieben wird
   vorlagen.py       Verteilervorlagen
   projektdatei.py   Projekt als JSON lesen und schreiben
   einstellungen.py  Briefkopf als Vorgabe in der Verteilerly.conf
@@ -94,6 +95,22 @@ darüber; die Gegenstelle trägt sich selbst ein. Wer beide in ein Feld
 tippt (`3 2a   5 4a`), bekommt sie auf beide verteilt. Auf dem Blatt
 stehen sie nebeneinander in einer Zelle — dort soll nicht zu sehen sein,
 dass es zwei Felder sind.
+
+**Wie eine Adresse geschrieben wird, ist Hausbrauch** — unter *Ansicht ▸
+Schreibweise der Rangierungen* steht zur Wahl:
+
+| Schreibweise | Beispiel |
+|---|---|
+| ohne Kürzel | `1 1a` |
+| mit L vor der Leiste | `L1 1a` |
+| mit L und Bindestrich | `L1-1a` |
+
+Die Wahl gilt für den Editor, das Blatt und die Ausgabe nach Excel und
+CSV; sie steht in der `Verteilerly.conf` und gilt damit für alle
+Verteiler. **Gelesen wird immer alles**: getippt werden darf jede der
+drei Formen, gleich welche gerade eingestellt ist, und in der
+Projektdatei steht die Adresse unverändert als `1 1a`. Wer umstellt, muss
+also weder seine Projekte noch seine Gewohnheiten anfassen.
 
 Menüeinträge, die gerade nichts bewirken können, sind ausgegraut: ohne
 Verteiler die ganze Ausgabe, *Kabel entfernen* nur dort, wo wirklich ein

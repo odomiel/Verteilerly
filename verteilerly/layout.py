@@ -478,7 +478,8 @@ def leistenblatt(
                 "farbe": ader.farbe,
                 "bezeichnung": ader.bezeichnung,
                 "rangierung": adressen_schreiben(
-                    v.ziele_von(_adresse(leiste_nr, stift.nummer, seite))
+                    v.ziele_von(_adresse(leiste_nr, stift.nummer, seite)),
+                    projekt.schreibweise,
                 ),
                 "bemerkung": ader.bemerkung,
                 "kabel": "",

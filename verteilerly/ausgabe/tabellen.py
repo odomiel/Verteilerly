@@ -63,10 +63,12 @@ def belegungszeilen(projekt: Projekt) -> list[list]:
                             leiste.nummer,
                             stift.nummer,
                             seite,
-                            str(adresse),
+                            adresse.anzeige(projekt.schreibweise),
                             ader.farbe,
                             ader.bezeichnung,
-                            adressen_schreiben(v.ziele_von(adresse)),
+                            adressen_schreiben(
+                                v.ziele_von(adresse), projekt.schreibweise
+                            ),
                             ader.bemerkung,
                             kabel.beschriftung if kabel else "",
                             kabel.kabeltyp if kabel else "",
