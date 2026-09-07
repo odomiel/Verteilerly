@@ -14,7 +14,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from .blattvorlagen import LINKS, MITTE, RECHTS, STANDARD, Blattvorlage
-from .modell import Bucht, Projekt, Verteiler, adressen_schreiben
+from .modell import Bucht, Projekt, Verteiler
 
 # -- Papier ----------------------------------------------------------------
 
@@ -477,9 +477,8 @@ def leistenblatt(
                 "ader": seite,
                 "farbe": ader.farbe,
                 "bezeichnung": ader.bezeichnung,
-                "rangierung": adressen_schreiben(
-                    v.ziele_von(_adresse(leiste_nr, stift.nummer, seite)),
-                    projekt.schreibweise,
+                "rangierung": v.rangierfeld(
+                    _adresse(leiste_nr, stift.nummer, seite), projekt.schreibweise
                 ),
                 "bemerkung": ader.bemerkung,
                 "kabel": "",

@@ -47,6 +47,26 @@ class TestProjektdatei(unittest.TestCase):
     def tearDown(self):
         self.ordner.cleanup()
 
+    def test_vermerk_ueberlebt_das_speichern(self):
+        """Der Freitext gehoert zur Ader und damit in die Datei."""
+        projekt = beispielprojekt()
+        v = projekt.verteiler
+        v.vermerk_setzen(Aderadresse.parse("1 2a"), "zur Klemmleiste", zuerst=True)
+        v.vermerk_setzen(Aderadresse.parse("1 3a"), "extern")
+        projektdatei.speichern(projekt, self.pfad)
+
+        zurueck = projektdatei.laden(self.pfad).verteiler
+        self.assertEqual(zurueck.ader(Aderadresse.parse("1 2a")).vermerk,
+                         "zur Klemmleiste")
+        self.assertTrue(zurueck.ader(Aderadresse.parse("1 2a")).vermerk_zuerst)
+        self.assertEqual(zurueck.ader(Aderadresse.parse("1 3a")).vermerk, "extern")
+        self.assertFalse(zurueck.ader(Aderadresse.parse("1 3a")).vermerk_zuerst)
+
+    def test_ader_ohne_vermerk_bleibt_schlank(self):
+        projektdatei.speichern(beispielprojekt(), self.pfad)
+        text = self.pfad.read_text(encoding="utf-8")
+        self.assertNotIn("vermerk", text)
+
     def test_roundtrip(self):
         original = beispielprojekt()
         projektdatei.speichern(original, self.pfad)

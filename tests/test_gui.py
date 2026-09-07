@@ -148,6 +148,59 @@ class TestLeistenModell(unittest.TestCase):
         self._setzen(0, SPALTE_RANGIERUNG, "2 1a")
         self.assertEqual(self._text(0, SPALTE_RANGIERUNG), "L2-1a")
 
+    def test_ohne_freitext_bleibt_ein_tippfehler_ein_fehler(self):
+        """Abgeschaltet meldet das Feld wieder, was es nicht lesen kann."""
+        gemeldet = []
+        self.m.fehler_gemeldet.connect(gemeldet.append)
+        self.assertFalse(self._setzen(0, SPALTE_RANGIERUNG, "zur Klemmleiste"))
+        self.assertEqual(self._text(0, SPALTE_RANGIERUNG), "")
+        self.assertTrue(gemeldet)
+
+    def test_freitext_landet_als_vermerk_an_der_ader(self):
+        self.m.freitext_erlauben(True)
+        self.assertTrue(self._setzen(0, SPALTE_RANGIERUNG, "zur Klemmleiste"))
+        self.assertEqual(self._text(0, SPALTE_RANGIERUNG), "zur Klemmleiste")
+        self.assertEqual(
+            self.v.ader(Aderadresse(1, 1, "a")).vermerk, "zur Klemmleiste"
+        )
+        # Ein Vermerk ist kein Ziel - gespiegelt wird nichts.
+        self.assertEqual(self.v.rangierungen, [])
+
+    def test_vermerk_und_ziel_nebeneinander(self):
+        self.m.freitext_erlauben(True)
+        self._setzen(0, SPALTE_RANGIERUNG, "extern")
+        self._setzen(0, SPALTE_RANGIERUNG_2, "3 2a")
+        # Der Vermerk bleibt in seinem Feld.
+        self.assertEqual(self._text(0, SPALTE_RANGIERUNG), "extern")
+        self.assertEqual(self._text(0, SPALTE_RANGIERUNG_2), "3 2a")
+        self.assertEqual(
+            self.v.ziele_von(Aderadresse(3, 2, "a")), [Aderadresse(1, 1, "a")]
+        )
+
+    def test_zweiter_vermerk_wird_abgewiesen(self):
+        gemeldet = []
+        self.m.fehler_gemeldet.connect(gemeldet.append)
+        self.m.freitext_erlauben(True)
+        self._setzen(0, SPALTE_RANGIERUNG, "extern")
+        self.assertFalse(self._setzen(0, SPALTE_RANGIERUNG_2, "auch extern"))
+        self.assertEqual(self._text(0, SPALTE_RANGIERUNG_2), "")
+        self.assertTrue(gemeldet)
+
+    def test_vermerk_leeren_laesst_das_ziel_stehen(self):
+        self.m.freitext_erlauben(True)
+        self._setzen(0, SPALTE_RANGIERUNG, "extern")
+        self._setzen(0, SPALTE_RANGIERUNG_2, "3 2a")
+        self._setzen(0, SPALTE_RANGIERUNG, "")
+        self.assertEqual(self._text(0, SPALTE_RANGIERUNG), "3 2a")
+        self.assertEqual(self.v.ader(Aderadresse(1, 1, "a")).vermerk, "")
+
+    def test_ziel_geht_dem_freitext_vor(self):
+        """Was sich als Ziel lesen lässt, bleibt ein Ziel."""
+        self.m.freitext_erlauben(True)
+        self._setzen(0, SPALTE_RANGIERUNG, "3 2a")
+        self.assertEqual(self.v.ader(Aderadresse(1, 1, "a")).vermerk, "")
+        self.assertEqual(len(self.v.rangierungen), 1)
+
     def test_fehlerhafte_eingabe_meldet_und_aendert_nichts(self):
         gemeldet = []
         self.m.fehler_gemeldet.connect(gemeldet.append)
@@ -318,6 +371,22 @@ class TestMenuezustaende(unittest.TestCase):
         angehakt = [e for e in eintraege if e.isChecked()]
         self.assertEqual(len(angehakt), 1)
         self.assertEqual(angehakt[0].data(), self.fenster.schreibweise.id)
+
+    def test_freitext_wird_gemerkt_und_durchgereicht(self):
+        """Die Wahl gilt für den Editor und steht in der Conf."""
+        f = self.fenster
+        self._projekt()
+        f.freitext_erlauben(True)
+        self.assertTrue(f.leistenansicht.modell.freitext_erlaubt)
+        self.assertTrue(f.aktion_freitext.isChecked())
+        self.assertTrue(f.einstellungen.value("freitext", False, type=bool))
+
+        # Auch ein danach geöffnetes Projekt erbt die Wahl.
+        self._projekt()
+        self.assertTrue(f.leistenansicht.modell.freitext_erlaubt)
+
+        f.freitext_erlauben(False)
+        self.assertFalse(f.leistenansicht.modell.freitext_erlaubt)
 
     def test_leere_auswahlfelder_sind_aus(self):
         f = self.fenster

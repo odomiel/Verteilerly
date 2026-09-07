@@ -122,6 +122,15 @@ für die Dialoge, die Qt selbst zeichnet — Datei öffnen, Datei speichern —
 wird beim Start Qts deutsche Übersetzung (`qtbase_de.qm`) geladen, die
 darum mit ins AppImage und in die .exe wandert.
 
+Ins Rangierfeld darf auf Wunsch auch ein **Vermerk** statt eines Ziels —
+„extern", „zur Klemmleiste", „n.b.". Freigeschaltet wird das über
+*Bearbeiten ▸ Freitext im Rangierfeld zulassen* und ist zunächst aus:
+wer nur Ziele einträgt, will einen Tippfehler als Fehler gemeldet
+bekommen und nicht als Vermerk stehen haben. Ein Vermerk belegt eines
+der beiden Felder, bleibt darin stehen und wird **nicht gespiegelt** —
+er gehört der Ader und steht als deren Feld in der Projektdatei. Was
+sich als Ziel lesen lässt, bleibt auch dann ein Ziel.
+
 Menüeinträge, die gerade nichts bewirken können, sind ausgegraut: ohne
 Verteiler die ganze Ausgabe, *Kabel entfernen* nur dort, wo wirklich ein
 Kabel liegt, *Speichern* nur, wenn es etwas zu speichern gibt. Jeder

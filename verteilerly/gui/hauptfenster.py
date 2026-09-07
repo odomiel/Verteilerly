@@ -68,6 +68,8 @@ class Hauptfenster(QMainWindow):
         self.schreibweise = schreibweisen.holen(
             self.einstellungen.value("schreibweise", schreibweisen.STANDARD.id)
         )
+        # Freitext im Rangierfeld - aus, bis er gebraucht wird.
+        self.freitext = self.einstellungen.value("freitext", False, type=bool)
 
         self.setWindowIcon(symbol_icon())
         self._oberflaeche_bauen()
@@ -200,6 +202,17 @@ class Hauptfenster(QMainWindow):
             hinweis="Stammdaten, die auf jedem Blatt stehen",
         )
 
+        bearbeiten.addSeparator()
+        self.aktion_freitext = QAction("&Freitext im Rangierfeld zulassen", self)
+        self.aktion_freitext.setCheckable(True)
+        self.aktion_freitext.setChecked(self.freitext)
+        self.aktion_freitext.setStatusTip(
+            "Erlaubt im Rangierfeld auch einen Vermerk statt eines Ziels — "
+            "etwa „extern“ oder „zur Klemmleiste“"
+        )
+        self.aktion_freitext.triggered.connect(self.freitext_erlauben)
+        bearbeiten.addAction(self.aktion_freitext)
+
         ansicht = self.menuBar().addMenu("&Ansicht")
         self.aktion_thema = QAction("&Dunkles Erscheinungsbild", self)
         self.aktion_thema.setCheckable(True)
@@ -267,6 +280,23 @@ class Hauptfenster(QMainWindow):
         self._schreibweise_anwenden()
         self.statusBar().showMessage(
             f"Rangierungen werden als {self.schreibweise.beispiel} geschrieben", 6000
+        )
+
+    def freitext_erlauben(self, an: bool) -> None:
+        """Schaltet den Vermerk im Rangierfeld frei.
+
+        Ausgeschaltet meldet ein unlesbares Ziel wieder einen Fehler -
+        wer nur Ziele eintraegt, will den Tippfehler sehen.
+        """
+        self.freitext = bool(an)
+        self.einstellungen.setValue("freitext", self.freitext)
+        self.leistenansicht.freitext_erlauben(self.freitext)
+        self.aktion_freitext.setChecked(self.freitext)
+        self.statusBar().showMessage(
+            "Freitext im Rangierfeld ist zugelassen"
+            if self.freitext
+            else "Im Rangierfeld sind nur Ziele zugelassen",
+            6000,
         )
 
     def _schreibweise_anwenden(self) -> None:
@@ -350,6 +380,7 @@ class Hauptfenster(QMainWindow):
         self.uebersicht.verteiler_setzen(verteiler)
         self.leistenansicht.verteiler_setzen(verteiler)
         self.leistenansicht.schreibweise_setzen(self.schreibweise)
+        self.leistenansicht.freitext_erlauben(self.freitext)
         self.vorschau.projekt_setzen(projekt)
         self.aktionen_auffrischen()
         self._titel_setzen()

@@ -101,12 +101,20 @@ class Ader:
 
     Die Rangierung steht bewusst nicht hier: sie ist ein eigenes Objekt am
     Verteiler, damit beide Enden nicht auseinanderlaufen koennen.
+    Der ``vermerk`` dagegen gehoert der einzelnen Ader: er steht im
+    Rangierfeld, meint aber kein Ziel im Verteiler und wird darum auch
+    nicht gespiegelt.
     """
 
     seite: str
     farbe: str = ""
     bezeichnung: str = ""
     bemerkung: str = ""
+    vermerk: str = ""
+    # In welchem der beiden Rangierfelder der Vermerk steht. Sonst
+    # spraenge er beim Eintragen eines Ziels ins erste Feld - die Eintraege
+    # sollen ihre Plaetze behalten.
+    vermerk_zuerst: bool = False
 
 
 @dataclass
@@ -528,6 +536,48 @@ class Verteiler:
             probe.append(Rangierung(adresse, ziel))
 
         self.rangierungen = probe
+
+    # -- Vermerke im Rangierfeld -----------------------------------
+
+    def vermerk_setzen(
+        self, adresse: Aderadresse, text: str, zuerst: bool = False
+    ) -> None:
+        """Setzt den Freitext dieser Ader - oder loescht ihn.
+
+        Ein Vermerk belegt eines der beiden Rangierfelder. Traegt die Ader
+        schon zwei Rangierungen, ist kein Feld mehr frei; dann wird
+        abgewiesen, statt den Vermerk stillschweigend zu verschlucken.
+        ``zuerst`` haelt fest, ob er vor oder hinter den Zielen steht.
+        """
+        text = text.strip()
+        if text and len(self.ziele_von(adresse)) >= MAX_RANGIERUNGEN_JE_ADER:
+            raise ModellFehler(
+                f"{adresse} traegt bereits {MAX_RANGIERUNGEN_JE_ADER} "
+                "Rangierungen - fuer einen Vermerk ist kein Feld frei"
+            )
+        ader = self.ader(adresse)
+        ader.vermerk = text
+        ader.vermerk_zuerst = bool(text) and zuerst
+
+    def rangiereintraege(
+        self, adresse: Aderadresse, schreibweise: Schreibweise | None = None
+    ) -> list[str]:
+        """Was im Rangierfeld dieser Ader steht: Ziele und Vermerk.
+
+        In der Folge, in der es eingetragen wurde - die Felder tauschen
+        die Plaetze nicht.
+        """
+        eintraege = [ziel.anzeige(schreibweise) for ziel in self.ziele_von(adresse)]
+        ader = self.ader(adresse)
+        if ader.vermerk:
+            eintraege.insert(0 if ader.vermerk_zuerst else len(eintraege), ader.vermerk)
+        return eintraege
+
+    def rangierfeld(
+        self, adresse: Aderadresse, schreibweise: Schreibweise | None = None
+    ) -> str:
+        """Der ganze Inhalt des Rangierfeldes als eine Zeile."""
+        return RANGIERUNG_TRENNER.join(self.rangiereintraege(adresse, schreibweise))
 
 
 # --------------------------------------------------------------------------

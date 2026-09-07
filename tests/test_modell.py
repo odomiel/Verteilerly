@@ -205,6 +205,54 @@ class TestAdresstexte(unittest.TestCase):
                 adressen_lesen(text)
 
 
+class TestVermerk(unittest.TestCase):
+    """Im Rangierfeld darf auch ein Freitext stehen."""
+
+    def setUp(self):
+        self.v = Verteiler.aus_geometrie(1, 4, 10)
+        self.a = Aderadresse.parse("1 1a")
+        self.b = Aderadresse.parse("3 2a")
+
+    def test_vermerk_steht_neben_dem_ziel(self):
+        self.v.rangierung_anlegen(self.a, self.b)
+        self.v.vermerk_setzen(self.a, "zur Klemmleiste")
+        self.assertEqual(
+            self.v.rangiereintraege(self.a), ["3 2a", "zur Klemmleiste"]
+        )
+        self.assertEqual(self.v.rangierfeld(self.a), "3 2a   zur Klemmleiste")
+
+    def test_vermerk_behaelt_sein_feld(self):
+        """Die Einträge tauschen die Plätze nicht."""
+        self.v.vermerk_setzen(self.a, "extern", zuerst=True)
+        self.v.rangierung_anlegen(self.a, self.b)
+        self.assertEqual(self.v.rangiereintraege(self.a), ["extern", "3 2a"])
+
+    def test_vermerk_wird_nicht_gespiegelt(self):
+        """Er meint kein Ziel - die Gegenstelle geht ihn nichts an."""
+        self.v.vermerk_setzen(self.a, "extern")
+        self.assertEqual(self.v.ader(self.b).vermerk, "")
+
+    def test_ohne_freies_feld_wird_abgewiesen(self):
+        self.v.rangierung_anlegen(self.a, self.b)
+        self.v.rangierung_anlegen(self.a, Aderadresse.parse("4 5b"))
+        with self.assertRaises(ModellFehler):
+            self.v.vermerk_setzen(self.a, "passt nicht mehr")
+
+    def test_leeren_raeumt_auch_die_stelle(self):
+        self.v.vermerk_setzen(self.a, "extern", zuerst=True)
+        self.v.vermerk_setzen(self.a, "")
+        self.assertEqual(self.v.rangiereintraege(self.a), [])
+        self.assertFalse(self.v.ader(self.a).vermerk_zuerst)
+
+    def test_vermerk_folgt_der_schreibweise_nicht(self):
+        self.v.rangierung_anlegen(self.a, self.b)
+        self.v.vermerk_setzen(self.a, "extern")
+        self.assertEqual(
+            self.v.rangiereintraege(self.a, schreibweisen.MIT_STRICH),
+            ["L3-2a", "extern"],
+        )
+
+
 class TestRangierungenSetzen(unittest.TestCase):
     """Die Spalte wird als Ganzes gesetzt, nicht Zeile fuer Zeile."""
 

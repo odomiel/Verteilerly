@@ -14,7 +14,6 @@ from ..modell import (
     BRIEFKOPF_BESCHRIFTUNG,
     Aderadresse,
     Projekt,
-    adressen_schreiben,
 )
 from . import AusgabeFehler
 
@@ -66,9 +65,7 @@ def belegungszeilen(projekt: Projekt) -> list[list]:
                             adresse.anzeige(projekt.schreibweise),
                             ader.farbe,
                             ader.bezeichnung,
-                            adressen_schreiben(
-                                v.ziele_von(adresse), projekt.schreibweise
-                            ),
+                            v.rangierfeld(adresse, projekt.schreibweise),
                             ader.bemerkung,
                             kabel.beschriftung if kabel else "",
                             kabel.kabeltyp if kabel else "",

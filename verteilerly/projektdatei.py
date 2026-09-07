@@ -25,11 +25,12 @@ from .modell import (
 )
 
 DATEIKENNUNG = "verteilerly-projekt"
-FORMATVERSION = 3
+FORMATVERSION = 4
 # Fassung 1 nannte die Buchten noch Reihen, Fassung 2 kannte noch keine
-# abgewaehlten Felder. Solche Dateien werden weiter gelesen; geschrieben
-# wird immer die neue Fassung.
-LESBARE_VERSIONEN = (1, 2, 3)
+# abgewaehlten Felder, Fassung 3 noch keinen Vermerk im Rangierfeld.
+# Solche Dateien werden weiter gelesen; geschrieben wird immer die neue
+# Fassung.
+LESBARE_VERSIONEN = (1, 2, 3, 4)
 
 
 class ProjektdateiFehler(ModellFehler):
@@ -44,10 +45,12 @@ class ProjektdateiFehler(ModellFehler):
 def _ader_raus(ader: Ader) -> dict[str, Any]:
     daten = {"seite": ader.seite}
     # Leere Felder werden weggelassen, damit die Datei lesbar bleibt.
-    for feld in ("farbe", "bezeichnung", "bemerkung"):
+    for feld in ("farbe", "bezeichnung", "bemerkung", "vermerk"):
         wert = getattr(ader, feld)
         if wert:
             daten[feld] = wert
+    if ader.vermerk and ader.vermerk_zuerst:
+        daten["vermerk_zuerst"] = True
     return daten
 
 
@@ -134,6 +137,8 @@ def _ader_rein(daten: dict[str, Any], seite: str) -> Ader:
         farbe=daten.get("farbe", ""),
         bezeichnung=daten.get("bezeichnung", ""),
         bemerkung=daten.get("bemerkung", ""),
+        vermerk=daten.get("vermerk", ""),
+        vermerk_zuerst=bool(daten.get("vermerk_zuerst")),
     )
 
 

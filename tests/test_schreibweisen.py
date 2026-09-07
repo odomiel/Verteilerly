@@ -60,6 +60,15 @@ class TestSchreibweiseImProjekt(unittest.TestCase):
         self.assertEqual(zeile[4], "L1-1a")   # die eigene Adresse
         self.assertEqual(zeile[7], "L3-2a")   # ihre Rangierung
 
+    def test_vermerk_steht_mit_im_rangierfeld(self):
+        """Auf dem Blatt und in der Tabelle steht beides."""
+        projekt = _projekt("mit_strich")
+        projekt.verteiler.vermerk_setzen(Aderadresse(1, 1, "a"), "zur Klemmleiste")
+
+        blatt = blaetter(projekt)[2]
+        self.assertIn("L3-2a   zur Klemmleiste", _texte(blatt))
+        self.assertEqual(belegungszeilen(projekt)[0][7], "L3-2a   zur Klemmleiste")
+
     def test_die_projektdatei_bleibt_bei_der_grundform(self):
         """Umgestellt wird die Anzeige, nicht das, was gespeichert wird."""
         import json

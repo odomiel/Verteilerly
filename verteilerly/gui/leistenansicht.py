@@ -70,6 +70,14 @@ class LeistenModell(QAbstractTableModel):
         self.leiste_nr: int | None = None
         self.farben: Farben = HELL
         self.schreibweise: Schreibweise = schreibweisen.STANDARD
+        # Freitext im Rangierfeld ist abschaltbar: wer nur Ziele
+        # eintraegt, will einen Tippfehler als Fehler gemeldet bekommen
+        # und nicht als Vermerk stehen haben.
+        self.freitext_erlaubt = False
+
+    def freitext_erlauben(self, an: bool) -> None:
+        """Darf ins Rangierfeld auch etwas anderes als ein Ziel?"""
+        self.freitext_erlaubt = an
 
     def schreibweise_setzen(self, schreibweise: Schreibweise) -> None:
         """Wie Rangierungen in den beiden Feldern stehen."""
@@ -156,11 +164,11 @@ class LeistenModell(QAbstractTableModel):
             if spalte == SPALTE_BEZEICHNUNG:
                 return ader.bezeichnung
             if spalte in RANGIERSPALTEN:
-                ziele = self.verteiler.ziele_von(self.adresse(zeile))
+                eintraege = self.verteiler.rangiereintraege(
+                    self.adresse(zeile), self.schreibweise
+                )
                 stelle = RANGIERSPALTEN.index(spalte)
-                if stelle >= len(ziele):
-                    return ""
-                return ziele[stelle].anzeige(self.schreibweise)
+                return eintraege[stelle] if stelle < len(eintraege) else ""
             if spalte == SPALTE_BEMERKUNG:
                 return ader.bemerkung
             if spalte == SPALTE_KABEL:
@@ -189,6 +197,17 @@ class LeistenModell(QAbstractTableModel):
                 return QColor(self.farben.akzent_leise)
 
         return None
+
+    def _belegung(self, adresse: Aderadresse) -> list[tuple[str, object]]:
+        """Was in den beiden Feldern steht - Ziele zuerst, dann der Vermerk."""
+        belegung: list[tuple[str, object]] = [
+            ("ziel", ziel) for ziel in self.verteiler.ziele_von(adresse)
+        ]
+        ader = self.verteiler.ader(adresse)
+        if ader.vermerk:
+            stelle = 0 if ader.vermerk_zuerst else len(belegung)
+            belegung.insert(stelle, ("vermerk", ader.vermerk))
+        return belegung
 
     def _kabeltext(self, stift_nr: int, seite: str) -> str:
         """Die Beschriftung steht nur an der ersten Zeile des Kabelblocks."""
@@ -232,30 +251,55 @@ class LeistenModell(QAbstractTableModel):
         return True
 
     def _rangierung_setzen(self, zeile: int, spalte: int, text: str) -> bool:
-        """Setzt eine der beiden Rangierungen; die andere bleibt stehen.
+        """Setzt eines der beiden Rangierfelder; das andere bleibt stehen.
 
         Wer zwei Ziele in ein Feld tippt, bekommt sie auf beide verteilt -
-        die alte Schreibweise „3 2a   5 4a“ funktioniert also weiter.
+        die alte Schreibweise „3 2a   5 4a“ funktioniert also weiter. Was
+        sich nicht als Ziel lesen laesst, wird bei erlaubtem Freitext zum
+        Vermerk der Ader, sonst bleibt es ein Fehler.
         """
         adresse = self.adresse(zeile)
-        bisher = self.verteiler.ziele_von(adresse)
         stelle = RANGIERSPALTEN.index(spalte)
+        belegung = self._belegung(adresse)
 
         try:
             neue = adressen_lesen(text)
         except ModellFehler as fehler:
-            self.fehler_gemeldet.emit(str(fehler))
+            if not (self.freitext_erlaubt and text.strip()):
+                self.fehler_gemeldet.emit(str(fehler))
+                return False
+            neue = None                       # kein Ziel, sondern Vermerk
+
+        if neue is not None and len(neue) > 1 and stelle == 0:
+            belegung = [("ziel", ziel) for ziel in neue]   # beide auf einmal
+        else:
+            if neue is None:
+                eintrag = ("vermerk", text.strip())
+            elif neue:
+                eintrag = ("ziel", neue[0])
+            else:
+                eintrag = None
+            belegung += [None] * (len(RANGIERSPALTEN) - len(belegung))
+            belegung[stelle] = eintrag
+            belegung = [teil for teil in belegung if teil is not None]
+
+        ziele = [wert for art, wert in belegung if art == "ziel"]
+        vermerke = [wert for art, wert in belegung if art == "vermerk"]
+        if len(vermerke) > 1:
+            self.fehler_gemeldet.emit(
+                "Je Ader ist ein Vermerk vorgesehen, nicht zwei"
+            )
             return False
 
-        if len(neue) > 1 and stelle == 0:
-            ziele = neue                      # beide Felder auf einmal
-        else:
-            ziele = list(bisher) + [None] * (len(RANGIERSPALTEN) - len(bisher))
-            ziele[stelle] = neue[0] if neue else None
-            ziele = [ziel for ziel in ziele if ziel is not None]
-
         try:
+            # Erst der Vermerk, denn er kann am Platz scheitern - und ein
+            # halb gesetztes Feld waere schlimmer als eine Meldung.
             self.verteiler.rangierungen_setzen(adresse, ziele)
+            self.verteiler.vermerk_setzen(
+                adresse,
+                vermerke[0] if vermerke else "",
+                zuerst=bool(belegung) and belegung[0][0] == "vermerk",
+            )
         except ModellFehler as fehler:
             self.fehler_gemeldet.emit(str(fehler))
             return False
@@ -365,6 +409,9 @@ class LeistenAnsicht(QWidget):
 
     def schreibweise_setzen(self, schreibweise: Schreibweise) -> None:
         self.modell.schreibweise_setzen(schreibweise)
+
+    def freitext_erlauben(self, an: bool) -> None:
+        self.modell.freitext_erlauben(an)
 
     def verteiler_setzen(self, verteiler: Verteiler | None) -> None:
         self.verteiler = verteiler
