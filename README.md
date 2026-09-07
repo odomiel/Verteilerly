@@ -18,6 +18,7 @@ verteilerly/        Programmpaket
   blattvorlagen.py  Wie ein Blatt aussieht: Spalten, Ränder, Schriftgrößen
   ausgabe/          PDF, Excel und CSV
     pdf.py          Zeichnet das Layoutmodell mit ReportLab
+    mappe.py        Excel-Mappe im Blattbild der Blattvorlage
     tabellen.py     Belegungsdaten je Ader als xlsx und csv
   pfade.py          Wo die Daten liegen - entpackt wie gepackt
   gui/              Oberfläche
@@ -182,8 +183,16 @@ Die Blätter entstehen in `layout.py` als Zeichenanweisungen in Millimetern
 — ohne Qt und ohne PDF-Bibliothek. Die Vorschau zeichnet dieses Modell mit
 QPainter, die PDF-Ausgabe mit ReportLab: eine einzige Quelle für das
 Blattbild, Vorschau und Ausdruck können nicht auseinanderlaufen.
-Excel und CSV geben nicht das Blatt aus, sondern die Belegungsdaten — eine
-Zeile je Ader, filter- und sortierbar.
+Die **Excel-Mappe trägt beides**: vorn die Blätter im Blattbild —
+Deckblatt, Verteilerbelegung und je Leiste eines, gesetzt nach der
+gewählten Blattvorlage —, dahinter dieselben Daten als Tabelle (*Daten je
+Ader*, *Kabel je Leiste*, *Projektdaten*), filter- und sortierbar.
+Übernommen werden Spaltenfolge und -breite, Schriftgrößen, Zeilenhöhen,
+der verbundene Kabelblock samt Drehung und die Einrichtung auf A4 —
+gedruckt kommt das Blatt aus Excel dem PDF nahe. Nachbilden lässt sich ein
+PDF damit nicht: Excel ist ein Raster, das Blatt eine Zeichnung; das
+Schriftfeld steht darum unter der Tabelle statt am Blattfuß.
+Die CSV bleibt reine Daten — eine Zeile je Ader.
 
 **Kein Text läuft über sein Feld hinaus.** Passt eine Bezeichnung, eine
 Bemerkung oder ein Kabelname nicht in seine Spalte, wird die Schrift dafür

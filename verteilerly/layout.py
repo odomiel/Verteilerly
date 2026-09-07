@@ -193,6 +193,26 @@ def _eintraege(
     return [(BESCHRIFTUNG.get(marke, marke), wert)]
 
 
+def schriftfeldwerte(
+    projekt: Projekt,
+    leiste: int | None = None,
+    vorlage: Blattvorlage = STANDARD,
+    blatttitel: str = "",
+) -> list[tuple[str, str]]:
+    """Beschriftung und Wert jeder Zeile des Schriftfeldes.
+
+    Dieselbe Auswahl wie auf dem gezeichneten Blatt - nur ohne Kaesten,
+    damit auch eine Tabelle sie fuellen kann.
+    """
+    traeger = Blatt(0, 0, titel=blatttitel)
+    return [
+        eintrag
+        for marken in vorlage.schriftfeld
+        for marke in marken
+        for eintrag in _eintraege(marke, projekt, traeger, leiste)
+    ]
+
+
 def schriftfeld(
     blatt: Blatt,
     projekt: Projekt,
@@ -449,6 +469,31 @@ def _belegungsfaktor(
 # -- Leistenblatt ----------------------------------------------------------
 
 
+def zeilenwerte(
+    projekt: Projekt, leiste_nr: int, stift_nr: int, seite: str
+) -> dict[str, str]:
+    """Was in den Spalten einer Aderzeile steht.
+
+    Eine Stelle fuer beide Wege: das gezeichnete Blatt und die Mappe im
+    Blattbild greifen auf dieselben Werte zu, damit sie nicht
+    auseinanderlaufen koennen.
+    """
+    v = projekt.verteiler
+    ader = v.leiste(leiste_nr).stift(stift_nr).ader(seite)
+    return {
+        # Wie in den Vorlagen: die Stiftnummer steht nur in der a-Zeile.
+        "stift": str(stift_nr) if seite == "a" else "",
+        "ader": seite,
+        "farbe": ader.farbe,
+        "bezeichnung": ader.bezeichnung,
+        "rangierung": v.rangierfeld(
+            _adresse(leiste_nr, stift_nr, seite), projekt.schreibweise
+        ),
+        "bemerkung": ader.bemerkung,
+        "kabel": "",
+    }
+
+
 def leistenblatt(
     projekt: Projekt, leiste_nr: int, vorlage: Blattvorlage = STANDARD
 ) -> Blatt:
@@ -483,18 +528,7 @@ def leistenblatt(
     y = oben + kopf_h
     for stift in leiste.stifte:
         for seite in ("a", "b"):
-            ader = stift.ader(seite)
-            werte = {
-                "stift": str(stift.nummer) if seite == "a" else "",
-                "ader": seite,
-                "farbe": ader.farbe,
-                "bezeichnung": ader.bezeichnung,
-                "rangierung": v.rangierfeld(
-                    _adresse(leiste_nr, stift.nummer, seite), projekt.schreibweise
-                ),
-                "bemerkung": ader.bemerkung,
-                "kabel": "",
-            }
+            werte = zeilenwerte(projekt, leiste_nr, stift.nummer, seite)
             x = rand
             for spalte, breite in zip(vorlage.spalten, breiten):
                 blatt.text(

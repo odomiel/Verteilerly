@@ -10,6 +10,7 @@ from __future__ import annotations
 import csv
 import pathlib
 
+from ..blattvorlagen import STANDARD, Blattvorlage
 from ..modell import (
     BRIEFKOPF_BESCHRIFTUNG,
     Aderadresse,
@@ -107,8 +108,15 @@ def csv_schreiben(projekt: Projekt, ziel: pathlib.Path) -> pathlib.Path:
     return ziel
 
 
-def xlsx_schreiben(projekt: Projekt, ziel: pathlib.Path) -> pathlib.Path:
-    """Drei Blätter: Belegung, Kabel, Projektdaten."""
+def xlsx_schreiben(
+    projekt: Projekt, ziel: pathlib.Path, vorlage: Blattvorlage = STANDARD
+) -> pathlib.Path:
+    """Die Blaetter im Blattbild, dahinter die Daten.
+
+    Vorn steht, was auch gedruckt wird - Deckblatt, Verteilerbelegung und
+    je Leiste ein Blatt, gesetzt nach der gewaehlten Blattvorlage. Dahinter
+    liegen dieselben Daten als Tabelle, zum Filtern und Weiterrechnen.
+    """
     try:
         from openpyxl import Workbook
         from openpyxl.styles import Alignment, Font
@@ -116,21 +124,23 @@ def xlsx_schreiben(projekt: Projekt, ziel: pathlib.Path) -> pathlib.Path:
     except ImportError as fehler:  # pragma: no cover - haengt an der Umgebung
         raise AusgabeFehler("openpyxl ist nicht vorhanden.") from fehler
 
+    from .mappe import blaetter_eintragen
+
     ziel = pathlib.Path(ziel)
     mappe = Workbook()
+    blaetter_eintragen(mappe, projekt, vorlage)
 
-    belegung = mappe.active
-    belegung.title = "Belegung"
+    belegung = mappe.create_sheet("Daten je Ader")
     _blatt_fuellen(belegung, SPALTEN, belegungszeilen(projekt), Font, Alignment,
                    get_column_letter)
     belegung.freeze_panes = "A2"
     belegung.auto_filter.ref = belegung.dimensions
 
-    kabel = mappe.create_sheet("Kabel")
+    kabel = mappe.create_sheet("Kabel je Leiste")
     _blatt_fuellen(kabel, KABELSPALTEN, kabelzeilen(projekt), Font, Alignment,
                    get_column_letter)
 
-    stammdaten = mappe.create_sheet("Projekt")
+    stammdaten = mappe.create_sheet("Projektdaten")
     zeilen = [["Verteiler", projekt.verteiler.name],
               ["Verteilernummer", projekt.verteiler.nummer]]
     zeilen += [

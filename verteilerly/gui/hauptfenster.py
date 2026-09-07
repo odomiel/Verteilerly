@@ -537,8 +537,10 @@ class Hauptfenster(QMainWindow):
         ziel = self._ausgabeziel(".xlsx", XLSXFILTER)
         if ziel is None:
             return
+        # Dieselbe Blattvorlage wie für die Vorschau und das PDF.
         self._ausgeben(
-            lambda: xlsx_schreiben(self.projekt, ziel), ziel
+            lambda: xlsx_schreiben(self.projekt, ziel, self.vorschau.blattvorlage),
+            ziel,
         )
 
     def csv_ausgeben(self) -> None:

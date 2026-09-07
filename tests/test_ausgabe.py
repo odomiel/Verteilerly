@@ -229,21 +229,26 @@ class TestTabellen(unittest.TestCase):
         ziel = csv_schreiben(self.projekt, Path(self.ordner.name) / "probe.csv")
         self.assertTrue(ziel.read_bytes().startswith(b"\xef\xbb\xbf"))
 
-    def test_xlsx_hat_drei_blaetter(self):
+    def test_xlsx_traegt_blattbild_und_daten(self):
+        """Vorn die Blätter, dahinter dieselben Daten als Tabelle."""
         ziel = xlsx_schreiben(self.projekt, Path(self.ordner.name) / "probe.xlsx")
         from openpyxl import load_workbook
 
         mappe = load_workbook(ziel)
-        self.assertEqual(mappe.sheetnames, ["Belegung", "Kabel", "Projekt"])
-        self.assertEqual(mappe["Belegung"].max_row, 81)
-        self.assertEqual(mappe["Belegung"].freeze_panes, "A2")
+        self.assertEqual(
+            mappe.sheetnames,
+            ["Deckblatt", "Verteilerbelegung", "Leiste 1", "Leiste 2", "Leiste 3",
+             "Leiste 4", "Daten je Ader", "Kabel je Leiste", "Projektdaten"],
+        )
+        self.assertEqual(mappe["Daten je Ader"].max_row, 81)
+        self.assertEqual(mappe["Daten je Ader"].freeze_panes, "A2")
 
     def test_xlsx_haelt_zahlen_als_zahlen(self):
         """Sonst sortiert Excel 10 vor 2."""
         ziel = xlsx_schreiben(self.projekt, Path(self.ordner.name) / "probe.xlsx")
         from openpyxl import load_workbook
 
-        blatt = load_workbook(ziel)["Belegung"]
+        blatt = load_workbook(ziel)["Daten je Ader"]
         self.assertEqual(blatt.cell(row=2, column=2).value, 1)
         self.assertIsInstance(blatt.cell(row=2, column=3).value, int)
 
@@ -253,7 +258,7 @@ class TestTabellen(unittest.TestCase):
 
         felder = {
             r[0].value: r[1].value
-            for r in load_workbook(ziel)["Projekt"].iter_rows()
+            for r in load_workbook(ziel)["Projektdaten"].iter_rows()
         }
         self.assertEqual(felder["Firma"], "Musterfirma")
         self.assertEqual(felder["Standort"], "Keller")
