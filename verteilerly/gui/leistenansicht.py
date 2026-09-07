@@ -55,6 +55,9 @@ AENDERBAR = {
     SPALTE_RANGIERUNG,
     SPALTE_RANGIERUNG_2,
     SPALTE_BEMERKUNG,
+    # Nur an der ersten Zeile eines Kabelblocks - dort, wo die
+    # Beschriftung steht. Das prueft flags() Zelle fuer Zelle.
+    SPALTE_KABEL,
 }
 
 
@@ -137,6 +140,10 @@ class LeistenModell(QAbstractTableModel):
 
     def flags(self, index: QModelIndex):
         grund = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+        if index.column() == SPALTE_KABEL:
+            stift_nr, seite = self._stelle(index.row())
+            if not self._kabeltext(stift_nr, seite):
+                return grund
         if index.column() in AENDERBAR:
             return grund | Qt.ItemFlag.ItemIsEditable
         return grund
@@ -172,6 +179,11 @@ class LeistenModell(QAbstractTableModel):
             if spalte == SPALTE_BEMERKUNG:
                 return ader.bemerkung
             if spalte == SPALTE_KABEL:
+                kabel = self.verteiler.kabel_an(self.leiste_nr, stift_nr)
+                if rolle == Qt.ItemDataRole.EditRole and kabel is not None:
+                    # Getippt wird die Beschriftung, nicht der Zusatz
+                    # „(gekürzt)“, den die Anzeige anhaengt.
+                    return kabel.beschriftung
                 return self._kabeltext(stift_nr, seite)
 
         if rolle == Qt.ItemDataRole.TextAlignmentRole:
@@ -197,6 +209,23 @@ class LeistenModell(QAbstractTableModel):
                 return QColor(self.farben.akzent_leise)
 
         return None
+
+    def _kabel_beschriften(self, stift_nr: int, seite: str, text: str) -> bool:
+        """Benennt das Kabel um, das an dieser Zeile anfaengt."""
+        if not self._kabeltext(stift_nr, seite):
+            return False
+        kabel = self.verteiler.kabel_an(self.leiste_nr, stift_nr)
+        if kabel is None or kabel.beschriftung == text:
+            return False
+        kabel.beschriftung = text
+        # Das Kabel kann ueber mehrere Leisten laufen - die Spalte ist
+        # als Ganzes zu erneuern, nicht nur diese eine Zelle.
+        self.dataChanged.emit(
+            self.index(0, SPALTE_KABEL),
+            self.index(self.rowCount() - 1, SPALTE_KABEL),
+        )
+        self.belegung_geaendert.emit()
+        return True
 
     def _belegung(self, adresse: Aderadresse) -> list[tuple[str, object]]:
         """Was in den beiden Feldern steht - Ziele zuerst, dann der Vermerk."""
@@ -236,6 +265,9 @@ class LeistenModell(QAbstractTableModel):
 
         if spalte in RANGIERSPALTEN:
             return self._rangierung_setzen(zeile, spalte, text)
+
+        if spalte == SPALTE_KABEL:
+            return self._kabel_beschriften(stift_nr, seite, text)
 
         if spalte == SPALTE_FARBE:
             ader.farbe = text

@@ -8,6 +8,7 @@ import os
 import pathlib
 import tempfile
 import unittest
+from unittest import mock
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -208,6 +209,38 @@ class TestLeistenModell(unittest.TestCase):
         self.assertEqual(len(gemeldet), 1)
         self.assertEqual(self._text(0, SPALTE_RANGIERUNG), "")
 
+    def test_kabelname_ist_an_der_ersten_zeile_aenderbar(self):
+        """Der Tippfehler in einer Beschriftung ist kein Grund,
+        das Kabel abzunehmen."""
+        kabel = self.v.kabel_anlegen("Linei 1 Tipfehler", 1, 3, 4, da_gesamt=6)
+        zeile = (3 - 1) * 2                       # Stift 3, Ader a
+
+        # Angezeigt wird der Zusatz, getippt wird die reine Beschriftung.
+        self.assertEqual(self._text(zeile, SPALTE_KABEL), "Linei 1 Tipfehler (gekürzt)")
+        self.assertEqual(
+            self.m.data(self.m.index(zeile, SPALTE_KABEL), Qt.ItemDataRole.EditRole),
+            "Linei 1 Tipfehler",
+        )
+        self.assertTrue(self._setzen(zeile, SPALTE_KABEL, "Linie 1 — Melderkreis"))
+        self.assertEqual(kabel.beschriftung, "Linie 1 — Melderkreis")
+        self.assertEqual(
+            self._text(zeile, SPALTE_KABEL), "Linie 1 — Melderkreis (gekürzt)"
+        )
+
+    def test_kabelspalte_nur_dort_aenderbar_wo_der_name_steht(self):
+        self.v.kabel_anlegen("Leitung", 1, 3, 4)
+        zeile = (3 - 1) * 2
+
+        def aenderbar(z):
+            return bool(
+                self.m.flags(self.m.index(z, SPALTE_KABEL))
+                & Qt.ItemFlag.ItemIsEditable
+            )
+
+        self.assertTrue(aenderbar(zeile))
+        self.assertFalse(aenderbar(zeile + 1))    # b-Zeile desselben Stifts
+        self.assertFalse(aenderbar(0))            # dort liegt kein Kabel
+
     def test_kabelname_nur_an_der_ersten_zeile_des_blocks(self):
         self.v.kabel_anlegen("Leitung zur Werkstatt", 1, 2, 3)
         self.assertEqual(self._text(0, SPALTE_KABEL), "")          # DA 1, frei
@@ -303,6 +336,69 @@ class TestMenuezustaende(unittest.TestCase):
                      "aktion_vorlage", "aktion_briefkopf", "aktion_speichern_unter"):
             with self.subTest(aktion=name):
                 self.assertTrue(getattr(f, name).isEnabled(), name)
+
+    def test_kabel_bearbeiten_folgt_der_auswahl(self):
+        """Der Eintrag greift nur, wo wirklich ein Kabel liegt."""
+        f = self.fenster
+        self._projekt()
+        f.uebersicht.auswahl = None
+        f.aktionen_auffrischen()
+        self.assertFalse(f.aktion_kabel_aendern.isEnabled())
+
+        f.uebersicht.auswahl = (1, 1)
+        f.aktionen_auffrischen()
+        self.assertTrue(f.aktion_kabel_aendern.isEnabled())
+        self.assertTrue(f.aktion_kabel_weg.isEnabled())
+
+    def test_bearbeiten_aendert_beschriftung_und_typ(self):
+        from verteilerly.gui.dialoge import KabelDialog
+
+        f = self.fenster
+        self._projekt()
+        kabel = f.projekt.verteiler.kabel[0]
+
+        def antworten(dialog):
+            dialog.beschriftung.setText("Linie 1 — neu")
+            dialog.kabel_da.setValue(kabel.da_aufgelegt + 2)
+            return KabelDialog.DialogCode.Accepted
+
+        with mock.patch.object(KabelDialog, "exec", antworten):
+            f.kabel_bearbeiten(kabel)
+
+        self.assertEqual(kabel.beschriftung, "Linie 1 — neu")
+        self.assertEqual(kabel.da_gesamt, kabel.da_aufgelegt + 2)
+        self.assertTrue(kabel.gekuerzt)
+        self.assertIn(kabel, f.projekt.verteiler.kabel)
+
+    def test_bearbeiten_kann_das_kabel_abnehmen(self):
+        from verteilerly.gui.dialoge import KabelDialog
+
+        f = self.fenster
+        self._projekt()
+        kabel = f.projekt.verteiler.kabel[0]
+
+        def entfernen(dialog):
+            dialog._entfernen()
+            return KabelDialog.DialogCode.Accepted
+
+        with mock.patch.object(KabelDialog, "exec", entfernen):
+            f.kabel_bearbeiten(kabel)
+        self.assertEqual(f.projekt.verteiler.kabel, [])
+
+    def test_abgebrochenes_bearbeiten_aendert_nichts(self):
+        from verteilerly.gui.dialoge import KabelDialog
+
+        f = self.fenster
+        self._projekt()
+        kabel = f.projekt.verteiler.kabel[0]
+        vorher = kabel.beschriftung
+
+        with mock.patch.object(
+            KabelDialog, "exec", lambda dialog: KabelDialog.DialogCode.Rejected
+        ):
+            f.kabel_bearbeiten(kabel)
+        self.assertEqual(kabel.beschriftung, vorher)
+        self.assertIn(kabel, f.projekt.verteiler.kabel)
 
     def test_kabel_entfernen_nur_auf_einem_kabel(self):
         self._projekt()

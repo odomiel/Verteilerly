@@ -29,6 +29,7 @@ from ..farbcodes import Kabeltypen
 from ..modell import (
     BRIEFKOPF_BESCHRIFTUNG,
     BRIEFKOPF_FELDER,
+    Kabel,
     Projekt,
     Verteiler,
 )
@@ -283,7 +284,14 @@ class NeuerVerteilerDialog(QDialog):
 
 
 class KabelDialog(QDialog):
-    """Ein Kabel auflegen."""
+    """Ein Kabel auflegen oder ein aufgelegtes bearbeiten.
+
+    Beim Bearbeiten liegt das Kabel schon: Leiste, Startpunkt und die Zahl
+    der aufgelegten Doppeladern stehen dann fest und werden nur gezeigt -
+    wer daran etwas aendern will, nimmt das Kabel ab und legt es neu auf.
+    Aenderbar ist, was keine Belegung verschiebt: Beschriftung, Kabeltyp
+    und die Kabelgroesse, an der nur die Kuerzung haengt.
+    """
 
     def __init__(
         self,
@@ -292,9 +300,12 @@ class KabelDialog(QDialog):
         leiste: int,
         start_da: int,
         parent: QWidget | None = None,
+        kabel: Kabel | None = None,
     ) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Kabel auflegen")
+        self.bearbeitet = kabel
+        self.entfernen = False
+        self.setWindowTitle("Kabel bearbeiten" if kabel else "Kabel auflegen")
         self.verteiler = verteiler
 
         self.beschriftung = QLineEdit()
@@ -331,6 +342,11 @@ class KabelDialog(QDialog):
         self.kuerzungshinweis.setWordWrap(True)
         self.auflegen_da.valueChanged.connect(self._kuerzung_zeigen)
 
+        self.farben_neu = QCheckBox("Adernfarben nach diesem Kabeltyp neu eintragen")
+        self.farben_neu.setToolTip(
+            "Überschreibt auch von Hand gesetzte Farben dieses Kabels"
+        )
+
         form = QFormLayout()
         form.addRow("Beschriftung:", self.beschriftung)
         form.addRow("Leiste:", self.leiste)
@@ -338,12 +354,54 @@ class KabelDialog(QDialog):
         form.addRow("Kabelgröße:", self.kabel_da)
         form.addRow("Davon auflegen:", self.auflegen_da)
         form.addRow("Kabeltyp:", self.kabeltyp)
+        form.addRow("", self.farben_neu)
         form.addRow("", self.kuerzungshinweis)
 
         aufbau = QVBoxLayout(self)
         aufbau.addLayout(form)
-        aufbau.addWidget(_knopfleiste(self))
+        aufbau.addWidget(self._knoepfe())
+        self.farben_neu.setVisible(kabel is not None)
+        if kabel is not None:
+            self._vorbelegen(kabel)
         self._kuerzung_zeigen()
+
+    def _vorbelegen(self, kabel: Kabel) -> None:
+        """Zeigt das aufgelegte Kabel; die Lage steht fest."""
+        self.beschriftung.setText(kabel.beschriftung)
+        abschnitt = kabel.abschnitte[0]
+        stelle = self.leiste.findData(abschnitt.leiste)
+        if stelle >= 0:
+            self.leiste.setCurrentIndex(stelle)
+        self.start.setValue(abschnitt.start_da)
+        self.auflegen_da.setValue(kabel.da_aufgelegt)
+        self.kabel_da.setMinimum(kabel.da_aufgelegt)
+        self.kabel_da.setValue(kabel.da_gesamt)
+        stelle = self.kabeltyp.findData(kabel.kabeltyp)
+        self.kabeltyp.setCurrentIndex(max(stelle, 0))
+
+        for feld in (self.leiste, self.start, self.auflegen_da):
+            feld.setEnabled(False)
+            feld.setToolTip(
+                "Steht fest — für eine andere Lage das Kabel abnehmen "
+                "und neu auflegen"
+            )
+        if len(kabel.abschnitte) > 1:
+            self.leiste.setToolTip(
+                f"Das Kabel läuft über {len(kabel.abschnitte)} Abschnitte"
+            )
+
+    def _knoepfe(self) -> QDialogButtonBox:
+        knoepfe = _knopfleiste(self)
+        if self.bearbeitet is not None:
+            weg = knoepfe.addButton(
+                "Kabel entfernen", QDialogButtonBox.ButtonRole.DestructiveRole
+            )
+            weg.clicked.connect(self._entfernen)
+        return knoepfe
+
+    def _entfernen(self) -> None:
+        self.entfernen = True
+        self.accept()
 
     def _kabelgroesse_geaendert(self, wert: int) -> None:
         if self.auflegen_da.value() > wert:
@@ -368,6 +426,8 @@ class KabelDialog(QDialog):
             "anzahl_da": self.auflegen_da.value(),
             "da_gesamt": self.kabel_da.value(),
             "kabeltyp": self.kabeltyp.currentData(),
+            "farben_neu": self.farben_neu.isChecked(),
+            "entfernen": self.entfernen,
         }
 
 

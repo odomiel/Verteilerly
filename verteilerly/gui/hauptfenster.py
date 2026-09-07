@@ -184,6 +184,10 @@ class Hauptfenster(QMainWindow):
             "&Kabel auflegen…", self.kabel_auflegen, "Ctrl+K", True, bearbeiten,
             hinweis="Ein Kabel auf eine Leiste legen",
         )
+        self.aktion_kabel_aendern = aktion(
+            "Kabel &bearbeiten…", self.kabel_bearbeiten, "Ctrl+E", True, bearbeiten,
+            hinweis="Beschriftung, Kabeltyp und Größe eines aufgelegten Kabels ändern",
+        )
         self.aktion_kabel_weg = aktion(
             "Kabel &entfernen", self.kabel_entfernen, "Ctrl+Shift+K", True, bearbeiten,
             hinweis="Erst eine Doppelader mit Kabel auswählen",
@@ -409,7 +413,9 @@ class Hauptfenster(QMainWindow):
         self.aktion_speichern.setEnabled(
             offen and (self.veraendert or self.pfad is None)
         )
-        self.aktion_kabel_weg.setEnabled(self._kabel_der_auswahl() is not None)
+        hat_kabel = self._kabel_der_auswahl() is not None
+        self.aktion_kabel_weg.setEnabled(hat_kabel)
+        self.aktion_kabel_aendern.setEnabled(hat_kabel)
 
     def _kabel_der_auswahl(self):
         """Das Kabel an der ausgewählten Doppelader, wenn dort eines liegt."""
@@ -636,6 +642,57 @@ class Hauptfenster(QMainWindow):
             return None
 
     def _kabel_angeklickt(self, kabel) -> None:
+        """Doppelklick auf ein Kabel: bearbeiten."""
+        self.kabel_bearbeiten(kabel)
+
+    def kabel_bearbeiten(self, kabel=None) -> None:
+        """Beschriftung, Kabeltyp und Kabelgröße eines Kabels ändern.
+
+        Die Lage bleibt, wie sie ist - dafür gibt es Abnehmen und neu
+        Auflegen. Der Dialog trägt aber den Knopf zum Entfernen.
+        """
+        if self.projekt is None:
+            return
+        kabel = kabel if kabel is not None else self._kabel_der_auswahl()
+        if kabel is None:
+            return
+
+        abschnitt = kabel.abschnitte[0]
+        dialog = KabelDialog(
+            self.projekt.verteiler, self.kabeltypen,
+            abschnitt.leiste, abschnitt.start_da, self, kabel=kabel,
+        )
+        if dialog.exec() != KabelDialog.DialogCode.Accepted:
+            return
+
+        angaben = dialog.angaben()
+        if angaben["entfernen"]:
+            self._kabel_abnehmen(kabel)
+            return
+
+        kabel.beschriftung = angaben["beschriftung"]
+        kabel.kabeltyp = angaben["kabeltyp"]
+        kabel.da_gesamt = max(angaben["da_gesamt"], kabel.da_aufgelegt)
+
+        gefuellt = 0
+        if angaben["farben_neu"]:
+            gefuellt = farben_eintragen(
+                self.projekt.verteiler, kabel, self.kabeltypen, ueberschreiben=True
+            )
+        self._belegung_geaendert()
+        self.leistenansicht.aktualisieren()
+
+        meldung = f"Kabel geändert: {kabel.beschriftung or 'ohne Beschriftung'}"
+        if gefuellt:
+            meldung += f", {gefuellt} Adernfarben neu eingetragen"
+            meldung += self._lagenhinweis(kabel)
+        self.statusBar().showMessage(meldung, 8000)
+
+    def kabel_entfernen(self) -> None:
+        """Der Eintrag ist nur da anklickbar, wo wirklich ein Kabel liegt."""
+        kabel = self._kabel_der_auswahl()
+        if kabel is None:
+            return
         antwort = frage(
             self,
             "Kabel entfernen?",
@@ -645,16 +702,16 @@ class Hauptfenster(QMainWindow):
             QMessageBox.StandardButton.No,
         )
         if antwort == QMessageBox.StandardButton.Yes:
-            self.projekt.verteiler.kabel_entfernen(kabel)
-            self._belegung_geaendert()
-            self.leistenansicht.aktualisieren()
-            self.aktionen_auffrischen()
+            self._kabel_abnehmen(kabel)
 
-    def kabel_entfernen(self) -> None:
-        """Der Eintrag ist nur da anklickbar, wo wirklich ein Kabel liegt."""
-        kabel = self._kabel_der_auswahl()
-        if kabel is not None:
-            self._kabel_angeklickt(kabel)
+    def _kabel_abnehmen(self, kabel) -> None:
+        self.projekt.verteiler.kabel_entfernen(kabel)
+        self._belegung_geaendert()
+        self.leistenansicht.aktualisieren()
+        self.aktionen_auffrischen()
+        self.statusBar().showMessage(
+            f"Kabel entfernt: {kabel.beschriftung or 'ohne Beschriftung'}", 8000
+        )
 
     # -- Sonstiges ---------------------------------------------------------
 

@@ -89,7 +89,13 @@ speichern*. Sie landet als YAML-Datei im Arbeitsordner (siehe
 
 Der Editor zeigt links die Verteilerübersicht und rechts die Belegung der
 gewählten Leiste. Ein Doppelklick auf eine freie Doppelader legt ein Kabel
-auf, einer auf ein Kabel öffnet es; passt ein Kabel nicht mehr auf die
+auf, einer auf ein aufgelegtes Kabel **bearbeitet** es: Beschriftung,
+Kabeltyp und Kabelgröße lassen sich ändern, und der Dialog trägt auch den
+Knopf zum Entfernen. Leiste, Startpunkt und Zahl der aufgelegten
+Doppeladern stehen dort fest — wer die Lage ändern will, nimmt das Kabel
+ab und legt es neu auf. Ein neuer Kabeltyp färbt die Adern nur auf
+Verlangen um. Die Beschriftung ist außerdem direkt in der Kabelspalte der
+Leistenansicht überschreibbar, dort, wo sie steht; passt ein Kabel nicht mehr auf die
 Leiste, fragt der Überlaufdialog nach der Fortsetzung. Rangierungen werden
 in zwei Felder getippt — je Rangierung eines, mit einer Überschrift
 darüber; die Gegenstelle trägt sich selbst ein. Wer beide in ein Feld
