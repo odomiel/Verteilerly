@@ -416,13 +416,52 @@ class TestSchriftfeldBeispiel(unittest.TestCase):
         self.assertIn("01.01.1970 · John Doe", texte)
 
 
+class TestBlattkopf(unittest.TestCase):
+    """Über der Tabelle steht nichts mehr - das sagt das Schriftfeld."""
+
+    def _blatt(self, vorlage=STANDARD):
+        v = Verteiler.aus_geometrie(1, 2, 10, name="Probe")
+        return leistenblatt(Projekt(verteiler=v), 1, vorlage)
+
+    def test_keine_ueberschrift_ueber_der_tabelle(self):
+        texte = _texte(self._blatt())
+        self.assertNotIn("Leiste 1", texte[:3])
+        self.assertNotIn("10 DA", texte)
+
+    def test_die_leiste_steht_weiter_im_schriftfeld(self):
+        blatt = self._blatt()
+        stellen = {e.text: e.y for e in blatt.elemente if isinstance(e, Text)}
+        self.assertIn("Leiste", stellen)
+        self.assertGreater(stellen["Leiste"], blatt.hoehe / 2)   # unten
+
+    def test_die_tabelle_beginnt_am_rand(self):
+        blatt = self._blatt()
+        kopf = [
+            e for e in blatt.elemente
+            if isinstance(e, Rechteck) and e.fuellung == "#E8E8E8"
+        ]
+        self.assertEqual(kopf[0].y, STANDARD.rand)
+
+    def test_gewonnener_platz_geht_an_die_zeilen(self):
+        """Zwölf Millimeter mehr - die Zeilen dürfen höher werden."""
+        v = Verteiler.aus_geometrie(1, 2, 20)
+        blatt = leistenblatt(Projekt(verteiler=v), 1)
+        zeilen = [
+            e for e in blatt.elemente
+            if isinstance(e, Linie) and e.y1 == e.y2 and e.x1 == STANDARD.rand
+        ]
+        hoehen = {round(b.y1 - a.y1, 3) for a, b in zip(zeilen, zeilen[1:])}
+        self.assertTrue(hoehen)
+        self.assertLessEqual(max(hoehen), STANDARD.zeilenhoehe_max)
+
+
 class TestKopfzeile(unittest.TestCase):
     """„Stift“ steht über der Nummer und über a und b."""
 
     def _kopf(self, vorlage=STANDARD):
         v = Verteiler.aus_geometrie(1, 2, 10)
         blatt = leistenblatt(Projekt(verteiler=v), 1, vorlage)
-        oben = vorlage.rand + 12
+        oben = vorlage.rand
         return blatt, [
             e for e in blatt.elemente
             if isinstance(e, Text) and abs(e.y - oben) < 0.01
@@ -446,7 +485,7 @@ class TestKopfzeile(unittest.TestCase):
         """Zwischen Nummer und a/b beginnt der Strich erst darunter."""
         blatt, _ = self._kopf()
         breiten = STANDARD.breiten(blatt.breite - 2 * STANDARD.rand)
-        oben = STANDARD.rand + 12
+        oben = STANDARD.rand
         x = STANDARD.rand + breiten[0]
         striche = [
             e for e in blatt.elemente

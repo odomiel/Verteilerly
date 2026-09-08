@@ -675,15 +675,10 @@ def leistenblatt(
     rand = vorlage.rand
     kopf_h = vorlage.kopfzeile_hoehe
 
-    blatt.text(
-        rand, rand, 120, 8, f"Leiste {leiste_nr}", vorlage.schrift_mittel, LINKS, True
-    )
-    blatt.text(
-        rand, rand, blatt.breite - 2 * rand, 8,
-        f"{leiste.da_anzahl} DA", vorlage.schrift_normal, RECHTS, False, TINTE_LEISE,
-    )
-
-    oben = rand + 12
+    # Kein Blattkopf ueber der Tabelle: welche Leiste das Blatt zeigt,
+    # steht im Schriftfeld - zweimal dasselbe waere nur Papier. Die
+    # Tabelle beginnt dafuer gleich am Rand und hat mehr Platz.
+    oben = rand
     tabellenbreite = blatt.breite - 2 * rand
     breiten = vorlage.breiten(tabellenbreite)
     zeile_h = _zeilenhoehe(blatt, oben, leiste.da_anzahl, vorlage)

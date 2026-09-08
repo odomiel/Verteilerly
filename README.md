@@ -228,6 +228,10 @@ zeilenhoehe_max: 7
 spalten: [stift, ader, farbe, rangierung]
 ```
 
+Über der Tabelle steht **keine Überschrift** — welche Leiste ein Blatt
+zeigt und wie viele Doppeladern sie hat, sagt das Schriftfeld unten; die
+Tabelle beginnt am Rand und hat den Platz.
+
 Eine Spalte ohne eigene Überschrift gehört zur vorigen: **Stift** steht
 über der Nummer *und* über der Spalte mit a und b, der Strich dazwischen
 beginnt erst unter der Kopfzeile. Das gilt für jede Blattvorlage, für die
