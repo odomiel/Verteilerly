@@ -570,3 +570,47 @@ class TestBelegungsblatt(unittest.TestCase):
         """Die Vorlage entscheidet - abgeschafft ist nichts."""
         blatt = self._blatt(STANDARD.mit(da_nummern=True))
         self.assertIn("10", _texte(blatt))
+
+
+class TestKabelspalteImLeistenblatt(unittest.TestCase):
+    """Auch hier ist frei eine durchgehende Fläche."""
+
+    def _blatt(self, vorlage=STANDARD):
+        v = Verteiler.aus_geometrie(1, 2, 10)
+        v.kabel_anlegen("4 DA zu Wohnzimmer", 1, 1, 4)
+        return leistenblatt(Projekt(verteiler=v), 1, vorlage)
+
+    def _waagerechte(self, blatt) -> list:
+        return [
+            e for e in blatt.elemente
+            if isinstance(e, Linie) and e.y1 == e.y2 and e.x1 == STANDARD.rand
+        ]
+
+    def test_zeilenstriche_enden_vor_der_kabelspalte(self):
+        blatt = self._blatt()
+        breiten = STANDARD.breiten(blatt.breite - 2 * STANDARD.rand)
+        kabelspalte = [s.feld for s in STANDARD.spalten].index("kabel")
+        ende = STANDARD.rand + sum(breiten[:kabelspalte])
+
+        striche = self._waagerechte(blatt)
+        self.assertEqual(len(striche), 20)          # 10 DA sind 20 Zeilen
+        for strich in striche:
+            with self.subTest(y=round(strich.y1, 1)):
+                self.assertAlmostEqual(strich.x2, ende, places=3)
+
+    def test_ohne_kabelspalte_laufen_sie_durch(self):
+        ohne = STANDARD.mit(
+            spalten=tuple(s for s in STANDARD.spalten if s.feld != "kabel")
+        )
+        blatt = self._blatt(ohne)
+        breite = blatt.breite - 2 * STANDARD.rand
+        for strich in self._waagerechte(blatt):
+            self.assertAlmostEqual(strich.x2, STANDARD.rand + breite, places=3)
+
+    def test_der_kabelblock_bleibt(self):
+        blatt = self._blatt()
+        bloecke = [
+            e for e in blatt.elemente
+            if isinstance(e, Rechteck) and e.fuellung == "#EFEFEF"
+        ]
+        self.assertEqual(len(bloecke), 1)

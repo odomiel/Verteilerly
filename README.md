@@ -169,6 +169,10 @@ mitgelieferte Vorlage mehr; wer sie will, setzt `da_nummern: true` in
 seiner Blattvorlage. Im Bearbeitungsmodus bleibt jede Leiste unterteilt:
 dort wird auf die einzelne Doppelader geklickt.
 
+Auf dem **Leistenblatt** gilt dasselbe für die Kabelspalte: die
+Zeilenstriche enden davor. Das Kabel steht dort als ein Block über seine
+Zeilen, und was frei bleibt, ist eine durchgehende Fläche.
+
 Die Blattfolge ist Deckblatt, Verteilerbelegung, dann je Leiste ein Blatt.
 Bis zwei Buchten passt die Verteilerbelegung auf ein Blatt; ab der dritten
 Bucht bekommt je zwei Buchten ein eigenes Blatt, benannt nach dem, was

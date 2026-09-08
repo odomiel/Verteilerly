@@ -698,6 +698,16 @@ def leistenblatt(
             vorlage.schrift_klein, spalte.ausrichtung, True,
         )
 
+    # Die Zeilenstriche enden vor der Kabelspalte: dort steht das Kabel
+    # als ein Block, und was frei bleibt, ist eine durchgehende Flaeche -
+    # wie in der Verteilerbelegung.
+    kabelspalte = next(
+        (i for i, spalte in enumerate(vorlage.spalten) if spalte.feld == "kabel"), None
+    )
+    zeilenbreite = (
+        tabellenbreite if kabelspalte is None else sum(breiten[:kabelspalte])
+    )
+
     y = oben + kopf_h
     for stift in leiste.stifte:
         for seite in ("a", "b"):
@@ -712,7 +722,7 @@ def leistenblatt(
             # Feine Linie zwischen a und b, kraeftige zwischen den Stiften.
             fein = seite == "a"
             blatt.linie(
-                rand, y + zeile_h, rand + tabellenbreite, y + zeile_h,
+                rand, y + zeile_h, rand + zeilenbreite, y + zeile_h,
                 0.15 if fein else 0.3, LINIE_FEIN if fein else LINIE,
             )
             y += zeile_h
