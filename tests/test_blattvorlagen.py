@@ -102,13 +102,19 @@ class TestMitgelieferte(unittest.TestCase):
         )
 
     def test_beispielvorlage_folgt_den_ods_dateien(self):
-        """Fünf Spalten ohne Kabel, Anschriften im Schriftfeld."""
+        """Die Spalten der Vorlage, dazu die Kabelspalte, Anschriften im Feld."""
         vorlage = Blattvorlagen.laden(mitgeliefert() / "blattvorlagen").holen("beispiel")
         felder = [spalte.feld for spalte in vorlage.spalten]
         self.assertEqual(
-            felder, ["stift", "ader", "farbe", "bezeichnung", "rangierung", "bemerkung"]
+            felder,
+            ["stift", "ader", "farbe", "bezeichnung", "rangierung", "bemerkung",
+             "kabel"],
         )
-        self.assertIsNone(vorlage.spalte("kabel"))
+        # Sie ist schmal und quer - so nimmt sie den breiten nichts weg.
+        self.assertTrue(vorlage.kabel_gedreht)
+        self.assertLess(
+            vorlage.spalte("kabel").anteil, vorlage.spalte("bemerkung").anteil / 3
+        )
         self.assertEqual(
             vorlage.schriftfeld,
             (
