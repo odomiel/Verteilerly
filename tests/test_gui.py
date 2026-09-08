@@ -236,7 +236,20 @@ class TestLeistenModell(unittest.TestCase):
             self._text(zeile, SPALTE_KABEL), "Linie 1 — Melderkreis (gekürzt)"
         )
 
-    def test_kabelspalte_nur_dort_aenderbar_wo_der_name_steht(self):
+    def test_kabel_ohne_beschriftung_laesst_sich_beschriften(self):
+        """Ein Kabel ohne Text war in der Spalte nicht anzuklicken."""
+        kabel = self.v.kabel_anlegen("", 1, 3, 4)
+        zeile = (3 - 1) * 2
+
+        self.assertTrue(
+            self.m.flags(self.m.index(zeile, SPALTE_KABEL))
+            & Qt.ItemFlag.ItemIsEditable
+        )
+        self.assertTrue(self._setzen(zeile, SPALTE_KABEL, "Linie 1"))
+        self.assertEqual(kabel.beschriftung, "Linie 1")
+        self.assertEqual(self._text(zeile, SPALTE_KABEL), "Linie 1")
+
+    def test_kabelspalte_nur_dort_aenderbar_wo_das_kabel_anfaengt(self):
         self.v.kabel_anlegen("Leitung", 1, 3, 4)
         zeile = (3 - 1) * 2
 

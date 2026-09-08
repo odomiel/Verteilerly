@@ -145,7 +145,9 @@ class LeistenModell(QAbstractTableModel):
         grund = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
         if index.column() == SPALTE_KABEL:
             stift_nr, seite = self._stelle(index.row())
-            if not self._kabeltext(stift_nr, seite):
+            # Beschreibbar ist, wo ein Kabel anfaengt - auch eines ohne
+            # Beschriftung, sonst liesse sich keine nachtragen.
+            if self._kabelanfang(stift_nr, seite) is None:
                 return grund
         if index.column() in AENDERBAR:
             return grund | Qt.ItemFlag.ItemIsEditable
@@ -182,7 +184,7 @@ class LeistenModell(QAbstractTableModel):
             if spalte == SPALTE_BEMERKUNG:
                 return ader.bemerkung
             if spalte == SPALTE_KABEL:
-                kabel = self.verteiler.kabel_an(self.leiste_nr, stift_nr)
+                kabel = self._kabelanfang(stift_nr, seite)
                 if rolle == Qt.ItemDataRole.EditRole and kabel is not None:
                     # Getippt wird die Beschriftung, nicht der Zusatz
                     # „(gekürzt)“, den die Anzeige anhaengt.
@@ -214,10 +216,8 @@ class LeistenModell(QAbstractTableModel):
         return None
 
     def _kabel_beschriften(self, stift_nr: int, seite: str, text: str) -> bool:
-        """Benennt das Kabel um, das an dieser Zeile anfaengt."""
-        if not self._kabeltext(stift_nr, seite):
-            return False
-        kabel = self.verteiler.kabel_an(self.leiste_nr, stift_nr)
+        """Beschriftet das Kabel, das an dieser Zeile anfaengt."""
+        kabel = self._kabelanfang(stift_nr, seite)
         if kabel is None or kabel.beschriftung == text:
             return False
         kabel.beschriftung = text
@@ -241,18 +241,27 @@ class LeistenModell(QAbstractTableModel):
             belegung.insert(stelle, ("vermerk", ader.vermerk))
         return belegung
 
-    def _kabeltext(self, stift_nr: int, seite: str) -> str:
-        """Die Beschriftung steht nur an der ersten Zeile des Kabelblocks."""
+    def _kabelanfang(self, stift_nr: int, seite: str):
+        """Das Kabel, dessen Block in dieser Zeile beginnt - sonst nichts.
+
+        Massgeblich ist die Lage des Kabels, nicht seine Beschriftung: ein
+        Kabel ohne Text soll hier einen bekommen koennen.
+        """
+        if seite != "a":
+            return None
         kabel = self.verteiler.kabel_an(self.leiste_nr, stift_nr)
         if kabel is None:
-            return ""
-        if seite != "a":
-            return ""
+            return None
         beginnt_hier = any(
             a.leiste == self.leiste_nr and a.start_da == stift_nr
             for a in kabel.abschnitte
         )
-        if not beginnt_hier:
+        return kabel if beginnt_hier else None
+
+    def _kabeltext(self, stift_nr: int, seite: str) -> str:
+        """Die Beschriftung steht nur an der ersten Zeile des Kabelblocks."""
+        kabel = self._kabelanfang(stift_nr, seite)
+        if kabel is None:
             return ""
         text = kabel.beschriftung
         return f"{text} (gekürzt)" if kabel.gekuerzt else text
