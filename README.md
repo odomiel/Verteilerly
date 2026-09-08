@@ -121,8 +121,8 @@ tippt (`3 2a   5 4a`), bekommt sie auf beide verteilt. Auf dem Blatt
 stehen sie nebeneinander in einer Zelle — dort soll nicht zu sehen sein,
 dass es zwei Felder sind.
 
-**Wie eine Adresse geschrieben wird, ist Hausbrauch** — unter *Ansicht ▸
-Schreibweise der Rangierungen* steht zur Wahl:
+**Wie eine Adresse geschrieben wird, ist Hausbrauch** — unter
+*Einstellungen ▸ Schreibweise der Rangierungen* steht zur Wahl:
 
 | Schreibweise | Beispiel |
 |---|---|
@@ -148,7 +148,7 @@ darum mit ins AppImage und in die .exe wandert.
 
 Ins Rangierfeld darf auf Wunsch auch ein **Vermerk** statt eines Ziels —
 „extern", „zur Klemmleiste", „n.b.". Freigeschaltet wird das über
-*Bearbeiten ▸ Freitext im Rangierfeld zulassen* und ist zunächst aus:
+*Einstellungen ▸ Freitext im Rangierfeld zulassen* und ist zunächst aus:
 wer nur Ziele einträgt, will einen Tippfehler als Fehler gemeldet
 bekommen und nicht als Vermerk stehen haben. Ein Vermerk belegt eines
 der beiden Felder, bleibt darin stehen und wird **nicht gespiegelt** —
@@ -213,8 +213,11 @@ Die Kabelspalte hat sie schmal und quer wie die Standardvorlage; in den
 Mustertabellen gibt es sie nicht, dort stand das Kabel nur in der
 Verteilerbelegung. Wie breit die drei Blöcke sind, sagt dort
 `schriftfeld_anteile`.
-Gewählt wird über der Vorschau; die Wahl gilt auch für die PDF-Ausgabe
-und wird gemerkt. Eine eigene Blattvorlage ist eine YAML-Datei in
+Gewählt wird sie beim Anlegen eines Verteilers und später unter
+*Einstellungen ▸ Blattvorlage* (Strg+Umschalt+B); über der Vorschau steht
+nur noch, welche gerade gilt. Die Wahl gehört zum Arbeitsplatz, nicht zum
+einzelnen Verteiler: sie steht in der `Verteilerly.conf` und gilt für
+Vorschau, PDF und Excel-Mappe. Eine eigene Blattvorlage ist eine YAML-Datei in
 `blattvorlagen/`, die nur angibt, was sie anders will:
 
 ```yaml

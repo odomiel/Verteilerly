@@ -26,6 +26,7 @@ from ..modell import Kabelabschnitt, ModellFehler, Projekt, UeberlaufFehler, Ver
 from ..version import VERSION
 from ..vorlagen import Vorlagen
 from .dialoge import (
+    BlattvorlagenDialog,
     BriefkopfDialog,
     KabelDialog,
     NeuerVerteilerDialog,
@@ -206,7 +207,6 @@ class Hauptfenster(QMainWindow):
             hinweis="Name und Nummer des Verteilers, Stammdaten und eigene Felder",
         )
 
-        bearbeiten.addSeparator()
         self.aktion_freitext = QAction("&Freitext im Rangierfeld zulassen", self)
         self.aktion_freitext.setCheckable(True)
         self.aktion_freitext.setChecked(self.freitext)
@@ -215,7 +215,14 @@ class Hauptfenster(QMainWindow):
             "etwa „extern“ oder „zur Klemmleiste“"
         )
         self.aktion_freitext.triggered.connect(self.freitext_erlauben)
-        bearbeiten.addAction(self.aktion_freitext)
+
+        einstellungen = self.menuBar().addMenu("&Einstellungen")
+        aktion(
+            "&Blattvorlage…", self.blattvorlage_waehlen, "Ctrl+Shift+B",
+            menue=einstellungen,
+            hinweis="Wie die Blätter aussehen — Spalten, Schriftgrößen, Ränder",
+        )
+        einstellungen.addSeparator()
 
         ansicht = self.menuBar().addMenu("&Ansicht")
         self.aktion_thema = QAction("&Dunkles Erscheinungsbild", self)
@@ -227,7 +234,7 @@ class Hauptfenster(QMainWindow):
         )
         ansicht.addAction(self.aktion_thema)
 
-        rangierungen = ansicht.addMenu("Schreibweise der &Rangierungen")
+        rangierungen = einstellungen.addMenu("Schreibweise der &Rangierungen")
         rangierungen.setToolTipsVisible(True)
         self.schreibweisen_gruppe = QActionGroup(self)
         self.schreibweisen_gruppe.setExclusive(True)
@@ -243,6 +250,7 @@ class Hauptfenster(QMainWindow):
             )
             self.schreibweisen_gruppe.addAction(handlung)
             rangierungen.addAction(handlung)
+        einstellungen.addAction(self.aktion_freitext)
 
         self.aktion_vorschau = QAction("&Vorschau anzeigen", self)
         self.aktion_vorschau.setCheckable(True)
@@ -285,6 +293,14 @@ class Hauptfenster(QMainWindow):
         self.statusBar().showMessage(
             f"Rangierungen werden als {self.schreibweise.beispiel} geschrieben", 6000
         )
+
+    def blattvorlage_waehlen(self) -> None:
+        """Auf eine andere Blattvorlage umstellen."""
+        dialog = BlattvorlagenDialog(
+            self.blattvorlagen, self.vorschau.blattvorlage.id, self
+        )
+        if dialog.exec() == BlattvorlagenDialog.DialogCode.Accepted:
+            self.vorschau.blattvorlage_setzen(dialog.gewaehlt())
 
     def freitext_erlauben(self, an: bool) -> None:
         """Schaltet den Vermerk im Rangierfeld frei.
@@ -449,10 +465,12 @@ class Hauptfenster(QMainWindow):
             self.einstellungen
         )
         dialog = NeuerVerteilerDialog(
-            self.vorlagen, self, self._vorlagenordner(), gemerkt, ausgeblendet
+            self.vorlagen, self, self._vorlagenordner(), gemerkt, ausgeblendet,
+            self.blattvorlagen, self.vorschau.blattvorlage.id,
         )
         if dialog.exec() != NeuerVerteilerDialog.DialogCode.Accepted:
             return
+        self.vorschau.blattvorlage_setzen(dialog.blattvorlage())
         # Was der Dialog trägt, gilt; die eigenen Felder kommen aus der conf.
         projekt = self.neues_projekt(dialog.projekt())
         self._projekt_setzen(projekt, None)

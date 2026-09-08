@@ -197,12 +197,14 @@ class Vorschau(QWidget):
         self.blattvorlagen = Blattvorlagen()
         self.blattvorlage: Blattvorlage = STANDARD
 
-        self.vorlagenwahl = QComboBox()
-        self.vorlagenwahl.setToolTip(
+        # Gewaehlt wird die Blattvorlage nicht mehr hier, sondern beim
+        # Anlegen und unter Einstellungen - hier steht nur noch,
+        # welche gerade gilt.
+        self.vorlagenname = QLabel("")
+        self.vorlagenname.setToolTip(
             "Wie das Blatt aussieht — Spalten, Schriftgrößen, Ränder. "
-            "Die Vorlagen liegen als YAML im Arbeitsordner."
+            "Zu ändern unter Einstellungen ▸ Blattvorlage."
         )
-        self.vorlagenwahl.currentIndexChanged.connect(self._vorlage_gewechselt)
 
         self.auswahl = QComboBox()
         self.auswahl.currentIndexChanged.connect(self._gewechselt)
@@ -228,7 +230,7 @@ class Vorschau(QWidget):
         zweite = QHBoxLayout()
         zweite.setContentsMargins(0, 0, 0, 6)
         zweite.addWidget(QLabel("Blattvorlage:"))
-        zweite.addWidget(self.vorlagenwahl, 1)
+        zweite.addWidget(self.vorlagenname, 1)
 
         self.flaeche = Blattflaeche()
 
@@ -241,28 +243,17 @@ class Vorschau(QWidget):
     # -- Zustand -----------------------------------------------------------
 
     def blattvorlagen_setzen(self, vorlagen: Blattvorlagen, gewaehlt: str = "") -> None:
-        """Die zur Wahl stehenden Blattvorlagen."""
+        """Die vorhandenen Blattvorlagen und die, die gerade gilt."""
         self.blattvorlagen = vorlagen
-        self.vorlagenwahl.blockSignals(True)
-        self.vorlagenwahl.clear()
-        for vorlage in vorlagen.alle:
-            self.vorlagenwahl.addItem(vorlage.name, vorlage.id)
-            if vorlage.beschreibung:
-                self.vorlagenwahl.setItemData(
-                    self.vorlagenwahl.count() - 1,
-                    vorlage.beschreibung,
-                    Qt.ItemDataRole.ToolTipRole,
-                )
-        stelle = self.vorlagenwahl.findData(gewaehlt or vorlagen.standard.id)
-        self.vorlagenwahl.setCurrentIndex(max(stelle, 0))
-        self.vorlagenwahl.blockSignals(False)
-        self.blattvorlage = vorlagen.holen(self.vorlagenwahl.currentData())
+        self.blattvorlage = vorlagen.holen(gewaehlt or vorlagen.standard.id)
+        self.vorlagenname.setText(self.blattvorlage.name)
 
-    def _vorlage_gewechselt(self) -> None:
-        kennung = self.vorlagenwahl.currentData()
-        if not kennung:
+    def blattvorlage_setzen(self, kennung: str) -> None:
+        """Stellt auf eine andere Blattvorlage um und zeichnet neu."""
+        if not kennung or kennung == self.blattvorlage.id:
             return
         self.blattvorlage = self.blattvorlagen.holen(kennung)
+        self.vorlagenname.setText(self.blattvorlage.name)
         self.aktualisieren()
         self.blattvorlage_gewechselt.emit(kennung)
 
@@ -310,5 +301,4 @@ class Vorschau(QWidget):
         self.vor.setEnabled(0 <= index < gesamt - 1)
         # Ohne Blätter gibt es nichts zu wählen.
         self.auswahl.setEnabled(bool(gesamt))
-        self.vorlagenwahl.setEnabled(bool(gesamt))
         self.blatt_gewechselt.emit(index)

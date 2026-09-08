@@ -320,17 +320,22 @@ class TestVorschau(unittest.TestCase):
         self.vorschau.aktualisieren()
         self.assertEqual(self.vorschau.auswahl.currentText(), "Leiste 2")
 
-    def test_blattvorlage_waehlen_zeichnet_neu(self):
+    def test_blattvorlage_umstellen_zeichnet_neu(self):
         """Die Vorschau folgt der gewählten Blattvorlage."""
         from verteilerly.blattvorlagen import Blattvorlage, Blattvorlagen
 
         knapp = Blattvorlage(id="knapp", name="Knapp", buchten_je_blatt=1)
         self.vorschau.blattvorlagen_setzen(Blattvorlagen([knapp]))
-        self.assertEqual(self.vorschau.vorlagenwahl.count(), 2)
-        self.vorschau.vorlagenwahl.setCurrentIndex(
-            self.vorschau.vorlagenwahl.findData("knapp")
-        )
+        # Gewählt wird nicht mehr hier, aber der Name steht daneben.
+        self.assertEqual(self.vorschau.blattvorlage.id, "standard")
+        self.assertEqual(self.vorschau.vorlagenname.text(), "Standard")
+
+        gemeldet = []
+        self.vorschau.blattvorlage_gewechselt.connect(gemeldet.append)
+        self.vorschau.blattvorlage_setzen("knapp")
         self.assertEqual(self.vorschau.blattvorlage.id, "knapp")
+        self.assertEqual(self.vorschau.vorlagenname.text(), knapp.name)
+        self.assertEqual(gemeldet, ["knapp"])
 
     def test_ohne_projekt_kein_blatt(self):
         self.vorschau.projekt_setzen(None)
@@ -513,6 +518,50 @@ class TestMenuezustaende(unittest.TestCase):
         self._projekt()
         self.assertEqual(f.projekt.rangierung_schreibweise, "mit_strich")
         f.schreibweise_waehlen("einfach")
+
+    def test_blattvorlage_ist_unter_einstellungen_zu_aendern(self):
+        """Die Wahl steckt im Einstellungsmenü, nicht mehr am Blattrand."""
+        from verteilerly.gui.dialoge import BlattvorlagenDialog
+
+        f = self.fenster
+        self._projekt()
+        vorher = f.vorschau.blattvorlage.id
+        ziel = next(v.id for v in f.blattvorlagen.alle if v.id != vorher)
+
+        def waehlen(dialog):
+            stelle = next(
+                i for i in range(dialog.liste.count())
+                if dialog.liste.item(i).data(Qt.ItemDataRole.UserRole) == ziel
+            )
+            dialog.liste.setCurrentRow(stelle)
+            return BlattvorlagenDialog.DialogCode.Accepted
+
+        with mock.patch.object(BlattvorlagenDialog, "exec", waehlen):
+            f.blattvorlage_waehlen()
+        self.assertEqual(f.vorschau.blattvorlage.id, ziel)
+        self.assertEqual(f.einstellungen.value("blattvorlage"), ziel)
+
+        f.vorschau.blattvorlage_setzen(vorher)
+
+    def test_einstellungsmenue_sammelt_die_einstellungen(self):
+        """Was in der Verteilerly.conf steht, steht auch unter Einstellungen."""
+        from PySide6.QtWidgets import QMenu
+
+        menues = {
+            menue.title().replace("&", ""): menue
+            for menue in self.fenster.menuBar().findChildren(QMenu)
+        }
+        self.assertIn("Einstellungen", menues)
+        eintraege = [
+            eintrag.text().replace("&", "")
+            for eintrag in menues["Einstellungen"].actions()
+            if eintrag.text()
+        ]
+        self.assertEqual(
+            eintraege,
+            ["Blattvorlage…", "Schreibweise der Rangierungen",
+             "Freitext im Rangierfeld zulassen"],
+        )
 
     def test_jede_schreibweise_steht_im_menue(self):
         from verteilerly import schreibweisen
@@ -779,6 +828,22 @@ class TestBriefkopfImNeuenVerteiler(unittest.TestCase):
     def test_leere_felder_bleiben_weg(self):
         projekt = self._dialog().projekt()
         self.assertEqual(projekt.briefkopf, {})
+
+    def test_blattvorlage_steht_schon_beim_anlegen_zur_wahl(self):
+        """Gewählt wird beim Anlegen, geändert unter Einstellungen."""
+        from verteilerly.blattvorlagen import Blattvorlage, Blattvorlagen
+
+        knapp = Blattvorlage(id="knapp", name="Knapp")
+        dialog = self._dialog(
+            blattvorlagen=Blattvorlagen([knapp]), blattvorlage="knapp"
+        )
+        self.assertEqual(dialog.blattvorlage(), "knapp")
+        self.assertEqual(dialog.blattvorlagenwahl.count(), 2)
+
+        dialog.blattvorlagenwahl.setCurrentIndex(
+            dialog.blattvorlagenwahl.findData("standard")
+        )
+        self.assertEqual(dialog.blattvorlage(), "standard")
 
     def test_beide_dialoge_bauen_dieselben_felder(self):
         """Ein Bauteil für beide - sonst laufen sie auseinander."""

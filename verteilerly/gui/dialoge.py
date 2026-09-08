@@ -16,6 +16,8 @@ from PySide6.QtWidgets import (
     QInputDialog,
     QLabel,
     QLineEdit,
+    QListWidget,
+    QListWidgetItem,
     QPlainTextEdit,
     QMessageBox,
     QPushButton,
@@ -28,6 +30,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ..blattvorlagen import Blattvorlagen
 from ..farbcodes import Kabeltypen
 from ..modell import (
     BRIEFKOPF_BESCHRIFTUNG,
@@ -124,6 +127,8 @@ class NeuerVerteilerDialog(QDialog):
         vorlagenordner=None,
         briefkopf: dict[str, str] | None = None,
         ausgeblendet: set[str] | None = None,
+        blattvorlagen: Blattvorlagen | None = None,
+        blattvorlage: str = "",
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle("Neuer Verteiler")
@@ -135,9 +140,31 @@ class NeuerVerteilerDialog(QDialog):
         self.nummer = QLineEdit()
         self.nummer.setPlaceholderText("z. B. 1.1")
 
+        # Wie das Blatt aussieht, wird gleich hier gewaehlt - und bleibt
+        # unter Einstellungen aenderbar.
+        self.blattvorlagen = blattvorlagen or Blattvorlagen()
+        self.blattvorlagenwahl = QComboBox()
+        self.blattvorlagenwahl.setToolTip(
+            "Spalten, Schriftgrößen und Ränder der Blätter. "
+            "Später unter Einstellungen ▸ Blattvorlage zu ändern."
+        )
+        for vorlage in self.blattvorlagen.alle:
+            self.blattvorlagenwahl.addItem(vorlage.name, vorlage.id)
+            if vorlage.beschreibung:
+                self.blattvorlagenwahl.setItemData(
+                    self.blattvorlagenwahl.count() - 1,
+                    vorlage.beschreibung,
+                    Qt.ItemDataRole.ToolTipRole,
+                )
+        stelle = self.blattvorlagenwahl.findData(
+            blattvorlage or self.blattvorlagen.standard.id
+        )
+        self.blattvorlagenwahl.setCurrentIndex(max(stelle, 0))
+
         stammdaten = QFormLayout()
         stammdaten.addRow("Verteilername:", self.name)
         stammdaten.addRow("Verteilernummer:", self.nummer)
+        stammdaten.addRow("Blattvorlage:", self.blattvorlagenwahl)
 
         # Vorlage
         self.aus_vorlage = QRadioButton("Aus Vorlage")
@@ -321,6 +348,10 @@ class NeuerVerteilerDialog(QDialog):
             )
         return self.geometrie(name, nummer)
 
+    def blattvorlage(self) -> str:
+        """Die Kennung der gewaehlten Blattvorlage."""
+        return self.blattvorlagenwahl.currentData() or ""
+
     def projekt(self) -> Projekt:
         """Der neue Verteiler samt dem hier eingetippten Briefkopf."""
         return Projekt(
@@ -328,6 +359,67 @@ class NeuerVerteilerDialog(QDialog):
             briefkopf=self.briefkopf.werte(),
             ausgeblendet=self.briefkopf.ausgeblendet(),
         )
+
+
+class BlattvorlagenDialog(QDialog):
+    """Welche Blattvorlage die Ausgabe benutzt.
+
+    Die Wahl gehoert nicht zu einem einzelnen Verteiler, sondern zum
+    Arbeitsplatz: sie steht in der Verteilerly.conf und gilt fuer
+    Vorschau, PDF und die Excel-Mappe.
+    """
+
+    def __init__(
+        self,
+        vorlagen: Blattvorlagen,
+        gewaehlt: str = "",
+        parent: QWidget | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Blattvorlage")
+        self.vorlagen = vorlagen
+
+        self.liste = QListWidget()
+        for vorlage in vorlagen.alle:
+            eintrag = QListWidgetItem(vorlage.name)
+            eintrag.setData(Qt.ItemDataRole.UserRole, vorlage.id)
+            if vorlage.beschreibung:
+                eintrag.setToolTip(vorlage.beschreibung)
+            self.liste.addItem(eintrag)
+        stelle = max(
+            (i for i in range(self.liste.count())
+             if self.liste.item(i).data(Qt.ItemDataRole.UserRole)
+             == (gewaehlt or vorlagen.standard.id)),
+            default=0,
+        )
+        self.liste.setCurrentRow(stelle)
+        self.liste.currentRowChanged.connect(self._beschreibung_zeigen)
+        self.liste.itemDoubleClicked.connect(lambda _: self.accept())
+
+        self.beschreibung = QLabel()
+        self.beschreibung.setWordWrap(True)
+        self.beschreibung.setMinimumHeight(48)
+
+        aufbau = QVBoxLayout(self)
+        aufbau.addWidget(QLabel("Wie das Blatt aussieht — Spalten, Schriftgrößen, "
+                                "Ränder:"))
+        aufbau.addWidget(self.liste, 1)
+        aufbau.addWidget(self.beschreibung)
+        aufbau.addWidget(_knopfleiste(self))
+        self.resize(420, 340)
+        self._beschreibung_zeigen()
+
+    def _beschreibung_zeigen(self) -> None:
+        vorlage = self.vorlagen.holen(self.gewaehlt())
+        teile = [vorlage.beschreibung] if vorlage.beschreibung else []
+        teile.append(
+            ", ".join(spalte.feld for spalte in vorlage.spalten)
+        )
+        self.beschreibung.setText("\n".join(teile))
+
+    def gewaehlt(self) -> str:
+        eintrag = self.liste.currentItem()
+        return eintrag.data(Qt.ItemDataRole.UserRole) if eintrag else ""
 
 
 class KabelDialog(QDialog):
