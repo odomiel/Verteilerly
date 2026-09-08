@@ -211,6 +211,11 @@ zeilenhoehe_max: 7
 spalten: [stift, ader, farbe, rangierung]
 ```
 
+Eine Spalte ohne eigene Überschrift gehört zur vorigen: **Stift** steht
+über der Nummer *und* über der Spalte mit a und b, der Strich dazwischen
+beginnt erst unter der Kopfzeile. Das gilt für jede Blattvorlage, für die
+Leistenansicht und für die Excel-Mappe gleichermaßen.
+
 Die Blätter entstehen in `layout.py` als Zeichenanweisungen in Millimetern
 — ohne Qt und ohne PDF-Bibliothek. Die Vorschau zeichnet dieses Modell mit
 QPainter, die PDF-Ausgabe mit ReportLab: eine einzige Quelle für das

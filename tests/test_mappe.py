@@ -62,6 +62,11 @@ class TestBlattbild(unittest.TestCase):
             [spalte.ueberschrift for spalte in STANDARD.spalten],
         )
 
+    def test_stiftueberschrift_reicht_ueber_beide_spalten(self):
+        blatt = self._mappe()["Leiste 1"]
+        self.assertIn("A3:B3", [str(r) for r in blatt.merged_cells.ranges])
+        self.assertEqual(blatt["A3"].value, "Stift")
+
     def test_zwei_zeilen_je_stift(self):
         blatt = self._mappe()["Leiste 1"]
         self.assertEqual(blatt.cell(row=4, column=1).value, "1")

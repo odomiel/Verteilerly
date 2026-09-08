@@ -623,6 +623,22 @@ def _belegungsfaktor(
 # -- Leistenblatt ----------------------------------------------------------
 
 
+def kopfgruppen(spalten) -> list[tuple[int, int]]:
+    """Welche Spalten sich eine Ueberschrift teilen.
+
+    Eine Spalte ohne eigene Ueberschrift gehoert zur vorigen: so steht
+    „Stift“ ueber der Nummer und ueber a und b, wie in den Vorlagen.
+    Zurueck kommt je Gruppe die erste Spalte und ihre Zahl.
+    """
+    gruppen: list[list[int]] = []
+    for i, spalte in enumerate(spalten):
+        if gruppen and not str(spalte.ueberschrift).strip():
+            gruppen[-1].append(i)
+        else:
+            gruppen.append([i])
+    return [(teile[0], len(teile)) for teile in gruppen]
+
+
 def zeilenwerte(
     projekt: Projekt, leiste_nr: int, stift_nr: int, seite: str
 ) -> dict[str, str]:
@@ -670,14 +686,16 @@ def leistenblatt(
     breiten = vorlage.breiten(tabellenbreite)
     zeile_h = _zeilenhoehe(blatt, oben, leiste.da_anzahl, vorlage)
 
-    x = rand
     blatt.rechteck(rand, oben, tabellenbreite, kopf_h, fuellung=FUELLUNG_KOPF, staerke=0.4)
-    for spalte, breite in zip(vorlage.spalten, breiten):
+    gruppen = kopfgruppen(vorlage.spalten)
+    for erste, anzahl in gruppen:
+        spalte = vorlage.spalten[erste]
+        x = rand + sum(breiten[:erste])
+        breite = sum(breiten[erste:erste + anzahl])
         blatt.text(
             x + 1.5, oben, breite - 3, kopf_h, spalte.ueberschrift,
             vorlage.schrift_klein, spalte.ausrichtung, True,
         )
-        x += breite
 
     y = oben + kopf_h
     for stift in leiste.stifte:
@@ -702,8 +720,11 @@ def leistenblatt(
 
     x = rand
     unten = oben + kopf_h + leiste.da_anzahl * 2 * zeile_h
-    for breite in breiten:
-        blatt.linie(x, oben, x, unten, 0.2, LINIE)
+    # Wo zwei Spalten sich eine Ueberschrift teilen, beginnt der Strich
+    # erst unter der Kopfzeile - sonst zerschnitte er sie.
+    fortsetzung = {i for erste, anzahl in gruppen for i in range(erste + 1, erste + anzahl)}
+    for i, breite in enumerate(breiten):
+        blatt.linie(x, oben + (kopf_h if i in fortsetzung else 0), x, unten, 0.2, LINIE)
         x += breite
     blatt.linie(x, oben, x, unten, 0.2, LINIE)
     blatt.rechteck(rand, oben, tabellenbreite, unten - oben, staerke=0.4)

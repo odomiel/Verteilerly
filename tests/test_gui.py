@@ -124,6 +124,15 @@ class TestLeistenModell(unittest.TestCase):
         self.assertIn(SPALTE_RANGIERUNG_2, kopf._weitere)
         self.assertNotIn(SPALTE_FARBE, kopf._weitere)
 
+    def test_stift_reicht_ueber_nummer_und_ader(self):
+        """Wie auf dem Blatt: eine Überschrift über beiden Spalten."""
+        ansicht = LeistenAnsicht()
+        kopf = ansicht.tabelle.horizontalHeader()
+        self.assertIn(SPALTE_STIFT, kopf._erste)
+        self.assertIn(SPALTE_ADER, kopf._weitere)
+        self.assertEqual(UEBERSCHRIFTEN[SPALTE_STIFT], "Stift")
+        self.assertEqual(UEBERSCHRIFTEN[SPALTE_ADER], "")
+
     def test_die_alte_schreibweise_geht_weiter(self):
         """„3 2a   4 5b“ in ein Feld getippt verteilt sich auf beide."""
         self.assertTrue(self._setzen(0, SPALTE_RANGIERUNG, "3 2a   4 5b"))

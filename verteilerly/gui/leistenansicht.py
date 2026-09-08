@@ -37,6 +37,8 @@ SPALTE_BEMERKUNG = 6
 SPALTE_KABEL = 7
 
 RANGIERSPALTEN = (SPALTE_RANGIERUNG, SPALTE_RANGIERUNG_2)
+# „Stift“ steht über der Nummer und über a und b, wie auf dem Blatt.
+STIFTSPALTEN = (SPALTE_STIFT, SPALTE_ADER)
 
 UEBERSCHRIFTEN = [
     "Stift",
@@ -411,9 +413,9 @@ class LeistenAnsicht(QWidget):
         )
         self.tabelle.setAlternatingRowColors(False)
 
-        # „Rangierung“ steht über beiden Rangierfeldern.
+        # „Stift“ und „Rangierung“ reichen über je zwei Spalten.
         self.tabelle.setHorizontalHeader(
-            ZusammengefassteKopfzeile((RANGIERSPALTEN,), self.tabelle)
+            ZusammengefassteKopfzeile((STIFTSPALTEN, RANGIERSPALTEN), self.tabelle)
         )
         kopfzeile = self.tabelle.horizontalHeader()
         for spalte, breite in (

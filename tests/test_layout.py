@@ -5,6 +5,7 @@ import unittest
 from verteilerly.blattvorlagen import STANDARD, Blattvorlage
 from verteilerly.layout import (
     Blatt,
+    Linie,
     Rechteck,
     Text,
     blaetter,
@@ -379,3 +380,66 @@ class TestSchriftfeldBeispiel(unittest.TestCase):
         texte = _texte(leistenblatt(self.projekt, 1, STANDARD))
         self.assertNotIn("Datum", texte)
         self.assertIn("01.01.1970 · John Doe", texte)
+
+
+class TestKopfzeile(unittest.TestCase):
+    """„Stift“ steht über der Nummer und über a und b."""
+
+    def _kopf(self, vorlage=STANDARD):
+        v = Verteiler.aus_geometrie(1, 2, 10)
+        blatt = leistenblatt(Projekt(verteiler=v), 1, vorlage)
+        oben = vorlage.rand + 12
+        return blatt, [
+            e for e in blatt.elemente
+            if isinstance(e, Text) and abs(e.y - oben) < 0.01
+        ]
+
+    def test_spalte_ohne_ueberschrift_gehoert_zur_vorigen(self):
+        from verteilerly.layout import kopfgruppen
+
+        self.assertEqual(kopfgruppen(STANDARD.spalten)[0], (0, 2))
+        # Jede Spalte kommt in genau einer Gruppe vor.
+        gezaehlt = sum(anzahl for _, anzahl in kopfgruppen(STANDARD.spalten))
+        self.assertEqual(gezaehlt, len(STANDARD.spalten))
+
+    def test_ueberschrift_reicht_ueber_beide_spalten(self):
+        blatt, kopf = self._kopf()
+        breiten = STANDARD.breiten(blatt.breite - 2 * STANDARD.rand)
+        stift = [e for e in kopf if e.text == "Stift"][0]
+        self.assertAlmostEqual(stift.breite, breiten[0] + breiten[1] - 3, places=3)
+
+    def test_kein_strich_durch_die_ueberschrift(self):
+        """Zwischen Nummer und a/b beginnt der Strich erst darunter."""
+        blatt, _ = self._kopf()
+        breiten = STANDARD.breiten(blatt.breite - 2 * STANDARD.rand)
+        oben = STANDARD.rand + 12
+        x = STANDARD.rand + breiten[0]
+        striche = [
+            e for e in blatt.elemente
+            if isinstance(e, Linie) and abs(e.x1 - x) < 0.01 and e.y1 != e.y2
+        ]
+        self.assertTrue(striche)
+        self.assertAlmostEqual(
+            min(e.y1 for e in striche), oben + STANDARD.kopfzeile_hoehe, places=3
+        )
+        # Vor der Farbspalte läuft der Strich dagegen ganz durch.
+        x2 = STANDARD.rand + breiten[0] + breiten[1]
+        durch = [
+            e for e in blatt.elemente
+            if isinstance(e, Linie) and abs(e.x1 - x2) < 0.01 and e.y1 != e.y2
+        ]
+        self.assertAlmostEqual(min(e.y1 for e in durch), oben, places=3)
+
+    def test_gilt_fuer_jede_mitgelieferte_vorlage(self):
+        from verteilerly.blattvorlagen import Blattvorlagen
+        from verteilerly.layout import kopfgruppen
+        from verteilerly.pfade import mitgeliefert
+
+        for vorlage in Blattvorlagen.laden(mitgeliefert() / "blattvorlagen").alle:
+            with self.subTest(vorlage=vorlage.id):
+                felder = [s.feld for s in vorlage.spalten]
+                if "ader" not in felder:
+                    continue
+                stelle = felder.index("ader")
+                gruppen = dict(kopfgruppen(vorlage.spalten))
+                self.assertEqual(gruppen.get(stelle - 1), 2)

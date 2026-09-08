@@ -20,6 +20,7 @@ from ..layout import (
     LINIE,
     LINIE_FEIN,
     buchtnamen,
+    kopfgruppen,
     schriftfeldwerte,
     schriftfeldzeilen,
     zeilenwerte,
@@ -253,6 +254,13 @@ def _leistenblatt(
             top=zeug.strich(LINIE, True), bottom=zeug.strich(LINIE, True),
             left=zeug.strich(LINIE_FEIN), right=zeug.strich(LINIE_FEIN),
         )
+    # „Stift“ steht über der Nummer und über a und b - wie auf dem Blatt.
+    for erste, anzahl in kopfgruppen(spalten):
+        if anzahl > 1:
+            blatt.merge_cells(
+                start_row=KOPFZEILE, start_column=erste + 1,
+                end_row=KOPFZEILE, end_column=erste + anzahl,
+            )
     blatt.row_dimensions[KOPFZEILE].height = zeilenhoehe(vorlage.kopfzeile_hoehe)
 
     erste_zeile = KOPFZEILE + 1
