@@ -182,18 +182,21 @@ und *Mit Anschriften*. Deren Schriftfeld ist Feld für Feld das
 der Mustertabellen (`schriftfeld_art: beispiel`):
 
 ```
-┌───────────────┬─────────┬─────────┬────────────────────────┐
-│               │  Datum  │  Name   │    Firma Beliebig      │
-│ Erstellt      │01.01.70 │John Doe │  Beliebige Straße 7    │
-│ Stand         │         │         │  77777 Beliebiger Ort  │
-│ Geprüft       │         │         │                        │
-├───────────────┴─────────┴─────────┼────────────────────────┤
-│ Verteiler:                        │    Kunde Beliebig      │
-│   Verteiler Name                  │  Beliebige Straße 7    │
-│ Verteiler Nr.        1.1          │  77777 Beliebiger Ort  │
-│ Leiste:              1            │                        │
-└───────────────────────────────────┴────────────────────────┘
+┌──────────┬────────┬────────┬──────────────────────────────┐
+│          │ Datum  │  Name  │        Firma Beliebig        │
+│ Erstellt │01.01.70│John Doe│      Beliebige Straße 7      │
+│ Stand    │        │        │     77777 Beliebiger Ort     │
+│ Geprüft  │        │        │                              │
+├──────────┴────────┴────────┼──────────────────────────────┤
+│ Verteiler:                 │        Kunde Beliebig        │
+│   Verteiler Name           │      Beliebige Straße 7      │
+│ Verteiler Nr.      1.1     │     77777 Beliebiger Ort     │
+│ Leiste:            1       │                              │
+└────────────────────────────┴──────────────────────────────┘
 ```
+
+Wie sich die beiden Hälften teilen, sagt `schriftfeld_anteile` — die
+Anschriften bekommen mit `[0.42, 0.58]` die größere.
 
 Die Kabelspalte hat sie schmal und quer wie die Standardvorlage; in den
 Mustertabellen gibt es sie nicht, dort stand das Kabel nur in der

@@ -310,7 +310,9 @@ def _schriftfeld_beispiel(
     oben = blatt.hoehe - rand - hoehe
     breite = blatt.breite - 2 * rand
 
-    linkes = breite * 0.56
+    # Wie sich die beiden Haelften teilen, sagt die Blattvorlage: links
+    # die Matrix und der Verteiler, rechts die beiden Anschriften.
+    linkes = breite * _schriftfeldanteile(2, vorlage.schriftfeld_anteile)[0]
     mitte_y = oben + hoehe / 2
 
     blatt.rechteck(rand, oben, breite, hoehe, fuellung=None, staerke=0.4)

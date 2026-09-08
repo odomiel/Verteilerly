@@ -361,10 +361,44 @@ class TestSchriftfeldBeispiel(unittest.TestCase):
                                                           "77777"))
         ]
         self.assertEqual(len(anschrift), 3)
-        # Rechts vom Verteilerblock und der Reihe nach untereinander.
-        links = min(e.x for e in anschrift)
-        self.assertGreater(links, blatt.breite / 2)
+        # Rechts vom Verteilerblock - nicht rechts von der Blattmitte, die
+        # Teilung liegt links davon - und der Reihe nach untereinander.
+        verteilerblock = max(
+            e.x + e.breite for e in blatt.elemente
+            if isinstance(e, Text) and e.text == "Verteiler Nr."
+        )
+        self.assertGreater(min(e.x for e in anschrift), verteilerblock)
         self.assertEqual([e.y for e in anschrift], sorted(e.y for e in anschrift))
+
+    def test_anschriften_bekommen_die_groessere_haelfte(self):
+        """Firma und Kunde brauchen mehr Platz als eine Verteilernummer."""
+        blatt = self._blatt()
+        trenner = min(
+            e.x for e in blatt.elemente
+            if isinstance(e, Text) and e.text.startswith("Firma Beliebig")
+        )
+        links = max(
+            e.x for e in blatt.elemente
+            if isinstance(e, Text) and e.text == "Verteiler Nr."
+        )
+        self.assertLess(links, trenner)
+        # Die linke Hälfte ist die kleinere - so sagt es die Vorlage.
+        self.assertLess(self.vorlage.schriftfeld_anteile[0], 0.5)
+        self.assertAlmostEqual(sum(self.vorlage.schriftfeld_anteile), 1.0, places=3)
+
+    def test_die_vorlage_bestimmt_die_teilung(self):
+        from verteilerly.layout import Linie
+
+        def trennstrich(anteil):
+            vorlage = self.vorlage.mit(schriftfeld_anteile=(anteil, 1 - anteil))
+            blatt = leistenblatt(self.projekt, 1, vorlage)
+            senkrecht = [
+                e for e in blatt.elemente
+                if isinstance(e, Linie) and e.y1 != e.y2 and e.y1 > 240
+            ]
+            return min(e.x1 for e in senkrecht)
+
+        self.assertLess(trennstrich(0.3), trennstrich(0.7))
 
     def test_kunde_steht_unter_der_firma(self):
         blatt = self._blatt()
