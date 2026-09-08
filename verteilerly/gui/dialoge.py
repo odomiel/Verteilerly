@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QMessageBox,
     QPushButton,
+    QScrollArea,
     QRadioButton,
     QSpinBox,
     QTableWidget,
@@ -119,6 +120,8 @@ class NeuerVerteilerDialog(QDialog):
         vorlagen: Vorlagen,
         parent: QWidget | None = None,
         vorlagenordner=None,
+        briefkopf: dict[str, str] | None = None,
+        ausgeblendet: set[str] | None = None,
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle("Neuer Verteiler")
@@ -205,6 +208,20 @@ class NeuerVerteilerDialog(QDialog):
         self.aus_vorlage.toggled.connect(lambda an: eigenkasten.setEnabled(not an))
         eigenkasten.setEnabled(False)
 
+        # Der Briefkopf gleich mit: was in der Verteilerly.conf gemerkt
+        # ist, steht schon drin und lässt sich hier für diesen Verteiler
+        # ändern. Er sitzt in einem Rollbereich, sonst wäre der
+        # Dialog höher als mancher Bildschirm.
+        self.briefkopf = BriefkopfFelder(
+            briefkopf, ausgeblendet,
+            "Briefkopf — steht auf jedem Blatt, später änderbar",
+        )
+        rollbereich = QScrollArea()
+        rollbereich.setWidget(self.briefkopf)
+        rollbereich.setWidgetResizable(True)
+        rollbereich.setFrameShape(QScrollArea.Shape.NoFrame)
+        rollbereich.setMinimumHeight(220)
+
         aufbau = QVBoxLayout(self)
         aufbau.addLayout(stammdaten)
         aufbau.addSpacing(6)
@@ -212,7 +229,9 @@ class NeuerVerteilerDialog(QDialog):
         aufbau.addWidget(vorlagenkasten)
         aufbau.addWidget(self.eigen)
         aufbau.addWidget(eigenkasten)
+        aufbau.addWidget(rollbereich, 1)
         aufbau.addWidget(_knopfleiste(self))
+        self.resize(560, 780)
 
         self._beschreibung_zeigen()
         self._summe_zeigen()
@@ -287,6 +306,14 @@ class NeuerVerteilerDialog(QDialog):
                 name, nummer
             )
         return self.geometrie(name, nummer)
+
+    def projekt(self) -> Projekt:
+        """Der neue Verteiler samt dem hier eingetippten Briefkopf."""
+        return Projekt(
+            verteiler=self.verteiler(),
+            briefkopf=self.briefkopf.werte(),
+            ausgeblendet=self.briefkopf.ausgeblendet(),
+        )
 
 
 class KabelDialog(QDialog):
@@ -491,6 +518,93 @@ class UeberlaufDialog(QDialog):
         return self.FORTSETZEN, self.leiste.currentData(), self.start.value()
 
 
+class BriefkopfFelder(QGroupBox):
+    """Die Briefkopffelder mit ihren Haken - in beiden Dialogen dasselbe.
+
+    Jedes Feld traegt einen Haken davor: abgewaehlte Felder erscheinen
+    auf keinem Blatt, behalten ihren Inhalt aber. Firma und Kunde
+    sind mehrzeilig, denn dort steht eine Anschrift.
+    """
+
+    def __init__(
+        self,
+        briefkopf: dict[str, str] | None = None,
+        ausgeblendet: set[str] | None = None,
+        titel: str = "Briefkopf — steht auf jedem Blatt",
+        parent: QWidget | None = None,
+    ) -> None:
+        super().__init__(titel, parent)
+        briefkopf = briefkopf or {}
+        ausgeblendet = ausgeblendet or set()
+
+        self.felder: dict[str, QWidget] = {}
+        self.haken: dict[str, QCheckBox] = {}
+        form = QFormLayout()
+        for name in BRIEFKOPF_FELDER:
+            feld = self._feld_bauen(name, briefkopf.get(name, ""))
+            haken = QCheckBox(BRIEFKOPF_BESCHRIFTUNG.get(name, name) + ":")
+            haken.setChecked(name not in ausgeblendet)
+            haken.setToolTip(
+                "Ohne Haken bleibt der Inhalt erhalten, erscheint aber auf "
+                "keinem Blatt."
+            )
+            # Der Haken ist zugleich die Beschriftung der Zeile.
+            haken.toggled.connect(feld.setEnabled)
+            feld.setEnabled(haken.isChecked())
+            self.felder[name] = feld
+            self.haken[name] = haken
+            form.addRow(haken, feld)
+
+        alle_an = QPushButton("Alle")
+        alle_an.clicked.connect(lambda: self.alle_haken(True))
+        alle_aus = QPushButton("Keine")
+        alle_aus.clicked.connect(lambda: self.alle_haken(False))
+        schnell = QHBoxLayout()
+        schnell.addWidget(QLabel("Auswahl:"))
+        schnell.addWidget(alle_an)
+        schnell.addWidget(alle_aus)
+        schnell.addStretch(1)
+
+        aufbau = QVBoxLayout()
+        aufbau.addLayout(form)
+        aufbau.addLayout(schnell)
+        self.setLayout(aufbau)
+
+    def _feld_bauen(self, name: str, wert: str) -> QWidget:
+        """Adressfelder brauchen mehrere Zeilen, alles andere eine."""
+        if name not in ADRESSFELDER:
+            return QLineEdit(wert)
+        feld = QPlainTextEdit(wert)
+        feld.setToolTip(
+            "Mehrzeilig: Firma, Straße, Ort — so steht die Anschrift auch "
+            "auf dem Blatt untereinander."
+        )
+        feld.setPlaceholderText("Firma Beliebig\nBeliebige Straße 7\n77777 Ort")
+        # Drei Zeilen sind die uebliche Anschrift; mehr geht auch.
+        feld.setFixedHeight(4 + 3 * QFontMetrics(feld.font()).lineSpacing())
+        return feld
+
+    def alle_haken(self, an: bool) -> None:
+        for haken in self.haken.values():
+            haken.setChecked(an)
+
+    def werte(self) -> dict[str, str]:
+        """Die ausgefuellten Felder - leere bleiben weg."""
+        gefuellt = {name: self._feldwert(feld) for name, feld in self.felder.items()}
+        return {name: wert for name, wert in gefuellt.items() if wert}
+
+    def ausgeblendet(self) -> set[str]:
+        return {name for name, haken in self.haken.items() if not haken.isChecked()}
+
+    def _feldwert(self, feld: QWidget) -> str:
+        if isinstance(feld, QPlainTextEdit):
+            # Leerzeilen am Rand weg, die Zeilen selbst bleiben.
+            return "\n".join(
+                zeile.strip() for zeile in feld.toPlainText().strip().splitlines()
+            )
+        return feld.text().strip()
+
+
 class BriefkopfDialog(QDialog):
     """Verteilerdaten, Briefkopf und eigene Felder pflegen.
 
@@ -521,39 +635,14 @@ class BriefkopfDialog(QDialog):
         verteilerblock = QGroupBox("Verteiler — steht im Schriftfeld jedes Blattes")
         verteilerblock.setLayout(verteilerform)
 
-        self.felder: dict[str, QWidget] = {}
-        self.haken: dict[str, QCheckBox] = {}
-        form = QFormLayout()
-        for name in BRIEFKOPF_FELDER:
-            feld = self._feld_bauen(name, projekt.briefkopf.get(name, ""))
-            haken = QCheckBox(BRIEFKOPF_BESCHRIFTUNG.get(name, name) + ":")
-            haken.setChecked(projekt.sichtbar(name))
-            haken.setToolTip(
-                "Ohne Haken bleibt der Inhalt erhalten, erscheint aber auf "
-                "keinem Blatt."
-            )
-            # Der Haken ist zugleich die Beschriftung der Zeile.
-            haken.toggled.connect(feld.setEnabled)
-            feld.setEnabled(haken.isChecked())
-            self.felder[name] = feld
-            self.haken[name] = haken
-            form.addRow(haken, feld)
-
-        alle_an = QPushButton("Alle")
-        alle_an.clicked.connect(lambda: self._alle_haken(True))
-        alle_aus = QPushButton("Keine")
-        alle_aus.clicked.connect(lambda: self._alle_haken(False))
-        schnell = QHBoxLayout()
-        schnell.addWidget(QLabel("Auswahl:"))
-        schnell.addWidget(alle_an)
-        schnell.addWidget(alle_aus)
-        schnell.addStretch(1)
-
-        briefkopfblock = QVBoxLayout()
-        briefkopfblock.addLayout(form)
-        briefkopfblock.addLayout(schnell)
-        briefkopf = QGroupBox("Briefkopf — steht auf jedem Blatt")
-        briefkopf.setLayout(briefkopfblock)
+        briefkopf = BriefkopfFelder(
+            projekt.briefkopf,
+            {name for name in BRIEFKOPF_FELDER if not projekt.sichtbar(name)},
+        )
+        self.briefkopf = briefkopf
+        # Die Tests und der Rest des Dialogs greifen weiter direkt zu.
+        self.felder = briefkopf.felder
+        self.haken = briefkopf.haken
 
         self.eigene = QTableWidget(0, 2)
         self.eigene.setHorizontalHeaderLabels(["Feldname", "Inhalt"])
@@ -588,31 +677,8 @@ class BriefkopfDialog(QDialog):
         aufbau.addWidget(eigene)
         aufbau.addWidget(_knopfleiste(self))
 
-    def _feld_bauen(self, name: str, wert: str) -> QWidget:
-        """Adressfelder brauchen mehrere Zeilen, alles andere eine."""
-        if name not in ADRESSFELDER:
-            return QLineEdit(wert)
-        feld = QPlainTextEdit(wert)
-        feld.setToolTip(
-            "Mehrzeilig: Firma, Straße, Ort — so steht die Anschrift auch "
-            "auf dem Blatt untereinander."
-        )
-        feld.setPlaceholderText("Firma Beliebig\nBeliebige Straße 7\n77777 Ort")
-        # Drei Zeilen sind die uebliche Anschrift; mehr geht auch.
-        feld.setFixedHeight(4 + 3 * QFontMetrics(feld.font()).lineSpacing())
-        return feld
-
-    def _feldwert(self, feld: QWidget) -> str:
-        if isinstance(feld, QPlainTextEdit):
-            # Leerzeilen am Rand weg, die Zeilen selbst bleiben.
-            return "\n".join(
-                zeile.strip() for zeile in feld.toPlainText().strip().splitlines()
-            )
-        return feld.text().strip()
-
     def _alle_haken(self, an: bool) -> None:
-        for haken in self.haken.values():
-            haken.setChecked(an)
+        self.briefkopf.alle_haken(an)
 
     def _zeile_anhaengen(self, name: str, wert: str, sichtbar: bool = True) -> None:
         zeile = self.eigene.rowCount()
@@ -637,14 +703,8 @@ class BriefkopfDialog(QDialog):
         self.projekt.verteiler.name = self.verteilername.text().strip()
         self.projekt.verteiler.nummer = self.verteilernummer.text().strip()
 
-        self.projekt.briefkopf = {
-            name: self._feldwert(feld)
-            for name, feld in self.felder.items()
-            if self._feldwert(feld)
-        }
-        for name, haken in self.haken.items():
-            if not haken.isChecked():
-                ausgeblendet.add(name)
+        self.projekt.briefkopf = self.briefkopf.werte()
+        ausgeblendet |= self.briefkopf.ausgeblendet()
 
         eigene: dict[str, str] = {}
         for zeile in range(self.eigene.rowCount()):

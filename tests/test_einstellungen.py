@@ -102,5 +102,41 @@ class TestBriefkopfMerken(unittest.TestCase):
         self.assertEqual(geerbt.verteiler.name, "Zweiter")
 
 
+@unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
+class TestNeuerVerteilerMitBriefkopf(unittest.TestCase):
+    """Was im Dialog steht, gilt; die conf ergänzt nur."""
+
+    def test_getippter_briefkopf_schlaegt_die_vorgabe(self):
+        from unittest import mock
+
+        from verteilerly.gui.dialoge import NeuerVerteilerDialog
+        from verteilerly.gui.hauptfenster import Hauptfenster
+        from verteilerly.modell import Verteiler
+
+        fenster = Hauptfenster()
+        fenster.einstellungen.beginGroup("briefkopf")
+        fenster.einstellungen.setValue("firma", "Gemerkte Firma")
+        fenster.einstellungen.setValue("kuerzel", "GM")
+        fenster.einstellungen.endGroup()
+        fenster.einstellungen.sync()
+
+        def antworten(dialog):
+            dialog.name.setText("Neu")
+            dialog.briefkopf.felder["firma"].setPlainText("Andere Firma")
+            return NeuerVerteilerDialog.DialogCode.Accepted
+
+        with mock.patch.object(NeuerVerteilerDialog, "exec", antworten):
+            fenster.neuer_verteiler()
+
+        # Getipptes bleibt, Fehlendes kommt aus der conf.
+        self.assertEqual(fenster.projekt.briefkopf["firma"], "Andere Firma")
+        self.assertEqual(fenster.projekt.briefkopf["kuerzel"], "GM")
+
+        fenster.einstellungen.beginGroup("briefkopf")
+        fenster.einstellungen.remove("")
+        fenster.einstellungen.endGroup()
+        fenster.einstellungen.sync()
+
+
 if __name__ == "__main__":
     unittest.main()

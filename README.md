@@ -87,6 +87,13 @@ Kunde wiederholen sich von Verteiler zu Verteiler. Was im Projekt schon
 steht, bleibt dabei stehen; die Vorgabe überschreibt nie eine Eingabe.
 
 
+Der Dialog *Neuer Verteiler* trägt den **Briefkopf gleich mit**: die in
+der `Verteilerly.conf` gemerkten Angaben stehen schon in den Feldern und
+sind dort für diesen Verteiler zu ändern, samt Haken. Getipptes gilt, die
+Vorgabe ergänzt nur, was fehlt. Es sind dieselben Felder wie unter
+*Bearbeiten ▸ Verteilerdaten und Briefkopf* — ein Bauteil für beide
+Dialoge, damit sie nicht auseinanderlaufen.
+
 Ein neuer Verteiler entsteht aus einer Vorlage oder aus eigenen Angaben;
 die DA je Leiste stehen dort als 8, 10 und 20 DA zur Wahl, alles andere
 wird eingetippt. Eine so gebaute Grundstruktur lässt sich als Vorlage

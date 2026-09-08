@@ -729,6 +729,55 @@ class TestEinstellungen(unittest.TestCase):
 
 
 @unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
+class TestBriefkopfImNeuenVerteiler(unittest.TestCase):
+    """Der gemerkte Briefkopf steht gleich beim Anlegen zur Hand."""
+
+    def setUp(self):
+        self.vorlagen = Vorlagen([
+            Vorlage(id="a", name="40 DA", buchten=1, leisten_je_bucht=4,
+                    da_je_leiste=10, standard=True)
+        ])
+
+    def _dialog(self, **kw):
+        return NeuerVerteilerDialog(self.vorlagen, None, None, **kw)
+
+    def test_gemerkte_werte_stehen_schon_drin(self):
+        dialog = self._dialog(
+            briefkopf={"firma": "Musterfirma", "kuerzel": "JD"},
+            ausgeblendet={"kundennummer"},
+        )
+        self.assertEqual(dialog.briefkopf.felder["kuerzel"].text(), "JD")
+        self.assertFalse(dialog.briefkopf.haken["kundennummer"].isChecked())
+        self.assertTrue(dialog.briefkopf.haken["firma"].isChecked())
+
+    def test_projekt_traegt_den_getippten_briefkopf(self):
+        dialog = self._dialog(briefkopf={"firma": "Musterfirma"})
+        dialog.name.setText("Verteiler Keller")
+        dialog.briefkopf.felder["kunde"].setPlainText("Kunde Beliebig\nStraße 7")
+        dialog.briefkopf.haken["dokumenttitel"].setChecked(False)
+
+        projekt = dialog.projekt()
+        self.assertEqual(projekt.verteiler.name, "Verteiler Keller")
+        self.assertEqual(projekt.briefkopf["firma"], "Musterfirma")
+        self.assertEqual(projekt.briefkopf["kunde"], "Kunde Beliebig\nStraße 7")
+        self.assertIn("dokumenttitel", projekt.ausgeblendet)
+
+    def test_leere_felder_bleiben_weg(self):
+        projekt = self._dialog().projekt()
+        self.assertEqual(projekt.briefkopf, {})
+
+    def test_beide_dialoge_bauen_dieselben_felder(self):
+        """Ein Bauteil für beide - sonst laufen sie auseinander."""
+        from verteilerly.gui.dialoge import BriefkopfDialog
+
+        neu = self._dialog()
+        pflege = BriefkopfDialog(Projekt(verteiler=Verteiler.aus_geometrie(1, 4, 10)))
+        self.assertEqual(
+            list(neu.briefkopf.felder), list(pflege.felder)
+        )
+
+
+@unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
 class TestNeuerVerteilerDialog(unittest.TestCase):
     """Vorlage wählen, eigene Geometrie angeben, Vorlage sichern."""
 

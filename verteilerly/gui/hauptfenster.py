@@ -443,12 +443,18 @@ class Hauptfenster(QMainWindow):
     def neuer_verteiler(self) -> None:
         if not self._darf_verwerfen():
             return
+        # Der gemerkte Briefkopf steht schon im Dialog und ist dort für
+        # diesen Verteiler zu ändern.
+        gemerkt, _, ausgeblendet = einstellungsspeicher.briefkopf_laden(
+            self.einstellungen
+        )
         dialog = NeuerVerteilerDialog(
-            self.vorlagen, self, self._vorlagenordner()
+            self.vorlagen, self, self._vorlagenordner(), gemerkt, ausgeblendet
         )
         if dialog.exec() != NeuerVerteilerDialog.DialogCode.Accepted:
             return
-        projekt = self.neues_projekt(dialog.verteiler())
+        # Was der Dialog trägt, gilt; die eigenen Felder kommen aus der conf.
+        projekt = self.neues_projekt(dialog.projekt())
         self._projekt_setzen(projekt, None)
         uebernommen = len(projekt.briefkopf) + len(projekt.eigene_felder)
         self.statusBar().showMessage(
@@ -457,10 +463,18 @@ class Hauptfenster(QMainWindow):
             + (f", Briefkopf mit {uebernommen} Feldern übernommen" if uebernommen else "")
         )
 
-    def neues_projekt(self, verteiler: Verteiler) -> Projekt:
-        """Ein frisches Projekt mit dem gemerkten Briefkopf."""
+    def neues_projekt(self, angaben) -> Projekt:
+        """Ein frisches Projekt mit dem gemerkten Briefkopf.
+
+        ``angaben`` ist ein Verteiler oder ein fertiges Projekt; im
+        zweiten Fall bleibt stehen, was schon eingetragen ist - ergaenzt
+        wird nur, was fehlt.
+        """
+        projekt = (
+            angaben if isinstance(angaben, Projekt) else Projekt(verteiler=angaben)
+        )
         return einstellungsspeicher.briefkopf_uebernehmen(
-            self.einstellungen, Projekt(verteiler=verteiler)
+            self.einstellungen, projekt
         )
 
     def briefkopf_merken(self) -> None:
