@@ -198,12 +198,12 @@ class Hauptfenster(QMainWindow):
         )
         bearbeiten.addSeparator()
         self.aktion_briefkopf = aktion(
-            "&Briefkopf und eigene Felder…",
+            "&Verteilerdaten und Briefkopf…",
             self.briefkopf_bearbeiten,
             "Ctrl+B",
             True,
             bearbeiten,
-            hinweis="Stammdaten, die auf jedem Blatt stehen",
+            hinweis="Name und Nummer des Verteilers, Stammdaten und eigene Felder",
         )
 
         bearbeiten.addSeparator()
@@ -775,8 +775,13 @@ class Hauptfenster(QMainWindow):
             # sie werden deshalb in der Verteilerly.conf gemerkt.
             self.briefkopf_merken()
             self._belegung_geaendert()
+            # Der Verteilername steht im Fenstertitel - er kann sich
+            # gerade geändert haben.
+            self._titel_setzen()
+            self.leistenansicht.aktualisieren()
             self.statusBar().showMessage(
-                "Briefkopf übernommen und als Vorgabe gemerkt"
+                "Verteilerdaten und Briefkopf übernommen; der Briefkopf ist "
+                "als Vorgabe gemerkt"
             )
 
     def ueber(self) -> None:

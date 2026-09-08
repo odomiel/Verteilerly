@@ -429,6 +429,22 @@ class TestMenuezustaende(unittest.TestCase):
         f._belegung_geaendert()
         self.assertTrue(f.aktion_speichern.isEnabled())    # wieder etwas offen
 
+    def test_geaenderter_verteilername_steht_im_fenstertitel(self):
+        from verteilerly.gui.dialoge import BriefkopfDialog
+
+        f = self.fenster
+        self._projekt()
+        self.assertIn("Probe", f.windowTitle())
+
+        def umbenennen(dialog):
+            dialog.verteilername.setText("Verteiler Keller")
+            return BriefkopfDialog.DialogCode.Accepted
+
+        with mock.patch.object(BriefkopfDialog, "exec", umbenennen):
+            f.briefkopf_bearbeiten()
+        self.assertEqual(f.projekt.verteiler.name, "Verteiler Keller")
+        self.assertIn("Verteiler Keller", f.windowTitle())
+
     def test_jeder_eintrag_sagt_wofuer_er_da_ist(self):
         """Der Statushinweis erscheint auch bei ausgegrauten Einträgen."""
         for name in ("aktion_speichern", "aktion_pdf", "aktion_kabel",
@@ -515,6 +531,22 @@ class TestBriefkopfDialog(unittest.TestCase):
             if self.dialog.eigene.item(i, 0).text() == name:
                 return self.dialog.eigene.item(i, 0)
         raise AssertionError(f"Zeile {name} fehlt")
+
+    def test_verteilerdaten_stehen_im_dialog(self):
+        """Name und Nummer sind auch nachträglich zu ändern."""
+        self.assertEqual(self.dialog.verteilername.text(), "Probe")
+        self.dialog.verteilername.setText("Verteiler Keller")
+        self.dialog.verteilernummer.setText("2.3")
+        self.dialog.uebernehmen()
+        self.assertEqual(self.projekt.verteiler.name, "Verteiler Keller")
+        self.assertEqual(self.projekt.verteiler.nummer, "2.3")
+
+    def test_verteilerdaten_lassen_sich_nicht_abwaehlen(self):
+        """Ein Blatt ohne Verteilernamen wäre keines."""
+        self.assertNotIn("verteilername", self.dialog.haken)
+        self.dialog._alle_haken(False)
+        self.dialog.uebernehmen()
+        self.assertEqual(self.projekt.verteiler.name, "Probe")
 
     def test_adressfelder_sind_mehrzeilig(self):
         """Firma und Kunde tragen eine Anschrift, keine Zeile."""

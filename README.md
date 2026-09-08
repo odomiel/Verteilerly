@@ -68,6 +68,12 @@ Programm starten:
 
 ## Stand
 
+**Name und Nummer des Verteilers** stehen obenan im Dialog *Bearbeiten ▸
+Verteilerdaten und Briefkopf* (Strg+B) — im Schriftfeld stehen sie neben
+Firma und Kunde, also werden sie auch dort gesucht. Bis dahin waren sie
+nur beim Anlegen zu setzen. Abwählen lassen sie sich nicht: ein Blatt
+ohne Verteilernamen wäre keines.
+
 Im Briefkopfdialog hat jedes Feld ein Häkchen — Standardfelder wie eigene
 gleichermaßen. Ein abgewähltes Feld verschwindet vom Blatt **mitsamt seiner
 Beschriftung** — eine Zeile „Kunde" ohne Kunden wäre schlimmer als gar

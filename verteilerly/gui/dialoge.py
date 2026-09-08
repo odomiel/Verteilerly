@@ -492,18 +492,34 @@ class UeberlaufDialog(QDialog):
 
 
 class BriefkopfDialog(QDialog):
-    """Briefkopf und eigene Felder zentral pflegen.
+    """Verteilerdaten, Briefkopf und eigene Felder pflegen.
 
-    Jedes Feld hat ein Haken davor: abgewaehlte Felder erscheinen auf
-    keinem Blatt, behalten ihren Inhalt aber. Wer eine Anlagennummer nur
-    fuer diesen Ausdruck weglassen will, muss sie nicht loeschen.
+    Jedes Briefkopffeld hat einen Haken davor: abgewaehlte Felder
+    erscheinen auf keinem Blatt, behalten ihren Inhalt aber. Wer eine
+    Anlagennummer nur fuer diesen Ausdruck weglassen will, muss sie nicht
+    loeschen.
+
+    Name und Nummer des Verteilers stehen oben mit im Dialog: im
+    Schriftfeld stehen sie neben Firma und Kunde, also werden sie auch
+    hier gesucht. Sie gehoeren zum Verteiler und lassen sich nicht
+    abwaehlen - ein Blatt ohne Verteilernamen waere keines.
     """
 
     def __init__(self, projekt: Projekt, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Briefkopf und eigene Felder")
-        self.resize(620, 700)
+        self.setWindowTitle("Verteilerdaten und Briefkopf")
+        self.resize(620, 760)
         self.projekt = projekt
+
+        self.verteilername = QLineEdit(projekt.verteiler.name)
+        self.verteilername.setPlaceholderText("z. B. Verteiler Keller")
+        self.verteilernummer = QLineEdit(projekt.verteiler.nummer)
+        self.verteilernummer.setPlaceholderText("z. B. 1.1")
+        verteilerform = QFormLayout()
+        verteilerform.addRow("Verteilername:", self.verteilername)
+        verteilerform.addRow("Verteilernummer:", self.verteilernummer)
+        verteilerblock = QGroupBox("Verteiler — steht im Schriftfeld jedes Blattes")
+        verteilerblock.setLayout(verteilerform)
 
         self.felder: dict[str, QWidget] = {}
         self.haken: dict[str, QCheckBox] = {}
@@ -567,6 +583,7 @@ class BriefkopfDialog(QDialog):
         eigene.setLayout(eigenblock)
 
         aufbau = QVBoxLayout(self)
+        aufbau.addWidget(verteilerblock)
         aufbau.addWidget(briefkopf)
         aufbau.addWidget(eigene)
         aufbau.addWidget(_knopfleiste(self))
@@ -616,6 +633,9 @@ class BriefkopfDialog(QDialog):
     def uebernehmen(self) -> None:
         """Schreibt die Eingaben ins Projekt - samt der Auswahl."""
         ausgeblendet: set[str] = set()
+
+        self.projekt.verteiler.name = self.verteilername.text().strip()
+        self.projekt.verteiler.nummer = self.verteilernummer.text().strip()
 
         self.projekt.briefkopf = {
             name: self._feldwert(feld)
