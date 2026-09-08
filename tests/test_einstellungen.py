@@ -90,16 +90,133 @@ class TestBriefkopfMerken(unittest.TestCase):
         self.assertEqual(eigene, {"Standort, Raum": "Keller"})
         self.assertEqual(ausgeblendet, {"Standort, Raum"})
 
-    def test_hauptfenster_reicht_beides_durch(self):
+    def test_hauptfenster_reicht_die_vorgaben_durch(self):
+        """Was als Vorgabe gemerkt ist, steht im nächsten Verteiler."""
         from verteilerly.gui.hauptfenster import Hauptfenster
 
         fenster = Hauptfenster()
-        fenster._projekt_setzen(self._projekt(), None)
-        fenster.briefkopf_merken()
+        sp.briefkopf_sichern(fenster.einstellungen, self._projekt())
 
         geerbt = fenster.neues_projekt(Verteiler.aus_geometrie(1, 2, 20, name="Zweiter"))
         self.assertEqual(geerbt.briefkopf["firma"], "Musterfirma")
         self.assertEqual(geerbt.verteiler.name, "Zweiter")
+
+        fenster.einstellungen.beginGroup("briefkopf")
+        fenster.einstellungen.remove("")
+        fenster.einstellungen.endGroup()
+        fenster.einstellungen.sync()
+
+
+@unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
+class TestVorgaben(unittest.TestCase):
+    """Die Vorgaben werden eigens gesetzt, nicht nebenbei gemerkt."""
+
+    def setUp(self):
+        from verteilerly.gui.hauptfenster import Hauptfenster
+
+        self.fenster = Hauptfenster()
+        self.addCleanup(self._conf_leeren)
+
+    def _conf_leeren(self):
+        for gruppe in ("briefkopf", "eigene_felder"):
+            self.fenster.einstellungen.beginGroup(gruppe)
+            self.fenster.einstellungen.remove("")
+            self.fenster.einstellungen.endGroup()
+        self.fenster.einstellungen.setValue("felder_ausgeblendet", [])
+        self.fenster.einstellungen.sync()
+
+    def _vorgaben_setzen(self, **werte):
+        from unittest import mock
+
+        from verteilerly.gui.dialoge import BriefkopfDialog
+
+        def tippen(dialog):
+            for name, wert in werte.items():
+                feld = dialog.briefkopf.felder[name]
+                if hasattr(feld, "setPlainText"):
+                    feld.setPlainText(wert)
+                else:
+                    feld.setText(wert)
+            return BriefkopfDialog.DialogCode.Accepted
+
+        with mock.patch.object(BriefkopfDialog, "exec", tippen):
+            self.fenster.vorgaben_bearbeiten()
+
+    def test_vorgaben_landen_in_der_conf(self):
+        self._vorgaben_setzen(firma="Musterfirma", kuerzel="JD")
+        briefkopf, _, _ = sp.briefkopf_laden(self.fenster.einstellungen)
+        self.assertEqual(briefkopf, {"firma": "Musterfirma", "kuerzel": "JD"})
+
+    def test_im_neuen_verteiler_ist_nur_angehakt_was_es_gibt(self):
+        """Was die Vorgaben nicht füllen, gehört auf kein Blatt."""
+        from unittest import mock
+
+        from verteilerly.gui.dialoge import NeuerVerteilerDialog
+
+        self._vorgaben_setzen(firma="Musterfirma", kuerzel="JD")
+        gesehen = {}
+
+        def anlegen(dialog):
+            gesehen["angehakt"] = {
+                name for name, haken in dialog.briefkopf.haken.items()
+                if haken.isChecked()
+            }
+            dialog.name.setText("Neu")
+            return NeuerVerteilerDialog.DialogCode.Accepted
+
+        with mock.patch.object(NeuerVerteilerDialog, "exec", anlegen):
+            self.fenster.neuer_verteiler()
+
+        self.assertEqual(gesehen["angehakt"], {"firma", "kuerzel"})
+        self.assertEqual(
+            self.fenster.projekt.briefkopf, {"firma": "Musterfirma", "kuerzel": "JD"}
+        )
+        self.assertIn("kunde", self.fenster.projekt.ausgeblendet)
+
+    def test_ein_bearbeiteter_briefkopf_aendert_die_vorgaben_nicht(self):
+        """Sonst überschriebe der letzte Kunde die Vorgabe ungefragt."""
+        from unittest import mock
+
+        from verteilerly.gui.dialoge import BriefkopfDialog
+
+        self._vorgaben_setzen(firma="Musterfirma")
+        self.fenster._projekt_setzen(
+            Projekt(verteiler=Verteiler.aus_geometrie(1, 2, 10)), None
+        )
+
+        def aendern(dialog):
+            dialog.briefkopf.felder["firma"].setPlainText("Ganz andere Firma")
+            return BriefkopfDialog.DialogCode.Accepted
+
+        with mock.patch.object(BriefkopfDialog, "exec", aendern):
+            self.fenster.briefkopf_bearbeiten()
+
+        self.assertEqual(self.fenster.projekt.briefkopf["firma"], "Ganz andere Firma")
+        self.assertEqual(
+            sp.briefkopf_laden(self.fenster.einstellungen)[0]["firma"], "Musterfirma"
+        )
+
+    def test_geoeffnete_verteiler_bleiben_unberuehrt(self):
+        """Eine geöffnete Datei gilt, wie sie ist - ohne Vorgaben darin."""
+        import json
+        import tempfile
+        from pathlib import Path
+
+        from verteilerly import projektdatei
+
+        self._vorgaben_setzen(firma="Musterfirma", kuerzel="JD")
+        alt = Projekt(
+            verteiler=Verteiler.aus_geometrie(1, 2, 10, name="Alt"),
+            briefkopf={"firma": "Alte Firma"},
+        )
+        with tempfile.TemporaryDirectory() as ordner:
+            pfad = Path(ordner) / "alt.vtly.json"
+            projektdatei.speichern(alt, pfad)
+            geladen = projektdatei.laden(pfad)
+            self.fenster._projekt_setzen(geladen, pfad)
+
+        self.assertEqual(self.fenster.projekt.briefkopf, {"firma": "Alte Firma"})
+        self.assertNotIn("kuerzel", self.fenster.projekt.briefkopf)
 
 
 @unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")

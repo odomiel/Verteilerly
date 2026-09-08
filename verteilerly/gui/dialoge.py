@@ -638,10 +638,15 @@ class BriefkopfFelder(QGroupBox):
         ausgeblendet: set[str] | None = None,
         titel: str = "Briefkopf — steht auf jedem Blatt",
         parent: QWidget | None = None,
+        inhalt_hakt_an: bool = True,
     ) -> None:
         super().__init__(titel, parent)
         briefkopf = briefkopf or {}
         ausgeblendet = ausgeblendet or set()
+        # Was ausgefuellt wird, erscheint auch: wer in ein Feld schreibt,
+        # meint es auch. Abwaehlen bleibt moeglich - der Haken
+        # folgt dem Tippen, nicht dem Loeschen.
+        self.inhalt_hakt_an = inhalt_hakt_an
 
         self.felder: dict[str, QWidget] = {}
         self.haken: dict[str, QCheckBox] = {}
@@ -657,6 +662,8 @@ class BriefkopfFelder(QGroupBox):
             # Der Haken ist zugleich die Beschriftung der Zeile.
             haken.toggled.connect(feld.setEnabled)
             feld.setEnabled(haken.isChecked())
+            if inhalt_hakt_an:
+                self._mithaken(feld, haken)
             self.felder[name] = feld
             self.haken[name] = haken
             form.addRow(haken, feld)
@@ -675,6 +682,21 @@ class BriefkopfFelder(QGroupBox):
         aufbau.addLayout(form)
         aufbau.addLayout(schnell)
         self.setLayout(aufbau)
+
+    def _mithaken(self, feld: QWidget, haken: QCheckBox) -> None:
+        """Was ausgefuellt wird, hakt sich selbst an - Leeren nicht ab.
+
+        Sonst tippte man einen Kunden ein und faende ihn auf keinem Blatt
+        wieder, weil der Haken davor noch aus war.
+        """
+        def gefuellt() -> None:
+            if not haken.isChecked() and self._feldwert(feld):
+                haken.setChecked(True)
+
+        if isinstance(feld, QPlainTextEdit):
+            feld.textChanged.connect(gefuellt)
+        else:
+            feld.textEdited.connect(lambda _text: gefuellt())
 
     def _feld_bauen(self, name: str, wert: str) -> QWidget:
         """Adressfelder brauchen mehrere Zeilen, alles andere eine."""
@@ -730,9 +752,19 @@ class BriefkopfDialog(QDialog):
     abwaehlen - ein Blatt ohne Verteilernamen waere keines.
     """
 
-    def __init__(self, projekt: Projekt, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        projekt: Projekt,
+        parent: QWidget | None = None,
+        vorgaben: bool = False,
+        quelle: Projekt | None = None,
+    ) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Verteilerdaten und Briefkopf")
+        self.vorgaben = vorgaben
+        self.quelle = quelle
+        self.setWindowTitle(
+            "Vorgaben für neue Verteiler" if vorgaben else "Verteilerdaten und Briefkopf"
+        )
         self.resize(620, 760)
         self.projekt = projekt
 
@@ -783,13 +815,43 @@ class BriefkopfDialog(QDialog):
         eigene.setLayout(eigenblock)
 
         aufbau = QVBoxLayout(self)
-        aufbau.addWidget(verteilerblock)
+        if vorgaben:
+            # Der Verteiler gehoert nicht in die Vorgaben - Name und
+            # Nummer sind bei jedem ein anderer.
+            verteilerblock.setVisible(False)
+            hinweis = QLabel(
+                "Diese Angaben stehen beim Anlegen eines neuen Verteilers schon "
+                "in den Feldern. Was hier leer bleibt, ist dort abgewählt."
+            )
+            hinweis.setWordWrap(True)
+            aufbau.addWidget(hinweis)
+            if quelle is not None:
+                uebernehmen = QPushButton("Aus dem offenen Verteiler übernehmen")
+                uebernehmen.clicked.connect(self._aus_dem_verteiler)
+                aufbau.addWidget(uebernehmen)
+        else:
+            aufbau.addWidget(verteilerblock)
         aufbau.addWidget(briefkopf)
         aufbau.addWidget(eigene)
         aufbau.addWidget(_knopfleiste(self))
 
     def _alle_haken(self, an: bool) -> None:
         self.briefkopf.alle_haken(an)
+
+    def _aus_dem_verteiler(self) -> None:
+        """Fuellt die Vorgaben mit dem Briefkopf des offenen Verteilers."""
+        if self.quelle is None:
+            return
+        for name, feld in self.briefkopf.felder.items():
+            wert = self.quelle.briefkopf.get(name, "")
+            if isinstance(feld, QPlainTextEdit):
+                feld.setPlainText(wert)
+            else:
+                feld.setText(wert)
+            self.briefkopf.haken[name].setChecked(self.quelle.sichtbar(name))
+        self.eigene.setRowCount(0)
+        for name, wert in self.quelle.eigene_felder.items():
+            self._zeile_anhaengen(name, wert, self.quelle.sichtbar(name))
 
     def _zeile_anhaengen(self, name: str, wert: str, sichtbar: bool = True) -> None:
         zeile = self.eigene.rowCount()
@@ -811,8 +873,9 @@ class BriefkopfDialog(QDialog):
         """Schreibt die Eingaben ins Projekt - samt der Auswahl."""
         ausgeblendet: set[str] = set()
 
-        self.projekt.verteiler.name = self.verteilername.text().strip()
-        self.projekt.verteiler.nummer = self.verteilernummer.text().strip()
+        if not self.vorgaben:
+            self.projekt.verteiler.name = self.verteilername.text().strip()
+            self.projekt.verteiler.nummer = self.verteilernummer.text().strip()
 
         self.projekt.briefkopf = self.briefkopf.werte()
         ausgeblendet |= self.briefkopf.ausgeblendet()

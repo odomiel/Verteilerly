@@ -81,11 +81,19 @@ keine — und **behält seinen Inhalt**: wer die Anlagennummer nur für diesen A
 weglassen will, muss sie nicht löschen. Die Auswahl steht in der
 Projektdatei.
 
-Briefkopf und eigene Felder werden zugleich in der `Verteilerly.conf`
-gemerkt und in jeden **neuen** Verteiler übernommen — Firma, Kürzel und
-Kunde wiederholen sich von Verteiler zu Verteiler. Was im Projekt schon
-steht, bleibt dabei stehen; die Vorgabe überschreibt nie eine Eingabe.
+Was bei jedem Verteiler gleich ist — Firma, Kürzel, der Ersteller —,
+wird als **Vorgabe** gesetzt: *Einstellungen ▸ Vorgaben für neue
+Verteiler* führt dieselben Felder und schreibt sie in die
+`Verteilerly.conf`; ein Knopf übernimmt sie aus dem offenen Verteiler.
+Ein bearbeiteter Briefkopf ändert die Vorgaben **nicht** von selbst —
+sonst überschriebe der letzte Kunde sie ungefragt.
 
+Beim Anlegen stehen sie schon in den Feldern; was im Projekt steht,
+bleibt stehen, die Vorgabe überschreibt nie eine Eingabe. **Angehakt ist
+dabei nur, was sie füllen** — ein leeres Feld gehört auf kein Blatt, bis
+jemand es ausfüllt; wer in ein Feld schreibt, hakt es damit an. Ein
+geöffneter Verteiler bleibt davon unberührt: dort gilt, was in der Datei
+steht.
 
 Der Dialog *Neuer Verteiler* trägt den **Briefkopf gleich mit** — rechts
 neben den Verteilerangaben, damit der Dialog flach bleibt und beides auf

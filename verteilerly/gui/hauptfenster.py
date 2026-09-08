@@ -22,7 +22,14 @@ from .. import pfade, projektdatei, schreibweisen
 from ..ausgabe import AusgabeFehler, csv_schreiben, pdf_schreiben, xlsx_schreiben
 from ..blattvorlagen import Blattvorlagen
 from ..farbcodes import Kabeltypen, farben_eintragen
-from ..modell import Kabelabschnitt, ModellFehler, Projekt, UeberlaufFehler, Verteiler
+from ..modell import (
+    BRIEFKOPF_FELDER,
+    Kabelabschnitt,
+    ModellFehler,
+    Projekt,
+    UeberlaufFehler,
+    Verteiler,
+)
 from ..version import VERSION
 from ..vorlagen import Vorlagen
 from .dialoge import (
@@ -221,6 +228,11 @@ class Hauptfenster(QMainWindow):
             "&Blattvorlage…", self.blattvorlage_waehlen, "Ctrl+Shift+B",
             menue=einstellungen,
             hinweis="Wie die Blätter aussehen — Spalten, Schriftgrößen, Ränder",
+        )
+        aktion(
+            "&Vorgaben für neue Verteiler…", self.vorgaben_bearbeiten,
+            menue=einstellungen,
+            hinweis="Firma, Kürzel und was sonst bei jedem Verteiler gleich ist",
         )
         einstellungen.addSeparator()
 
@@ -464,6 +476,11 @@ class Hauptfenster(QMainWindow):
         gemerkt, _, ausgeblendet = einstellungsspeicher.briefkopf_laden(
             self.einstellungen
         )
+        # Angehakt ist, was die Vorgaben füllen - ein leeres Feld gehört
+        # auf kein Blatt, bis jemand es ausfüllt.
+        ausgeblendet = set(ausgeblendet) | {
+            name for name in BRIEFKOPF_FELDER if not gemerkt.get(name)
+        }
         dialog = NeuerVerteilerDialog(
             self.vorlagen, self, self._vorlagenordner(), gemerkt, ausgeblendet,
             self.blattvorlagen, self.vorschau.blattvorlage.id,
@@ -495,10 +512,30 @@ class Hauptfenster(QMainWindow):
             self.einstellungen, projekt
         )
 
-    def briefkopf_merken(self) -> None:
-        """Die Angaben wiederholen sich von Verteiler zu Verteiler."""
-        if self.projekt is not None:
-            einstellungsspeicher.briefkopf_sichern(self.einstellungen, self.projekt)
+    def vorgaben_bearbeiten(self) -> None:
+        """Was bei jedem neuen Verteiler schon dastehen soll.
+
+        Firma, Kürzel, Ersteller - was sich nicht von Verteiler zu
+        Verteiler ändert. Gemerkt wird nur, was hier eingetragen ist;
+        ein bearbeiteter Briefkopf ändert die Vorgaben nicht mehr von
+        selbst, sonst überschriebe der letzte Kunde sie ungefragt.
+        """
+        briefkopf, eigene, ausgeblendet = einstellungsspeicher.briefkopf_laden(
+            self.einstellungen
+        )
+        muster = Projekt(
+            briefkopf=briefkopf, eigene_felder=eigene, ausgeblendet=ausgeblendet
+        )
+        dialog = BriefkopfDialog(muster, self, vorgaben=True, quelle=self.projekt)
+        if dialog.exec() != BriefkopfDialog.DialogCode.Accepted:
+            return
+        dialog.uebernehmen()
+        einstellungsspeicher.briefkopf_sichern(self.einstellungen, muster)
+        self.statusBar().showMessage(
+            f"Vorgaben gemerkt: {len(muster.briefkopf) + len(muster.eigene_felder)} "
+            "Felder stehen im nächsten neuen Verteiler schon da",
+            8000,
+        )
 
     def oeffnen(self) -> None:
         if not self._darf_verwerfen():
@@ -803,17 +840,13 @@ class Hauptfenster(QMainWindow):
         dialog = BriefkopfDialog(self.projekt, self)
         if dialog.exec() == BriefkopfDialog.DialogCode.Accepted:
             dialog.uebernehmen()
-            # Die Angaben wiederholen sich von Verteiler zu Verteiler -
-            # sie werden deshalb in der Verteilerly.conf gemerkt.
-            self.briefkopf_merken()
             self._belegung_geaendert()
             # Der Verteilername steht im Fenstertitel - er kann sich
             # gerade geändert haben.
             self._titel_setzen()
             self.leistenansicht.aktualisieren()
             self.statusBar().showMessage(
-                "Verteilerdaten und Briefkopf übernommen; der Briefkopf ist "
-                "als Vorgabe gemerkt"
+                "Verteilerdaten und Briefkopf übernommen", 8000
             )
 
     def ueber(self) -> None:

@@ -36,7 +36,7 @@ try:
 except ImportError:  # ohne Qt laufen wenigstens die uebrigen Tests
     ANWENDUNG = None
 
-from verteilerly.modell import Aderadresse, Projekt, Verteiler
+from verteilerly.modell import BRIEFKOPF_FELDER, Aderadresse, Projekt, Verteiler
 from verteilerly.vorlagen import Vorlage, Vorlagen
 
 
@@ -602,8 +602,8 @@ class TestMenuezustaende(unittest.TestCase):
         ]
         self.assertEqual(
             eintraege,
-            ["Blattvorlage…", "Schreibweise der Rangierungen",
-             "Freitext im Rangierfeld zulassen"],
+            ["Blattvorlage…", "Vorgaben für neue Verteiler…",
+             "Schreibweise der Rangierungen", "Freitext im Rangierfeld zulassen"],
         )
 
     def test_jede_schreibweise_steht_im_menue(self):
@@ -871,6 +871,26 @@ class TestBriefkopfImNeuenVerteiler(unittest.TestCase):
     def test_leere_felder_bleiben_weg(self):
         projekt = self._dialog().projekt()
         self.assertEqual(projekt.briefkopf, {})
+
+    def test_nur_gefuellte_felder_sind_angehakt(self):
+        """Was die Vorgaben nicht füllen, gehört auf kein Blatt."""
+        dialog = self._dialog(
+            briefkopf={"firma": "Musterfirma", "kuerzel": "JD"},
+            ausgeblendet={"kunde", "anlagennummer", "kundennummer", "gezeichnet_am",
+                          "gezeichnet_von", "erstellt_am", "erstellt_von", "stand_am",
+                          "stand_von", "geprueft_am", "geprueft_von", "dokumenttitel"},
+        )
+        angehakt = {n for n, h in dialog.briefkopf.haken.items() if h.isChecked()}
+        self.assertEqual(angehakt, {"firma", "kuerzel"})
+
+    def test_wer_tippt_hakt_das_feld_an(self):
+        """Sonst tippt man einen Kunden ein und findet ihn auf keinem Blatt."""
+        dialog = self._dialog(ausgeblendet=set(BRIEFKOPF_FELDER))
+        self.assertFalse(dialog.briefkopf.haken["kunde"].isChecked())
+
+        dialog.briefkopf.felder["kunde"].setPlainText("Kunde Müller")
+        self.assertTrue(dialog.briefkopf.haken["kunde"].isChecked())
+        self.assertEqual(dialog.projekt().briefkopf["kunde"], "Kunde Müller")
 
     def test_blattvorlage_steht_schon_beim_anlegen_zur_wahl(self):
         """Gewählt wird beim Anlegen, geändert unter Einstellungen."""
