@@ -118,12 +118,12 @@ class TestMitgelieferte(unittest.TestCase):
         self.assertEqual(
             vorlage.schriftfeld,
             (
-                ("verteiler", "verteilernummer", "leiste", "blatt"),
-                ("erstellt", "stand", "geprueft", "gezeichnet"),
-                ("firma", "kunde", "eigene"),
+                ("verteiler", "verteilernummer", "leiste"),
+                ("erstellt", "stand", "geprueft"),
+                ("firma", "kunde"),
             ),
         )
-        self.assertEqual(len(vorlage.schriftfeld_anteile), 3)
+        self.assertEqual(vorlage.schriftfeld_art, "beispiel")
         # Für zwei Anschriften braucht das Schriftfeld mehr Höhe.
         self.assertGreater(vorlage.schriftfeld_hoehe, STANDARD.schriftfeld_hoehe)
 

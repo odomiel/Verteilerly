@@ -22,6 +22,12 @@ from .modell import ModellFehler
 LINKS, MITTE, RECHTS = "links", "mitte", "rechts"
 AUSRICHTUNGEN = (LINKS, MITTE, RECHTS)
 
+# Wie das Schriftfeld aufgebaut ist. "standard" reiht Beschriftung und
+# Wert in Spalten; "beispiel" baut das Feld der Mustertabellen nach - eine
+# Matrix aus Datum und Name, darunter der Verteiler, rechts daneben die
+# Anschriften von Firma und Kunde.
+SCHRIFTFELDARTEN = ("standard", "beispiel")
+
 # Was eine Spalte des Leistenblattes zeigen kann.
 SPALTENFELDER = (
     "stift",
@@ -110,6 +116,7 @@ class Blattvorlage:
 
     spalten: tuple[Spalte, ...] = STANDARDSPALTEN
     schriftfeld: tuple[tuple[str, ...], ...] = STANDARDSCHRIFTFELD
+    schriftfeld_art: str = "standard"
     # Wie breit die Bloecke des Schriftfeldes sind. Leer heisst: nach
     # Augenmass verteilt, Namen brauchen mehr Platz als Nummern.
     schriftfeld_anteile: tuple[float, ...] = ()
@@ -248,6 +255,9 @@ def blattvorlage_aus_yaml(inhalt: dict, herkunft: str = "") -> Blattvorlage:
         schriftfeld_anteile=tuple(
             float(teil) for teil in inhalt.get("schriftfeld_anteile") or ()
         ),
+        schriftfeld_art=str(
+            inhalt.get("schriftfeld_art", STANDARD.schriftfeld_art)
+        ),
         buchten_je_blatt=int(
             _zahl(inhalt, "buchten_je_blatt", STANDARD.buchten_je_blatt, wo)
         ),
@@ -263,6 +273,12 @@ def blattvorlage_aus_yaml(inhalt: dict, herkunft: str = "") -> Blattvorlage:
             belegung, "abstand_buchten", STANDARD.abstand_buchten, wo
         ),
     )
+    if vorlage.schriftfeld_art not in SCHRIFTFELDARTEN:
+        bekannt = ", ".join(SCHRIFTFELDARTEN)
+        raise BlattvorlagenFehler(
+            f"{wo}: schriftfeld_art {vorlage.schriftfeld_art!r} gibt es nicht "
+            f"(bekannt: {bekannt})"
+        )
     if vorlage.buchten_je_blatt < 1:
         raise BlattvorlagenFehler(f"{wo}: buchten_je_blatt muss mindestens 1 sein")
     if vorlage.rand < 0 or vorlage.zeilenhoehe_min <= 0:

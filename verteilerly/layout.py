@@ -237,7 +237,14 @@ def schriftfeld(
 
     Die Leistennummer kommt aus dem Aufruf, nicht aus einer Kopie des
     Vorblatts - genau der Fehler, der in einer Mustertabelle steckt.
+
+    Wie die Felder liegen, sagt die Blattvorlage: in Spalten aus
+    Beschriftung und Wert oder in der Aufteilung der Mustertabellen.
     """
+    if vorlage.schriftfeld_art == "beispiel":
+        _schriftfeld_beispiel(blatt, projekt, leiste, vorlage)
+        return
+
     rand = vorlage.rand
     hoehe = vorlage.schriftfeld_hoehe
     oben = blatt.hoehe - rand - hoehe
@@ -288,6 +295,131 @@ def _schriftfeldanteile(
     return [1.0 / anzahl] * anzahl
 
 
+def _schriftfeld_beispiel(
+    blatt: Blatt, projekt: Projekt, leiste: int | None, vorlage: Blattvorlage
+) -> None:
+    """Das Schriftfeld der Mustertabellen, Feld fuer Feld nachgebaut.
+
+    Links oben eine Matrix: die Spalten Datum und Name, die Zeilen
+    Erstellt, Stand und Geprueft. Links unten der Verteiler mit Nummer
+    und Leiste. Rechts daneben zwei Kaesten uebereinander - Firma oben,
+    Kunde unten -, in denen die Anschrift zeilenweise steht.
+    """
+    rand = vorlage.rand
+    hoehe = vorlage.schriftfeld_hoehe
+    oben = blatt.hoehe - rand - hoehe
+    breite = blatt.breite - 2 * rand
+
+    linkes = breite * 0.56
+    mitte_y = oben + hoehe / 2
+
+    blatt.rechteck(rand, oben, breite, hoehe, fuellung=None, staerke=0.4)
+    blatt.linie(rand + linkes, oben, rand + linkes, oben + hoehe, 0.2, LINIE_FEIN)
+    blatt.linie(rand, mitte_y, rand + breite, mitte_y, 0.2, LINIE_FEIN)
+
+    _beispiel_matrix(blatt, projekt, vorlage, rand, oben, linkes, hoehe / 2)
+    _beispiel_verteiler(
+        blatt, projekt, leiste, vorlage, rand, mitte_y, linkes, hoehe / 2
+    )
+
+    anschriften = rand + linkes
+    weite = breite - linkes
+    for i, marke in enumerate(("firma", "kunde")):
+        _beispiel_anschrift(
+            blatt, projekt, vorlage, marke,
+            anschriften, oben + i * hoehe / 2, weite, hoehe / 2,
+        )
+
+
+def _beispiel_matrix(
+    blatt: Blatt, projekt: Projekt, vorlage: Blattvorlage,
+    x: float, y: float, breite: float, hoehe: float,
+) -> None:
+    """Erstellt / Stand / Geprueft, je mit Datum und Name."""
+    marken = [m for m in ("erstellt", "stand", "geprueft")
+              if _marke_sichtbar(m, projekt)]
+    zeilen = len(marken) + 1                      # die Kopfzeile zaehlt mit
+    zeile_h = hoehe / max(zeilen, 4)
+    label_b = breite * 0.42
+    spalte_b = (breite - label_b) / 2
+
+    for i, ueberschrift in enumerate(("Datum", "Name")):
+        blatt.text(
+            x + label_b + i * spalte_b, y, spalte_b, zeile_h, ueberschrift,
+            vorlage.schrift_klein, MITTE, False, TINTE_LEISE,
+        )
+
+    for j, marke in enumerate(marken, 1):
+        zeile_y = y + j * zeile_h
+        blatt.text(
+            x + 2, zeile_y, label_b - 3, zeile_h, BESCHRIFTUNG[marke],
+            vorlage.schrift_klein, LINKS, False, TINTE_LEISE,
+        )
+        for i, teil in enumerate(("_am", "_von")):
+            blatt.text(
+                x + label_b + i * spalte_b, zeile_y, spalte_b, zeile_h,
+                _wert(projekt, marke + teil), vorlage.schrift_normal, MITTE,
+            )
+
+
+def _beispiel_verteiler(
+    blatt: Blatt, projekt: Projekt, leiste: int | None, vorlage: Blattvorlage,
+    x: float, y: float, breite: float, hoehe: float,
+) -> None:
+    """Verteiler, Nummer und Leiste - der Name unter seiner Beschriftung."""
+    v = projekt.verteiler
+    zeilen: list[tuple[str, str, bool]] = [
+        ("Verteiler:", "", False),
+        ("", v.name, True),                       # der Name steht darunter
+        ("Verteiler Nr.", v.nummer, False),
+        ("Leiste:", "" if leiste is None else str(leiste), False),
+    ]
+    zeile_h = hoehe / max(len(zeilen), 4)
+    label_b = breite * 0.42
+    for j, (name, wert, breit) in enumerate(zeilen):
+        zeile_y = y + j * zeile_h
+        if name:
+            blatt.text(
+                x + 2, zeile_y, label_b - 3, zeile_h, name,
+                vorlage.schrift_klein, LINKS, False, TINTE_LEISE,
+            )
+        if breit:
+            blatt.text(
+                x + 4, zeile_y, breite - 6, zeile_h, wert, vorlage.schrift_normal
+            )
+        else:
+            blatt.text(
+                x + label_b, zeile_y, breite - label_b - 2, zeile_h, wert,
+                vorlage.schrift_normal, MITTE,
+            )
+
+
+def _beispiel_anschrift(
+    blatt: Blatt, projekt: Projekt, vorlage: Blattvorlage, marke: str,
+    x: float, y: float, breite: float, hoehe: float,
+) -> None:
+    """Ein Kasten mit einer Anschrift - Zeile fuer Zeile, mittig."""
+    if not _marke_sichtbar(marke, projekt):
+        return
+    zeilen = [teil.strip() for teil in _wert(projekt, marke).split("\n")]
+    zeilen = [teil for teil in zeilen if teil]
+    if not zeilen:
+        blatt.text(
+            x + 3, y, breite - 6, hoehe, BESCHRIFTUNG[marke],
+            vorlage.schrift_klein, LINKS, False, TINTE_LEISE,
+        )
+        return
+
+    zeile_h = min(vorlage.schrift_normal * 0.45 + 1.4, hoehe / len(zeilen))
+    block = zeile_h * len(zeilen)
+    erste = y + (hoehe - block) / 2
+    for i, teil in enumerate(zeilen):
+        blatt.text(
+            x + 3, erste + i * zeile_h, breite - 6, zeile_h, teil,
+            vorlage.schrift_normal, MITTE,
+        )
+
+
 def _fusszeile(blatt: Blatt, nummer: int, gesamt: int, vorlage: Blattvorlage) -> None:
     y = blatt.hoehe - vorlage.rand + 1
     blatt.text(
@@ -335,12 +467,12 @@ def deckblatt(projekt: Projekt, vorlage: Blattvorlage = STANDARD) -> Blatt:
     ]
     zeilen += list(projekt.sichtbare_eigene_felder().items())
 
-    for name, wert in zeilen:
-        if not str(wert).strip():
-            continue
-        blatt.text(
-            rand, y, 46, 7, name, vorlage.schrift_normal, LINKS, False, TINTE_LEISE
-        )
+    # Eine Anschrift steht auch hier zeilenweise.
+    for name, wert in schriftfeldzeilen([(n, w) for n, w in zeilen if str(w).strip()]):
+        if name:
+            blatt.text(
+                rand, y, 46, 7, name, vorlage.schrift_normal, LINKS, False, TINTE_LEISE
+            )
         blatt.text(rand + 48, y, breite - 48, 7, str(wert), vorlage.schrift_mittel)
         y += 7.6
 

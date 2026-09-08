@@ -305,3 +305,77 @@ class TestAnschriftImSchriftfeld(unittest.TestCase):
         self.assertEqual(_schriftfeldanteile(3, (1.0, 1.0, 2.0)), [0.25, 0.25, 0.5])
         # Passt die Angabe nicht zur Zahl der Blöcke, bleibt es beim Augenmaß.
         self.assertEqual(_schriftfeldanteile(3, (1.0, 1.0)), [0.38, 0.26, 0.36])
+
+
+class TestSchriftfeldBeispiel(unittest.TestCase):
+    """Das Schriftfeld der Mustertabellen, Feld für Feld."""
+
+    def setUp(self):
+        from verteilerly.blattvorlagen import Blattvorlagen
+        from verteilerly.pfade import mitgeliefert
+
+        self.vorlage = Blattvorlagen.laden(
+            mitgeliefert() / "blattvorlagen"
+        ).holen("beispiel")
+        self.projekt = Projekt(
+            verteiler=Verteiler.aus_geometrie(1, 2, 10, name="Verteiler Name",
+                                              nummer="1.1"),
+            briefkopf={
+                "firma": "Firma Beliebig\nBeliebige Straße 7\n77777 Beliebiger Ort",
+                "kunde": "Kunde Beliebig",
+                "erstellt_am": "01.01.1970",
+                "erstellt_von": "John Doe",
+            },
+        )
+
+    def _blatt(self):
+        return leistenblatt(self.projekt, 1, self.vorlage)
+
+    def test_matrix_aus_datum_und_name(self):
+        texte = _texte(self._blatt())
+        for erwartet in ("Datum", "Name", "Erstellt", "Stand", "Geprüft"):
+            with self.subTest(feld=erwartet):
+                self.assertIn(erwartet, texte)
+        # Datum und Name stehen getrennt, nicht als „01.01.1970 · John Doe“.
+        self.assertIn("01.01.1970", texte)
+        self.assertIn("John Doe", texte)
+        self.assertNotIn("01.01.1970 · John Doe", texte)
+
+    def test_verteilerblock_unter_der_matrix(self):
+        blatt = self._blatt()
+        stellen = {e.text: e.y for e in blatt.elemente if isinstance(e, Text)}
+        self.assertIn("Verteiler:", stellen)
+        self.assertIn("Verteiler Nr.", stellen)
+        self.assertIn("Leiste:", stellen)
+        # Der Name steht unter seiner Beschriftung, nicht daneben.
+        self.assertGreater(stellen["Verteiler Name"], stellen["Verteiler:"])
+        self.assertGreater(stellen["Verteiler Nr."], stellen["Verteiler Name"])
+
+    def test_anschriften_stehen_rechts_und_untereinander(self):
+        blatt = self._blatt()
+        anschrift = [
+            e for e in blatt.elemente
+            if isinstance(e, Text) and e.text.startswith(("Firma Beliebig",
+                                                          "Beliebige Straße",
+                                                          "77777"))
+        ]
+        self.assertEqual(len(anschrift), 3)
+        # Rechts vom Verteilerblock und der Reihe nach untereinander.
+        links = min(e.x for e in anschrift)
+        self.assertGreater(links, blatt.breite / 2)
+        self.assertEqual([e.y for e in anschrift], sorted(e.y for e in anschrift))
+
+    def test_kunde_steht_unter_der_firma(self):
+        blatt = self._blatt()
+        stellen = {e.text: e.y for e in blatt.elemente if isinstance(e, Text)}
+        self.assertGreater(stellen["Kunde Beliebig"], stellen["Firma Beliebig"])
+
+    def test_abgewaehltes_feld_bleibt_leer(self):
+        """Auch hier gilt: ohne Haken kein Eintrag."""
+        self.projekt.sichtbarkeit_setzen("firma", False)
+        self.assertNotIn("Firma Beliebig", _texte(self._blatt()))
+
+    def test_standardvorlage_bleibt_bei_ihrer_bauart(self):
+        texte = _texte(leistenblatt(self.projekt, 1, STANDARD))
+        self.assertNotIn("Datum", texte)
+        self.assertIn("01.01.1970 · John Doe", texte)

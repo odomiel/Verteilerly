@@ -172,11 +172,26 @@ Wie das Blatt aussieht, sagt eine **Blattvorlage**; was darauf steht,
 kommt aus dem Projekt. Vier liegen bei — *Standard* mit allen Spalten,
 *Knapp* als reines Rangierblatt ohne Bezeichnung und Bemerkung,
 *Ausführlich* mit großer Schrift, hohen Zeilen und einer Bucht je Blatt,
-und *Mit Anschriften* mit dem Schriftfeld der Mustertabellen —
-links der Verteiler, in der Mitte Erstellt/Stand/Geprüft mit Datum und
-Name, rechts Firma und Kunde mit ihrer Anschrift. Die Kabelspalte hat sie
-schmal und quer wie die Standardvorlage; in den Mustertabellen gibt es sie
-nicht, dort stand das Kabel nur in der Verteilerbelegung. Wie breit die drei Blöcke sind, sagt dort
+und *Mit Anschriften*. Deren Schriftfeld ist Feld für Feld das
+der Mustertabellen (`schriftfeld_art: beispiel`):
+
+```
+┌───────────────┬─────────┬─────────┬────────────────────────┐
+│               │  Datum  │  Name   │    Firma Beliebig      │
+│ Erstellt      │01.01.70 │John Doe │  Beliebige Straße 7    │
+│ Stand         │         │         │  77777 Beliebiger Ort  │
+│ Geprüft       │         │         │                        │
+├───────────────┴─────────┴─────────┼────────────────────────┤
+│ Verteiler:                        │    Kunde Beliebig      │
+│   Verteiler Name                  │  Beliebige Straße 7    │
+│ Verteiler Nr.        1.1          │  77777 Beliebiger Ort  │
+│ Leiste:              1            │                        │
+└───────────────────────────────────┴────────────────────────┘
+```
+
+Die Kabelspalte hat sie schmal und quer wie die Standardvorlage; in den
+Mustertabellen gibt es sie nicht, dort stand das Kabel nur in der
+Verteilerbelegung. Wie breit die drei Blöcke sind, sagt dort
 `schriftfeld_anteile`.
 Gewählt wird über der Vorschau; die Wahl gilt auch für die PDF-Ausgabe
 und wird gemerkt. Eine eigene Blattvorlage ist eine YAML-Datei in
