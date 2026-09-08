@@ -297,6 +297,36 @@ class TestLeistenModell(unittest.TestCase):
 
 
 @unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
+class TestUebersicht(unittest.TestCase):
+    """Im Bearbeitungsmodus bleibt jede Leiste unterteilt."""
+
+    def test_auch_leere_leisten_bleiben_unterteilt(self):
+        from PySide6.QtGui import QImage
+
+        from verteilerly.gui.uebersicht import ZELLE_B, Uebersicht
+
+        v = Verteiler.aus_geometrie(1, 2, 10)
+        v.kabel_anlegen("Leitung", 1, 1, 4)
+        ansicht = Uebersicht()
+        ansicht.verteiler_setzen(v)
+        ansicht.resize(520, 200)
+        bild = QImage(ansicht.size(), QImage.Format.Format_RGB32)
+        ansicht.render(bild)
+
+        # Waagerecht durch die zweite Leiste - dort liegt kein Kabel.
+        kasten = ansicht._kaesten[2]
+        y = kasten.center().y()
+        grund = bild.pixel(kasten.left() + ZELLE_B // 2, y)
+        striche = sum(
+            1
+            for x in range(kasten.left() + 1, kasten.right())
+            if bild.pixel(x, y) != grund
+        )
+        # Neun Trennstriche zwischen zehn Doppeladern, dazu die Ränder.
+        self.assertGreaterEqual(striche, 9)
+
+
+@unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
 class TestVorschau(unittest.TestCase):
     """Die Vorschau haelt sich an dieselbe Blattfolge wie das PDF."""
 

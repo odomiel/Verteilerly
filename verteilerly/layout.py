@@ -566,11 +566,17 @@ def verteilerbelegung(
             y += zelle_h + luft_l
         x += label_b + breiteste * zelle_b + luft_r
 
+    belegte = {a.leiste for kabel in v.kabel for a in kabel.abschnitte}
     for nummer, (kx, ky, da) in kaesten.items():
         blatt.text(
             kx - label_b, ky, label_b - 2, zelle_h, f"Leiste {nummer}", schrift, RECHTS
         )
         blatt.rechteck(kx, ky, da * zelle_b, zelle_h, staerke=0.4)
+        # Eine Leiste ohne Kabel bleibt leer: die Unterteilung braucht
+        # nur, wo etwas liegt - sonst ist das Blatt ein Gitter aus
+        # lauter Nichts.
+        if nummer not in belegte:
+            continue
         for i in range(1, da):
             zx = kx + i * zelle_b
             blatt.linie(zx, ky, zx, ky + zelle_h, 0.15, LINIE_FEIN)
@@ -589,8 +595,11 @@ def verteilerbelegung(
             blatt.text(bx + 1, ky, bb - 2, zelle_h * 0.62, beschriftung, schrift)
 
     # Die DA-Nummern zuletzt, damit sie auch auf einem Kabelblock stehen.
+    # Keine Vorlage fuehrt sie noch - die Zahlen 1 bis 10 in jeder Zelle
+    # waren mehr Raster als Auskunft. Wer sie will, schaltet sie in seiner
+    # Blattvorlage wieder ein.
     if vorlage.da_nummern and zelle_b >= 4.5:
-        for _, (kx, ky, da) in kaesten.items():
+        for nummer, (kx, ky, da) in kaesten.items():
             for i in range(da):
                 blatt.text(
                     kx + i * zelle_b, ky + zelle_h * 0.6, zelle_b, zelle_h * 0.4,

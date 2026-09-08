@@ -153,6 +153,12 @@ class TestMitgelieferte(unittest.TestCase):
         # Wo die Spalte breit ist, bleibt der Name waagerecht.
         self.assertFalse(beiliegend.holen("knapp").kabel_gedreht)
 
+    def test_keine_mitgelieferte_vorlage_zeigt_da_nummern(self):
+        """Die Zahlen 1 bis 10 in jeder Zelle waren mehr Raster als Auskunft."""
+        for vorlage in Blattvorlagen.laden(mitgeliefert() / "blattvorlagen").alle:
+            with self.subTest(vorlage=vorlage.id):
+                self.assertFalse(vorlage.da_nummern)
+
     def test_die_eingebaute_ist_immer_dabei(self):
         with tempfile.TemporaryDirectory() as leer:
             vorlagen = Blattvorlagen.laden(pathlib.Path(leer))

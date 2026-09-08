@@ -122,7 +122,7 @@ class Blattvorlage:
     schriftfeld_anteile: tuple[float, ...] = ()
 
     buchten_je_blatt: int = 2
-    da_nummern: bool = True
+    da_nummern: bool = False
     # Die Kabelspalte ist schmal; quer gelesen passt der Name trotzdem
     # hinein, statt auf Winzigkeit zu schrumpfen.
     kabel_gedreht: bool = True

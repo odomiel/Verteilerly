@@ -32,7 +32,7 @@ schriftfeld:
   - [erstellt, stand, geprueft, gezeichnet, eigene]
 
 buchten_je_blatt: 2
-da_nummern: true
+da_nummern: false
 # Der Kabelname steht quer in der schmalen Spalte, von unten nach oben.
 kabel_gedreht: true
 

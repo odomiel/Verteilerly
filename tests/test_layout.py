@@ -516,3 +516,38 @@ class TestKopfzeile(unittest.TestCase):
                 stelle = felder.index("ader")
                 gruppen = dict(kopfgruppen(vorlage.spalten))
                 self.assertEqual(gruppen.get(stelle - 1), 2)
+
+
+class TestBelegungsblatt(unittest.TestCase):
+    """Nur wo ein Kabel liegt, ist die Leiste unterteilt."""
+
+    def _blatt(self, vorlage=STANDARD):
+        v = Verteiler.aus_geometrie(1, 4, 10)
+        v.kabel_anlegen("4 DA zu Wohnzimmer", 1, 1, 4)
+        return verteilerbelegungen(Projekt(verteiler=v), vorlage)[0]
+
+    def _senkrechte(self, blatt, oben: float, unten: float) -> list:
+        return [
+            e for e in blatt.elemente
+            if isinstance(e, Linie) and e.x1 == e.x2 and oben <= e.y1 < unten
+        ]
+
+    def test_leere_leiste_bleibt_leer(self):
+        blatt = self._blatt()
+        kaesten = sorted(
+            (e for e in blatt.elemente if isinstance(e, Rechteck) and not e.fuellung),
+            key=lambda e: e.y,
+        )
+        belegt, leer = kaesten[0], kaesten[1]
+        self.assertTrue(self._senkrechte(blatt, belegt.y, belegt.y + belegt.hoehe))
+        self.assertEqual(self._senkrechte(blatt, leer.y, leer.y + leer.hoehe), [])
+
+    def test_keine_da_nummern_mehr(self):
+        for text in _texte(self._blatt()):
+            with self.subTest(text=text):
+                self.assertNotIn(text, [str(i) for i in range(1, 11)])
+
+    def test_wer_die_nummern_will_bekommt_sie(self):
+        """Die Vorlage entscheidet - abgeschafft ist nichts."""
+        blatt = self._blatt(STANDARD.mit(da_nummern=True))
+        self.assertIn("10", _texte(blatt))
