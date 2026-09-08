@@ -87,6 +87,13 @@ def palette_bauen(farben: Farben) -> QPalette:
 
 
 def stilblatt(farben: Farben) -> str:
+    """Das Stilblatt zum Farbsatz.
+
+    Ankreuzfelder bekommen eine eigene Regel: im dunklen Satz zeichnet
+    Fusion sie sonst dunkel auf dunkel, und man sieht nicht einmal, dass
+    dort etwas anzukreuzen ist. Angekreuzt ist das Feld gefuellt, offen
+    traegt es die Farbe eines Eingabefeldes.
+    """
     return f"""
 QToolBar {{
     background: {farben.flaeche_2};
@@ -140,6 +147,19 @@ QLineEdit, QSpinBox, QComboBox, QPlainTextEdit {{
     selection-color: {farben.flaeche};
 }}
 QLineEdit:focus, QSpinBox:focus, QComboBox:focus {{ border-color: {farben.akzent}; }}
+QCheckBox {{ spacing: 7px; }}
+QCheckBox::indicator {{
+    width: 14px;
+    height: 14px;
+    border: 1px solid {farben.linie_kraeftig};
+    border-radius: 3px;
+    background: {farben.flaeche};
+}}
+QCheckBox::indicator:hover {{ border-color: {farben.akzent}; }}
+QCheckBox::indicator:checked {{
+    background: {farben.akzent};
+    border-color: {farben.akzent};
+}}
 QPushButton {{
     background: {farben.flaeche_2};
     border: 1px solid {farben.linie_kraeftig};

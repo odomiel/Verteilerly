@@ -310,6 +310,23 @@ class TestLeistenModell(unittest.TestCase):
 
 
 @unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
+class TestThema(unittest.TestCase):
+    """Der dunkle Satz ist eine vollwertige Alternative."""
+
+    def test_ankreuzfelder_haben_eine_eigene_regel(self):
+        """Ohne sie zeichnet Fusion sie dunkel auf dunkel."""
+        from verteilerly.gui.thema import DUNKEL, HELL, stilblatt
+
+        for farben in (HELL, DUNKEL):
+            with self.subTest(satz=farben.name):
+                blatt = stilblatt(farben)
+                self.assertIn("QCheckBox::indicator", blatt)
+                # Angekreuzt ist gefüllt, offen trägt es die Feldfarbe.
+                self.assertIn(f"background: {farben.akzent}", blatt)
+                self.assertIn(f"background: {farben.flaeche}", blatt)
+
+
+@unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
 class TestUebersicht(unittest.TestCase):
     """Im Bearbeitungsmodus bleibt jede Leiste unterteilt."""
 
@@ -724,10 +741,16 @@ class TestBriefkopfDialog(unittest.TestCase):
             self._zeile("Vertrag").checkState(), Qt.CheckState.Unchecked
         )
 
+    def test_abgewaehltes_feld_bleibt_beschreibbar(self):
+        """Auch im Briefkopfdialog sperrt der Haken das Feld nicht."""
+        self.dialog.haken["kundennummer"].setChecked(False)
+        self.assertTrue(self.dialog.felder["kundennummer"].isEnabled())
+
     def test_abgewaehltes_feld_zeigt_seinen_inhalt_weiter(self):
-        """Nicht löschen heißt: der Wert steht noch da, nur grau."""
+        """Nicht löschen heißt: der Wert steht noch da - und bleibt änderbar."""
+        self.assertFalse(self.dialog.haken["kundennummer"].isChecked())
         self.assertEqual(self.dialog.felder["kundennummer"].text(), "K-1")
-        self.assertFalse(self.dialog.felder["kundennummer"].isEnabled())
+        self.assertTrue(self.dialog.felder["kundennummer"].isEnabled())
 
     def test_abwaehlen_loescht_nichts(self):
         self.dialog.haken["firma"].setChecked(False)
@@ -882,6 +905,18 @@ class TestBriefkopfImNeuenVerteiler(unittest.TestCase):
         )
         angehakt = {n for n, h in dialog.briefkopf.haken.items() if h.isChecked()}
         self.assertEqual(angehakt, {"firma", "kuerzel"})
+
+    def test_abgewaehlte_felder_bleiben_beschreibbar(self):
+        """Sonst ließe sich gerade dort nichts eintragen, wo etwas fehlt."""
+        dialog = self._dialog(ausgeblendet=set(BRIEFKOPF_FELDER))
+        gesperrt = [
+            name for name, feld in dialog.briefkopf.felder.items()
+            if not feld.isEnabled()
+        ]
+        self.assertEqual(gesperrt, [])
+
+        dialog.briefkopf.felder["anlagennummer"].setText("123456")
+        self.assertEqual(dialog.projekt().briefkopf["anlagennummer"], "123456")
 
     def test_wer_tippt_hakt_das_feld_an(self):
         """Sonst tippt man einen Kunden ein und findet ihn auf keinem Blatt."""

@@ -659,9 +659,9 @@ class BriefkopfFelder(QGroupBox):
                 "Ohne Haken bleibt der Inhalt erhalten, erscheint aber auf "
                 "keinem Blatt."
             )
-            # Der Haken ist zugleich die Beschriftung der Zeile.
-            haken.toggled.connect(feld.setEnabled)
-            feld.setEnabled(haken.isChecked())
+            # Der Haken ist zugleich die Beschriftung der Zeile. Er sperrt
+            # das Feld nicht: seit leere Felder abgewaehlt sind, liesse
+            # sich sonst gerade dort nichts eintragen, wo etwas fehlt.
             if inhalt_hakt_an:
                 self._mithaken(feld, haken)
             self.felder[name] = feld
