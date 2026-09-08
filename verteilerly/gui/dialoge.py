@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QFontMetrics
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -15,6 +16,7 @@ from PySide6.QtWidgets import (
     QInputDialog,
     QLabel,
     QLineEdit,
+    QPlainTextEdit,
     QMessageBox,
     QPushButton,
     QRadioButton,
@@ -39,6 +41,10 @@ from .sprache import frage
 
 # Die gebraeuchlichen Leistengroessen; alles andere wird eingetippt.
 DA_VORGABEN = (8, 10, 20)
+
+# Felder, in denen eine Anschrift steht - die gehoert untereinander, so
+# wie in den Mustertabellen.
+ADRESSFELDER = ("firma", "kunde")
 
 
 def _knopfleiste(dialog: QDialog) -> QDialogButtonBox:
@@ -499,11 +505,11 @@ class BriefkopfDialog(QDialog):
         self.resize(620, 700)
         self.projekt = projekt
 
-        self.felder: dict[str, QLineEdit] = {}
+        self.felder: dict[str, QWidget] = {}
         self.haken: dict[str, QCheckBox] = {}
         form = QFormLayout()
         for name in BRIEFKOPF_FELDER:
-            feld = QLineEdit(projekt.briefkopf.get(name, ""))
+            feld = self._feld_bauen(name, projekt.briefkopf.get(name, ""))
             haken = QCheckBox(BRIEFKOPF_BESCHRIFTUNG.get(name, name) + ":")
             haken.setChecked(projekt.sichtbar(name))
             haken.setToolTip(
@@ -565,6 +571,28 @@ class BriefkopfDialog(QDialog):
         aufbau.addWidget(eigene)
         aufbau.addWidget(_knopfleiste(self))
 
+    def _feld_bauen(self, name: str, wert: str) -> QWidget:
+        """Adressfelder brauchen mehrere Zeilen, alles andere eine."""
+        if name not in ADRESSFELDER:
+            return QLineEdit(wert)
+        feld = QPlainTextEdit(wert)
+        feld.setToolTip(
+            "Mehrzeilig: Firma, Straße, Ort — so steht die Anschrift auch "
+            "auf dem Blatt untereinander."
+        )
+        feld.setPlaceholderText("Firma Beliebig\nBeliebige Straße 7\n77777 Ort")
+        # Drei Zeilen sind die uebliche Anschrift; mehr geht auch.
+        feld.setFixedHeight(4 + 3 * QFontMetrics(feld.font()).lineSpacing())
+        return feld
+
+    def _feldwert(self, feld: QWidget) -> str:
+        if isinstance(feld, QPlainTextEdit):
+            # Leerzeilen am Rand weg, die Zeilen selbst bleiben.
+            return "\n".join(
+                zeile.strip() for zeile in feld.toPlainText().strip().splitlines()
+            )
+        return feld.text().strip()
+
     def _alle_haken(self, an: bool) -> None:
         for haken in self.haken.values():
             haken.setChecked(an)
@@ -590,9 +618,9 @@ class BriefkopfDialog(QDialog):
         ausgeblendet: set[str] = set()
 
         self.projekt.briefkopf = {
-            name: feld.text().strip()
+            name: self._feldwert(feld)
             for name, feld in self.felder.items()
-            if feld.text().strip()
+            if self._feldwert(feld)
         }
         for name, haken in self.haken.items():
             if not haken.isChecked():

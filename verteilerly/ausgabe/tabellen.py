@@ -166,6 +166,11 @@ def _blatt_fuellen(blatt, ueberschriften, zeilen, Font, Alignment, spaltenname) 
         zelle.alignment = Alignment(vertical="center")
     for zeile in zeilen:
         blatt.append(zeile)
+        # Eine Anschrift steht mehrzeilig in der Zelle - ohne Umbruch
+        # zeigte Excel nur die erste Zeile.
+        for zelle in blatt[blatt.max_row]:
+            if isinstance(zelle.value, str) and "\n" in zelle.value:
+                zelle.alignment = Alignment(vertical="top", wrap_text=True)
 
     for nummer, name in enumerate(ueberschriften, 1):
         laengste = max(

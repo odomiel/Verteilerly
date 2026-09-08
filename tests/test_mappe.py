@@ -134,6 +134,32 @@ class TestBlattbild(unittest.TestCase):
         self.assertIn("B2:F2", [str(r) for r in blatt.merged_cells.ranges])
         self.assertEqual(blatt["B2"].value, "Linie 1 — Melderkreis")
 
+    def test_anschrift_steht_zeilenweise_im_schriftfeld(self):
+        """Firma und Kunde wie in den Mustertabellen."""
+        self.projekt.briefkopf["firma"] = (
+            "Firma Beliebig\nBeliebige Straße 7\n77777 Beliebiger Ort"
+        )
+        blatt = self._mappe()["Leiste 1"]
+        gefunden = [
+            (blatt.cell(row=z, column=1).value, blatt.cell(row=z, column=2).value)
+            for z in range(24, 42)
+        ]
+        self.assertIn(("Firma", "Firma Beliebig"), gefunden)
+        self.assertIn((None, "Beliebige Straße 7"), gefunden)
+        self.assertIn((None, "77777 Beliebiger Ort"), gefunden)
+
+    def test_anschrift_bricht_in_den_projektdaten_um(self):
+        self.projekt.briefkopf["firma"] = "Firma Beliebig\nBeliebige Straße 7"
+        blatt = self._mappe()["Projektdaten"]
+        zellen = [
+            blatt.cell(row=z, column=2)
+            for z in range(1, blatt.max_row + 1)
+            if isinstance(blatt.cell(row=z, column=2).value, str)
+            and "\n" in blatt.cell(row=z, column=2).value
+        ]
+        self.assertTrue(zellen)
+        self.assertTrue(zellen[0].alignment.wrap_text)
+
     def test_daten_stehen_weiter_dahinter(self):
         """Das Blattbild tritt nicht an die Stelle der Daten."""
         mappe = self._mappe()

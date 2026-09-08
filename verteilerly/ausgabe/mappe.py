@@ -21,6 +21,7 @@ from ..layout import (
     LINIE_FEIN,
     buchtnamen,
     schriftfeldwerte,
+    schriftfeldzeilen,
     zeilenwerte,
 )
 from ..modell import Projekt
@@ -128,7 +129,9 @@ def _deckblatt(mappe, projekt: Projekt, vorlage: Blattvorlage, zeug) -> object:
     blatt["B3"] = v.nummer
 
     zeile = 5
-    for name, wert in schriftfeldwerte(projekt, None, vorlage, "Deckblatt"):
+    for name, wert in schriftfeldzeilen(
+        schriftfeldwerte(projekt, None, vorlage, "Deckblatt")
+    ):
         blatt.cell(row=zeile, column=1, value=name).font = zeug.schrift(
             vorlage.schrift_klein, False, "#555555"
         )
@@ -322,8 +325,8 @@ def _schriftfeld(
     zeile: int, spaltenzahl: int,
 ) -> None:
     """Was auf dem Blatt unten steht, steht hier unter der Tabelle."""
-    eintraege = schriftfeldwerte(
-        projekt, leiste_nr, vorlage, f"Leiste {leiste_nr}"
+    eintraege = schriftfeldzeilen(
+        schriftfeldwerte(projekt, leiste_nr, vorlage, f"Leiste {leiste_nr}")
     )
     if not eintraege:
         return

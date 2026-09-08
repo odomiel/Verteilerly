@@ -516,6 +516,23 @@ class TestBriefkopfDialog(unittest.TestCase):
                 return self.dialog.eigene.item(i, 0)
         raise AssertionError(f"Zeile {name} fehlt")
 
+    def test_adressfelder_sind_mehrzeilig(self):
+        """Firma und Kunde tragen eine Anschrift, keine Zeile."""
+        from PySide6.QtWidgets import QLineEdit, QPlainTextEdit
+
+        from verteilerly.gui.dialoge import ADRESSFELDER
+
+        for name in ADRESSFELDER:
+            with self.subTest(feld=name):
+                self.assertIsInstance(self.dialog.felder[name], QPlainTextEdit)
+        self.assertIsInstance(self.dialog.felder["kuerzel"], QLineEdit)
+
+    def test_anschrift_ueberlebt_das_uebernehmen(self):
+        anschrift = "Firma Beliebig\nBeliebige Straße 7\n77777 Ort"
+        self.dialog.felder["firma"].setPlainText(anschrift + "\n")
+        self.dialog.uebernehmen()
+        self.assertEqual(self.projekt.briefkopf["firma"], anschrift)
+
     def test_haken_zeigen_den_stand(self):
         self.assertTrue(self.dialog.haken["firma"].isChecked())
         self.assertFalse(self.dialog.haken["kundennummer"].isChecked())

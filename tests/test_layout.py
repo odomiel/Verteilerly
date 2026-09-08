@@ -260,3 +260,48 @@ class TestKabelspalte(unittest.TestCase):
         quer = [e for e in blatt.elemente if isinstance(e, Text) and e.drehung]
         self.assertEqual(len(quer), 1)
         self.assertIn("gekürzt: 3 von 4 DA", quer[0].text)
+
+
+class TestAnschriftImSchriftfeld(unittest.TestCase):
+    """Eine Anschrift steht untereinander, wie in den Vorlagen."""
+
+    def _projekt(self) -> Projekt:
+        return Projekt(
+            verteiler=Verteiler.aus_geometrie(1, 2, 10, name="Verteiler Name"),
+            briefkopf={
+                "firma": "Firma Beliebig\nBeliebige Straße 7\n77777 Beliebiger Ort",
+                "kunde": "Kunde Beliebig",
+            },
+        )
+
+    def test_zeilen_werden_aufgeteilt(self):
+        from verteilerly.layout import schriftfeldzeilen
+
+        zeilen = schriftfeldzeilen(
+            [("Firma", "Firma Beliebig\nBeliebige Straße 7"), ("Kunde", "")]
+        )
+        self.assertEqual(
+            zeilen,
+            [("Firma", "Firma Beliebig"), ("", "Beliebige Straße 7"), ("Kunde", "")],
+        )
+
+    def test_anschrift_steht_zeilenweise_auf_dem_blatt(self):
+        blatt = leistenblatt(self._projekt(), 1)
+        texte = _texte(blatt)
+        for zeile in ("Firma Beliebig", "Beliebige Straße 7", "77777 Beliebiger Ort"):
+            with self.subTest(zeile=zeile):
+                self.assertIn(zeile, texte)
+        # Die Beschriftung steht nur an der ersten Zeile.
+        self.assertEqual(texte.count("Firma"), 1)
+
+    def test_einzeiliges_bleibt_eine_zeile(self):
+        blatt = leistenblatt(self._projekt(), 1)
+        self.assertIn("Kunde Beliebig", _texte(blatt))
+
+    def test_anteile_der_bloecke_aus_der_vorlage(self):
+        from verteilerly.layout import _schriftfeldanteile
+
+        self.assertEqual(_schriftfeldanteile(3), [0.38, 0.26, 0.36])
+        self.assertEqual(_schriftfeldanteile(3, (1.0, 1.0, 2.0)), [0.25, 0.25, 0.5])
+        # Passt die Angabe nicht zur Zahl der Blöcke, bleibt es beim Augenmaß.
+        self.assertEqual(_schriftfeldanteile(3, (1.0, 1.0)), [0.38, 0.26, 0.36])

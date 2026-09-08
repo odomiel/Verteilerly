@@ -193,6 +193,20 @@ def _eintraege(
     return [(BESCHRIFTUNG.get(marke, marke), wert)]
 
 
+def schriftfeldzeilen(eintraege: list[tuple[str, str]]) -> list[tuple[str, str]]:
+    """Verteilt mehrzeilige Werte auf eigene Zeilen.
+
+    Eine Anschrift steht in einer Zeile je Zeile - Firma, Strasse, Ort -
+    und nicht hintereinanderweg. Die Beschriftung steht nur an der ersten.
+    """
+    zeilen: list[tuple[str, str]] = []
+    for name, wert in eintraege:
+        teile = str(wert).split("\n") or [""]
+        for i, teil in enumerate(teile):
+            zeilen.append((name if i == 0 else "", teil.strip()))
+    return zeilen
+
+
 def schriftfeldwerte(
     projekt: Projekt,
     leiste: int | None = None,
@@ -232,14 +246,16 @@ def schriftfeld(
     blatt.rechteck(rand, oben, breite, hoehe, fuellung=None, staerke=0.4)
 
     spalten = [
-        [eintrag
-         for marke in marken
-         for eintrag in _eintraege(marke, projekt, blatt, leiste)]
+        schriftfeldzeilen(
+            [eintrag
+             for marke in marken
+             for eintrag in _eintraege(marke, projekt, blatt, leiste)]
+        )
         for marken in vorlage.schriftfeld
     ]
 
     # Namen brauchen mehr Platz als Nummern - daher ungleiche Spalten.
-    anteile = _schriftfeldanteile(len(spalten))
+    anteile = _schriftfeldanteile(len(spalten), vorlage.schriftfeld_anteile)
     x = rand
     for i, spalte in enumerate(spalten):
         spaltenbreite = breite * anteile[i]
@@ -260,7 +276,13 @@ def schriftfeld(
         x += spaltenbreite
 
 
-def _schriftfeldanteile(anzahl: int) -> list[float]:
+def _schriftfeldanteile(
+    anzahl: int, vorgabe: tuple[float, ...] = ()
+) -> list[float]:
+    """Wie sich die Bloecke des Schriftfeldes die Breite teilen."""
+    if len(vorgabe) == anzahl and sum(vorgabe) > 0:
+        summe = sum(vorgabe)
+        return [teil / summe for teil in vorgabe]
     if anzahl == 3:
         return [0.38, 0.26, 0.36]
     return [1.0 / anzahl] * anzahl

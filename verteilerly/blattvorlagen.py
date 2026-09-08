@@ -110,6 +110,9 @@ class Blattvorlage:
 
     spalten: tuple[Spalte, ...] = STANDARDSPALTEN
     schriftfeld: tuple[tuple[str, ...], ...] = STANDARDSCHRIFTFELD
+    # Wie breit die Bloecke des Schriftfeldes sind. Leer heisst: nach
+    # Augenmass verteilt, Namen brauchen mehr Platz als Nummern.
+    schriftfeld_anteile: tuple[float, ...] = ()
 
     buchten_je_blatt: int = 2
     da_nummern: bool = True
@@ -241,6 +244,9 @@ def blattvorlage_aus_yaml(inhalt: dict, herkunft: str = "") -> Blattvorlage:
             _schriftfeld_aus_yaml(inhalt["schriftfeld"], wo)
             if inhalt.get("schriftfeld")
             else STANDARD.schriftfeld
+        ),
+        schriftfeld_anteile=tuple(
+            float(teil) for teil in inhalt.get("schriftfeld_anteile") or ()
         ),
         buchten_je_blatt=int(
             _zahl(inhalt, "buchten_je_blatt", STANDARD.buchten_je_blatt, wo)

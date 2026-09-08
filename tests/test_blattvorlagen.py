@@ -94,11 +94,32 @@ class TestMitgelieferte(unittest.TestCase):
     def setUp(self):
         self.vorlagen = Blattvorlagen.laden(blattvorlagenordner())
 
-    def test_drei_vorlagen_liegen_bei(self):
+    def test_die_mitgelieferten_vorlagen(self):
+        beiliegend = Blattvorlagen.laden(mitgeliefert() / "blattvorlagen")
         self.assertEqual(
-            sorted(v.id for v in self.vorlagen.alle),
-            ["ausfuehrlich", "knapp", "standard"],
+            sorted(v.id for v in beiliegend.alle),
+            ["ausfuehrlich", "beispiel", "knapp", "standard"],
         )
+
+    def test_beispielvorlage_folgt_den_ods_dateien(self):
+        """Fünf Spalten ohne Kabel, Anschriften im Schriftfeld."""
+        vorlage = Blattvorlagen.laden(mitgeliefert() / "blattvorlagen").holen("beispiel")
+        felder = [spalte.feld for spalte in vorlage.spalten]
+        self.assertEqual(
+            felder, ["stift", "ader", "farbe", "bezeichnung", "rangierung", "bemerkung"]
+        )
+        self.assertIsNone(vorlage.spalte("kabel"))
+        self.assertEqual(
+            vorlage.schriftfeld,
+            (
+                ("verteiler", "verteilernummer", "leiste", "blatt"),
+                ("erstellt", "stand", "geprueft", "gezeichnet"),
+                ("firma", "kunde", "eigene"),
+            ),
+        )
+        self.assertEqual(len(vorlage.schriftfeld_anteile), 3)
+        # Für zwei Anschriften braucht das Schriftfeld mehr Höhe.
+        self.assertGreater(vorlage.schriftfeld_hoehe, STANDARD.schriftfeld_hoehe)
 
     def test_standard_steht_vorn(self):
         self.assertEqual(self.vorlagen.standard.id, "standard")
