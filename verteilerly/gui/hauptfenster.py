@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from .. import einstellungen as einstellungsspeicher
-from .. import pfade, projektdatei, schreibweisen
+from .. import bestand, pfade, projektdatei, schreibweisen
 from ..ausgabe import AusgabeFehler, csv_schreiben, pdf_schreiben, xlsx_schreiben
 from ..blattvorlagen import Blattvorlagen
 from ..farbcodes import Kabeltypen, farben_eintragen
@@ -850,12 +850,38 @@ class Hauptfenster(QMainWindow):
             )
 
     def ueber(self) -> None:
+        """Fassung, Bausteine und Lizenzen - alles auf einen Blick."""
+
+        def tabelle(zeilen) -> str:
+            # Ohne <br> zwischen den Zeilen: das Trennzeichen der Tabelle
+            # ist die Zeile selbst, sonst klafft dazwischen eine Lücke.
+            return (
+                "<table cellpadding='3' cellspacing='0'>"
+                + "".join(zeilen)
+                + "</table>"
+            )
+
+        bausteine = tabelle(
+            f"<tr><td>{teil.name}</td>"
+            f"<td><b>{teil.fassung}</b></td>"
+            f"<td>{teil.lizenz}</td>"
+            f"<td>{teil.aufgabe}</td></tr>"
+            for teil in bestand.abhaengigkeiten()
+        )
+        umgebung = tabelle(
+            f"<tr><td>{name}</td><td>{wert}</td></tr>"
+            for name, wert in bestand.umgebung()
+        )
+
         QMessageBox.about(
             self,
             "Über Verteilerly",
-            f"<b>Verteilerly {VERSION}</b><br><br>"
-            "Dokumentation für LSA+-Verteiler in der Fernmeldetechnik.<br>"
-            f"Daten: {pfade.datenordner()}",
+            f"<b>Verteilerly {VERSION}</b><br>"
+            "Dokumentation für LSA+-Verteiler in der Fernmeldetechnik."
+            f"<p><b>Bausteine</b></p>{bausteine}"
+            "<p><i>Alle unter LGPL, BSD, MIT oder PSF — kein proprietärer "
+            "Bestandteil.</i></p>"
+            f"<p><b>Umgebung</b></p>{umgebung}",
         )
 
     def closeEvent(self, ereignis) -> None:

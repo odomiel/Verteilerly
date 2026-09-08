@@ -9,6 +9,7 @@ kopierten Tabellenblättern.
 ```
 verteilerly/        Programmpaket
   modell.py         Verteiler, Bucht, Leiste, Stift, Ader, Kabel, Rangierung
+  bestand.py        Welche Bausteine mit welcher Fassung drinstecken
   farbcodes.py      Kabeltypen und Adernfarben
   schreibweisen.py  Wie eine Rangierungsadresse geschrieben wird
   vorlagen.py       Verteilervorlagen
@@ -279,6 +280,13 @@ Größe. Erst unterhalb von 5 pt hört das auf, denn kleiner liest es niemand
 mehr; dann wird gekürzt und ein „…“ zeigt an, dass noch etwas folgt.
 Vorschau und PDF rechnen dabei gleich, jedes mit den Maßen seiner eigenen
 Schrift-Engine — was in der Vorschau passt, passt auch im Ausdruck.
+
+*Hilfe ▸ Über Verteilerly* führt jeden Baustein mit Fassung, Lizenz und
+Aufgabe auf — Python, PySide6, Qt, ReportLab, openpyxl, PyYAML —, dazu
+System, Arbeitsordner und Einstellungsdatei. Die Fassungen liest
+`bestand.py` aus dem laufenden Programm, nicht aus einer gepflegten
+Liste; ein fehlender Baustein steht als *nicht vorhanden* darin, statt
+den Bericht abbrechen zu lassen.
 
 Zurückgestellt: Widerstandssymbol,
 Pluginschnittstelle, Blatt „Änderungen“, Strichregel.

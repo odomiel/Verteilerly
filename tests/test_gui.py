@@ -553,6 +553,26 @@ class TestMenuezustaende(unittest.TestCase):
         self.assertEqual(f.projekt.verteiler.name, "Verteiler Keller")
         self.assertIn("Verteiler Keller", f.windowTitle())
 
+    def test_ueber_nennt_die_bausteine_mit_fassung(self):
+        """Was drinsteckt, ist im Programm nachzusehen."""
+        from PySide6.QtWidgets import QMessageBox
+
+        from verteilerly import bestand
+
+        gezeigt = {}
+
+        def fangen(eltern, titel, text):
+            gezeigt["text"] = text
+
+        with mock.patch.object(QMessageBox, "about", fangen):
+            self.fenster.ueber()
+
+        for teil in bestand.abhaengigkeiten():
+            with self.subTest(baustein=teil.name):
+                self.assertIn(teil.name, gezeigt["text"])
+                self.assertIn(teil.fassung, gezeigt["text"])
+                self.assertIn(teil.lizenz, gezeigt["text"])
+
     def test_jeder_eintrag_sagt_wofuer_er_da_ist(self):
         """Der Statushinweis erscheint auch bei ausgegrauten Einträgen."""
         for name in ("aktion_speichern", "aktion_pdf", "aktion_kabel",
