@@ -257,6 +257,40 @@ class TestLeistenModell(unittest.TestCase):
         self.assertEqual(self._text(3, SPALTE_KABEL), "")          # b-Zeile
         self.assertEqual(self._text(4, SPALTE_KABEL), "")          # DA 3, im Block
 
+    def test_pfeile_schalten_durch_die_leisten(self):
+        """Leiste für Leiste, ohne das Aufklappmenü."""
+        ansicht = LeistenAnsicht()
+        ansicht.verteiler_setzen(self.v)
+        gemeldet = []
+        ansicht.leiste_gewechselt.connect(gemeldet.append)
+
+        self.assertEqual(ansicht.auswahl.currentData(), 1)
+        self.assertFalse(ansicht.zurueck.isEnabled())    # am Anfang
+        self.assertTrue(ansicht.vor.isEnabled())
+
+        ansicht.vor.click()
+        self.assertEqual(ansicht.auswahl.currentData(), 2)
+        self.assertEqual(gemeldet[-1], 2)
+        self.assertTrue(ansicht.zurueck.isEnabled())
+
+        ansicht.zurueck.click()
+        self.assertEqual(ansicht.auswahl.currentData(), 1)
+
+    def test_pfeile_enden_an_der_letzten_leiste(self):
+        ansicht = LeistenAnsicht()
+        ansicht.verteiler_setzen(self.v)
+        for _ in range(10):
+            ansicht.vor.click()
+        self.assertEqual(ansicht.auswahl.currentData(), 4)   # vier Leisten
+        self.assertFalse(ansicht.vor.isEnabled())
+        self.assertTrue(ansicht.zurueck.isEnabled())
+
+    def test_ohne_verteiler_sind_die_pfeile_aus(self):
+        ansicht = LeistenAnsicht()
+        ansicht.verteiler_setzen(None)
+        self.assertFalse(ansicht.zurueck.isEnabled())
+        self.assertFalse(ansicht.vor.isEnabled())
+
     def test_leere_leiste_hat_keine_zeilen(self):
         self.m.setzen(None, None)
         self.assertEqual(self.m.rowCount(), 0)

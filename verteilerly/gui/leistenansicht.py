@@ -8,13 +8,14 @@ Kabelspalte rechts zeigt, welches Kabel die Doppelader belegt.
 from __future__ import annotations
 
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, QRect, Qt, Signal
-from PySide6.QtGui import QColor, QFont
+from PySide6.QtGui import QColor, QFont, QKeySequence
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QComboBox,
     QHBoxLayout,
     QHeaderView,
     QLabel,
+    QPushButton,
     QTableView,
     QVBoxLayout,
     QWidget,
@@ -388,12 +389,32 @@ class LeistenAnsicht(QWidget):
 
         self.auswahl = QComboBox()
         self.auswahl.currentIndexChanged.connect(self._leiste_gewechselt)
+
+        # Durchblättern ohne den Umweg über das Aufklappmenü - wie über
+        # der Vorschau. Beim Abarbeiten einer Bucht geht es Leiste für
+        # Leiste, da will niemand jedes Mal auswählen.
+        self.zurueck = QPushButton("‹")
+        self.zurueck.setShortcut(QKeySequence("Alt+Left"))
+        self.zurueck.setToolTip("Eine Leiste zurück (Alt+←)")
+        self.vor = QPushButton("›")
+        self.vor.setShortcut(QKeySequence("Alt+Right"))
+        self.vor.setToolTip("Eine Leiste weiter (Alt+→)")
+        for knopf in (self.zurueck, self.vor):
+            knopf.setFixedWidth(30)
+            # Das Stilblatt polstert Knöpfe breit; hier bliebe sonst
+            # nichts vom Pfeil übrig.
+            knopf.setStyleSheet("padding: 4px 0;")
+        self.zurueck.clicked.connect(lambda: self._schieben(-1))
+        self.vor.clicked.connect(lambda: self._schieben(1))
+
         self.hinweis = QLabel("")
 
         kopf = QHBoxLayout()
         kopf.setContentsMargins(0, 0, 0, 6)
         kopf.addWidget(QLabel("Leiste:"))
         kopf.addWidget(self.auswahl)
+        kopf.addWidget(self.zurueck)
+        kopf.addWidget(self.vor)
         kopf.addSpacing(12)
         kopf.addWidget(self.hinweis, 1)
 
@@ -462,6 +483,12 @@ class LeistenAnsicht(QWidget):
         self.auswahl.setEnabled(bool(self.auswahl.count()))
         self._leiste_gewechselt()
 
+    def _schieben(self, richtung: int) -> None:
+        """Eine Leiste weiter oder zurück - am Ende passiert nichts."""
+        neu = self.auswahl.currentIndex() + richtung
+        if 0 <= neu < self.auswahl.count():
+            self.auswahl.setCurrentIndex(neu)
+
     def leiste_zeigen(self, nummer: int) -> None:
         stelle = self.auswahl.findData(nummer)
         if stelle >= 0:
@@ -475,8 +502,15 @@ class LeistenAnsicht(QWidget):
         nummer = self.auswahl.currentData()
         self.modell.setzen(self.verteiler, nummer)
         self._hinweis_setzen()
+        self._pfeile_auffrischen()
         if nummer is not None:
             self.leiste_gewechselt.emit(nummer)
+
+    def _pfeile_auffrischen(self) -> None:
+        """Am Anfang und am Ende ist der jeweilige Pfeil aus."""
+        stelle = self.auswahl.currentIndex()
+        self.zurueck.setEnabled(stelle > 0)
+        self.vor.setEnabled(0 <= stelle < self.auswahl.count() - 1)
 
     def _hinweis_setzen(self) -> None:
         nummer = self.auswahl.currentData()

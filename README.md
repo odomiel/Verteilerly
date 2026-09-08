@@ -95,7 +95,9 @@ speichern*. Sie landet als YAML-Datei im Arbeitsordner (siehe
 *Verpacken ▸ Daten*) und steht sofort im Menü.
 
 Der Editor zeigt links die Verteilerübersicht und rechts die Belegung der
-gewählten Leiste. Ein Doppelklick auf eine freie Doppelader legt ein Kabel
+gewählten Leiste. Neben dem Aufklappmenü stehen zwei Pfeile, die Leiste
+für Leiste weiterschalten (Alt+← und Alt+→); am ersten und letzten
+Eintrag ist der jeweilige Pfeil aus. Ein Doppelklick auf eine freie Doppelader legt ein Kabel
 auf, einer auf ein aufgelegtes Kabel **bearbeitet** es: Beschriftung,
 Kabeltyp und Kabelgröße lassen sich ändern, und der Dialog trägt auch den
 Knopf zum Entfernen. Leiste, Startpunkt und Zahl der aufgelegten
