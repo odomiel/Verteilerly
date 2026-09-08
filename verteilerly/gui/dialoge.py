@@ -46,6 +46,8 @@ DA_VORGABEN = (8, 10, 20)
 # Felder, in denen eine Anschrift steht - die gehoert untereinander, so
 # wie in den Mustertabellen.
 ADRESSFELDER = ("firma", "kunde")
+# So viele Zeilen zeigt ein Adressfeld ohne Rollen: Name, Strasse, Ort.
+ADRESSZEILEN = 3
 
 
 def _knopfleiste(dialog: QDialog) -> QDialogButtonBox:
@@ -592,8 +594,13 @@ class BriefkopfFelder(QGroupBox):
             "auf dem Blatt untereinander."
         )
         feld.setPlaceholderText("Firma Beliebig\nBeliebige Straße 7\n77777 Ort")
-        # Drei Zeilen sind die uebliche Anschrift; mehr geht auch.
-        feld.setFixedHeight(4 + 3 * QFontMetrics(feld.font()).lineSpacing())
+        # Drei Zeilen sind die uebliche Anschrift - und sie sollen ganz zu
+        # sehen sein, ohne Rollbalken. Rahmen und Innenabstand zaehlen mit,
+        # sonst wird die dritte Zeile angeschnitten.
+        rahmen = 2 * feld.frameWidth()
+        polster = 2 * int(feld.document().documentMargin())
+        zeile = QFontMetrics(feld.font()).lineSpacing()
+        feld.setFixedHeight(rahmen + polster + ADRESSZEILEN * zeile + 2)
         return feld
 
     def alle_haken(self, an: bool) -> None:

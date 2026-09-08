@@ -602,6 +602,20 @@ class TestBriefkopfDialog(unittest.TestCase):
                 self.assertIsInstance(self.dialog.felder[name], QPlainTextEdit)
         self.assertIsInstance(self.dialog.felder["kuerzel"], QLineEdit)
 
+    def test_adressfeld_zeigt_drei_zeilen_ohne_rollen(self):
+        """Die übliche Anschrift muss ganz zu sehen sein."""
+        from PySide6.QtGui import QFontMetrics
+
+        from verteilerly.gui.dialoge import ADRESSZEILEN
+
+        feld = self.dialog.felder["firma"]
+        noetig = (
+            ADRESSZEILEN * QFontMetrics(feld.font()).lineSpacing()
+            + 2 * feld.frameWidth()
+            + 2 * int(feld.document().documentMargin())
+        )
+        self.assertGreaterEqual(feld.height(), noetig)
+
     def test_anschrift_ueberlebt_das_uebernehmen(self):
         anschrift = "Firma Beliebig\nBeliebige Straße 7\n77777 Ort"
         self.dialog.felder["firma"].setPlainText(anschrift + "\n")
