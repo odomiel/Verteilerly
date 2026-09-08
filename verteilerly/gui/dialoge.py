@@ -222,16 +222,28 @@ class NeuerVerteilerDialog(QDialog):
         rollbereich.setFrameShape(QScrollArea.Shape.NoFrame)
         rollbereich.setMinimumHeight(220)
 
+        # Der Briefkopf steht neben dem Verteiler, nicht darunter: so
+        # bleibt der Dialog flach genug für einen Bildschirm, und beides
+        # ist auf einen Blick zu sehen.
+        links = QVBoxLayout()
+        links.setContentsMargins(0, 0, 0, 0)
+        links.addLayout(stammdaten)
+        links.addSpacing(6)
+        links.addWidget(self.aus_vorlage)
+        links.addWidget(vorlagenkasten)
+        links.addWidget(self.eigen)
+        links.addWidget(eigenkasten)
+        links.addStretch(1)
+
+        nebeneinander = QHBoxLayout()
+        nebeneinander.setContentsMargins(0, 0, 0, 0)
+        nebeneinander.addLayout(links, 4)
+        nebeneinander.addWidget(rollbereich, 5)
+
         aufbau = QVBoxLayout(self)
-        aufbau.addLayout(stammdaten)
-        aufbau.addSpacing(6)
-        aufbau.addWidget(self.aus_vorlage)
-        aufbau.addWidget(vorlagenkasten)
-        aufbau.addWidget(self.eigen)
-        aufbau.addWidget(eigenkasten)
-        aufbau.addWidget(rollbereich, 1)
+        aufbau.addLayout(nebeneinander, 1)
         aufbau.addWidget(_knopfleiste(self))
-        self.resize(560, 780)
+        self.resize(1000, 620)
 
         self._beschreibung_zeigen()
         self._summe_zeigen()
