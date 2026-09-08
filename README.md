@@ -161,11 +161,13 @@ Kabel liegt, *Speichern* nur, wenn es etwas zu speichern gibt. Jeder
 Eintrag trägt einen Statushinweis, der auch im ausgegrauten Zustand
 erscheint und sagt, wofür er da ist.
 
-In der **Verteilerbelegung** ist eine Leiste nur dort unterteilt, wo ein
-Kabel liegt — freie Leisten bleiben leere Kästen. Die DA-Nummern in den
-Zellen führt keine mitgelieferte Vorlage mehr; wer sie will, setzt
-`da_nummern: true` in seiner Blattvorlage. Im Bearbeitungsmodus bleibt
-jede Leiste unterteilt: dort wird auf die Doppelader geklickt.
+In der **Verteilerbelegung** steht kein Raster: gezeichnet wird allein das
+Kabel. Was frei bleibt — links davon, rechts davon oder beides —, ist eine
+durchgehende Fläche; wie viele Doppeladern ein Kabel belegt, zeigt die
+Breite seines Blocks. Die DA-Nummern in den Zellen führt keine
+mitgelieferte Vorlage mehr; wer sie will, setzt `da_nummern: true` in
+seiner Blattvorlage. Im Bearbeitungsmodus bleibt jede Leiste unterteilt:
+dort wird auf die einzelne Doppelader geklickt.
 
 Die Blattfolge ist Deckblatt, Verteilerbelegung, dann je Leiste ein Blatt.
 Bis zwei Buchten passt die Verteilerbelegung auf ein Blatt; ab der dritten

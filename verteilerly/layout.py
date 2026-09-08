@@ -566,20 +566,15 @@ def verteilerbelegung(
             y += zelle_h + luft_l
         x += label_b + breiteste * zelle_b + luft_r
 
-    belegte = {a.leiste for kabel in v.kabel for a in kabel.abschnitte}
+    # Kein Raster in der Leiste: gezeichnet werden nur die Kabel. Was frei
+    # ist - links, rechts oder beides -, bleibt eine durchgehende Flaeche,
+    # und der Block zeigt durch seine Breite, wie viele Doppeladern er
+    # belegt.
     for nummer, (kx, ky, da) in kaesten.items():
         blatt.text(
             kx - label_b, ky, label_b - 2, zelle_h, f"Leiste {nummer}", schrift, RECHTS
         )
         blatt.rechteck(kx, ky, da * zelle_b, zelle_h, staerke=0.4)
-        # Eine Leiste ohne Kabel bleibt leer: die Unterteilung braucht
-        # nur, wo etwas liegt - sonst ist das Blatt ein Gitter aus
-        # lauter Nichts.
-        if nummer not in belegte:
-            continue
-        for i in range(1, da):
-            zx = kx + i * zelle_b
-            blatt.linie(zx, ky, zx, ky + zelle_h, 0.15, LINIE_FEIN)
 
     for kabel in v.kabel:
         for abschnitt in kabel.abschnitte:

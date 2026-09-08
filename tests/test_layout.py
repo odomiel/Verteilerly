@@ -523,7 +523,9 @@ class TestBelegungsblatt(unittest.TestCase):
 
     def _blatt(self, vorlage=STANDARD):
         v = Verteiler.aus_geometrie(1, 4, 10)
-        v.kabel_anlegen("4 DA zu Wohnzimmer", 1, 1, 4)
+        v.kabel_anlegen("4 DA zu Wohnzimmer", 1, 1, 4)     # am Anfang
+        v.kabel_anlegen("2 DA zur Garage", 2, 5, 2)        # mittendrin
+        v.kabel_anlegen("3 DA zum Dach", 3, 8, 3)          # am Ende
         return verteilerbelegungen(Projekt(verteiler=v), vorlage)[0]
 
     def _senkrechte(self, blatt, oben: float, unten: float) -> list:
@@ -532,15 +534,32 @@ class TestBelegungsblatt(unittest.TestCase):
             if isinstance(e, Linie) and e.x1 == e.x2 and oben <= e.y1 < unten
         ]
 
-    def test_leere_leiste_bleibt_leer(self):
+    def test_freie_flaechen_bleiben_durchgehend(self):
+        """Ob am Anfang, in der Mitte oder am Ende - links und rechts
+        vom Kabel steht kein Raster."""
         blatt = self._blatt()
-        kaesten = sorted(
-            (e for e in blatt.elemente if isinstance(e, Rechteck) and not e.fuellung),
-            key=lambda e: e.y,
+        # Nur die Leistenkästen, nicht das Schriftfeld darunter.
+        schriftfeld_oben = blatt.hoehe - STANDARD.rand - STANDARD.schriftfeld_hoehe
+        kaesten = [
+            e for e in blatt.elemente
+            if isinstance(e, Rechteck) and not e.fuellung and e.y < schriftfeld_oben
+        ]
+        self.assertEqual(len(kaesten), 4)
+        for kasten in kaesten:
+            with self.subTest(leiste=round(kasten.y, 1)):
+                self.assertEqual(
+                    self._senkrechte(blatt, kasten.y, kasten.y + kasten.hoehe), []
+                )
+
+    def test_das_kabel_ist_der_einzige_block(self):
+        blatt = self._blatt()
+        bloecke = [e for e in blatt.elemente if isinstance(e, Rechteck) and e.fuellung]
+        self.assertEqual(len(bloecke), 3)
+        # Seine Breite sagt, wie viele Doppeladern er belegt.
+        schmal, breit = min(bloecke, key=lambda e: e.breite), max(
+            bloecke, key=lambda e: e.breite
         )
-        belegt, leer = kaesten[0], kaesten[1]
-        self.assertTrue(self._senkrechte(blatt, belegt.y, belegt.y + belegt.hoehe))
-        self.assertEqual(self._senkrechte(blatt, leer.y, leer.y + leer.hoehe), [])
+        self.assertAlmostEqual(breit.breite / schmal.breite, 2.0, places=3)
 
     def test_keine_da_nummern_mehr(self):
         for text in _texte(self._blatt()):
