@@ -32,6 +32,12 @@ LINIE_FEIN = "#B4B4B4"
 FUELLUNG_KOPF = "#E8E8E8"
 FUELLUNG_KABEL = "#EFEFEF"
 
+# Wie viel der linken Schriftfeldhaelfte die Beschriftungen bekommen
+# (Bauart "beispiel"). "Erstellt", "Geprueft" und "Verteiler Nr." sind
+# kurz; was darueber hinausgeht, fehlt den Werten daneben - ein Name wie
+# "Max Mustermann" braucht mehr Platz als das Wort "Stand".
+BESCHRIFTUNGSANTEIL = 0.28
+
 
 # -- Zeichenanweisungen ----------------------------------------------------
 
@@ -359,7 +365,7 @@ def _beispiel_matrix(
               if _marke_sichtbar(m, projekt)]
     zeilen = len(marken) + 1                      # die Kopfzeile zaehlt mit
     zeile_h = hoehe / max(zeilen, 4)
-    label_b = breite * 0.42
+    label_b = breite * BESCHRIFTUNGSANTEIL
     spalte_b = (breite - label_b) / 2
 
     for i, ueberschrift in enumerate(("Datum", "Name")):
@@ -405,7 +411,8 @@ def _beispiel_verteiler(
     # zwischen den beiden Strichen statt oben angeschlagen.
     zeile_h = hoehe / max(len(zeilen), 4)
     erste = y + (hoehe - zeile_h * len(zeilen)) / 2
-    label_b = breite * 0.42
+    # Dieselbe Fluchtlinie wie die Matrix darueber.
+    label_b = breite * BESCHRIFTUNGSANTEIL
     for j, (name, wert) in enumerate(zeilen):
         zeile_y = erste + j * zeile_h
         blatt.text(

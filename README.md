@@ -229,20 +229,25 @@ und *Mit Anschriften*. Deren Schriftfeld ist Feld für Feld das
 der Mustertabellen (`schriftfeld_art: beispiel`):
 
 ```
-┌──────────┬────────┬────────┬──────────────────────────────┐
-│          │ Datum  │  Name  │        Firma Beliebig        │
-│ Erstellt │01.01.70│John Doe│      Beliebige Straße 7      │
-│ Stand    │        │        │     77777 Beliebiger Ort     │
-│ Geprüft  │        │        │                              │
-├──────────┴────────┴────────┼──────────────────────────────┤
-│ Verteiler:  Verteiler Name │        Kunde Beliebig        │
-│ Verteiler Nr.       1.1    │      Beliebige Straße 7      │
-│ Leiste:              1     │     77777 Beliebiger Ort     │
+┌────────┬─────────┬─────────┬──────────────────────────────┐
+│        │  Datum  │  Name   │        Firma Beliebig        │
+│Erstellt│01.01.70 │John Doe │      Beliebige Straße 7      │
+│Stand   │         │         │     77777 Beliebiger Ort     │
+│Geprüft │         │         │                              │
+├────────┴─────────┴─────────┼──────────────────────────────┤
+│Verteiler:  Verteiler Name  │        Kunde Beliebig        │
+│Verteiler Nr.     1.1       │      Beliebige Straße 7      │
+│Leiste:            1        │     77777 Beliebiger Ort     │
 └────────────────────────────┴──────────────────────────────┘
 ```
 
 Wie sich die beiden Hälften teilen, sagt `schriftfeld_anteile` — die
 Anschriften bekommen mit `[0.42, 0.58]` die größere.
+
+Von der linken Hälfte bekommen die Beschriftungen **28 %** — *Erstellt*,
+*Geprüft* und *Verteiler Nr.* sind kurze Wörter, ein Name wie *Max
+Mustermann* braucht dagegen Platz. Beide Blöcke setzen ihre Werte auf
+dieselbe Fluchtlinie.
 
 Verteiler, Nummer und das freie Feld darunter stehen **mittig zwischen den
 beiden Strichen**: die Zeilenhöhe richtet sich nach der Matrix darüber,

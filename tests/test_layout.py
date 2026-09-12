@@ -372,6 +372,32 @@ class TestSchriftfeldBeispiel(unittest.TestCase):
         self.assertIn("John Doe", texte)
         self.assertNotIn("01.01.1970 · John Doe", texte)
 
+    def test_datum_und_name_bekommen_mehr_platz_als_ihre_beschriftung(self):
+        """„Stand" ist ein kurzes Wort, „Max Mustermann" ein langer Name."""
+        felder = {e.text: e for e in self._blatt().elemente if isinstance(e, Text)}
+        for spalte in ("Datum", "Name"):
+            with self.subTest(spalte=spalte):
+                self.assertGreater(
+                    felder[spalte].breite, felder["Erstellt"].breite
+                )
+
+    def test_der_name_wird_nicht_eingequetscht(self):
+        """Ein üblicher Name muss ohne Schrumpfen hineinpassen."""
+        from reportlab.pdfbase.pdfmetrics import stringWidth
+
+        self.projekt.briefkopf["erstellt_von"] = "Max Mustermann"
+        felder = {e.text: e for e in self._blatt().elemente if isinstance(e, Text)}
+        noetig = stringWidth(
+            "Max Mustermann", "Helvetica", self.vorlage.schrift_normal
+        ) / (72 / 25.4)
+        self.assertLess(noetig, felder["Max Mustermann"].breite)
+
+    def test_beide_bloecke_auf_einer_fluchtlinie(self):
+        """Matrix und Verteilerblock beginnen ihre Werte an derselben Stelle."""
+        felder = {e.text: e for e in self._blatt().elemente if isinstance(e, Text)}
+        self.assertEqual(felder["01.01.1970"].x, felder["Verteiler Name"].x)
+        self.assertEqual(felder["Erstellt"].x, felder["Verteiler Nr."].x)
+
     def test_verteilerblock_unter_der_matrix(self):
         blatt = self._blatt()
         stellen = {e.text: e.y for e in blatt.elemente if isinstance(e, Text)}
