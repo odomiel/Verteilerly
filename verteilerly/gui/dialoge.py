@@ -738,16 +738,20 @@ class ProjektdatenFelder(QGroupBox):
         alle_an.clicked.connect(lambda: self.alle_haken(True))
         alle_aus = QPushButton("Keine")
         alle_aus.clicked.connect(lambda: self.alle_haken(False))
-        schnell = QHBoxLayout()
-        schnell.addWidget(QLabel("Auswahl:"))
-        schnell.addWidget(alle_an)
-        schnell.addWidget(alle_aus)
-        schnell.addStretch(1)
+        self.schnell = QHBoxLayout()
+        self.schnell.addWidget(QLabel("Auswahl:"))
+        self.schnell.addWidget(alle_an)
+        self.schnell.addWidget(alle_aus)
+        self.schnell.addStretch(1)
 
         aufbau = QVBoxLayout()
         aufbau.addLayout(form)
-        aufbau.addLayout(schnell)
+        aufbau.addLayout(self.schnell)
         self.setLayout(aufbau)
+
+    def zusatz(self, feld: QWidget) -> None:
+        """Haengt etwas rechts an die Auswahlzeile - dort ist Platz frei."""
+        self.schnell.insertWidget(self.schnell.count() - 1, feld)
 
     def _mithaken(self, feld: QWidget, haken: QCheckBox) -> None:
         """Was ausgefuellt wird, hakt sich selbst an - Leeren nicht ab.
@@ -821,8 +825,8 @@ class BeschriftungsFelder(QWidget):
         super().__init__(parent)
         beschriftungen = beschriftungen or {}
 
-        # Kein Gruppenkasten: zugeklappt soll die Zeile nicht mehr Platz
-        # kosten als eine Zeile - der Dialog ist ohnehin hoch genug.
+        # Der Schalter gehoert in die Auswahlzeile der Projektdaten; er
+        # wird dort eingehaengt (ProjektdatenFelder.zusatz).
         self.schalter = QCheckBox(
             "Erweitert: Beschriftungen auf dem Blatt ändern"
         )
@@ -837,6 +841,8 @@ class BeschriftungsFelder(QWidget):
         for marke, vorgabe in BLATTBESCHRIFTUNG.items():
             feld = QLineEdit(beschriftungen.get(marke, "").strip() or vorgabe)
             feld.setPlaceholderText(vorgabe)
+            # So breit, dass auch "Verteiler-Nr." ganz hineinpasst.
+            feld.setMinimumWidth(150)
             self.felder[marke] = feld
             # Links steht die Vorgabe: so ist die Zeile auch dann noch zu
             # erkennen, wenn rechts ein ganz anderes Wort steht.
@@ -847,9 +853,14 @@ class BeschriftungsFelder(QWidget):
         rollen = QScrollArea()
         rollen.setWidget(inhalt)
         rollen.setWidgetResizable(True)
-        # Die Liste steht neben den Feldern; dort ist Hoehe da, sie darf
-        # also so weit aufgehen, wie der Dialog ohnehin hoch ist.
-        rollen.setMinimumHeight(150)
+        # Neben den Feldern ist Hoehe da: die Liste bekommt so viel, wie
+        # sie braucht, und der Rollbalken erscheint erst, wenn der Dialog
+        # dafuer zu flach ist.
+        rahmen = 2 * rollen.frameWidth()
+        rollen.setMinimumHeight(inhalt.sizeHint().height() + rahmen)
+        # Der Rollbereich gibt die Wuensche seines Inhalts nicht weiter -
+        # er koennte ja rollen. Die Breite muss er trotzdem bekommen.
+        rollen.setMinimumWidth(inhalt.sizeHint().width() + rahmen)
 
         zurueck = QPushButton("Auf Vorgabe zurücksetzen")
         zurueck.setToolTip("Schreibt in jedes Feld wieder das Wort der Vorgabe.")
@@ -871,9 +882,11 @@ class BeschriftungsFelder(QWidget):
         self.kasten.setVisible(eigen)
         self.schalter.toggled.connect(self.kasten.setVisible)
 
+        # Der Schalter steht nicht hier, sondern in der Auswahlzeile der
+        # Projektdaten - dort ist er zu finden, wo man ihn sucht. Dieses
+        # Bauteil traegt nur die Liste.
         aufbau = QVBoxLayout()
         aufbau.setContentsMargins(0, 0, 0, 0)
-        aufbau.addWidget(self.schalter)
         aufbau.addWidget(self.kasten)
         self.setLayout(aufbau)
 
@@ -973,6 +986,7 @@ class ProjektdatenDialog(QDialog):
         self.blattkasten.setVisible(not vorgaben)
 
         self.beschriftungen = BeschriftungsFelder(projekt.beschriftungen, self)
+        projektdaten.zusatz(self.beschriftungen.schalter)
 
         hinzu = QPushButton("Feld hinzufügen")
         hinzu.clicked.connect(lambda: self._zeile_anhaengen("", "", True))

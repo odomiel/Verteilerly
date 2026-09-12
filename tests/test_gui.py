@@ -913,6 +913,29 @@ class TestProjektdatenDialog(unittest.TestCase):
         self.dialog.beschriftungen.schalter.setChecked(True)
         self.assertTrue(self.dialog.beschriftungen.kasten.isVisibleTo(self.dialog))
 
+    def test_der_schalter_steht_in_der_auswahlzeile(self):
+        """Bei „Alle / Keine", nicht unten im Dialog."""
+        schalter = self.dialog.beschriftungen.schalter
+        self.assertTrue(self.dialog.projektdaten.isAncestorOf(schalter))
+        zeile = self.dialog.projektdaten.schnell
+        self.assertIn(schalter, [
+            zeile.itemAt(i).widget() for i in range(zeile.count())
+        ])
+
+    def test_die_liste_bleibt_neben_den_feldern(self):
+        self.assertFalse(
+            self.dialog.projektdaten.isAncestorOf(self.dialog.beschriftungen.kasten)
+        )
+
+    def test_die_liste_braucht_keinen_rollbalken(self):
+        """Der Rollbalken kommt erst, wenn der Dialog dafür zu flach ist."""
+        from PySide6.QtWidgets import QScrollArea
+
+        rollen = self.dialog.beschriftungen.findChild(QScrollArea)
+        inhalt = rollen.widget()
+        self.assertGreaterEqual(rollen.minimumHeight(), inhalt.sizeHint().height())
+        self.assertGreaterEqual(rollen.minimumWidth(), inhalt.sizeHint().width())
+
     def test_eigenes_wort_kommt_ins_projekt(self):
         self.dialog.beschriftungen.felder["kunde"].setText("Auftraggeber")
         self.dialog.uebernehmen()

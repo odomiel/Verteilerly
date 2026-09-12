@@ -85,7 +85,8 @@ Projektdatei.
 
 **Die Beschriftungen selbst** sind änderbar: wo *Kunde* steht, darf
 *Auftraggeber* stehen. Der Schalter *Erweitert: Beschriftungen auf dem Blatt
-ändern* klappt die Liste **neben** den Feldern auf — untereinander wäre der
+ändern* steht in der Auswahlzeile neben *Alle* und *Keine* und klappt die
+Liste **neben** den Feldern auf — untereinander wäre der
 Dialog höher als mancher Bildschirm; links das Wort der Vorgabe, rechts das eigene —, ein
 Knopf schreibt überall wieder die Vorgabe hinein. Geändert wird nur das Wort:
 Inhalt, Haken und Reihenfolge bleiben, und es gilt auf Deckblatt,
