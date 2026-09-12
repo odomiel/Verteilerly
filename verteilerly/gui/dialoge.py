@@ -1,4 +1,4 @@
-"""Dialoge: neuer Verteiler, Kabel anlegen, Überlauf, Briefkopf.
+"""Dialoge: neuer Verteiler, Kabel anlegen, Überlauf, Projektdaten.
 """
 
 from __future__ import annotations
@@ -238,21 +238,21 @@ class NeuerVerteilerDialog(QDialog):
         self.aus_vorlage.toggled.connect(lambda an: eigenkasten.setEnabled(not an))
         eigenkasten.setEnabled(False)
 
-        # Der Briefkopf gleich mit: was in der Verteilerly.conf gemerkt
+        # Die Projektdaten gleich mit: was in der Verteilerly.conf gemerkt
         # ist, steht schon drin und lässt sich hier für diesen Verteiler
         # ändern. Er sitzt in einem Rollbereich, sonst wäre der
         # Dialog höher als mancher Bildschirm.
-        self.briefkopf = BriefkopfFelder(
+        self.projektdaten = ProjektdatenFelder(
             briefkopf, ausgeblendet,
-            "Briefkopf — steht auf jedem Blatt, später änderbar",
+            "Projektdaten — stehen auf jedem Blatt, später änderbar",
         )
         rollbereich = QScrollArea()
-        rollbereich.setWidget(self.briefkopf)
+        rollbereich.setWidget(self.projektdaten)
         rollbereich.setWidgetResizable(True)
         rollbereich.setFrameShape(QScrollArea.Shape.NoFrame)
         rollbereich.setMinimumHeight(220)
 
-        # Der Briefkopf steht neben dem Verteiler, nicht darunter: so
+        # Die Projektdaten stehen neben dem Verteiler, nicht darunter: so
         # bleibt der Dialog flach genug für einen Bildschirm, und beides
         # ist auf einen Blick zu sehen.
         links = QVBoxLayout()
@@ -354,11 +354,11 @@ class NeuerVerteilerDialog(QDialog):
         return self.blattvorlagenwahl.currentData() or ""
 
     def projekt(self) -> Projekt:
-        """Der neue Verteiler samt dem hier eingetippten Briefkopf."""
+        """Der neue Verteiler samt den hier eingetippten Projektdaten."""
         return Projekt(
             verteiler=self.verteiler(),
-            briefkopf=self.briefkopf.werte(),
-            ausgeblendet=self.briefkopf.ausgeblendet(),
+            briefkopf=self.projektdaten.werte(),
+            ausgeblendet=self.projektdaten.ausgeblendet(),
         )
 
 
@@ -687,8 +687,8 @@ class UeberlaufDialog(QDialog):
         return self.FORTSETZEN, self.leiste.currentData(), self.start.value()
 
 
-class BriefkopfFelder(QGroupBox):
-    """Die Briefkopffelder mit ihren Haken - in beiden Dialogen dasselbe.
+class ProjektdatenFelder(QGroupBox):
+    """Die Projektdatenfelder mit ihren Haken - in beiden Dialogen dasselbe.
 
     Jedes Feld traegt einen Haken davor: abgewaehlte Felder erscheinen
     auf keinem Blatt, behalten ihren Inhalt aber. Firma und Kunde
@@ -699,7 +699,7 @@ class BriefkopfFelder(QGroupBox):
         self,
         briefkopf: dict[str, str] | None = None,
         ausgeblendet: set[str] | None = None,
-        titel: str = "Briefkopf — steht auf jedem Blatt",
+        titel: str = "Projektdaten — stehen auf jedem Blatt",
         parent: QWidget | None = None,
         inhalt_hakt_an: bool = True,
     ) -> None:
@@ -801,10 +801,10 @@ class BriefkopfFelder(QGroupBox):
         return feld.text().strip()
 
 
-class BriefkopfDialog(QDialog):
-    """Verteilerdaten, Briefkopf und eigene Felder pflegen.
+class ProjektdatenDialog(QDialog):
+    """Projektdaten und eigene Felder pflegen.
 
-    Jedes Briefkopffeld hat einen Haken davor: abgewaehlte Felder
+    Jedes Feld hat einen Haken davor: abgewaehlte Felder
     erscheinen auf keinem Blatt, behalten ihren Inhalt aber. Wer eine
     Anlagennummer nur fuer diesen Ausdruck weglassen will, muss sie nicht
     loeschen.
@@ -826,7 +826,7 @@ class BriefkopfDialog(QDialog):
         self.vorgaben = vorgaben
         self.quelle = quelle
         self.setWindowTitle(
-            "Vorgaben für neue Verteiler" if vorgaben else "Verteilerdaten und Briefkopf"
+            "Vorgaben für neue Verteiler" if vorgaben else "Projektdaten"
         )
         self.resize(620, 760)
         self.projekt = projekt
@@ -841,14 +841,14 @@ class BriefkopfDialog(QDialog):
         verteilerblock = QGroupBox("Verteiler — steht im Schriftfeld jedes Blattes")
         verteilerblock.setLayout(verteilerform)
 
-        briefkopf = BriefkopfFelder(
+        projektdaten = ProjektdatenFelder(
             projekt.briefkopf,
             {name for name in BRIEFKOPF_FELDER if not projekt.sichtbar(name)},
         )
-        self.briefkopf = briefkopf
+        self.projektdaten = projektdaten
         # Die Tests und der Rest des Dialogs greifen weiter direkt zu.
-        self.felder = briefkopf.felder
-        self.haken = briefkopf.haken
+        self.felder = projektdaten.felder
+        self.haken = projektdaten.haken
 
         self.eigene = QTableWidget(0, 2)
         self.eigene.setHorizontalHeaderLabels(["Feldname", "Inhalt"])
@@ -894,24 +894,24 @@ class BriefkopfDialog(QDialog):
                 aufbau.addWidget(uebernehmen)
         else:
             aufbau.addWidget(verteilerblock)
-        aufbau.addWidget(briefkopf)
+        aufbau.addWidget(projektdaten)
         aufbau.addWidget(eigene)
         aufbau.addWidget(_knopfleiste(self))
 
     def _alle_haken(self, an: bool) -> None:
-        self.briefkopf.alle_haken(an)
+        self.projektdaten.alle_haken(an)
 
     def _aus_dem_verteiler(self) -> None:
-        """Fuellt die Vorgaben mit dem Briefkopf des offenen Verteilers."""
+        """Fuellt die Vorgaben aus dem offenen Verteiler."""
         if self.quelle is None:
             return
-        for name, feld in self.briefkopf.felder.items():
+        for name, feld in self.projektdaten.felder.items():
             wert = self.quelle.briefkopf.get(name, "")
             if isinstance(feld, QPlainTextEdit):
                 feld.setPlainText(wert)
             else:
                 feld.setText(wert)
-            self.briefkopf.haken[name].setChecked(self.quelle.sichtbar(name))
+            self.projektdaten.haken[name].setChecked(self.quelle.sichtbar(name))
         self.eigene.setRowCount(0)
         for name, wert in self.quelle.eigene_felder.items():
             self._zeile_anhaengen(name, wert, self.quelle.sichtbar(name))
@@ -940,8 +940,8 @@ class BriefkopfDialog(QDialog):
             self.projekt.verteiler.name = self.verteilername.text().strip()
             self.projekt.verteiler.nummer = self.verteilernummer.text().strip()
 
-        self.projekt.briefkopf = self.briefkopf.werte()
-        ausgeblendet |= self.briefkopf.ausgeblendet()
+        self.projekt.briefkopf = self.projektdaten.werte()
+        ausgeblendet |= self.projektdaten.ausgeblendet()
 
         eigene: dict[str, str] = {}
         for zeile in range(self.eigene.rowCount()):

@@ -1,6 +1,6 @@
-"""Briefkopf und eigene Felder in den Einstellungen merken.
+"""Projektdaten und eigene Felder in den Einstellungen merken.
 
-Der Briefkopf ist bei einem Errichter meist derselbe: Firma, Kürzel,
+Die Projektdaten sind bei einem Errichter meist dieselben: Firma, Kürzel,
 Kunde wiederholen sich von Verteiler zu Verteiler. Er wird deshalb in der
 Verteilerly.conf mitgeführt und in einen neuen Verteiler übernommen -
 gespeichert bleibt er trotzdem im Projekt, denn dort gehört er hin.
@@ -47,7 +47,7 @@ def _gruppe_lesen(einstellungen, gruppe: str) -> dict[str, str]:
 
 
 def briefkopf_sichern(einstellungen, projekt: Projekt) -> None:
-    """Schreibt Briefkopf, eigene Felder und die Auswahl in die conf."""
+    """Schreibt Projektdaten, eigene Felder und die Auswahl in die conf."""
     _gruppe_schreiben(einstellungen, GRUPPE_BRIEFKOPF, projekt.briefkopf)
     _gruppe_schreiben(einstellungen, GRUPPE_EIGENE, projekt.eigene_felder)
     einstellungen.setValue(SCHLUESSEL_AUSGEBLENDET, sorted(projekt.ausgeblendet))
@@ -55,7 +55,7 @@ def briefkopf_sichern(einstellungen, projekt: Projekt) -> None:
 
 
 def briefkopf_laden(einstellungen) -> tuple[dict[str, str], dict[str, str], set[str]]:
-    """Was in der conf steht: Briefkopf, eigene Felder, abgewaehlte Felder."""
+    """Was in der conf steht: Projektdaten, eigene Felder, abgewaehlte Felder."""
     return (
         _gruppe_lesen(einstellungen, GRUPPE_BRIEFKOPF),
         _gruppe_lesen(einstellungen, GRUPPE_EIGENE),

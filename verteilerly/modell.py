@@ -659,7 +659,7 @@ BRIEFKOPF_BESCHRIFTUNG = {
 class Projekt:
     """Stammdaten und Verteiler einer Dokumentation.
 
-    Der Briefkopf steht einmal zentral und wird auf jedem Blatt
+    Die Projektdaten stehen einmal zentral und werden auf jedem Blatt
     eingesetzt; eigene Felder ergaenzen ihn frei.
     """
 

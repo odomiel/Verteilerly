@@ -15,7 +15,7 @@ verteilerly/        Programmpaket
   schreibweisen.py  Wie eine Rangierungsadresse geschrieben wird
   vorlagen.py       Verteilervorlagen
   projektdatei.py   Projekt als JSON lesen und schreiben
-  einstellungen.py  Briefkopf als Vorgabe in der Verteilerly.conf
+  einstellungen.py  Projektdaten als Vorgabe in der Verteilerly.conf
   layout.py         Blätter als Zeichenanweisungen — Vorlage für Vorschau und PDF
   blattvorlagen.py  Wie ein Blatt aussieht: Spalten, Ränder, Schriftgrößen
   ausgabe/          PDF, Excel und CSV
@@ -28,7 +28,7 @@ verteilerly/        Programmpaket
     uebersicht.py   Verteilerübersicht, gezeichnet wie im Beispiel
     leistenansicht.py  Belegung einer Leiste als Tabelle
     vorschau.py     Zeichnet die Blätter neben der Eingabe
-    dialoge.py      Neuer Verteiler, Kabel, Überlauf, Briefkopf
+    dialoge.py      Neuer Verteiler, Kabel, Überlauf, Projektdaten
     thema.py        Farbsätze hell und dunkel
     sprache.py      Deutsche Beschriftung der Qt-Dialoge
 daten/              Liegt neben dem Programm und ist frei erweiterbar
@@ -71,12 +71,12 @@ Programm starten:
 ## Stand
 
 **Name und Nummer des Verteilers** stehen obenan im Dialog *Bearbeiten ▸
-Verteilerdaten und Briefkopf* (Strg+B) — im Schriftfeld stehen sie neben
+Projektdaten* (Strg+B) — im Schriftfeld stehen sie neben
 Firma und Kunde, also werden sie auch dort gesucht. Bis dahin waren sie
 nur beim Anlegen zu setzen. Abwählen lassen sie sich nicht: ein Blatt
 ohne Verteilernamen wäre keines.
 
-Im Briefkopfdialog hat jedes Feld ein Häkchen — Standardfelder wie eigene
+Im Projektdatendialog hat jedes Feld ein Häkchen — Standardfelder wie eigene
 gleichermaßen. Ein abgewähltes Feld verschwindet vom Blatt **mitsamt seiner
 Beschriftung** — eine Zeile „Kunde" ohne Kunden wäre schlimmer als gar
 keine — und **behält seinen Inhalt**: wer die Anlagennummer nur für diesen Ausdruck
@@ -87,7 +87,7 @@ Was bei jedem Verteiler gleich ist — Firma, Kürzel, der Ersteller —,
 wird als **Vorgabe** gesetzt: *Einstellungen ▸ Vorgaben für neue
 Verteiler* führt dieselben Felder und schreibt sie in die
 `Verteilerly.conf`; ein Knopf übernimmt sie aus dem offenen Verteiler.
-Ein bearbeiteter Briefkopf ändert die Vorgaben **nicht** von selbst —
+Bearbeitete Projektdaten ändern die Vorgaben **nicht** von selbst —
 sonst überschriebe der letzte Kunde sie ungefragt.
 
 Beim Anlegen stehen sie schon in den Feldern; was im Projekt steht,
@@ -97,13 +97,13 @@ jemand es ausfüllt; wer in ein Feld schreibt, hakt es damit an. Ein
 geöffneter Verteiler bleibt davon unberührt: dort gilt, was in der Datei
 steht.
 
-Der Dialog *Neuer Verteiler* trägt den **Briefkopf gleich mit** — rechts
+Der Dialog *Neuer Verteiler* trägt die **Projektdaten gleich mit** — rechts
 neben den Verteilerangaben, damit der Dialog flach bleibt und beides auf
 einen Blick zu sehen ist. Die in der `Verteilerly.conf` gemerkten Angaben
 stehen schon in den Feldern und
 sind dort für diesen Verteiler zu ändern, samt Haken. Getipptes gilt, die
 Vorgabe ergänzt nur, was fehlt. Es sind dieselben Felder wie unter
-*Bearbeiten ▸ Verteilerdaten und Briefkopf* — ein Bauteil für beide
+*Bearbeiten ▸ Projektdaten* — ein Bauteil für beide
 Dialoge, damit sie nicht auseinanderlaufen.
 
 Ein neuer Verteiler entsteht aus einer Vorlage oder aus eigenen Angaben;
@@ -202,8 +202,8 @@ Platz zu fressen, den Bezeichnung und Bemerkung besser brauchen können.
 Steuern lässt sich das je Blattvorlage über `kabel_gedreht`; die Vorlage
 *Knapp* hat eine breite Kabelspalte und lässt den Namen waagerecht.
 
-**Firma und Kunde tragen eine Anschrift, keine Zeile.** Im Briefkopf-
-dialog sind beide Felder mehrzeilig; Name, Straße und Ort stehen auf dem
+**Firma und Kunde tragen eine Anschrift, keine Zeile.** Im
+Projektdatendialog sind beide Felder mehrzeilig; Name, Straße und Ort stehen auf dem
 Blatt untereinander, die Beschriftung nur an der ersten Zeile. So halten
 es die Mustertabellen — und so kommt es auch nach Excel.
 

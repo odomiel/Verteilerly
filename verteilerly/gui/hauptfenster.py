@@ -35,7 +35,7 @@ from ..version import VERSION
 from ..vorlagen import Vorlagen
 from .dialoge import (
     BlattvorlagenDialog,
-    BriefkopfDialog,
+    ProjektdatenDialog,
     KabelDialog,
     NeuerVerteilerDialog,
     PaketDialog,
@@ -208,13 +208,14 @@ class Hauptfenster(QMainWindow):
             hinweis="Die Maße dieses Verteilers als Vorlage ablegen",
         )
         bearbeiten.addSeparator()
-        self.aktion_briefkopf = aktion(
-            "&Verteilerdaten und Briefkopf…",
-            self.briefkopf_bearbeiten,
+        self.aktion_projektdaten = aktion(
+            "&Projektdaten…",
+            self.projektdaten_bearbeiten,
             "Ctrl+B",
             True,
             bearbeiten,
-            hinweis="Name und Nummer des Verteilers, Stammdaten und eigene Felder",
+            hinweis="Name und Nummer des Verteilers, Stammdaten und eigene Felder — "
+                    "was im Schriftfeld jedes Blattes steht",
         )
 
         self.aktion_freitext = QAction("&Freitext im Rangierfeld zulassen", self)
@@ -446,7 +447,7 @@ class Hauptfenster(QMainWindow):
             self.aktion_csv,
             self.aktion_kabel,
             self.aktion_vorlage,
-            self.aktion_briefkopf,
+            self.aktion_projektdaten,
         ):
             handlung.setEnabled(offen)
 
@@ -485,7 +486,7 @@ class Hauptfenster(QMainWindow):
     def neuer_verteiler(self) -> None:
         if not self._darf_verwerfen():
             return
-        # Der gemerkte Briefkopf steht schon im Dialog und ist dort für
+        # Die gemerkten Vorgaben stehen schon im Dialog und sind dort für
         # diesen Verteiler zu ändern.
         gemerkt, _, ausgeblendet = einstellungsspeicher.briefkopf_laden(
             self.einstellungen
@@ -509,11 +510,11 @@ class Hauptfenster(QMainWindow):
         self.statusBar().showMessage(
             f"Neuer Verteiler: {self.projekt.verteiler.da_gesamt} DA auf "
             f"{len(self.projekt.verteiler.alle_leisten)} Leisten"
-            + (f", Briefkopf mit {uebernommen} Feldern übernommen" if uebernommen else "")
+            + (f", {uebernommen} Felder Projektdaten übernommen" if uebernommen else "")
         )
 
     def neues_projekt(self, angaben) -> Projekt:
-        """Ein frisches Projekt mit dem gemerkten Briefkopf.
+        """Ein frisches Projekt mit den gemerkten Vorgaben.
 
         ``angaben`` ist ein Verteiler oder ein fertiges Projekt; im
         zweiten Fall bleibt stehen, was schon eingetragen ist - ergaenzt
@@ -658,7 +659,7 @@ class Hauptfenster(QMainWindow):
 
         Firma, Kürzel, Ersteller - was sich nicht von Verteiler zu
         Verteiler ändert. Gemerkt wird nur, was hier eingetragen ist;
-        ein bearbeiteter Briefkopf ändert die Vorgaben nicht mehr von
+        bearbeitete Projektdaten ändern die Vorgaben nicht mehr von
         selbst, sonst überschriebe der letzte Kunde sie ungefragt.
         """
         briefkopf, eigene, ausgeblendet = einstellungsspeicher.briefkopf_laden(
@@ -667,8 +668,8 @@ class Hauptfenster(QMainWindow):
         muster = Projekt(
             briefkopf=briefkopf, eigene_felder=eigene, ausgeblendet=ausgeblendet
         )
-        dialog = BriefkopfDialog(muster, self, vorgaben=True, quelle=self.projekt)
-        if dialog.exec() != BriefkopfDialog.DialogCode.Accepted:
+        dialog = ProjektdatenDialog(muster, self, vorgaben=True, quelle=self.projekt)
+        if dialog.exec() != ProjektdatenDialog.DialogCode.Accepted:
             return
         dialog.uebernehmen()
         einstellungsspeicher.briefkopf_sichern(self.einstellungen, muster)
@@ -975,11 +976,11 @@ class Hauptfenster(QMainWindow):
             beschreibung=f"Nach dem Verteiler {verteiler.name}." if verteiler.name else "",
         )
 
-    def briefkopf_bearbeiten(self) -> None:
+    def projektdaten_bearbeiten(self) -> None:
         if self.projekt is None:
             return
-        dialog = BriefkopfDialog(self.projekt, self)
-        if dialog.exec() == BriefkopfDialog.DialogCode.Accepted:
+        dialog = ProjektdatenDialog(self.projekt, self)
+        if dialog.exec() == ProjektdatenDialog.DialogCode.Accepted:
             dialog.uebernehmen()
             self._belegung_geaendert()
             # Der Verteilername steht im Fenstertitel - er kann sich
@@ -987,7 +988,7 @@ class Hauptfenster(QMainWindow):
             self._titel_setzen()
             self.leistenansicht.aktualisieren()
             self.statusBar().showMessage(
-                "Verteilerdaten und Briefkopf übernommen", 8000
+                "Projektdaten übernommen", 8000
             )
 
     def ueber(self) -> None:

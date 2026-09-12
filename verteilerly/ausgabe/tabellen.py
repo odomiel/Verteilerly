@@ -95,7 +95,7 @@ def kabelzeilen(projekt: Projekt) -> list[list]:
 
 
 def csv_schreiben(projekt: Projekt, ziel: pathlib.Path) -> pathlib.Path:
-    """Nur die Belegung; Kabel und Briefkopf haben in einer CSV keinen Platz."""
+    """Nur die Belegung; Kabel und Projektdaten haben in einer CSV keinen Platz."""
     ziel = pathlib.Path(ziel)
     try:
         # BOM, damit Excel die Umlaute nicht zerlegt.

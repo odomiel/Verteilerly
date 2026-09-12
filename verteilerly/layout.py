@@ -133,7 +133,7 @@ def _wert(projekt: Projekt, name: str, vorgabe: str = "") -> str:
 
 
 def _paar(projekt: Projekt, vorsilbe: str) -> str:
-    """„am“ und „von“ eines Briefkopffeldes zu einer Zeile."""
+    """„am“ und „von“ eines Projektdatenfeldes zu einer Zeile."""
     datum = _wert(projekt, f"{vorsilbe}_am")
     name = _wert(projekt, f"{vorsilbe}_von")
     if vorsilbe == "gezeichnet":
@@ -142,7 +142,7 @@ def _paar(projekt: Projekt, vorsilbe: str) -> str:
     return " · ".join(t for t in (datum, name) if t)
 
 
-# Marken, die kein Briefkopffeld sind - sie gehoeren zum Blatt selbst und
+# Marken, die kein Projektdatenfeld sind - sie gehoeren zum Blatt selbst und
 # lassen sich nicht abwaehlen.
 BLATTMARKEN = ("verteiler", "verteilernummer", "leiste", "blatt")
 # Marken, die aus mehreren Feldern zusammengesetzt sind.

@@ -149,7 +149,7 @@ class TestSchriftfeld(unittest.TestCase):
     def test_leeres_feld_behaelt_seine_beschriftung(self):
         """Angewählt und leer heißt: hier wird von Hand eingetragen."""
         texte = _texte(leistenblatt(self.projekt, 1))
-        self.assertIn("Geprüft", texte)          # im Briefkopf nicht gefüllt
+        self.assertIn("Geprüft", texte)          # in den Projektdaten nicht gefüllt
         self.assertIn("Stand", texte)
 
     def test_paar_faellt_erst_weg_wenn_beide_haelften_weg_sind(self):
@@ -159,7 +159,7 @@ class TestSchriftfeld(unittest.TestCase):
         self.assertNotIn("Geprüft", _texte(leistenblatt(self.projekt, 1)))
 
     def test_blatteigene_marken_bleiben_immer(self):
-        """Verteiler, Leiste und Blatt gehören zum Blatt, nicht zum Briefkopf."""
+        """Verteiler, Leiste und Blatt gehören zum Blatt, nicht zu den Projektdaten."""
         for name in ("verteiler", "verteilernummer", "leiste", "blatt"):
             self.projekt.sichtbarkeit_setzen(name, False)
         texte = _texte(leistenblatt(self.projekt, 1))

@@ -424,7 +424,7 @@ class TestMenuezustaende(unittest.TestCase):
         f = self.fenster
         for name in ("aktion_speichern", "aktion_speichern_unter", "aktion_pdf",
                      "aktion_xlsx", "aktion_csv", "aktion_kabel",
-                     "aktion_kabel_weg", "aktion_vorlage", "aktion_briefkopf"):
+                     "aktion_kabel_weg", "aktion_vorlage", "aktion_projektdaten"):
             with self.subTest(aktion=name):
                 self.assertFalse(getattr(f, name).isEnabled(), name)
 
@@ -441,7 +441,7 @@ class TestMenuezustaende(unittest.TestCase):
         self._projekt()
         f = self.fenster
         for name in ("aktion_pdf", "aktion_xlsx", "aktion_csv", "aktion_kabel",
-                     "aktion_vorlage", "aktion_briefkopf", "aktion_speichern_unter"):
+                     "aktion_vorlage", "aktion_projektdaten", "aktion_speichern_unter"):
             with self.subTest(aktion=name):
                 self.assertTrue(getattr(f, name).isEnabled(), name)
 
@@ -538,7 +538,7 @@ class TestMenuezustaende(unittest.TestCase):
         self.assertTrue(f.aktion_speichern.isEnabled())    # wieder etwas offen
 
     def test_geaenderter_verteilername_steht_im_fenstertitel(self):
-        from verteilerly.gui.dialoge import BriefkopfDialog
+        from verteilerly.gui.dialoge import ProjektdatenDialog
 
         f = self.fenster
         self._projekt()
@@ -546,10 +546,10 @@ class TestMenuezustaende(unittest.TestCase):
 
         def umbenennen(dialog):
             dialog.verteilername.setText("Verteiler Keller")
-            return BriefkopfDialog.DialogCode.Accepted
+            return ProjektdatenDialog.DialogCode.Accepted
 
-        with mock.patch.object(BriefkopfDialog, "exec", umbenennen):
-            f.briefkopf_bearbeiten()
+        with mock.patch.object(ProjektdatenDialog, "exec", umbenennen):
+            f.projektdaten_bearbeiten()
         self.assertEqual(f.projekt.verteiler.name, "Verteiler Keller")
         self.assertIn("Verteiler Keller", f.windowTitle())
 
@@ -670,7 +670,7 @@ class TestMenuezustaende(unittest.TestCase):
     def test_jeder_eintrag_sagt_wofuer_er_da_ist(self):
         """Der Statushinweis erscheint auch bei ausgegrauten Einträgen."""
         for name in ("aktion_speichern", "aktion_pdf", "aktion_kabel",
-                     "aktion_kabel_weg", "aktion_vorlage", "aktion_briefkopf"):
+                     "aktion_kabel_weg", "aktion_vorlage", "aktion_projektdaten"):
             with self.subTest(aktion=name):
                 self.assertTrue(getattr(self.fenster, name).statusTip())
 
@@ -779,11 +779,11 @@ class TestMenuezustaende(unittest.TestCase):
 
 
 @unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
-class TestBriefkopfDialog(unittest.TestCase):
+class TestProjektdatenDialog(unittest.TestCase):
     """Felder an- und abwählen, ohne sie zu löschen."""
 
     def setUp(self):
-        from verteilerly.gui.dialoge import BriefkopfDialog
+        from verteilerly.gui.dialoge import ProjektdatenDialog
 
         self.projekt = Projekt(
             verteiler=Verteiler.aus_geometrie(1, 4, 10, name="Probe"),
@@ -792,7 +792,7 @@ class TestBriefkopfDialog(unittest.TestCase):
         )
         self.projekt.sichtbarkeit_setzen("kundennummer", False)
         self.projekt.sichtbarkeit_setzen("Vertrag", False)
-        self.dialog = BriefkopfDialog(self.projekt)
+        self.dialog = ProjektdatenDialog(self.projekt)
 
     def _zeile(self, name):
         for i in range(self.dialog.eigene.rowCount()):
@@ -858,7 +858,7 @@ class TestBriefkopfDialog(unittest.TestCase):
         )
 
     def test_abgewaehltes_feld_bleibt_beschreibbar(self):
-        """Auch im Briefkopfdialog sperrt der Haken das Feld nicht."""
+        """Auch im Projektdatendialog sperrt der Haken das Feld nicht."""
         self.dialog.haken["kundennummer"].setChecked(False)
         self.assertTrue(self.dialog.felder["kundennummer"].isEnabled())
 
@@ -974,8 +974,8 @@ class TestEinstellungen(unittest.TestCase):
 
 
 @unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
-class TestBriefkopfImNeuenVerteiler(unittest.TestCase):
-    """Der gemerkte Briefkopf steht gleich beim Anlegen zur Hand."""
+class TestProjektdatenImNeuenVerteiler(unittest.TestCase):
+    """Die gemerkten Vorgaben stehen gleich beim Anlegen zur Hand."""
 
     def setUp(self):
         self.vorlagen = Vorlagen([
@@ -991,15 +991,15 @@ class TestBriefkopfImNeuenVerteiler(unittest.TestCase):
             briefkopf={"firma": "Musterfirma", "kuerzel": "JD"},
             ausgeblendet={"kundennummer"},
         )
-        self.assertEqual(dialog.briefkopf.felder["kuerzel"].text(), "JD")
-        self.assertFalse(dialog.briefkopf.haken["kundennummer"].isChecked())
-        self.assertTrue(dialog.briefkopf.haken["firma"].isChecked())
+        self.assertEqual(dialog.projektdaten.felder["kuerzel"].text(), "JD")
+        self.assertFalse(dialog.projektdaten.haken["kundennummer"].isChecked())
+        self.assertTrue(dialog.projektdaten.haken["firma"].isChecked())
 
     def test_projekt_traegt_den_getippten_briefkopf(self):
         dialog = self._dialog(briefkopf={"firma": "Musterfirma"})
         dialog.name.setText("Verteiler Keller")
-        dialog.briefkopf.felder["kunde"].setPlainText("Kunde Beliebig\nStraße 7")
-        dialog.briefkopf.haken["dokumenttitel"].setChecked(False)
+        dialog.projektdaten.felder["kunde"].setPlainText("Kunde Beliebig\nStraße 7")
+        dialog.projektdaten.haken["dokumenttitel"].setChecked(False)
 
         projekt = dialog.projekt()
         self.assertEqual(projekt.verteiler.name, "Verteiler Keller")
@@ -1019,28 +1019,28 @@ class TestBriefkopfImNeuenVerteiler(unittest.TestCase):
                           "gezeichnet_von", "erstellt_am", "erstellt_von", "stand_am",
                           "stand_von", "geprueft_am", "geprueft_von", "dokumenttitel"},
         )
-        angehakt = {n for n, h in dialog.briefkopf.haken.items() if h.isChecked()}
+        angehakt = {n for n, h in dialog.projektdaten.haken.items() if h.isChecked()}
         self.assertEqual(angehakt, {"firma", "kuerzel"})
 
     def test_abgewaehlte_felder_bleiben_beschreibbar(self):
         """Sonst ließe sich gerade dort nichts eintragen, wo etwas fehlt."""
         dialog = self._dialog(ausgeblendet=set(BRIEFKOPF_FELDER))
         gesperrt = [
-            name for name, feld in dialog.briefkopf.felder.items()
+            name for name, feld in dialog.projektdaten.felder.items()
             if not feld.isEnabled()
         ]
         self.assertEqual(gesperrt, [])
 
-        dialog.briefkopf.felder["anlagennummer"].setText("123456")
+        dialog.projektdaten.felder["anlagennummer"].setText("123456")
         self.assertEqual(dialog.projekt().briefkopf["anlagennummer"], "123456")
 
     def test_wer_tippt_hakt_das_feld_an(self):
         """Sonst tippt man einen Kunden ein und findet ihn auf keinem Blatt."""
         dialog = self._dialog(ausgeblendet=set(BRIEFKOPF_FELDER))
-        self.assertFalse(dialog.briefkopf.haken["kunde"].isChecked())
+        self.assertFalse(dialog.projektdaten.haken["kunde"].isChecked())
 
-        dialog.briefkopf.felder["kunde"].setPlainText("Kunde Müller")
-        self.assertTrue(dialog.briefkopf.haken["kunde"].isChecked())
+        dialog.projektdaten.felder["kunde"].setPlainText("Kunde Müller")
+        self.assertTrue(dialog.projektdaten.haken["kunde"].isChecked())
         self.assertEqual(dialog.projekt().briefkopf["kunde"], "Kunde Müller")
 
     def test_blattvorlage_steht_schon_beim_anlegen_zur_wahl(self):
@@ -1061,12 +1061,12 @@ class TestBriefkopfImNeuenVerteiler(unittest.TestCase):
 
     def test_beide_dialoge_bauen_dieselben_felder(self):
         """Ein Bauteil für beide - sonst laufen sie auseinander."""
-        from verteilerly.gui.dialoge import BriefkopfDialog
+        from verteilerly.gui.dialoge import ProjektdatenDialog
 
         neu = self._dialog()
-        pflege = BriefkopfDialog(Projekt(verteiler=Verteiler.aus_geometrie(1, 4, 10)))
+        pflege = ProjektdatenDialog(Projekt(verteiler=Verteiler.aus_geometrie(1, 4, 10)))
         self.assertEqual(
-            list(neu.briefkopf.felder), list(pflege.felder)
+            list(neu.projektdaten.felder), list(pflege.felder)
         )
 
 

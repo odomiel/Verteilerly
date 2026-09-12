@@ -1,4 +1,4 @@
-"""Tests zum gemerkten Briefkopf."""
+"""Tests zu den gemerkten Projektdaten."""
 
 import os
 import pathlib
@@ -20,7 +20,7 @@ from verteilerly.modell import Projekt, Verteiler
 
 
 @unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
-class TestBriefkopfMerken(unittest.TestCase):
+class TestProjektdatenMerken(unittest.TestCase):
     def setUp(self):
         self.ordner = tempfile.TemporaryDirectory()
         self.addCleanup(self.ordner.cleanup)
@@ -128,18 +128,18 @@ class TestVorgaben(unittest.TestCase):
     def _vorgaben_setzen(self, **werte):
         from unittest import mock
 
-        from verteilerly.gui.dialoge import BriefkopfDialog
+        from verteilerly.gui.dialoge import ProjektdatenDialog
 
         def tippen(dialog):
             for name, wert in werte.items():
-                feld = dialog.briefkopf.felder[name]
+                feld = dialog.projektdaten.felder[name]
                 if hasattr(feld, "setPlainText"):
                     feld.setPlainText(wert)
                 else:
                     feld.setText(wert)
-            return BriefkopfDialog.DialogCode.Accepted
+            return ProjektdatenDialog.DialogCode.Accepted
 
-        with mock.patch.object(BriefkopfDialog, "exec", tippen):
+        with mock.patch.object(ProjektdatenDialog, "exec", tippen):
             self.fenster.vorgaben_bearbeiten()
 
     def test_vorgaben_landen_in_der_conf(self):
@@ -158,7 +158,7 @@ class TestVorgaben(unittest.TestCase):
 
         def anlegen(dialog):
             gesehen["angehakt"] = {
-                name for name, haken in dialog.briefkopf.haken.items()
+                name for name, haken in dialog.projektdaten.haken.items()
                 if haken.isChecked()
             }
             dialog.name.setText("Neu")
@@ -177,7 +177,7 @@ class TestVorgaben(unittest.TestCase):
         """Sonst überschriebe der letzte Kunde die Vorgabe ungefragt."""
         from unittest import mock
 
-        from verteilerly.gui.dialoge import BriefkopfDialog
+        from verteilerly.gui.dialoge import ProjektdatenDialog
 
         self._vorgaben_setzen(firma="Musterfirma")
         self.fenster._projekt_setzen(
@@ -185,11 +185,11 @@ class TestVorgaben(unittest.TestCase):
         )
 
         def aendern(dialog):
-            dialog.briefkopf.felder["firma"].setPlainText("Ganz andere Firma")
-            return BriefkopfDialog.DialogCode.Accepted
+            dialog.projektdaten.felder["firma"].setPlainText("Ganz andere Firma")
+            return ProjektdatenDialog.DialogCode.Accepted
 
-        with mock.patch.object(BriefkopfDialog, "exec", aendern):
-            self.fenster.briefkopf_bearbeiten()
+        with mock.patch.object(ProjektdatenDialog, "exec", aendern):
+            self.fenster.projektdaten_bearbeiten()
 
         self.assertEqual(self.fenster.projekt.briefkopf["firma"], "Ganz andere Firma")
         self.assertEqual(
@@ -220,7 +220,7 @@ class TestVorgaben(unittest.TestCase):
 
 
 @unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
-class TestNeuerVerteilerMitBriefkopf(unittest.TestCase):
+class TestNeuerVerteilerMitProjektdaten(unittest.TestCase):
     """Was im Dialog steht, gilt; die conf ergänzt nur."""
 
     def test_getippter_briefkopf_schlaegt_die_vorgabe(self):
@@ -239,7 +239,7 @@ class TestNeuerVerteilerMitBriefkopf(unittest.TestCase):
 
         def antworten(dialog):
             dialog.name.setText("Neu")
-            dialog.briefkopf.felder["firma"].setPlainText("Andere Firma")
+            dialog.projektdaten.felder["firma"].setPlainText("Andere Firma")
             return NeuerVerteilerDialog.DialogCode.Accepted
 
         with mock.patch.object(NeuerVerteilerDialog, "exec", antworten):
