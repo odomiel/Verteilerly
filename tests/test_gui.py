@@ -14,7 +14,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
     from PySide6.QtCore import Qt
-    from PySide6.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication, QMessageBox
 
     from verteilerly.gui.dialoge import DA_VORGABEN, NeuerVerteilerDialog
     from verteilerly.gui.vorschau import Vorschau
@@ -553,6 +553,79 @@ class TestMenuezustaende(unittest.TestCase):
         self.assertEqual(f.projekt.verteiler.name, "Verteiler Keller")
         self.assertIn("Verteiler Keller", f.windowTitle())
 
+    def test_paket_hin_und_zurueck(self):
+        """Sichern, etwas verstellen, einspielen - es ist wieder da."""
+        import tempfile
+        from pathlib import Path
+
+        from PySide6.QtCore import QSettings
+        from PySide6.QtWidgets import QFileDialog
+
+        from verteilerly import pfade
+
+        f = self.fenster
+        with tempfile.TemporaryDirectory() as ordner:
+            # Eigene Einstellungsdatei und eigener Arbeitsordner: die
+            # übrigen Fenster der Testreihe schreiben sonst dazwischen.
+            conf = Path(ordner) / "Verteilerly.conf"
+            daten = Path(ordner) / "daten"
+            (daten / "vorlagen").mkdir(parents=True)
+            (daten / "vorlagen" / "eigen.yaml").write_text(
+                "id: eigen\nname: Eigen\n", encoding="utf-8"
+            )
+            f.einstellungen = QSettings(str(conf), QSettings.Format.IniFormat)
+            f.einstellungen.setValue("blattvorlage", "knapp")
+            f.einstellungen.setValue("schreibweise", "mit_strich")
+            f.einstellungen.sync()
+            ziel = str(Path(ordner) / "paket.zip")
+
+            with mock.patch.object(pfade, "einstellungsdatei", return_value=conf), \
+                 mock.patch.object(pfade, "eigener_datenordner", return_value=daten):
+                with mock.patch.object(
+                    QFileDialog, "getSaveFileName", return_value=(ziel, "")
+                ):
+                    f.paket_sichern()
+                self.assertTrue(Path(ziel).is_file())
+
+                # Nach dem Sichern verstellen und die eigene Vorlage löschen …
+                f.einstellungen.setValue("blattvorlage", "standard")
+                f.einstellungen.setValue("schreibweise", "einfach")
+                (daten / "vorlagen" / "eigen.yaml").unlink()
+
+                with mock.patch.object(
+                    QFileDialog, "getOpenFileName", return_value=(ziel, "")
+                ), mock.patch(
+                    "verteilerly.gui.hauptfenster.frage",
+                    return_value=QMessageBox.StandardButton.Yes,
+                ):
+                    f.paket_einspielen()
+
+                # … und das Paket bringt beides zurück, ohne Neustart.
+                self.assertTrue((daten / "vorlagen" / "eigen.yaml").is_file())
+                self.assertEqual(f.einstellungen.value("blattvorlage"), "knapp")
+                self.assertEqual(f.vorschau.blattvorlage.id, "knapp")
+                self.assertEqual(f.schreibweise.id, "mit_strich")
+
+    def test_kein_paket_wird_abgewiesen(self):
+        import tempfile
+        from pathlib import Path
+
+        from PySide6.QtWidgets import QFileDialog
+
+        f = self.fenster
+        with tempfile.TemporaryDirectory() as ordner:
+            fremd = Path(ordner) / "fremd.zip"
+            fremd.write_text("kein ZIP", encoding="utf-8")
+            gemeldet = {}
+            with mock.patch.object(
+                QFileDialog, "getOpenFileName", return_value=(str(fremd), "")
+            ), mock.patch.object(
+                QMessageBox, "critical",
+                lambda *args: gemeldet.setdefault("titel", args[1]),
+            ):
+                f.paket_einspielen()
+        self.assertEqual(gemeldet.get("titel"), "Kein Paket")
+
     def test_ueber_nennt_die_bausteine_mit_fassung(self):
         """Was drinsteckt, ist im Programm nachzusehen."""
         from PySide6.QtWidgets import QMessageBox
@@ -640,6 +713,8 @@ class TestMenuezustaende(unittest.TestCase):
         self.assertEqual(
             eintraege,
             ["Blattvorlage…", "Vorgaben für neue Verteiler…",
+             "Vorlagen und Einstellungen sichern…",
+             "Vorlagen und Einstellungen einspielen…",
              "Schreibweise der Rangierungen", "Freitext im Rangierfeld zulassen"],
         )
 

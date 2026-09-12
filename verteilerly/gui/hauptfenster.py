@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pathlib
+import tempfile
 
 from PySide6.QtCore import QSettings, Qt, QTimer
 from PySide6.QtGui import QAction, QActionGroup, QKeySequence
@@ -18,7 +19,7 @@ from PySide6.QtWidgets import (
 )
 
 from .. import einstellungen as einstellungsspeicher
-from .. import bestand, pfade, projektdatei, schreibweisen
+from .. import bestand, paket, pfade, projektdatei, schreibweisen
 from ..ausgabe import AusgabeFehler, csv_schreiben, pdf_schreiben, xlsx_schreiben
 from ..blattvorlagen import Blattvorlagen
 from ..farbcodes import Kabeltypen, farben_eintragen
@@ -51,6 +52,7 @@ DATEIFILTER = "Verteilerly-Projekt (*.vtly.json);;Alle Dateien (*)"
 PDFFILTER = "PDF (*.pdf)"
 XLSXFILTER = "Excel-Arbeitsmappe (*.xlsx)"
 CSVFILTER = "CSV, Semikolon getrennt (*.csv)"
+PAKETFILTER = "Verteilerly-Paket (*.zip)"
 VORSCHAU_VERZUG = 250  # ms, damit das Tippen nicht stockt
 
 
@@ -233,6 +235,17 @@ class Hauptfenster(QMainWindow):
             "&Vorgaben für neue Verteiler…", self.vorgaben_bearbeiten,
             menue=einstellungen,
             hinweis="Firma, Kürzel und was sonst bei jedem Verteiler gleich ist",
+        )
+        einstellungen.addSeparator()
+        aktion(
+            "Vorlagen und Einstellungen &sichern…", self.paket_sichern,
+            menue=einstellungen,
+            hinweis="Vorlagen, Kabeltypen und Einstellungen in eine Datei packen",
+        )
+        aktion(
+            "Vorlagen und Einstellungen &einspielen…", self.paket_einspielen,
+            menue=einstellungen,
+            hinweis="Ein gesichertes Paket in den Arbeitsordner zurückholen",
         )
         einstellungen.addSeparator()
 
@@ -511,6 +524,113 @@ class Hauptfenster(QMainWindow):
         return einstellungsspeicher.briefkopf_uebernehmen(
             self.einstellungen, projekt
         )
+
+    def paket_sichern(self) -> None:
+        """Vorlagen, Kabeltypen und Einstellungen in eine Datei packen."""
+        vorschlag = pathlib.Path.home() / f"Verteilerly-{VERSION}.zip"
+        name, _ = QFileDialog.getSaveFileName(
+            self, "Vorlagen und Einstellungen sichern", str(vorschlag), PAKETFILTER
+        )
+        if not name:
+            return
+        try:
+            bericht = paket.sichern(
+                pathlib.Path(name),
+                pfade.eigener_datenordner(),
+                pfade.einstellungsdatei(),
+            )
+        except paket.PaketFehler as fehler:
+            QMessageBox.critical(self, "Nicht gesichert", str(fehler))
+            return
+        self.statusBar().showMessage(
+            f"Gesichert nach {name}: {self._paketbericht(bericht)}", 12000
+        )
+
+    def paket_einspielen(self) -> None:
+        """Ein gesichertes Paket zurueckholen."""
+        name, _ = QFileDialog.getOpenFileName(
+            self, "Vorlagen und Einstellungen einspielen", "", PAKETFILTER
+        )
+        if not name:
+            return
+        try:
+            vorschau = paket.inhalt(pathlib.Path(name))
+        except paket.PaketFehler as fehler:
+            QMessageBox.critical(self, "Kein Paket", str(fehler))
+            return
+
+        antwort = frage(
+            self,
+            "Paket einspielen?",
+            f"Das Paket enthält {self._paketbericht(vorschau)}.\n"
+            f"Erstellt am {vorschau.get('erstellt', 'unbekannt')} "
+            f"mit Verteilerly {vorschau.get('version', '?')}.\n\n"
+            "Gleichnamige Dateien im Arbeitsordner werden ersetzt; alles "
+            "andere bleibt stehen.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.Yes,
+        )
+        if antwort != QMessageBox.StandardButton.Yes:
+            return
+
+        # Die Einstellungen gehen nicht als Datei an ihren Platz, sondern
+        # Wert fuer Wert durch die laufenden QSettings: ein Dateitausch
+        # unter ihnen faellt ihnen nicht zuverlaessig auf.
+        with tempfile.TemporaryDirectory() as ordner:
+            zwischen = pathlib.Path(ordner) / paket.CONFNAME
+            try:
+                bericht = paket.einspielen(
+                    pathlib.Path(name), pfade.eigener_datenordner(), zwischen
+                )
+            except paket.PaketFehler as fehler:
+                QMessageBox.critical(self, "Nicht eingespielt", str(fehler))
+                return
+            if bericht.get("einstellungen"):
+                self._einstellungen_uebernehmen(zwischen)
+
+        self._nach_dem_einspielen()
+        self.statusBar().showMessage(
+            f"Eingespielt: {self._paketbericht(bericht)}", 12000
+        )
+
+    def _paketbericht(self, bericht: dict) -> str:
+        teile = [
+            f"{bericht.get(name, 0)} {beschriftung}"
+            for name, beschriftung in (
+                ("vorlagen", "Verteilervorlagen"),
+                ("blattvorlagen", "Blattvorlagen"),
+                ("kabeltypen", "Kabeltypen"),
+            )
+        ]
+        if bericht.get("einstellungen"):
+            teile.append("die Einstellungen")
+        return ", ".join(teile)
+
+    def _einstellungen_uebernehmen(self, datei: pathlib.Path) -> None:
+        """Traegt die Werte einer eingespielten Datei in die laufenden ein."""
+        quelle = QSettings(str(datei), QSettings.Format.IniFormat)
+        self.einstellungen.clear()
+        for schluessel in quelle.allKeys():
+            self.einstellungen.setValue(schluessel, quelle.value(schluessel))
+        self.einstellungen.sync()
+
+    def _nach_dem_einspielen(self) -> None:
+        """Das Eingespielte gilt sofort - ohne Neustart."""
+        self.vorlagen = self._vorlagen_laden()
+        self.blattvorlagen = self._blattvorlagen_laden()
+        self.kabeltypen = Kabeltypen.laden(pfade.kabeltypenordner())
+
+        self.vorschau.blattvorlagen_setzen(
+            self.blattvorlagen, str(self.einstellungen.value("blattvorlage", ""))
+        )
+        self.thema_anwenden(str(self.einstellungen.value("thema", self.thema_name)))
+        self.schreibweise = schreibweisen.holen(
+            self.einstellungen.value("schreibweise", self.schreibweise.id)
+        )
+        self.freitext = self.einstellungen.value("freitext", self.freitext, type=bool)
+        self.aktion_freitext.setChecked(self.freitext)
+        self._schreibweise_anwenden()
+        self.vorschau.aktualisieren()
 
     def vorgaben_bearbeiten(self) -> None:
         """Was bei jedem neuen Verteiler schon dastehen soll.

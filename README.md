@@ -10,6 +10,7 @@ kopierten Tabellenblättern.
 verteilerly/        Programmpaket
   modell.py         Verteiler, Bucht, Leiste, Stift, Ader, Kabel, Rangierung
   bestand.py        Welche Bausteine mit welcher Fassung drinstecken
+  paket.py          Vorlagen und Einstellungen sichern und einspielen
   farbcodes.py      Kabeltypen und Adernfarben
   schreibweisen.py  Wie eine Rangierungsadresse geschrieben wird
   vorlagen.py       Verteilervorlagen
@@ -377,6 +378,19 @@ unangetastet — eigene Änderungen wiegen schwerer als jede Vorgabe. Wer
 was mitgebracht hat, steht im Merkzettel `.ausgelegt.json` daneben; ohne
 ihn (Arbeitsordner aus einer älteren Fassung) wird nichts aufgefrischt.
 Dorthin wird auch geschrieben, wenn eine Vorlage gesichert wird.
+
+**Umziehen und sichern.** *Einstellungen ▸ Vorlagen und Einstellungen
+sichern…* packt Verteilervorlagen, Blattvorlagen, Kabeltypen und die
+`Verteilerly.conf` in eine ZIP-Datei; *…einspielen…* holt sie zurück —
+auf demselben Rechner nach einem Fehlgriff oder auf einem zweiten. Das
+Eingespielte gilt sofort, ohne Neustart: Vorlagen, Kabeltypen,
+Blattvorlage, Schreibweise und Erscheinungsbild werden neu geladen.
+
+Beim Einspielen wird nichts blind ausgepackt: übernommen werden nur die
+bekannten Unterordner, nur `*.yaml` und die Einstellungsdatei, und nur
+Namen ohne Pfadanteil — ein Paket aus fremder Hand darf nichts außerhalb
+des Arbeitsordners anlegen. Gleichnamige Dateien werden ersetzt, alles
+andere bleibt stehen.
 
 Gelesen wird darüber hinaus aus allen Orten, an denen Daten liegen
 können — ein Ordner `daten/` **neben der AppImage-Datei** geht dabei vor,
