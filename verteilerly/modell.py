@@ -655,6 +655,16 @@ BRIEFKOPF_BESCHRIFTUNG = {
 }
 
 
+# Die drei Blattarten - auf jeder koennen die eigenen Felder stehen
+# oder eben nicht.
+BLATTARTEN = ("deckblatt", "belegung", "leisten")
+BLATTART_BESCHRIFTUNG = {
+    "deckblatt": "Deckblatt",
+    "belegung": "Verteilerbelegung",
+    "leisten": "Leistenblättern",
+}
+
+
 @dataclass
 class Projekt:
     """Stammdaten und Verteiler einer Dokumentation.
@@ -669,6 +679,9 @@ class Projekt:
     # Felder, die auf den Blaettern nicht erscheinen sollen. Der Inhalt
     # bleibt erhalten - abwaehlen ist kein Loeschen.
     ausgeblendet: set[str] = field(default_factory=set)
+    # Auf welchen Blaettern die eigenen Felder erscheinen. Ohne
+    # Angabe auf allen - wer eines nicht will, nimmt es heraus.
+    eigene_felder_auf: set[str] = field(default_factory=lambda: set(BLATTARTEN))
     # Wie Rangierungen geschrieben werden. Eine Anzeigesache: die
     # Projektdatei haelt Adressen immer in der Grundform fest.
     rangierung_schreibweise: str = schreibweisen.STANDARD.id
@@ -702,3 +715,9 @@ class Projekt:
             for name, wert in self.eigene_felder.items()
             if self.sichtbar(name)
         }
+
+    def eigene_felder_hier(self, blattart: str) -> dict[str, str]:
+        """Die eigenen Felder, sofern sie auf dieses Blatt gehoeren."""
+        if blattart not in self.eigene_felder_auf:
+            return {}
+        return self.sichtbare_eigene_felder()

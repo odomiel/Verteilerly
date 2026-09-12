@@ -131,7 +131,7 @@ def _deckblatt(mappe, projekt: Projekt, vorlage: Blattvorlage, zeug) -> object:
 
     zeile = 5
     for name, wert in schriftfeldzeilen(
-        schriftfeldwerte(projekt, None, vorlage, "Deckblatt")
+        schriftfeldwerte(projekt, None, vorlage, "Deckblatt", "deckblatt")
     ):
         blatt.cell(row=zeile, column=1, value=name).font = zeug.schrift(
             vorlage.schrift_klein, False, "#555555"

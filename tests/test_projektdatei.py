@@ -173,6 +173,30 @@ class TestFeldauswahl(unittest.TestCase):
         del daten["ausgeblendet"]
         self.assertEqual(projektdatei.aus_dict(daten).ausgeblendet, set())
 
+    def test_blattarten_der_eigenen_felder_kommen_zurueck(self):
+        """Auf welchen Blättern die eigenen Felder stehen."""
+        projekt = beispielprojekt()
+        projekt.eigene_felder["Standort"] = "Keller"
+        projekt.eigene_felder_auf = {"belegung"}
+        projektdatei.speichern(projekt, self.ziel)
+        self.assertEqual(projektdatei.laden(self.ziel).eigene_felder_auf, {"belegung"})
+
+    def test_keine_blattart_bleibt_keine(self):
+        projekt = beispielprojekt()
+        projekt.eigene_felder_auf = set()
+        projektdatei.speichern(projekt, self.ziel)
+        self.assertEqual(projektdatei.laden(self.ziel).eigene_felder_auf, set())
+
+    def test_aeltere_datei_zeigt_die_felder_ueberall(self):
+        from verteilerly.modell import BLATTARTEN
+
+        daten = projektdatei.als_dict(beispielprojekt())
+        del daten["eigene_felder_auf"]
+        daten["formatversion"] = 4
+        self.assertEqual(
+            projektdatei.aus_dict(daten).eigene_felder_auf, set(BLATTARTEN)
+        )
+
 
 class TestAeltereDateien(unittest.TestCase):
     """Fassung 1 nannte die Buchten noch Reihen."""

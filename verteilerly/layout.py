@@ -170,12 +170,23 @@ def _marke_sichtbar(marke: str, projekt: Projekt) -> bool:
 
 
 def _eintraege(
-    marke: str, projekt: Projekt, blatt: Blatt, leiste: int | None
+    marke: str,
+    projekt: Projekt,
+    blatt: Blatt,
+    leiste: int | None,
+    blattart: str = "leisten",
 ) -> list[tuple[str, str]]:
     """Was hinter einer Marke des Schriftfeldes steht."""
     v = projekt.verteiler
+    eigene = list(projekt.eigene_felder_hier(blattart).items())
     if marke == "eigene":
-        return list(projekt.sichtbare_eigene_felder().items())
+        # Auf der Verteilerbelegung stehen sie am Platz der Leiste -
+        # zweimal braucht sie niemand.
+        return [] if blattart == "belegung" else eigene
+    if marke == "leiste" and blattart == "belegung":
+        # Dieses Blatt zeigt alle Leisten, also keine einzelne: der Platz
+        # gehoert hier den eigenen Feldern.
+        return eigene
     if not _marke_sichtbar(marke, projekt):
         return []
     if marke == "verteiler":
@@ -212,6 +223,7 @@ def schriftfeldwerte(
     leiste: int | None = None,
     vorlage: Blattvorlage = STANDARD,
     blatttitel: str = "",
+    blattart: str = "leisten",
 ) -> list[tuple[str, str]]:
     """Beschriftung und Wert jeder Zeile des Schriftfeldes.
 
@@ -223,7 +235,7 @@ def schriftfeldwerte(
         eintrag
         for marken in vorlage.schriftfeld
         for marke in marken
-        for eintrag in _eintraege(marke, projekt, traeger, leiste)
+        for eintrag in _eintraege(marke, projekt, traeger, leiste, blattart)
     ]
 
 
@@ -232,6 +244,7 @@ def schriftfeld(
     projekt: Projekt,
     leiste: int | None = None,
     vorlage: Blattvorlage = STANDARD,
+    blattart: str = "leisten",
 ) -> None:
     """Der Kopf jedes Blattes, vollstaendig aus den Projektdaten.
 
@@ -242,7 +255,7 @@ def schriftfeld(
     Beschriftung und Wert oder in der Aufteilung der Mustertabellen.
     """
     if vorlage.schriftfeld_art == "beispiel":
-        _schriftfeld_beispiel(blatt, projekt, leiste, vorlage)
+        _schriftfeld_beispiel(blatt, projekt, leiste, vorlage, blattart)
         return
 
     rand = vorlage.rand
@@ -256,7 +269,7 @@ def schriftfeld(
         schriftfeldzeilen(
             [eintrag
              for marke in marken
-             for eintrag in _eintraege(marke, projekt, blatt, leiste)]
+             for eintrag in _eintraege(marke, projekt, blatt, leiste, blattart)]
         )
         for marken in vorlage.schriftfeld
     ]
@@ -296,7 +309,11 @@ def _schriftfeldanteile(
 
 
 def _schriftfeld_beispiel(
-    blatt: Blatt, projekt: Projekt, leiste: int | None, vorlage: Blattvorlage
+    blatt: Blatt,
+    projekt: Projekt,
+    leiste: int | None,
+    vorlage: Blattvorlage,
+    blattart: str = "leisten",
 ) -> None:
     """Das Schriftfeld der Mustertabellen, Feld fuer Feld nachgebaut.
 
@@ -321,7 +338,7 @@ def _schriftfeld_beispiel(
 
     _beispiel_matrix(blatt, projekt, vorlage, rand, oben, linkes, hoehe / 2)
     _beispiel_verteiler(
-        blatt, projekt, leiste, vorlage, rand, mitte_y, linkes, hoehe / 2
+        blatt, projekt, leiste, vorlage, rand, mitte_y, linkes, hoehe / 2, blattart
     )
 
     anschriften = rand + linkes
@@ -366,15 +383,23 @@ def _beispiel_matrix(
 
 def _beispiel_verteiler(
     blatt: Blatt, projekt: Projekt, leiste: int | None, vorlage: Blattvorlage,
-    x: float, y: float, breite: float, hoehe: float,
+    x: float, y: float, breite: float, hoehe: float, blattart: str = "leisten",
 ) -> None:
-    """Verteiler, Nummer und Leiste - Beschriftung links, Wert daneben."""
+    """Verteiler, Nummer und Leiste - Beschriftung links, Wert daneben.
+
+    Auf der Verteilerbelegung gibt es keine einzelne Leiste; dort stehen
+    an ihrer Stelle die eigenen Felder.
+    """
     v = projekt.verteiler
     zeilen = [
         ("Verteiler:", v.name),
         ("Verteiler Nr.", v.nummer),
-        ("Leiste:", "" if leiste is None else str(leiste)),
     ]
+    if blattart == "belegung":
+        zeilen += list(projekt.eigene_felder_hier("belegung").items())
+    else:
+        zeilen.append(("Leiste:", "" if leiste is None else str(leiste)))
+        zeilen += list(projekt.eigene_felder_hier(blattart).items())
     zeile_h = hoehe / max(len(zeilen), 4)
     label_b = breite * 0.42
     for j, (name, wert) in enumerate(zeilen):
@@ -460,7 +485,7 @@ def deckblatt(projekt: Projekt, vorlage: Blattvorlage = STANDARD) -> Blatt:
         ("Gezeichnet", _paar(projekt, "gezeichnet")),
         ("Blattvorlage", vorlage.name if not vorlage.standard else ""),
     ]
-    zeilen += list(projekt.sichtbare_eigene_felder().items())
+    zeilen += list(projekt.eigene_felder_hier("deckblatt").items())
 
     # Eine Anschrift steht auch hier zeilenweise.
     for name, wert in schriftfeldzeilen([(n, w) for n, w in zeilen if str(w).strip()]):
@@ -596,7 +621,7 @@ def verteilerbelegung(
                     str(i + 1), vorlage.schrift_klein, MITTE, False, TINTE_LEISE,
                 )
 
-    schriftfeld(blatt, projekt, None, vorlage)
+    schriftfeld(blatt, projekt, None, vorlage, "belegung")
     return blatt
 
 
@@ -735,7 +760,7 @@ def leistenblatt(
     blatt.linie(x, oben, x, unten, 0.2, LINIE)
     blatt.rechteck(rand, oben, tabellenbreite, unten - oben, staerke=0.4)
 
-    schriftfeld(blatt, projekt, leiste_nr, vorlage)
+    schriftfeld(blatt, projekt, leiste_nr, vorlage, "leisten")
     return blatt
 
 

@@ -83,6 +83,15 @@ keine — und **behält seinen Inhalt**: wer die Anlagennummer nur für diesen A
 weglassen will, muss sie nicht löschen. Die Auswahl steht in der
 Projektdatei.
 
+**Eigene Felder** — frei benannte Paare wie *Standort: Keller* — erscheinen
+im Schriftfeld. Eine Häkchenzeile *Anzeigen auf* sagt, auf welchen
+Blattarten: Deckblatt, Verteilerbelegung, Leistenblättern. Eine abgewählte
+Blattart lässt den Inhalt unberührt, sie zeigt ihn nur nicht.
+
+Auf der **Verteilerbelegung** stehen sie am Platz der Leiste: dieses Blatt
+zeigt alle Leisten, also keine einzelne — eine Zeile „Leiste" bliebe dort
+leer. In allen mitgelieferten Blattvorlagen ist das so.
+
 Was bei jedem Verteiler gleich ist — Firma, Kürzel, der Ersteller —,
 wird als **Vorgabe** gesetzt: *Einstellungen ▸ Vorgaben für neue
 Verteiler* führt dieselben Felder und schreibt sie in die

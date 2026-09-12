@@ -335,5 +335,37 @@ class TestFeldauswahl(unittest.TestCase):
         self.assertEqual(self.projekt.eigene_felder, {"Standort": "Keller"})
 
 
+class TestEigeneFelderJeBlattart(unittest.TestCase):
+    """Eigene Felder nur auf den gewählten Blattarten."""
+
+    def setUp(self):
+        from verteilerly.modell import Projekt
+
+        self.projekt = Projekt(eigene_felder={"Standort": "Keller"})
+
+    def test_zunaechst_auf_jeder_blattart(self):
+        from verteilerly.modell import BLATTARTEN
+
+        for art in BLATTARTEN:
+            with self.subTest(art=art):
+                self.assertEqual(
+                    self.projekt.eigene_felder_hier(art), {"Standort": "Keller"}
+                )
+
+    def test_abgewaehlte_blattart_bleibt_leer(self):
+        self.projekt.eigene_felder_auf = {"belegung"}
+        self.assertEqual(self.projekt.eigene_felder_hier("belegung"), {"Standort": "Keller"})
+        self.assertEqual(self.projekt.eigene_felder_hier("deckblatt"), {})
+        self.assertEqual(self.projekt.eigene_felder_hier("leisten"), {})
+
+    def test_der_inhalt_bleibt_erhalten(self):
+        self.projekt.eigene_felder_auf = set()
+        self.assertEqual(self.projekt.eigene_felder, {"Standort": "Keller"})
+
+    def test_abgewaehltes_feld_kommt_auch_hier_nicht(self):
+        self.projekt.sichtbarkeit_setzen("Standort", False)
+        self.assertEqual(self.projekt.eigene_felder_hier("belegung"), {})
+
+
 if __name__ == "__main__":
     unittest.main()

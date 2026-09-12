@@ -34,6 +34,8 @@ from .. import paket
 from ..blattvorlagen import Blattvorlagen
 from ..farbcodes import Kabeltypen
 from ..modell import (
+    BLATTART_BESCHRIFTUNG,
+    BLATTARTEN,
     BRIEFKOPF_BESCHRIFTUNG,
     BRIEFKOPF_FELDER,
     Kabel,
@@ -862,6 +864,26 @@ class ProjektdatenDialog(QDialog):
         for name, wert in projekt.eigene_felder.items():
             self._zeile_anhaengen(name, wert, projekt.sichtbar(name))
 
+        # Auf welchen Blaettern die eigenen Felder erscheinen.
+        self.blattarten: dict[str, QCheckBox] = {}
+        blattzeile = QHBoxLayout()
+        blattzeile.addWidget(QLabel("Anzeigen auf:"))
+        for art in BLATTARTEN:
+            haken = QCheckBox(BLATTART_BESCHRIFTUNG[art])
+            haken.setChecked(art in projekt.eigene_felder_auf)
+            haken.setToolTip(
+                "Ohne Haken erscheinen die eigenen Felder auf dieser Blattart "
+                "nicht; ihr Inhalt bleibt erhalten."
+            )
+            self.blattarten[art] = haken
+            blattzeile.addWidget(haken)
+        blattzeile.addStretch(1)
+        # In den Vorgaben hat die Zeile nichts zu suchen: sie gehoert zum
+        # Projekt, nicht zu dem, was jeder neue Verteiler erbt.
+        self.blattkasten = QWidget()
+        self.blattkasten.setLayout(blattzeile)
+        self.blattkasten.setVisible(not vorgaben)
+
         hinzu = QPushButton("Feld hinzufügen")
         hinzu.clicked.connect(lambda: self._zeile_anhaengen("", "", True))
         weg = QPushButton("Feld entfernen")
@@ -873,6 +895,7 @@ class ProjektdatenDialog(QDialog):
 
         eigenblock = QVBoxLayout()
         eigenblock.addWidget(self.eigene)
+        eigenblock.addWidget(self.blattkasten)
         eigenblock.addLayout(knoepfe)
         eigene = QGroupBox("Eigene Felder")
         eigene.setLayout(eigenblock)
@@ -955,3 +978,6 @@ class ProjektdatenDialog(QDialog):
                 ausgeblendet.add(schluessel)
         self.projekt.eigene_felder = eigene
         self.projekt.ausgeblendet = ausgeblendet
+        self.projekt.eigene_felder_auf = {
+            art for art, haken in self.blattarten.items() if haken.isChecked()
+        }

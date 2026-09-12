@@ -167,6 +167,35 @@ class TestSchriftfeld(unittest.TestCase):
         self.assertIn("Verteiler", texte)
         self.assertIn("Leiste", texte)
 
+    def test_belegung_fuehrt_keine_leiste_sondern_eigene_felder(self):
+        """Die Belegung gilt allen Leisten - dort steht der Platzhalter."""
+        texte = _texte(verteilerbelegungen(self.projekt)[0])
+        self.assertNotIn("Leiste", texte)
+        self.assertIn("Standort", texte)
+        self.assertIn("Keller", texte)
+
+    def test_eigene_felder_stehen_auf_der_belegung_nur_einmal(self):
+        texte = _texte(verteilerbelegungen(self.projekt)[0])
+        self.assertEqual(texte.count("Standort"), 1)
+        self.assertEqual(texte.count("Keller"), 1)
+
+    def test_belegung_ohne_eigene_felder_bleibt_ohne_leiste(self):
+        self.projekt.eigene_felder.clear()
+        self.assertNotIn("Leiste", _texte(verteilerbelegungen(self.projekt)[0]))
+
+    def test_abgewaehlte_blattart_zeigt_die_felder_nicht(self):
+        """Der Inhalt bleibt, nur dieses Blatt fuehrt ihn nicht."""
+        self.projekt.eigene_felder_auf = {"leisten"}
+        self.assertNotIn("Keller", _texte(verteilerbelegungen(self.projekt)[0]))
+        self.assertNotIn("Keller", _texte(deckblatt(self.projekt)))
+        self.assertIn("Keller", _texte(leistenblatt(self.projekt, 1)))
+        self.assertEqual(self.projekt.eigene_felder["Standort"], "Keller")
+
+    def test_leistenblatt_fuehrt_weiter_seine_leiste(self):
+        texte = _texte(leistenblatt(self.projekt, 1))
+        self.assertIn("Leiste", texte)
+        self.assertIn("Standort", texte)
+
     def test_halb_abgewaehltes_paar(self):
         """Erstellt am/von: fällt eine Hälfte weg, bleibt die andere."""
         self.projekt.briefkopf["erstellt_von"] = "T. Mirik"

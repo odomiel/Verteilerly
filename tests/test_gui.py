@@ -899,6 +899,21 @@ class TestProjektdatenDialog(unittest.TestCase):
         self.dialog._zeile_anhaengen("Neu", "Wert")
         self.assertEqual(self._zeile("Neu").checkState(), Qt.CheckState.Checked)
 
+    def test_blattarten_der_eigenen_felder(self):
+        """Die Wahl der Blätter kommt ins Projekt."""
+        self.assertTrue(all(h.isChecked() for h in self.dialog.blattarten.values()))
+        self.dialog.blattarten["deckblatt"].setChecked(False)
+        self.dialog.uebernehmen()
+        self.assertEqual(self.projekt.eigene_felder_auf, {"belegung", "leisten"})
+
+    def test_der_dialog_zeigt_die_gespeicherte_wahl(self):
+        from verteilerly.gui.dialoge import ProjektdatenDialog
+
+        self.projekt.eigene_felder_auf = {"leisten"}
+        dialog = ProjektdatenDialog(self.projekt)
+        self.assertFalse(dialog.blattarten["deckblatt"].isChecked())
+        self.assertTrue(dialog.blattarten["leisten"].isChecked())
+
 
 @unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
 class TestDeutscheDialoge(unittest.TestCase):

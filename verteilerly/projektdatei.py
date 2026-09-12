@@ -12,6 +12,7 @@ from typing import Any
 
 from .modell import (
     Ader,
+    BLATTARTEN,
     Aderadresse,
     Kabel,
     Kabelabschnitt,
@@ -25,12 +26,13 @@ from .modell import (
 )
 
 DATEIKENNUNG = "verteilerly-projekt"
-FORMATVERSION = 4
+FORMATVERSION = 5
 # Fassung 1 nannte die Buchten noch Reihen, Fassung 2 kannte noch keine
-# abgewaehlten Felder, Fassung 3 noch keinen Vermerk im Rangierfeld.
+# abgewaehlten Felder, Fassung 3 noch keinen Vermerk im Rangierfeld,
+# Fassung 4 noch keine Wahl der Blattarten fuer die eigenen Felder.
 # Solche Dateien werden weiter gelesen; geschrieben wird immer die neue
 # Fassung.
-LESBARE_VERSIONEN = (1, 2, 3, 4)
+LESBARE_VERSIONEN = (1, 2, 3, 4, 5)
 
 
 class ProjektdateiFehler(ModellFehler):
@@ -109,6 +111,8 @@ def als_dict(projekt: Projekt) -> dict[str, Any]:
         # Abgewaehlte Felder behalten ihren Inhalt - nur die Auswahl wird
         # vermerkt.
         "ausgeblendet": sorted(projekt.ausgeblendet),
+        # Auf welchen Blattarten die eigenen Felder erscheinen.
+        "eigene_felder_auf": sorted(projekt.eigene_felder_auf),
         "verteiler": _verteiler_raus(projekt.verteiler),
     }
 
@@ -199,6 +203,12 @@ def aus_dict(daten: dict[str, Any]) -> Projekt:
         briefkopf=dict(daten.get("briefkopf") or {}),
         eigene_felder=dict(daten.get("eigene_felder") or {}),
         ausgeblendet=set(daten.get("ausgeblendet") or ()),
+        # Aeltere Dateien kannten die Wahl nicht - dort stehen die eigenen
+        # Felder wie bisher auf jedem Blatt.
+        eigene_felder_auf=set(
+            daten.get("eigene_felder_auf", BLATTARTEN) or ()
+        )
+        & set(BLATTARTEN),
     )
 
 
