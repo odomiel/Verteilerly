@@ -9,6 +9,7 @@ from verteilerly.layout import (
     Rechteck,
     Text,
     blaetter,
+    deckblatt,
     leistenblatt,
     verteilerbelegungen,
 )
@@ -614,3 +615,43 @@ class TestKabelspalteImLeistenblatt(unittest.TestCase):
             if isinstance(e, Rechteck) and e.fuellung == "#EFEFEF"
         ]
         self.assertEqual(len(bloecke), 1)
+
+
+class TestDeckblattOhneSchriftfeld(unittest.TestCase):
+    """Das Deckblatt ist selbst eines - unten steht nichts noch einmal."""
+
+    def _blatt(self, vorlage=STANDARD):
+        v = Verteiler.aus_geometrie(1, 2, 10, name="Probe", nummer="1.1")
+        projekt = Projekt(
+            verteiler=v,
+            briefkopf={"firma": "Musterfirma", "erstellt_am": "01.01.1970"},
+        )
+        return deckblatt(projekt, vorlage)
+
+    def test_kein_schriftfeldkasten_am_blattfuss(self):
+        blatt = self._blatt()
+        unten = blatt.hoehe - STANDARD.rand - STANDARD.schriftfeld_hoehe
+        kaesten = [
+            e for e in blatt.elemente
+            if isinstance(e, Rechteck) and e.y >= unten - 0.01
+        ]
+        self.assertEqual(kaesten, [])
+
+    def test_jede_angabe_steht_genau_einmal(self):
+        texte = _texte(self._blatt())
+        for wert in ("Musterfirma", "Probe", "1.1"):
+            with self.subTest(wert=wert):
+                self.assertEqual(texte.count(wert), 1)
+
+    def test_die_fusszeile_bleibt(self):
+        folge = blaetter(Projekt(verteiler=Verteiler.aus_geometrie(1, 2, 10)))
+        self.assertIn("Blatt 1 von 4", _texte(folge[0]))
+
+    def test_die_uebrigen_blaetter_behalten_ihr_schriftfeld(self):
+        projekt = Projekt(
+            verteiler=Verteiler.aus_geometrie(1, 2, 10, name="Probe"),
+            briefkopf={"firma": "Musterfirma"},
+        )
+        for blatt in blaetter(projekt)[1:]:
+            with self.subTest(blatt=blatt.titel):
+                self.assertIn("Musterfirma", _texte(blatt))

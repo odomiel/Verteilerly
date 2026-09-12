@@ -478,7 +478,9 @@ def deckblatt(projekt: Projekt, vorlage: Blattvorlage = STANDARD) -> Blatt:
         blatt.text(rand + 48, y, breite - 48, 7, str(wert), vorlage.schrift_mittel)
         y += 7.6
 
-    schriftfeld(blatt, projekt, None, vorlage)
+    # Kein Schriftfeld: das Deckblatt ist selbst eines. Alles, was dort
+    # unten stuende, steht hier schon in der Liste - zweimal dasselbe auf
+    # einem Blatt ist kein Kopf, sondern eine Wiederholung.
     return blatt
 
 

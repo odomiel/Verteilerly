@@ -183,6 +183,11 @@ Auf dem **Leistenblatt** gilt dasselbe für die Kabelspalte: die
 Zeilenstriche enden davor. Das Kabel steht dort als ein Block über seine
 Zeilen, und was frei bleibt, ist eine durchgehende Fläche.
 
+Das **Deckblatt trägt kein Schriftfeld** — es ist selbst eines: Titel,
+Verteiler, Aufbau, Kennzahlen und die Projektdaten stehen dort als Liste.
+Ein zweiter Kasten am Blattfuß hätte nur wiederholt, was darüber schon
+steht.
+
 Die Blattfolge ist Deckblatt, Verteilerbelegung, dann je Leiste ein Blatt.
 Bis zwei Buchten passt die Verteilerbelegung auf ein Blatt; ab der dritten
 Bucht bekommt je zwei Buchten ein eigenes Blatt, benannt nach dem, was
