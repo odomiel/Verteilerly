@@ -847,10 +847,9 @@ class BeschriftungsFelder(QWidget):
         rollen = QScrollArea()
         rollen.setWidget(inhalt)
         rollen.setWidgetResizable(True)
-        # Aufgeklappt sollen ein paar Zeilen zu sehen sein, aber nicht
-        # alle dreizehn - der Dialog ist ohnehin hoch.
-        rollen.setMinimumHeight(120)
-        rollen.setMaximumHeight(220)
+        # Die Liste steht neben den Feldern; dort ist Hoehe da, sie darf
+        # also so weit aufgehen, wie der Dialog ohnehin hoch ist.
+        rollen.setMinimumHeight(150)
 
         zurueck = QPushButton("Auf Vorgabe zurücksetzen")
         zurueck.setToolTip("Schreibt in jedes Feld wieder das Wort der Vorgabe.")
@@ -991,6 +990,10 @@ class ProjektdatenDialog(QDialog):
         eigene = QGroupBox("Eigene Felder")
         eigene.setLayout(eigenblock)
 
+        # Links die Felder, rechts die Beschriftungen: untereinander
+        # waere der Dialog hoeher als mancher Bildschirm.
+        links = QVBoxLayout()
+        links.setContentsMargins(0, 0, 0, 0)
         aufbau = QVBoxLayout(self)
         if vorgaben:
             # Der Verteiler gehoert nicht in die Vorgaben - Name und
@@ -1001,16 +1004,27 @@ class ProjektdatenDialog(QDialog):
                 "in den Feldern. Was hier leer bleibt, ist dort abgewählt."
             )
             hinweis.setWordWrap(True)
-            aufbau.addWidget(hinweis)
+            links.addWidget(hinweis)
             if quelle is not None:
                 uebernehmen = QPushButton("Aus dem offenen Verteiler übernehmen")
                 uebernehmen.clicked.connect(self._aus_dem_verteiler)
-                aufbau.addWidget(uebernehmen)
+                links.addWidget(uebernehmen)
         else:
-            aufbau.addWidget(verteilerblock)
-        aufbau.addWidget(projektdaten)
-        aufbau.addWidget(eigene)
-        aufbau.addWidget(self.beschriftungen)
+            links.addWidget(verteilerblock)
+        links.addWidget(projektdaten)
+        links.addWidget(eigene)
+
+        rechts = QVBoxLayout()
+        rechts.setContentsMargins(0, 0, 0, 0)
+        rechts.addWidget(self.beschriftungen)
+        rechts.addStretch(1)
+
+        nebeneinander = QHBoxLayout()
+        # Die Beschriftungen nehmen nur, was sie brauchen; zugeklappt ist
+        # das eine Zeile, der Platz gehoert dann den Feldern.
+        nebeneinander.addLayout(links, 1)
+        nebeneinander.addLayout(rechts, 0)
+        aufbau.addLayout(nebeneinander)
         aufbau.addWidget(_knopfleiste(self))
 
     def _alle_haken(self, an: bool) -> None:

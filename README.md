@@ -84,8 +84,9 @@ weglassen will, muss sie nicht löschen. Die Auswahl steht in der
 Projektdatei.
 
 **Die Beschriftungen selbst** sind änderbar: wo *Kunde* steht, darf
-*Auftraggeber* stehen. Der Schalter *Erweitert: eigene Wörter verwenden*
-klappt die Liste auf — links das Wort der Vorgabe, rechts das eigene —, ein
+*Auftraggeber* stehen. Der Schalter *Erweitert: Beschriftungen auf dem Blatt
+ändern* klappt die Liste **neben** den Feldern auf — untereinander wäre der
+Dialog höher als mancher Bildschirm; links das Wort der Vorgabe, rechts das eigene —, ein
 Knopf schreibt überall wieder die Vorgabe hinein. Geändert wird nur das Wort:
 Inhalt, Haken und Reihenfolge bleiben, und es gilt auf Deckblatt,
 Verteilerbelegung und Leistenblättern gleichermaßen, auch in der Excel-Mappe.
