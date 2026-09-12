@@ -384,6 +384,50 @@ class TestSchriftfeldBeispiel(unittest.TestCase):
         self.assertGreater(stellen["Verteiler Nr."], stellen["Verteiler:"])
         self.assertGreater(stellen["Leiste:"], stellen["Verteiler Nr."])
 
+    def _verteilerblock(self, blatt):
+        """Oberkante und Unterkante der Zeilen in der linken unteren Haelfte."""
+        from verteilerly.layout import _schriftfeldanteile
+
+        mitte = blatt.hoehe - self.vorlage.rand - self.vorlage.schriftfeld_hoehe / 2
+        linkes = (blatt.breite - 2 * self.vorlage.rand) * _schriftfeldanteile(
+            2, self.vorlage.schriftfeld_anteile
+        )[0]
+        felder = [
+            e for e in blatt.elemente
+            if isinstance(e, Text)
+            and e.y >= mitte - 0.01
+            and e.x < self.vorlage.rand + linkes - 0.01
+        ]
+        return min(e.y for e in felder), max(e.y + e.hoehe for e in felder)
+
+    def test_verteilerblock_steht_mittig_zwischen_den_strichen(self):
+        """Weniger Zeilen als Platz: die Luft gehört oben und unten gleich."""
+        blatt = self._blatt()
+        mitte = blatt.hoehe - self.vorlage.rand - self.vorlage.schriftfeld_hoehe / 2
+        unten = blatt.hoehe - self.vorlage.rand
+        hoch, tief = self._verteilerblock(blatt)
+        self.assertAlmostEqual(hoch - mitte, unten - tief, places=6)
+        self.assertGreater(hoch - mitte, 0)
+
+    def test_auch_die_belegung_steht_mittig(self):
+        """Dort fehlt die Leiste, es sind also noch weniger Zeilen."""
+        blatt = verteilerbelegungen(self.projekt, self.vorlage)[0]
+        mitte = blatt.hoehe - self.vorlage.rand - self.vorlage.schriftfeld_hoehe / 2
+        unten = blatt.hoehe - self.vorlage.rand
+        hoch, tief = self._verteilerblock(blatt)
+        self.assertAlmostEqual(hoch - mitte, unten - tief, places=6)
+        self.assertGreater(hoch - mitte, 0)
+
+    def test_voller_block_fuellt_die_haelfte(self):
+        """Mit genug eigenen Feldern bleibt keine Luft - und nichts ragt heraus."""
+        self.projekt.eigene_felder = {"Standort": "Keller", "Vertrag": "2028"}
+        blatt = self._blatt()
+        mitte = blatt.hoehe - self.vorlage.rand - self.vorlage.schriftfeld_hoehe / 2
+        unten = blatt.hoehe - self.vorlage.rand
+        hoch, tief = self._verteilerblock(blatt)
+        self.assertGreaterEqual(hoch, mitte - 0.01)
+        self.assertLessEqual(tief, unten + 0.01)
+
     def test_der_name_steht_neben_seiner_beschriftung(self):
         """Wie die übrigen Zeilen des Feldes - nicht darunter."""
         blatt = self._blatt()

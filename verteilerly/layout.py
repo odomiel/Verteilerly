@@ -400,10 +400,14 @@ def _beispiel_verteiler(
     else:
         zeilen.append(("Leiste:", "" if leiste is None else str(leiste)))
         zeilen += list(projekt.eigene_felder_hier(blattart).items())
+    # Die Zeilenhoehe richtet sich nach der Matrix darueber, damit beide
+    # Haelften dieselbe Schrift tragen; der Block steht dann aber mittig
+    # zwischen den beiden Strichen statt oben angeschlagen.
     zeile_h = hoehe / max(len(zeilen), 4)
+    erste = y + (hoehe - zeile_h * len(zeilen)) / 2
     label_b = breite * 0.42
     for j, (name, wert) in enumerate(zeilen):
-        zeile_y = y + j * zeile_h
+        zeile_y = erste + j * zeile_h
         blatt.text(
             x + 2, zeile_y, label_b - 3, zeile_h, name,
             vorlage.schrift_klein, LINKS, False, TINTE_LEISE,

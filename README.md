@@ -244,6 +244,13 @@ der Mustertabellen (`schriftfeld_art: beispiel`):
 Wie sich die beiden Hälften teilen, sagt `schriftfeld_anteile` — die
 Anschriften bekommen mit `[0.42, 0.58]` die größere.
 
+Verteiler, Nummer und das freie Feld darunter stehen **mittig zwischen den
+beiden Strichen**: die Zeilenhöhe richtet sich nach der Matrix darüber,
+damit beide Hälften dieselbe Schrift tragen, und was an Platz übrig bleibt,
+gehört oben und unten zu gleichen Teilen. Auf der Verteilerbelegung sind es
+zwei Zeilen statt drei — dort fehlt die Leiste —, und mit genug
+eigenen Feldern füllt der Block die Hälfte aus.
+
 Die Kabelspalte hat sie schmal und quer wie die Standardvorlage; in den
 Mustertabellen gibt es sie nicht, dort stand das Kabel nur in der
 Verteilerbelegung. Wie breit die drei Blöcke sind, sagt dort
