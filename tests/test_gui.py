@@ -562,6 +562,7 @@ class TestMenuezustaende(unittest.TestCase):
         from PySide6.QtWidgets import QFileDialog
 
         from verteilerly import pfade
+        from verteilerly.gui.dialoge import PaketDialog
 
         f = self.fenster
         with tempfile.TemporaryDirectory() as ordner:
@@ -583,6 +584,9 @@ class TestMenuezustaende(unittest.TestCase):
                  mock.patch.object(pfade, "eigener_datenordner", return_value=daten):
                 with mock.patch.object(
                     QFileDialog, "getSaveFileName", return_value=(ziel, "")
+                ), mock.patch.object(
+                    PaketDialog, "exec",
+                    lambda dialog: PaketDialog.DialogCode.Accepted,
                 ):
                     f.paket_sichern()
                 self.assertTrue(Path(ziel).is_file())
@@ -594,9 +598,9 @@ class TestMenuezustaende(unittest.TestCase):
 
                 with mock.patch.object(
                     QFileDialog, "getOpenFileName", return_value=(ziel, "")
-                ), mock.patch(
-                    "verteilerly.gui.hauptfenster.frage",
-                    return_value=QMessageBox.StandardButton.Yes,
+                ), mock.patch.object(
+                    PaketDialog, "exec",
+                    lambda dialog: PaketDialog.DialogCode.Accepted,
                 ):
                     f.paket_einspielen()
 
@@ -605,6 +609,23 @@ class TestMenuezustaende(unittest.TestCase):
                 self.assertEqual(f.einstellungen.value("blattvorlage"), "knapp")
                 self.assertEqual(f.vorschau.blattvorlage.id, "knapp")
                 self.assertEqual(f.schreibweise.id, "mit_strich")
+
+    def test_auswahl_bietet_nur_an_was_es_gibt(self):
+        """Ein Paket ohne Kabeltypen kann keine mitbringen."""
+        from verteilerly.gui.dialoge import PaketDialog
+
+        dialog = PaketDialog(
+            "Probe", {"vorlagen": 3, "blattvorlagen": 0, "kabeltypen": 2,
+                      "einstellungen": 1}
+        )
+        self.assertEqual(dialog.auswahl(), {"vorlagen", "kabeltypen", "einstellungen"})
+        self.assertFalse(dialog.haken["blattvorlagen"].isEnabled())
+        self.assertIn("(3)", dialog.haken["vorlagen"].text())
+
+        # Ohne einen einzigen Haken gibt es nichts zu tun.
+        for haken in dialog.haken.values():
+            haken.setChecked(False)
+        self.assertFalse(dialog.knoepfe.buttons()[0].isEnabled())
 
     def test_kein_paket_wird_abgewiesen(self):
         import tempfile

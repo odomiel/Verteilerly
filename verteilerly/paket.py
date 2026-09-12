@@ -26,6 +26,16 @@ MERKZETTEL = "paket.json"
 CONFNAME = "Verteilerly.conf"
 # Was ein Paket tragen darf - mehr wird weder eingepackt noch ausgepackt.
 UNTERORDNER = ("vorlagen", "blattvorlagen", "kabeltypen")
+EINSTELLUNGEN = "einstellungen"
+# Die Teile, die sich einzeln waehlen lassen - in dieser Reihenfolge
+# stehen sie auch im Dialog.
+TEILE = (*UNTERORDNER, EINSTELLUNGEN)
+BESCHRIFTUNG = {
+    "vorlagen": "Verteilervorlagen",
+    "blattvorlagen": "Blattvorlagen",
+    "kabeltypen": "Kabeltypen",
+    EINSTELLUNGEN: "Einstellungen",
+}
 ENDUNG = ".yaml"
 
 
@@ -45,20 +55,39 @@ def _dateien(datenordner: pathlib.Path) -> list[tuple[str, pathlib.Path]]:
     return gefunden
 
 
+def bestand(
+    datenordner: pathlib.Path, einstellungen: pathlib.Path | None = None
+) -> dict[str, int]:
+    """Was ein Paket aus diesem Arbeitsordner enthielte - zum Auswaehlen."""
+    bericht = {name: 0 for name in UNTERORDNER}
+    for name, _ in _dateien(pathlib.Path(datenordner)):
+        bericht[name.split("/")[0]] += 1
+    conf = pathlib.Path(einstellungen) if einstellungen else None
+    bericht[EINSTELLUNGEN] = int(bool(conf and conf.is_file()))
+    return bericht
+
+
 def sichern(
     ziel: pathlib.Path,
     datenordner: pathlib.Path,
     einstellungen: pathlib.Path | None = None,
+    teile: set[str] | None = None,
 ) -> dict[str, int]:
     """Schreibt Vorlagen und Einstellungen in eine ZIP-Datei.
 
+    ``teile`` waehlt aus, was hinein soll; ohne Angabe kommt alles mit.
     Zurueck kommt, was hineingegangen ist - je Unterordner die Zahl der
     Dateien und ob die Einstellungen dabei sind.
     """
     ziel = pathlib.Path(ziel)
-    dateien = _dateien(pathlib.Path(datenordner))
+    gewaehlt = set(TEILE) if teile is None else set(teile)
+    dateien = [
+        (name, datei)
+        for name, datei in _dateien(pathlib.Path(datenordner))
+        if name.split("/")[0] in gewaehlt
+    ]
     conf = pathlib.Path(einstellungen) if einstellungen else None
-    mit_conf = bool(conf and conf.is_file())
+    mit_conf = bool(conf and conf.is_file() and EINSTELLUNGEN in gewaehlt)
 
     merkzettel = {
         "kennung": KENNUNG,
@@ -81,7 +110,7 @@ def sichern(
     bericht = {name: 0 for name in UNTERORDNER}
     for name, _ in dateien:
         bericht[name.split("/")[0]] += 1
-    bericht["einstellungen"] = int(mit_conf)
+    bericht[EINSTELLUNGEN] = int(mit_conf)
     return bericht
 
 
@@ -125,7 +154,7 @@ def inhalt(quelle: pathlib.Path) -> dict:
     for name in namen:
         if name != CONFNAME:
             bericht[name.split("/")[0]] += 1
-    bericht["einstellungen"] = int(CONFNAME in namen)
+    bericht[EINSTELLUNGEN] = int(CONFNAME in namen)
     bericht["version"] = merkzettel.get("version", "")
     bericht["erstellt"] = merkzettel.get("erstellt", "")
     return bericht
@@ -135,35 +164,40 @@ def einspielen(
     quelle: pathlib.Path,
     datenordner: pathlib.Path,
     einstellungen: pathlib.Path | None = None,
+    teile: set[str] | None = None,
 ) -> dict[str, int]:
     """Packt ein Paket in den Arbeitsordner aus.
 
-    Gleichnamige Dateien werden ersetzt - das ist der Sinn der Sache:
-    ein Paket bringt den Stand mit, den es enthaelt. Was im Paket fehlt,
-    bleibt unangetastet.
+    ``teile`` waehlt aus, was ankommen soll; ohne Angabe alles. Gleich-
+    namige Dateien werden ersetzt - das ist der Sinn der Sache: ein Paket
+    bringt den Stand mit, den es enthaelt. Was im Paket fehlt oder nicht
+    gewaehlt ist, bleibt unangetastet.
     """
     quelle = pathlib.Path(quelle)
     datenordner = pathlib.Path(datenordner)
+    gewaehlt = set(TEILE) if teile is None else set(teile)
     inhalt(quelle)                       # prueft Kennung und Lesbarkeit
 
     bericht = {name: 0 for name in UNTERORDNER}
-    bericht["einstellungen"] = 0
+    bericht[EINSTELLUNGEN] = 0
     try:
         with zipfile.ZipFile(quelle) as paket:
             for name in paket.namelist():
                 if not _brauchbar(name):
                     continue
                 if name == CONFNAME:
-                    if einstellungen is None:
+                    if einstellungen is None or EINSTELLUNGEN not in gewaehlt:
                         continue
                     ziel = pathlib.Path(einstellungen)
                 else:
+                    if name.split("/")[0] not in gewaehlt:
+                        continue
                     ziel = datenordner / name
                     bericht[name.split("/")[0]] += 1
                 ziel.parent.mkdir(parents=True, exist_ok=True)
                 ziel.write_bytes(paket.read(name))
                 if name == CONFNAME:
-                    bericht["einstellungen"] = 1
+                    bericht[EINSTELLUNGEN] = 1
     except OSError as fehler:
         raise PaketFehler(str(fehler)) from fehler
     return bericht

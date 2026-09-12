@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from .. import paket
 from ..blattvorlagen import Blattvorlagen
 from ..farbcodes import Kabeltypen
 from ..modell import (
@@ -359,6 +360,68 @@ class NeuerVerteilerDialog(QDialog):
             briefkopf=self.briefkopf.werte(),
             ausgeblendet=self.briefkopf.ausgeblendet(),
         )
+
+
+class PaketDialog(QDialog):
+    """Was gesichert oder eingespielt werden soll.
+
+    Je Teil ein Haken mit der Zahl der Dateien dahinter. Was es nicht
+    gibt, ist abgehakt und nicht anzuhaken - ein Paket ohne Kabeltypen
+    kann keine mitbringen.
+    """
+
+    def __init__(
+        self,
+        titel: str,
+        bestand: dict,
+        parent: QWidget | None = None,
+        hinweis: str = "",
+        knopf: str = "Übernehmen",
+    ) -> None:
+        super().__init__(parent)
+        self.setWindowTitle(titel)
+
+        self.haken: dict[str, QCheckBox] = {}
+        felder = QVBoxLayout()
+        for teil in paket.TEILE:
+            anzahl = int(bestand.get(teil, 0))
+            beschriftung = paket.BESCHRIFTUNG[teil]
+            if teil != paket.EINSTELLUNGEN:
+                beschriftung += f" ({anzahl})"
+            haken = QCheckBox(beschriftung)
+            haken.setChecked(bool(anzahl))
+            haken.setEnabled(bool(anzahl))
+            if not anzahl:
+                haken.setToolTip("Ist nicht vorhanden")
+            self.haken[teil] = haken
+            felder.addWidget(haken)
+
+        kasten = QGroupBox("Teile")
+        kasten.setLayout(felder)
+
+        aufbau = QVBoxLayout(self)
+        if hinweis:
+            zeile = QLabel(hinweis)
+            zeile.setWordWrap(True)
+            aufbau.addWidget(zeile)
+        aufbau.addWidget(kasten)
+        knoepfe = _knopfleiste(self)
+        knoepfe.button(QDialogButtonBox.StandardButton.Ok).setText(knopf)
+        self.knoepfe = knoepfe
+        aufbau.addWidget(knoepfe)
+        for haken in self.haken.values():
+            haken.toggled.connect(self._knopf_auffrischen)
+        self._knopf_auffrischen()
+        self.resize(380, 260)
+
+    def _knopf_auffrischen(self) -> None:
+        """Ohne einen einzigen Haken gibt es nichts zu tun."""
+        self.knoepfe.button(QDialogButtonBox.StandardButton.Ok).setEnabled(
+            bool(self.auswahl())
+        )
+
+    def auswahl(self) -> set[str]:
+        return {teil for teil, haken in self.haken.items() if haken.isChecked()}
 
 
 class BlattvorlagenDialog(QDialog):

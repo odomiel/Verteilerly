@@ -38,6 +38,7 @@ from .dialoge import (
     BriefkopfDialog,
     KabelDialog,
     NeuerVerteilerDialog,
+    PaketDialog,
     UeberlaufDialog,
     als_vorlage_speichern,
 )
@@ -527,17 +528,34 @@ class Hauptfenster(QMainWindow):
 
     def paket_sichern(self) -> None:
         """Vorlagen, Kabeltypen und Einstellungen in eine Datei packen."""
+        vorhanden = paket.bestand(
+            pfade.eigener_datenordner(), pfade.einstellungsdatei()
+        )
+        wahl = PaketDialog(
+            "Vorlagen und Einstellungen sichern",
+            vorhanden,
+            self,
+            "Was soll in das Paket?",
+            "Sichern…",
+        )
+        if wahl.exec() != PaketDialog.DialogCode.Accepted:
+            return
+        teile = wahl.auswahl()
+
         vorschlag = pathlib.Path.home() / f"Verteilerly-{VERSION}.zip"
         name, _ = QFileDialog.getSaveFileName(
             self, "Vorlagen und Einstellungen sichern", str(vorschlag), PAKETFILTER
         )
         if not name:
             return
+        # Was gleich eingepackt wird, soll auf der Platte stehen.
+        self.einstellungen.sync()
         try:
             bericht = paket.sichern(
                 pathlib.Path(name),
                 pfade.eigener_datenordner(),
                 pfade.einstellungsdatei(),
+                teile,
             )
         except paket.PaketFehler as fehler:
             QMessageBox.critical(self, "Nicht gesichert", str(fehler))
@@ -559,19 +577,19 @@ class Hauptfenster(QMainWindow):
             QMessageBox.critical(self, "Kein Paket", str(fehler))
             return
 
-        antwort = frage(
+        wahl = PaketDialog(
+            "Paket einspielen",
+            vorschau,
             self,
-            "Paket einspielen?",
-            f"Das Paket enthält {self._paketbericht(vorschau)}.\n"
-            f"Erstellt am {vorschau.get('erstellt', 'unbekannt')} "
-            f"mit Verteilerly {vorschau.get('version', '?')}.\n\n"
-            "Gleichnamige Dateien im Arbeitsordner werden ersetzt; alles "
-            "andere bleibt stehen.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.Yes,
+            f"Erstellt am {vorschau.get('erstellt', 'unbekannt')} mit "
+            f"Verteilerly {vorschau.get('version', '?')}. Was soll "
+            "eingespielt werden? Gleichnamige Dateien im Arbeitsordner "
+            "werden ersetzt; alles andere bleibt stehen.",
+            "Einspielen",
         )
-        if antwort != QMessageBox.StandardButton.Yes:
+        if wahl.exec() != PaketDialog.DialogCode.Accepted:
             return
+        teile = wahl.auswahl()
 
         # Die Einstellungen gehen nicht als Datei an ihren Platz, sondern
         # Wert fuer Wert durch die laufenden QSettings: ein Dateitausch
@@ -580,7 +598,10 @@ class Hauptfenster(QMainWindow):
             zwischen = pathlib.Path(ordner) / paket.CONFNAME
             try:
                 bericht = paket.einspielen(
-                    pathlib.Path(name), pfade.eigener_datenordner(), zwischen
+                    pathlib.Path(name),
+                    pfade.eigener_datenordner(),
+                    zwischen,
+                    teile,
                 )
             except paket.PaketFehler as fehler:
                 QMessageBox.critical(self, "Nicht eingespielt", str(fehler))

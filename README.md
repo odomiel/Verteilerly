@@ -386,6 +386,12 @@ auf demselben Rechner nach einem Fehlgriff oder auf einem zweiten. Das
 Eingespielte gilt sofort, ohne Neustart: Vorlagen, Kabeltypen,
 Blattvorlage, Schreibweise und Erscheinungsbild werden neu geladen.
 
+**Was hinein- und herauskommt, ist wählbar:** Verteilervorlagen,
+Blattvorlagen, Kabeltypen und Einstellungen tragen je einen Haken, mit
+der Zahl der Dateien dahinter. Was es nicht gibt, ist nicht anzuhaken —
+ein Paket ohne Kabeltypen kann keine mitbringen —, und ohne einen
+einzigen Haken bleibt der Knopf aus.
+
 Beim Einspielen wird nichts blind ausgepackt: übernommen werden nur die
 bekannten Unterordner, nur `*.yaml` und die Einstellungsdatei, und nur
 Namen ohne Pfadanteil — ein Paket aus fremder Hand darf nichts außerhalb

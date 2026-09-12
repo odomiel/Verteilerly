@@ -74,6 +74,44 @@ class TestPaket(unittest.TestCase):
             (self.daten / "vorlagen" / "meine.yaml").read_text(encoding="utf-8"), "bleibt\n"
         )
 
+    def test_nur_das_gewaehlte_geht_hinein(self):
+        bericht = paket.sichern(
+            self.ziel, self.daten, self.conf, {"vorlagen", "kabeltypen"}
+        )
+        self.assertEqual(bericht["vorlagen"], 1)
+        self.assertEqual(bericht["blattvorlagen"], 0)
+        self.assertEqual(bericht["einstellungen"], 0)
+
+        with zipfile.ZipFile(self.ziel) as datei:
+            namen = set(datei.namelist())
+        self.assertNotIn("blattvorlagen/eng.yaml", namen)
+        self.assertNotIn("Verteilerly.conf", namen)
+
+    def test_nur_das_gewaehlte_kommt_an(self):
+        paket.sichern(self.ziel, self.daten, self.conf)
+
+        neu = self.wurzel / "anderswo"
+        conf_neu = self.wurzel / "anderswo.conf"
+        bericht = paket.einspielen(self.ziel, neu, conf_neu, {"blattvorlagen"})
+
+        self.assertEqual(bericht["blattvorlagen"], 1)
+        self.assertEqual(bericht["vorlagen"], 0)
+        self.assertEqual(bericht["einstellungen"], 0)
+        self.assertTrue((neu / "blattvorlagen" / "eng.yaml").is_file())
+        self.assertFalse((neu / "vorlagen").exists())
+        self.assertFalse(conf_neu.exists())
+
+    def test_bestand_zaehlt_den_arbeitsordner(self):
+        """Was zur Wahl steht, bevor überhaupt gepackt wird."""
+        bericht = paket.bestand(self.daten, self.conf)
+        self.assertEqual(bericht["vorlagen"], 1)
+        self.assertEqual(bericht["kabeltypen"], 1)
+        self.assertEqual(bericht["einstellungen"], 1)
+        self.assertEqual(paket.bestand(self.daten)["einstellungen"], 0)
+        self.assertEqual(
+            paket.bestand(self.wurzel / "leer")["vorlagen"], 0
+        )
+
     def test_inhalt_zeigt_was_drin_ist(self):
         paket.sichern(self.ziel, self.daten, self.conf)
         bericht = paket.inhalt(self.ziel)
