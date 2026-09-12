@@ -320,6 +320,17 @@ mehr; dann wird gekürzt und ein „…“ zeigt an, dass noch etwas folgt.
 Vorschau und PDF rechnen dabei gleich, jedes mit den Maßen seiner eigenen
 Schrift-Engine — was in der Vorschau passt, passt auch im Ausdruck.
 
+*Hilfe ▸ Dokumentation* (F1) zeigt die **Dokumentation im Programm**: links
+ein Verzeichnis der Abschnitte, rechts der Text — Überblick, Anlegen, Editor,
+Kabel, Rangierungen, Projektdaten, Blattvorlagen, Blattregeln, Ausgabe,
+Dateien, Menüs mit Tastenkürzeln. Sie liegt als HTML in
+`daten/hilfe/dokumentation.html`, wird über dieselbe Suchreihenfolge gefunden
+wie die übrigen mitgelieferten Dateien und **nicht** in den Arbeitsordner
+ausgelegt — sie gehört zum Programm. Eigene Farben bringt sie nicht mit, damit
+sie im dunklen Erscheinungsbild lesbar bleibt. `tests/test_hilfe.py` vergleicht
+die Einträge der Menüleiste mit dem Text: was im Menü steht, muss dort erklärt
+sein.
+
 *Hilfe ▸ Über Verteilerly* führt jeden Baustein mit Fassung, Lizenz und
 Aufgabe auf — Python, PySide6, Qt, ReportLab, openpyxl, PyYAML —, dazu
 System, Arbeitsordner und Einstellungsdatei. Die Fassungen liest

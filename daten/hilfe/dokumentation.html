@@ -1,0 +1,342 @@
+<h1>Verteilerly — Dokumentation</h1>
+
+<p class="anriss">Dokumentation für Fernmeldeverteiler in LSA+-Technik:
+Deckblatt, Verteilerbelegung und Leistenblätter aus einem Datenmodell statt
+aus kopierten Tabellenblättern. Diese Seite beschreibt jede Funktion des
+Programms in der Reihenfolge, in der man ihr bei der Arbeit begegnet.</p>
+
+<h2><a name="ueberblick"></a>1 &nbsp; Überblick</h2>
+
+<p>Ein <b>Verteiler</b> besteht aus Buchten, eine Bucht aus Leisten, eine
+Leiste aus Stiften, ein Stift aus den beiden Adern <b>a</b> und <b>b</b>. Zwei
+Adern zusammen sind eine <b>Doppelader (DA)</b>. Quer dazu liegen die
+<b>Kabel</b>: ein Kabel belegt einen zusammenhängenden Block von Doppeladern,
+bei Bedarf über mehrere Leisten hinweg. Eine <b>Rangierung</b> verbindet zwei
+Adern innerhalb des Verteilers und wird an beiden Enden geführt.</p>
+
+<p>Alles steht in <b>einer Projektdatei</b>. Daraus entstehen drei Blattarten:</p>
+
+<table border="1" cellspacing="0" cellpadding="5">
+<tr><th>Blatt</th><th>Was darauf steht</th></tr>
+<tr><td><b>Deckblatt</b></td><td>Titel, Verteiler, Aufbau, Kennzahlen und die
+Projektdaten als Liste. Es trägt kein Schriftfeld — es ist selbst eines.</td></tr>
+<tr><td><b>Verteilerbelegung</b></td><td>Jede Leiste als Zeile aus
+Doppeladern, die Kabel als Blöcke darin. Bis zwei Buchten auf einem Blatt, ab
+der dritten bekommt je zwei Buchten ein eigenes.</td></tr>
+<tr><td><b>Leistenblatt</b></td><td>Je Leiste eines: Stift, Ader, Farbe,
+Bezeichnung, Rangierung, Bemerkung und die Kabelspalte.</td></tr>
+</table>
+
+<p>Vorschau, PDF und Excel-Mappe zeichnen <i>dasselbe</i> Blattmodell — was in
+der Vorschau steht, steht auch im Ausdruck.</p>
+
+<h2><a name="anlegen"></a>2 &nbsp; Verteiler anlegen und speichern</h2>
+
+<p><b>Datei ▸ Neuer Verteiler…</b> (Strg+N). Der Dialog hat zwei Hälften:
+links der Verteiler, rechts die Projektdaten.</p>
+
+<ul>
+<li><b>Aus einer Vorlage</b> — die mitgelieferten und die selbst abgelegten
+Grundstrukturen stehen im Aufklappmenü.</li>
+<li><b>Eigene Maße</b> — Zahl der Buchten, Leisten je Bucht und Doppeladern je
+Leiste. 8, 10 und 20 DA stehen zur Wahl, jede andere Zahl wird eingetippt.</li>
+<li><b>Blattvorlage</b> — welches Blattbild gelten soll; später änderbar.</li>
+<li><b>Projektdaten</b> — Firma, Kunde, Ersteller und so weiter. Was in den
+Vorgaben gemerkt ist, steht schon in den Feldern.</li>
+</ul>
+
+<p>Eine so gebaute Struktur lässt sich als <b>Vorlage</b> ablegen: im Dialog
+selbst oder später über <b>Bearbeiten ▸ Als Vorlage speichern…</b>. Sie wird
+eine YAML-Datei im Arbeitsordner und steht sofort im Menü.</p>
+
+<p>Gespeichert wird mit <b>Strg+S</b> als <code>.vtly.json</code> — lesbares
+JSON mit einer Formatversion, ältere Fassungen werden weiter gelesen. Beim
+Schließen mit ungesicherten Änderungen fragt das Programm nach; die Knöpfe
+heißen <i>Speichern</i>, <i>Verwerfen</i> und <i>Abbrechen</i>.</p>
+
+<h2><a name="editor"></a>3 &nbsp; Der Editor</h2>
+
+<p>Links die <b>Verteilerübersicht</b>: jede Leiste ein Kasten aus
+DA-Zellen, Buchten nebeneinander, die Kabel als Blöcke. Ein Klick wählt eine
+Doppelader, ein Doppelklick legt ein Kabel auf oder öffnet ein vorhandenes.</p>
+
+<p>Rechts die <b>Leistenansicht</b> der gewählten Leiste mit den Spalten
+<i>Stift</i>, <i>Farbe</i>, <i>Bezeichnung</i>, <i>Rangierung</i> (zwei
+Felder), <i>Bemerkung</i> und <i>Kabel</i>. Änderbar sind Farbe, Bezeichnung,
+Rangierung, Bemerkung und die Kabelbeschriftung; Stift, Ader und Kabellage
+stehen fest.</p>
+
+<p>Die Leiste wird über das Aufklappmenü gewählt oder mit den beiden Pfeilen
+daneben weitergeschaltet (<b>Alt+←</b> und <b>Alt+→</b>); am ersten und
+letzten Eintrag ist der jeweilige Pfeil aus.</p>
+
+<p>Unter der Menüleiste liegt die <b>Werkzeugleiste</b> mit dem, was am
+häufigsten gebraucht wird: neuer Verteiler, öffnen, speichern, PDF, Kabel
+auflegen, bearbeiten und entfernen sowie die Vorschau.</p>
+
+<p><b>Ansicht ▸ Vorschau anzeigen</b> (F9) blendet die Blattvorschau ein und
+aus, <b>Ansicht ▸ Dunkles Erscheinungsbild</b> (Strg+D) schaltet den
+Farbsatz um. Das Blatt bleibt davon unberührt: Papier ist weiß.</p>
+
+<h2><a name="kabel"></a>4 &nbsp; Kabel</h2>
+
+<p><b>Auflegen</b> — <b>Bearbeiten ▸ Kabel auflegen…</b> (Strg+K) oder
+Doppelklick auf eine freie Doppelader. Anzugeben sind Beschriftung, Kabeltyp
+und Größe; Leiste und Startpunkt kommen aus der Auswahl.</p>
+
+<p><b>Bearbeiten</b> — Doppelklick auf ein aufgelegtes Kabel oder
+<b>Bearbeiten ▸ Kabel bearbeiten…</b> (Strg+Umschalt+E). Beschriftung,
+Kabeltyp und Größe lassen sich ändern, und der Dialog trägt auch den Knopf
+zum Entfernen. Leiste, Startpunkt und Zahl der belegten Doppeladern stehen
+fest — wer die Lage ändern will, nimmt das Kabel ab und legt es neu auf. Ein
+neuer Kabeltyp färbt die Adern nur auf Verlangen um.</p>
+
+<p>Die Beschriftung ist außerdem <b>direkt in der Kabelspalte</b> der
+Leistenansicht überschreibbar — dort, wo sie steht. Das gilt auch für ein
+Kabel, das ohne Beschriftung angelegt wurde.</p>
+
+<p><b>Entfernen</b> — <b>Bearbeiten ▸ Kabel entfernen</b>
+(Strg+Umschalt+K), nach Auswahl einer Doppelader mit Kabel.</p>
+
+<p><b>Überlauf</b> — passt ein Kabel nicht ganz auf die Leiste, fragt ein
+Dialog, was mit dem Rest geschehen soll: auf einer anderen Leiste fortsetzen
+(mit Leiste und Startpunkt) oder verfallen lassen. Ein fortgesetztes Kabel
+bleibt <i>ein</i> Kabel mit mehreren Abschnitten.</p>
+
+<p><b>Adernfarben</b> — der Kabeltyp füllt die Farbspalte selbst: J-Y(St)Y
+und der VDE-Farbcode für Fernmeldekabel lagenweise, Sternvierer paarweise,
+DIN 47100 als Liste. Die Kabeltypen liegen als YAML im Arbeitsordner und
+lassen sich ergänzen.</p>
+
+<h2><a name="rangierungen"></a>5 &nbsp; Rangierungen</h2>
+
+<p>Je Ader stehen <b>zwei Rangierfelder</b> nebeneinander — eines je
+Rangierung, mit einer Überschrift darüber. Eingetragen wird das Ziel als
+Adresse aus Leiste, Stift und Ader:</p>
+
+<table border="1" cellspacing="0" cellpadding="5">
+<tr><th>Schreibweise</th><th>Beispiel</th></tr>
+<tr><td>ohne Kürzel</td><td><code>1 1a</code></td></tr>
+<tr><td>mit Bindestrich</td><td><code>1-1a</code></td></tr>
+<tr><td>mit L vor der Leiste</td><td><code>L1 1a</code></td></tr>
+<tr><td>mit L und Bindestrich</td><td><code>L1-1a</code></td></tr>
+</table>
+
+<p>Welche davon <i>angezeigt</i> wird, steht unter <b>Einstellungen ▸
+Schreibweise der Rangierungen</b>. <b>Gelesen wird immer alles</b>: getippt
+werden darf jede Form, gleich welche eingestellt ist, und in der Projektdatei
+steht die Adresse unverändert als <code>1 1a</code>. Wer umstellt, muss weder
+seine Projekte noch seine Gewohnheiten anfassen.</p>
+
+<p>Die <b>Gegenstelle trägt sich selbst ein</b>: eine Rangierung ist ein
+Objekt, das an beiden Enden geführt wird. Wer beide Ziele in ein Feld tippt
+(<code>3 2a&nbsp;&nbsp;5 4a</code>), bekommt sie auf beide Felder verteilt.
+Auf dem Blatt stehen sie nebeneinander in einer Zelle — dort soll nicht zu
+sehen sein, dass es zwei Felder sind.</p>
+
+<p><b>Vermerk statt Ziel</b> — <b>Einstellungen ▸ Freitext im Rangierfeld
+zulassen</b> erlaubt auch „extern", „zur Klemmleiste" oder „n.b.". Zunächst
+ist das aus: wer nur Ziele einträgt, will einen Tippfehler als Fehler gemeldet
+bekommen und nicht als Vermerk stehen haben. Ein Vermerk belegt eines der
+beiden Felder, bleibt darin stehen und wird <b>nicht gespiegelt</b> — er
+gehört der Ader. Was sich als Ziel lesen lässt, bleibt auch dann ein Ziel.</p>
+
+<h2><a name="projektdaten"></a>6 &nbsp; Projektdaten</h2>
+
+<p><b>Bearbeiten ▸ Projektdaten…</b> (Strg+B). Was hier steht, erscheint im
+Schriftfeld jedes Blattes.</p>
+
+<p><b>Verteilername und -nummer</b> stehen obenan. Abwählen lassen sie sich
+nicht — ein Blatt ohne Verteilernamen wäre keines.</p>
+
+<p><b>Jedes Feld hat ein Häkchen.</b> Ein abgewähltes Feld verschwindet vom
+Blatt mitsamt seiner Beschriftung — eine Zeile „Kunde" ohne Kunden wäre
+schlimmer als gar keine — und <b>behält seinen Inhalt</b>: wer die
+Anlagennummer nur für diesen Ausdruck weglassen will, muss sie nicht löschen.
+<i>Alle</i> und <i>Keine</i> setzen alle Haken auf einmal.</p>
+
+<p><b>Firma und Kunde tragen eine Anschrift</b>, keine Zeile: beide Felder
+sind mehrzeilig, Name, Straße und Ort stehen auf dem Blatt untereinander, die
+Beschriftung nur an der ersten Zeile.</p>
+
+<p><b>Eigene Felder</b> sind frei benannte Paare wie <i>Standort: Keller</i>.
+Die Häkchenzeile <i>Anzeigen auf</i> sagt, auf welchen Blattarten sie
+erscheinen — Deckblatt, Verteilerbelegung, Leistenblättern. Eine abgewählte
+Blattart lässt den Inhalt unberührt, sie zeigt ihn nur nicht. Auf der
+Verteilerbelegung stehen sie am Platz der Leiste: dieses Blatt zeigt alle
+Leisten, also keine einzelne.</p>
+
+<p><b>Beschriftungen ändern</b> — der Schalter <i>Erweitert: Beschriftungen
+auf dem Blatt ändern</i> in der Auswahlzeile klappt neben den Feldern eine
+Liste auf: links das Wort der Vorgabe, rechts das eigene. Wo <i>Kunde</i>
+steht, darf <i>Auftraggeber</i> stehen. Geändert wird nur das Wort — Inhalt,
+Haken und Reihenfolge bleiben —, und es gilt auf allen Blättern und in der
+Excel-Mappe. <i>Auf Vorgabe zurücksetzen</i> schreibt überall wieder das
+Vorgabewort hinein. Gemerkt wird nur, was abweicht.</p>
+
+<p><b>Vorgaben für neue Verteiler</b> — <b>Einstellungen ▸ Vorgaben für neue
+Verteiler…</b> führt dieselben Felder und schreibt sie in die
+<code>Verteilerly.conf</code>; ein Knopf übernimmt sie aus dem offenen
+Verteiler. Beim Anlegen stehen sie schon in den Feldern; angehakt ist dabei
+nur, was sie füllen. Bearbeitete Projektdaten ändern die Vorgaben
+<b>nicht</b> von selbst — sonst überschriebe der letzte Kunde sie ungefragt.
+Ein geöffneter Verteiler bleibt unberührt: dort gilt, was in der Datei
+steht.</p>
+
+<h2><a name="blattvorlagen"></a>7 &nbsp; Blattvorlagen</h2>
+
+<p>Wie das Blatt aussieht, sagt eine <b>Blattvorlage</b>; was darauf steht,
+kommt aus dem Projekt. Vier liegen bei:</p>
+
+<table border="1" cellspacing="0" cellpadding="5">
+<tr><th>Vorlage</th><th>Wofür</th></tr>
+<tr><td><b>Standard</b></td><td>Alle Spalten, schmale Kabelspalte mit
+gedrehtem Namen.</td></tr>
+<tr><td><b>Knapp</b></td><td>Reines Rangierblatt ohne Bezeichnung und
+Bemerkung, Kabelspalte breit und waagerecht.</td></tr>
+<tr><td><b>Ausführlich</b></td><td>Große Schrift, hohe Zeilen, eine Bucht je
+Blatt.</td></tr>
+<tr><td><b>Mit Anschriften</b></td><td>Das Schriftfeld der
+Mustertabellen: links oben die Matrix aus Datum und Name mit Erstellt, Stand und
+Geprüft, links unten Verteiler, Nummer und Leiste, rechts zwei Kästen mit den
+Anschriften von Firma und Kunde.</td></tr>
+</table>
+
+<p>Gewählt wird beim Anlegen und später unter <b>Einstellungen ▸
+Blattvorlage…</b> (Strg+Umschalt+B). Die Wahl gehört zum Arbeitsplatz, nicht
+zum einzelnen Verteiler: sie steht in der <code>Verteilerly.conf</code> und
+gilt für Vorschau, PDF und Excel-Mappe.</p>
+
+<p>Eine <b>eigene Blattvorlage</b> ist eine YAML-Datei im Unterordner
+<code>blattvorlagen/</code> des Arbeitsordners. Sie gibt nur an, was sie
+anders will:</p>
+
+<pre>id: eng
+name: "Eng"
+rand: 8
+zeilenhoehe_max: 7
+spalten: [stift, ader, farbe, rangierung]</pre>
+
+<p>Wiederkehrende Einstellungen sind unter anderem <code>rand</code>,
+<code>spalten</code>, <code>schriftfeld</code>, <code>schriftfeld_art</code>,
+<code>schriftfeld_anteile</code>, <code>kabel_gedreht</code>,
+<code>da_nummern</code> und <code>buchten_je_blatt</code>.</p>
+
+<h2><a name="blattbild"></a>8 &nbsp; Was auf den Blättern gilt</h2>
+
+<ul>
+<li><b>Keine Überschrift über der Tabelle</b> — welche Leiste ein Blatt zeigt,
+sagt das Schriftfeld; die Tabelle beginnt am Rand und hat den Platz.</li>
+<li><b>Stift</b> steht über der Nummer <i>und</i> über a und b: eine Spalte
+ohne eigene Überschrift gehört zur vorigen.</li>
+<li><b>Kein Text läuft über sein Feld hinaus.</b> Passt eine Bezeichnung, eine
+Bemerkung oder ein Kabelname nicht, wird die Schrift nur für dieses Feld
+verkleinert — bis 5 pt; darunter wird gekürzt und ein „…" zeigt an, dass noch
+etwas folgt.</li>
+<li>In der <b>Verteilerbelegung</b> steht kein Raster: gezeichnet wird allein
+das Kabel, freie Flächen bleiben durchgehend. DA-Nummern führt keine
+mitgelieferte Vorlage; wer sie will, setzt <code>da_nummern: true</code>. Im
+Editor bleibt jede Leiste unterteilt — dort wird geklickt.</li>
+<li>Auf dem <b>Leistenblatt</b> gilt dasselbe für die Kabelspalte: die
+Zeilenstriche enden davor, das Kabel steht als Block über seine Zeilen.</li>
+</ul>
+
+<h2><a name="ausgabe"></a>9 &nbsp; Ausgabe</h2>
+
+<table border="1" cellspacing="0" cellpadding="5">
+<tr><th>Weg</th><th>Was herauskommt</th></tr>
+<tr><td><b>Datei ▸ Als PDF…</b> (Strg+E)</td><td>Deckblatt,
+Verteilerbelegung und je Leiste ein Blatt — das Pflichtformat.</td></tr>
+<tr><td><b>Datei ▸ Als Excel-Mappe…</b></td><td>Vorn dieselben Blätter im
+Blattbild, dahinter die Daten als Tabelle: <i>Daten je Ader</i>, <i>Kabel je
+Leiste</i>, <i>Projektdaten</i> — filter- und sortierbar.</td></tr>
+<tr><td><b>Datei ▸ Als CSV…</b></td><td>Reine Daten, eine Zeile je Ader.</td></tr>
+</table>
+
+<p>Die Excel-Mappe übernimmt Spaltenfolge und -breite, Schriftgrößen,
+Zeilenhöhen, den verbundenen Kabelblock samt Drehung und die Einrichtung auf
+A4. Ein PDF nachbilden kann sie nicht: Excel ist ein Raster, das Blatt eine
+Zeichnung — das Schriftfeld steht darum unter der Tabelle statt am
+Blattfuß.</p>
+
+<h2><a name="dateien"></a>10 &nbsp; Dateien, Ordner und Sicherung</h2>
+
+<table border="1" cellspacing="0" cellpadding="5">
+<tr><th>Was</th><th>Wo</th></tr>
+<tr><td>Projektdatei</td><td>wohin gespeichert wird, <code>.vtly.json</code></td></tr>
+<tr><td>Arbeitsordner</td><td>Windows: <code>daten\</code> neben dem Programm.
+Linux: <code>~/.config/Verteilerly</code></td></tr>
+<tr><td>Einstellungen</td><td><code>Verteilerly.conf</code> — eine Datei, nie
+die Registry</td></tr>
+</table>
+
+<p>Im Arbeitsordner liegen <code>vorlagen/</code>, <code>blattvorlagen/</code>
+und <code>kabeltypen/</code> als YAML. Fehlendes legt das Programm beim Start
+an. Eine mitgelieferte Datei wird nur dann aufgefrischt, wenn sie noch genau
+so daliegt, wie sie ausgelegt wurde — <b>eigene Änderungen bleiben
+unangetastet</b>.</p>
+
+<p>In der <code>Verteilerly.conf</code> stehen die Blattvorlage, die
+Schreibweise der Rangierungen, der Freitext-Schalter, das Erscheinungsbild und
+die gemerkten Projektdaten. Was den einzelnen Verteiler betrifft, steht
+dagegen in der Projektdatei.</p>
+
+<p><b>Sichern und Einspielen</b> — <b>Einstellungen ▸ Vorlagen und
+Einstellungen sichern…</b> packt Verteilervorlagen, Blattvorlagen, Kabeltypen
+und die Einstellungen in eine ZIP-Datei; <b>… einspielen…</b> holt sie
+zurück. In beiden Richtungen wird mit Häkchen gewählt, was mitkommt, und der
+Dialog zeigt vorher, was im Paket steckt. Beim Einspielen werden nur die
+bekannten Unterordner und nur YAML übernommen — ein Paket aus fremder Hand
+kann nichts außerhalb des Arbeitsordners anlegen.</p>
+
+<h2><a name="menue"></a>11 &nbsp; Menüs und Tastenkürzel</h2>
+
+<table border="1" cellspacing="0" cellpadding="5">
+<tr><th>Menü</th><th>Eintrag</th><th>Kürzel</th></tr>
+<tr><td rowspan="8"><b>Datei</b></td><td>Neuer Verteiler…</td><td>Strg+N</td></tr>
+<tr><td>Öffnen…</td><td>Strg+O</td></tr>
+<tr><td>Speichern</td><td>Strg+S</td></tr>
+<tr><td>Speichern unter…</td><td>Strg+Umschalt+S</td></tr>
+<tr><td>Als PDF…</td><td>Strg+E</td></tr>
+<tr><td>Als Excel-Mappe…</td><td></td></tr>
+<tr><td>Als CSV…</td><td></td></tr>
+<tr><td>Beenden</td><td>Strg+Q</td></tr>
+<tr><td rowspan="5"><b>Bearbeiten</b></td><td>Kabel auflegen…</td><td>Strg+K</td></tr>
+<tr><td>Kabel bearbeiten…</td><td>Strg+Umschalt+E</td></tr>
+<tr><td>Kabel entfernen</td><td>Strg+Umschalt+K</td></tr>
+<tr><td>Als Vorlage speichern…</td><td></td></tr>
+<tr><td>Projektdaten…</td><td>Strg+B</td></tr>
+<tr><td rowspan="6"><b>Einstellungen</b></td><td>Blattvorlage…</td><td>Strg+Umschalt+B</td></tr>
+<tr><td>Vorgaben für neue Verteiler…</td><td></td></tr>
+<tr><td>Vorlagen und Einstellungen sichern…</td><td></td></tr>
+<tr><td>Vorlagen und Einstellungen einspielen…</td><td></td></tr>
+<tr><td>Schreibweise der Rangierungen</td><td></td></tr>
+<tr><td>Freitext im Rangierfeld zulassen</td><td></td></tr>
+<tr><td rowspan="2"><b>Ansicht</b></td><td>Dunkles Erscheinungsbild</td><td>Strg+D</td></tr>
+<tr><td>Vorschau anzeigen</td><td>F9</td></tr>
+<tr><td rowspan="2"><b>Hilfe</b></td><td>Dokumentation</td><td>F1</td></tr>
+<tr><td>Über Verteilerly</td><td></td></tr>
+</table>
+
+<p>Im Editor schalten <b>Alt+←</b> und <b>Alt+→</b> von Leiste zu Leiste.</p>
+
+<p>Menüeinträge, die gerade nichts bewirken können, sind <b>ausgegraut</b>:
+ohne Verteiler die ganze Ausgabe, <i>Kabel entfernen</i> nur dort, wo wirklich
+ein Kabel liegt, <i>Speichern</i> nur, wenn es etwas zu speichern gibt. Jeder
+Eintrag trägt einen Statushinweis, der auch im ausgegrauten Zustand erscheint
+und sagt, wofür er da ist.</p>
+
+<h2><a name="ueber"></a>12 &nbsp; Auskunft über das Programm</h2>
+
+<p><b>Hilfe ▸ Dokumentation</b> (F1) öffnet diese Seite: links das
+Verzeichnis, rechts der Text.</p>
+
+<p><b>Hilfe ▸ Über Verteilerly</b> führt jeden Baustein mit Fassung, Lizenz
+und Aufgabe auf — Python, PySide6, Qt, ReportLab, openpyxl, PyYAML —, dazu
+System, Arbeitsordner und Einstellungsdatei. Die Fassungen kommen aus dem
+laufenden Programm, nicht aus einer gepflegten Liste.</p>
+
+<p>Auf der Kommandozeile beantwortet <code>--selbsttest</code> dieselbe Frage
+kurz und ohne Fenster; <code>--python&nbsp;skript.py</code> führt ein eigenes
+Skript gegen das gepackte Programm aus.</p>
+

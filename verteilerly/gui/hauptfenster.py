@@ -196,7 +196,8 @@ class Hauptfenster(QMainWindow):
             hinweis="Ein Kabel auf eine Leiste legen",
         )
         self.aktion_kabel_aendern = aktion(
-            "Kabel &bearbeiten…", self.kabel_bearbeiten, "Ctrl+E", True, bearbeiten,
+            "Kabel &bearbeiten…", self.kabel_bearbeiten, "Ctrl+Shift+E", True,
+            bearbeiten,
             hinweis="Beschriftung, Kabeltyp und Größe eines aufgelegten Kabels ändern",
         )
         self.aktion_kabel_weg = aktion(
@@ -292,6 +293,9 @@ class Hauptfenster(QMainWindow):
         self.vorschau_zeigen(self.aktion_vorschau.isChecked())
 
         hilfe = self.menuBar().addMenu("&Hilfe")
+        aktion("&Dokumentation", self.dokumentation, "F1", menue=hilfe,
+               hinweis="Was das Programm kann und wie es bedient wird")
+        hilfe.addSeparator()
         aktion("Ü&ber Verteilerly", self.ueber, menue=hilfe)
 
     # -- Darstellung -------------------------------------------------------
@@ -1030,6 +1034,12 @@ class Hauptfenster(QMainWindow):
             "Bestandteil.</i></p>"
             f"<p><b>Umgebung</b></p>{umgebung}",
         )
+
+    def dokumentation(self) -> None:
+        """Die Dokumentation im Programm."""
+        from .dialoge import DokumentationDialog
+
+        DokumentationDialog(self).exec()
 
     def closeEvent(self, ereignis) -> None:
         if self._darf_verwerfen():

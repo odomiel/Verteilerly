@@ -36,6 +36,14 @@ for ordner in ("vorlagen", "kabeltypen", "blattvorlagen"):
         if name.endswith(".yaml"):
             datas.append((os.path.join(quelle, name), os.path.join("daten", ordner)))
 
+# Die Dokumentation, die "Hilfe > Dokumentation" anzeigt. Sie liegt
+# im Datenordner, wird aber nicht ausgelegt - sie gehoert zum Programm.
+_hilfe = os.path.join(_wurzel, "daten", "hilfe")
+if os.path.isdir(_hilfe):
+    for name in sorted(os.listdir(_hilfe)):
+        if name.endswith(".html"):
+            datas.append((os.path.join(_hilfe, name), os.path.join("daten", "hilfe")))
+
 # README und Lizenz mit hinein - eine weitergegebene .exe soll sagen koennen,
 # was sie ist und unter welchen Bedingungen sie weitergegeben werden darf.
 for beigabe in ("README.md"):

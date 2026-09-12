@@ -24,13 +24,15 @@ from PySide6.QtWidgets import (
     QScrollArea,
     QRadioButton,
     QSpinBox,
+    QSplitter,
     QTableWidget,
     QTableWidgetItem,
+    QTextBrowser,
     QVBoxLayout,
     QWidget,
 )
 
-from .. import paket
+from .. import hilfe, paket
 from ..blattvorlagen import Blattvorlagen
 from ..farbcodes import Kabeltypen
 from ..modell import (
@@ -688,6 +690,60 @@ class UeberlaufDialog(QDialog):
         if self.verfaellt.isChecked():
             return self.VERFAELLT, 0, 0
         return self.FORTSETZEN, self.leiste.currentData(), self.start.value()
+
+
+class DokumentationDialog(QDialog):
+    """Die Dokumentation im Programm.
+
+    Links das Verzeichnis, rechts der Text. Die Seite bringt keine
+    eigenen Farben mit: sie soll im hellen wie im dunklen
+    Erscheinungsbild lesbar sein, und das entscheidet die Farbpalette
+    des Fensters.
+    """
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Dokumentation")
+
+        text = hilfe.dokumentation()
+        self.text = QTextBrowser()
+        self.text.setOpenExternalLinks(False)
+        self.text.setHtml(text)
+        self.text.document().setDefaultStyleSheet(
+            "h1 { font-size: 17pt; }"
+            "h2 { font-size: 12pt; margin-top: 18px; }"
+            "p, li, td, th { line-height: 140%; }"
+            "th { text-align: left; }"
+            "pre { margin-left: 12px; }"
+            ".anriss { font-size: 11pt; }"
+        )
+
+        self.verzeichnis = QListWidget()
+        self.verzeichnis.setMaximumWidth(260)
+        for marke, titel in hilfe.abschnitte(text):
+            eintrag = QListWidgetItem(titel)
+            eintrag.setData(Qt.ItemDataRole.UserRole, marke)
+            self.verzeichnis.addItem(eintrag)
+        self.verzeichnis.currentItemChanged.connect(self._springen)
+
+        teiler = QSplitter()
+        teiler.addWidget(self.verzeichnis)
+        teiler.addWidget(self.text)
+        teiler.setStretchFactor(1, 1)
+
+        schliessen = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        schliessen.rejected.connect(self.reject)
+        schliessen.button(QDialogButtonBox.StandardButton.Close).setText("Schließen")
+
+        aufbau = QVBoxLayout(self)
+        aufbau.addWidget(teiler)
+        aufbau.addWidget(schliessen)
+        self.resize(940, 700)
+
+    def _springen(self, eintrag: QListWidgetItem | None) -> None:
+        if eintrag is None:
+            return
+        self.text.scrollToAnchor(eintrag.data(Qt.ItemDataRole.UserRole))
 
 
 class ProjektdatenFelder(QGroupBox):
