@@ -349,9 +349,22 @@ class TestSchriftfeldBeispiel(unittest.TestCase):
         self.assertIn("Verteiler:", stellen)
         self.assertIn("Verteiler Nr.", stellen)
         self.assertIn("Leiste:", stellen)
-        # Der Name steht unter seiner Beschriftung, nicht daneben.
-        self.assertGreater(stellen["Verteiler Name"], stellen["Verteiler:"])
-        self.assertGreater(stellen["Verteiler Nr."], stellen["Verteiler Name"])
+        # Der Block steht unter der Matrix …
+        self.assertGreater(stellen["Verteiler:"], stellen["Erstellt"])
+        # … und seine Zeilen folgen aufeinander.
+        self.assertGreater(stellen["Verteiler Nr."], stellen["Verteiler:"])
+        self.assertGreater(stellen["Leiste:"], stellen["Verteiler Nr."])
+
+    def test_der_name_steht_neben_seiner_beschriftung(self):
+        """Wie die übrigen Zeilen des Feldes - nicht darunter."""
+        blatt = self._blatt()
+        felder = {
+            e.text: e for e in blatt.elemente if isinstance(e, Text)
+        }
+        self.assertEqual(felder["Verteiler Name"].y, felder["Verteiler:"].y)
+        self.assertGreater(felder["Verteiler Name"].x, felder["Verteiler:"].x)
+        # Auf derselben Fluchtlinie wie Nummer und Leiste.
+        self.assertEqual(felder["Verteiler Name"].x, felder["1.1"].x)
 
     def test_anschriften_stehen_rechts_und_untereinander(self):
         blatt = self._blatt()

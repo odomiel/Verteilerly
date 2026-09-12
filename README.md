@@ -226,10 +226,9 @@ der Mustertabellen (`schriftfeld_art: beispiel`):
 │ Stand    │        │        │     77777 Beliebiger Ort     │
 │ Geprüft  │        │        │                              │
 ├──────────┴────────┴────────┼──────────────────────────────┤
-│ Verteiler:                 │        Kunde Beliebig        │
-│   Verteiler Name           │      Beliebige Straße 7      │
-│ Verteiler Nr.      1.1     │     77777 Beliebiger Ort     │
-│ Leiste:            1       │                              │
+│ Verteiler:  Verteiler Name │        Kunde Beliebig        │
+│ Verteiler Nr.       1.1    │      Beliebige Straße 7      │
+│ Leiste:              1     │     77777 Beliebiger Ort     │
 └────────────────────────────┴──────────────────────────────┘
 ```
 

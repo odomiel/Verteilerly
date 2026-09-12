@@ -368,32 +368,25 @@ def _beispiel_verteiler(
     blatt: Blatt, projekt: Projekt, leiste: int | None, vorlage: Blattvorlage,
     x: float, y: float, breite: float, hoehe: float,
 ) -> None:
-    """Verteiler, Nummer und Leiste - der Name unter seiner Beschriftung."""
+    """Verteiler, Nummer und Leiste - Beschriftung links, Wert daneben."""
     v = projekt.verteiler
-    zeilen: list[tuple[str, str, bool]] = [
-        ("Verteiler:", "", False),
-        ("", v.name, True),                       # der Name steht darunter
-        ("Verteiler Nr.", v.nummer, False),
-        ("Leiste:", "" if leiste is None else str(leiste), False),
+    zeilen = [
+        ("Verteiler:", v.name),
+        ("Verteiler Nr.", v.nummer),
+        ("Leiste:", "" if leiste is None else str(leiste)),
     ]
     zeile_h = hoehe / max(len(zeilen), 4)
     label_b = breite * 0.42
-    for j, (name, wert, breit) in enumerate(zeilen):
+    for j, (name, wert) in enumerate(zeilen):
         zeile_y = y + j * zeile_h
-        if name:
-            blatt.text(
-                x + 2, zeile_y, label_b - 3, zeile_h, name,
-                vorlage.schrift_klein, LINKS, False, TINTE_LEISE,
-            )
-        if breit:
-            blatt.text(
-                x + 4, zeile_y, breite - 6, zeile_h, wert, vorlage.schrift_normal
-            )
-        else:
-            blatt.text(
-                x + label_b, zeile_y, breite - label_b - 2, zeile_h, wert,
-                vorlage.schrift_normal, MITTE,
-            )
+        blatt.text(
+            x + 2, zeile_y, label_b - 3, zeile_h, name,
+            vorlage.schrift_klein, LINKS, False, TINTE_LEISE,
+        )
+        blatt.text(
+            x + label_b, zeile_y, breite - label_b - 2, zeile_h, wert,
+            vorlage.schrift_normal, MITTE,
+        )
 
 
 def _beispiel_anschrift(
