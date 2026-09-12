@@ -51,6 +51,33 @@ class TestProjektdatenMerken(unittest.TestCase):
         self.assertEqual(eigene, {"Standort": "Keller"})
         self.assertEqual(ausgeblendet, {"kuerzel"})
 
+    def test_eigene_beschriftungen_werden_gemerkt(self):
+        """Wer „Kunde" umbenennt, meint es meist für jeden Verteiler."""
+        projekt = self._projekt()
+        projekt.beschriftungen = {"kunde": "Auftraggeber", "firma": "Firma"}
+        sp.briefkopf_sichern(self.einstellungen, projekt)
+        inhalt = self.datei.read_text(encoding="utf-8")
+        self.assertIn("[beschriftungen]", inhalt)
+        # Nur die Abweichung - „Firma" heißt ohnehin so.
+        self.assertEqual(
+            sp.beschriftungen_laden(self.einstellungen), {"kunde": "Auftraggeber"}
+        )
+
+    def test_ein_neuer_verteiler_erbt_die_beschriftungen(self):
+        projekt = self._projekt()
+        projekt.beschriftungen = {"kunde": "Auftraggeber"}
+        sp.briefkopf_sichern(self.einstellungen, projekt)
+        neu = sp.briefkopf_uebernehmen(self.einstellungen, Projekt())
+        self.assertEqual(neu.beschriftung("kunde"), "Auftraggeber")
+
+    def test_ein_eigenes_wort_im_projekt_bleibt_stehen(self):
+        projekt = self._projekt()
+        projekt.beschriftungen = {"kunde": "Auftraggeber"}
+        sp.briefkopf_sichern(self.einstellungen, projekt)
+        offen = Projekt(beschriftungen={"kunde": "Besteller"})
+        sp.briefkopf_uebernehmen(self.einstellungen, offen)
+        self.assertEqual(offen.beschriftung("kunde"), "Besteller")
+
     def test_ein_neuer_verteiler_erbt_den_briefkopf(self):
         sp.briefkopf_sichern(self.einstellungen, self._projekt())
         neu = sp.briefkopf_uebernehmen(

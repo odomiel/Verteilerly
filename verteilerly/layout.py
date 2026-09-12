@@ -14,7 +14,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from .blattvorlagen import LINKS, MITTE, RECHTS, STANDARD, Blattvorlage
-from .modell import Bucht, Projekt, Verteiler
+from .modell import BLATTBESCHRIFTUNG, Bucht, Projekt, Verteiler
 
 # -- Papier ----------------------------------------------------------------
 
@@ -116,21 +116,9 @@ class Blatt:
 
 # -- Schriftfeld -----------------------------------------------------------
 
-BESCHRIFTUNG = {
-    "firma": "Firma",
-    "kunde": "Kunde",
-    "anlagennummer": "Anlage",
-    "kundennummer": "Kunden-Nr.",
-    "verteiler": "Verteiler",
-    "verteilernummer": "Verteiler-Nr.",
-    "leiste": "Leiste",
-    "blatt": "Blatt",
-    "erstellt": "Erstellt",
-    "stand": "Stand",
-    "geprueft": "Geprüft",
-    "gezeichnet": "Gezeichnet",
-    "dokumenttitel": "Titel",
-}
+# Die Vorgabe steht im Modell; was hier gezeichnet wird, sagt das
+# Projekt - es darf jedes Wort ersetzen.
+BESCHRIFTUNG = BLATTBESCHRIFTUNG
 
 
 def _wert(projekt: Projekt, name: str, vorgabe: str = "") -> str:
@@ -207,7 +195,7 @@ def _eintraege(
         wert = _paar(projekt, marke)
     else:
         wert = _wert(projekt, marke)
-    return [(BESCHRIFTUNG.get(marke, marke), wert)]
+    return [(projekt.beschriftung(marke), wert)]
 
 
 def schriftfeldzeilen(eintraege: list[tuple[str, str]]) -> list[tuple[str, str]]:
@@ -377,7 +365,7 @@ def _beispiel_matrix(
     for j, marke in enumerate(marken, 1):
         zeile_y = y + j * zeile_h
         blatt.text(
-            x + 2, zeile_y, label_b - 3, zeile_h, BESCHRIFTUNG[marke],
+            x + 2, zeile_y, label_b - 3, zeile_h, projekt.beschriftung(marke),
             vorlage.schrift_klein, LINKS, False, TINTE_LEISE,
         )
         for i, teil in enumerate(("_am", "_von")):
@@ -385,6 +373,11 @@ def _beispiel_matrix(
                 x + label_b + i * spalte_b, zeile_y, spalte_b, zeile_h,
                 _wert(projekt, marke + teil), vorlage.schrift_normal, MITTE,
             )
+
+
+def _mit_doppelpunkt(text: str) -> str:
+    """Wie es die Mustertabelle haelt: "Verteiler:", aber "Verteiler-Nr."."""
+    return text if text.endswith((":", ".")) else text + ":"
 
 
 def _beispiel_verteiler(
@@ -398,13 +391,16 @@ def _beispiel_verteiler(
     """
     v = projekt.verteiler
     zeilen = [
-        ("Verteiler:", v.name),
-        ("Verteiler Nr.", v.nummer),
+        (_mit_doppelpunkt(projekt.beschriftung("verteiler")), v.name),
+        (_mit_doppelpunkt(projekt.beschriftung("verteilernummer")), v.nummer),
     ]
     if blattart == "belegung":
         zeilen += list(projekt.eigene_felder_hier("belegung").items())
     else:
-        zeilen.append(("Leiste:", "" if leiste is None else str(leiste)))
+        zeilen.append((
+            _mit_doppelpunkt(projekt.beschriftung("leiste")),
+            "" if leiste is None else str(leiste),
+        ))
         zeilen += list(projekt.eigene_felder_hier(blattart).items())
     # Die Zeilenhoehe richtet sich nach der Matrix darueber, damit beide
     # Haelften dieselbe Schrift tragen; der Block steht dann aber mittig
@@ -436,7 +432,7 @@ def _beispiel_anschrift(
     zeilen = [teil for teil in zeilen if teil]
     if not zeilen:
         blatt.text(
-            x + 3, y, breite - 6, hoehe, BESCHRIFTUNG[marke],
+            x + 3, y, breite - 6, hoehe, projekt.beschriftung(marke),
             vorlage.schrift_klein, LINKS, False, TINTE_LEISE,
         )
         return
@@ -479,21 +475,27 @@ def deckblatt(projekt: Projekt, vorlage: Blattvorlage = STANDARD) -> Blatt:
     blatt.linie(rand, y, rand + breite, y, 0.6, TINTE)
     y += 10
 
+    # Das Deckblatt hat Platz und schreibt die Woerter deshalb aus:
+    # "Verteilernummer" statt "Verteiler-Nr.". Wer ein Wort selbst
+    # gesetzt hat, bekommt seines - auch hier.
+    def wort(marke: str, vorgabe: str) -> str:
+        return projekt.beschriftungen.get(marke, "").strip() or vorgabe
+
     zeilen = [
-        ("Verteiler", v.name),
-        ("Verteilernummer", v.nummer),
+        (wort("verteiler", "Verteiler"), v.name),
+        (wort("verteilernummer", "Verteilernummer"), v.nummer),
         ("Aufbau", _aufbau(v)),
         ("Doppeladern", str(v.da_gesamt)),
         ("Kabel", str(len(v.kabel))),
         ("Rangierungen", str(len(v.rangierungen))),
-        ("Firma", _wert(projekt, "firma")),
-        ("Kunde", _wert(projekt, "kunde")),
-        ("Anlagennummer", _wert(projekt, "anlagennummer")),
-        ("Kundennummer", _wert(projekt, "kundennummer")),
-        ("Erstellt", _paar(projekt, "erstellt")),
-        ("Stand", _paar(projekt, "stand")),
-        ("Geprüft", _paar(projekt, "geprueft")),
-        ("Gezeichnet", _paar(projekt, "gezeichnet")),
+        (wort("firma", "Firma"), _wert(projekt, "firma")),
+        (wort("kunde", "Kunde"), _wert(projekt, "kunde")),
+        (wort("anlagennummer", "Anlagennummer"), _wert(projekt, "anlagennummer")),
+        (wort("kundennummer", "Kundennummer"), _wert(projekt, "kundennummer")),
+        (wort("erstellt", "Erstellt"), _paar(projekt, "erstellt")),
+        (wort("stand", "Stand"), _paar(projekt, "stand")),
+        (wort("geprueft", "Geprüft"), _paar(projekt, "geprueft")),
+        (wort("gezeichnet", "Gezeichnet"), _paar(projekt, "gezeichnet")),
         ("Blattvorlage", vorlage.name if not vorlage.standard else ""),
     ]
     zeilen += list(projekt.eigene_felder_hier("deckblatt").items())

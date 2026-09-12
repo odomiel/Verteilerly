@@ -666,7 +666,12 @@ class Hauptfenster(QMainWindow):
             self.einstellungen
         )
         muster = Projekt(
-            briefkopf=briefkopf, eigene_felder=eigene, ausgeblendet=ausgeblendet
+            briefkopf=briefkopf,
+            eigene_felder=eigene,
+            ausgeblendet=ausgeblendet,
+            beschriftungen=einstellungsspeicher.beschriftungen_laden(
+                self.einstellungen
+            ),
         )
         dialog = ProjektdatenDialog(muster, self, vorgaben=True, quelle=self.projekt)
         if dialog.exec() != ProjektdatenDialog.DialogCode.Accepted:

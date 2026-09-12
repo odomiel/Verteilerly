@@ -15,6 +15,7 @@ from .modell import Projekt
 
 GRUPPE_BRIEFKOPF = "briefkopf"
 GRUPPE_EIGENE = "eigene_felder"
+GRUPPE_BESCHRIFTUNGEN = "beschriftungen"
 SCHLUESSEL_AUSGEBLENDET = "felder_ausgeblendet"
 
 
@@ -50,6 +51,9 @@ def briefkopf_sichern(einstellungen, projekt: Projekt) -> None:
     """Schreibt Projektdaten, eigene Felder und die Auswahl in die conf."""
     _gruppe_schreiben(einstellungen, GRUPPE_BRIEFKOPF, projekt.briefkopf)
     _gruppe_schreiben(einstellungen, GRUPPE_EIGENE, projekt.eigene_felder)
+    _gruppe_schreiben(
+        einstellungen, GRUPPE_BESCHRIFTUNGEN, projekt.eigene_beschriftungen()
+    )
     einstellungen.setValue(SCHLUESSEL_AUSGEBLENDET, sorted(projekt.ausgeblendet))
     einstellungen.sync()
 
@@ -63,6 +67,15 @@ def briefkopf_laden(einstellungen) -> tuple[dict[str, str], dict[str, str], set[
     )
 
 
+def beschriftungen_laden(einstellungen) -> dict[str, str]:
+    """Die gemerkten eigenen Woerter fuer das Schriftfeld.
+
+    Eigener Zugriff, damit die drei bisherigen Rueckgabewerte von
+    ``briefkopf_laden`` bleiben, wie sie sind.
+    """
+    return _gruppe_lesen(einstellungen, GRUPPE_BESCHRIFTUNGEN)
+
+
 def briefkopf_uebernehmen(einstellungen, projekt: Projekt) -> Projekt:
     """Legt die gemerkten Angaben in ein frisches Projekt.
 
@@ -74,5 +87,7 @@ def briefkopf_uebernehmen(einstellungen, projekt: Projekt) -> Projekt:
         projekt.briefkopf.setdefault(name, wert)
     for name, wert in eigene.items():
         projekt.eigene_felder.setdefault(name, wert)
+    for marke, wert in beschriftungen_laden(einstellungen).items():
+        projekt.beschriftungen.setdefault(marke, wert)
     projekt.ausgeblendet |= ausgeblendet
     return projekt

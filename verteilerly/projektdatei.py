@@ -26,13 +26,13 @@ from .modell import (
 )
 
 DATEIKENNUNG = "verteilerly-projekt"
-FORMATVERSION = 5
+FORMATVERSION = 6
 # Fassung 1 nannte die Buchten noch Reihen, Fassung 2 kannte noch keine
 # abgewaehlten Felder, Fassung 3 noch keinen Vermerk im Rangierfeld,
-# Fassung 4 noch keine Wahl der Blattarten fuer die eigenen Felder.
-# Solche Dateien werden weiter gelesen; geschrieben wird immer die neue
-# Fassung.
-LESBARE_VERSIONEN = (1, 2, 3, 4, 5)
+# Fassung 4 noch keine Wahl der Blattarten fuer die eigenen Felder,
+# Fassung 5 noch keine eigenen Beschriftungen. Solche Dateien werden
+# weiter gelesen; geschrieben wird immer die neue Fassung.
+LESBARE_VERSIONEN = (1, 2, 3, 4, 5, 6)
 
 
 class ProjektdateiFehler(ModellFehler):
@@ -113,6 +113,8 @@ def als_dict(projekt: Projekt) -> dict[str, Any]:
         "ausgeblendet": sorted(projekt.ausgeblendet),
         # Auf welchen Blattarten die eigenen Felder erscheinen.
         "eigene_felder_auf": sorted(projekt.eigene_felder_auf),
+        # Nur die Woerter, die von der Vorgabe abweichen.
+        "beschriftungen": projekt.eigene_beschriftungen(),
         "verteiler": _verteiler_raus(projekt.verteiler),
     }
 
@@ -209,6 +211,7 @@ def aus_dict(daten: dict[str, Any]) -> Projekt:
             daten.get("eigene_felder_auf", BLATTARTEN) or ()
         )
         & set(BLATTARTEN),
+        beschriftungen=dict(daten.get("beschriftungen") or {}),
     )
 
 

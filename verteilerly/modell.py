@@ -655,6 +655,29 @@ BRIEFKOPF_BESCHRIFTUNG = {
 }
 
 
+# Wie die Zeilen des Schriftfeldes auf dem Blatt heissen.
+# Anders als BRIEFKOPF_BESCHRIFTUNG, das die Felder im Dialog benennt:
+# auf dem Blatt ist es enger, dort steht "Anlage" statt "Anlagennummer"
+# und ein Paar aus Datum und Name teilt sich eine Beschriftung. Wem die
+# Woerter nicht passen, der aendert sie im Projektdatendialog; die
+# Vorgabe steht hier.
+BLATTBESCHRIFTUNG = {
+    "firma": "Firma",
+    "kunde": "Kunde",
+    "anlagennummer": "Anlage",
+    "kundennummer": "Kunden-Nr.",
+    "verteiler": "Verteiler",
+    "verteilernummer": "Verteiler-Nr.",
+    "leiste": "Leiste",
+    "blatt": "Blatt",
+    "erstellt": "Erstellt",
+    "stand": "Stand",
+    "geprueft": "Geprüft",
+    "gezeichnet": "Gezeichnet",
+    "dokumenttitel": "Titel",
+}
+
+
 # Die drei Blattarten - auf jeder koennen die eigenen Felder stehen
 # oder eben nicht.
 BLATTARTEN = ("deckblatt", "belegung", "leisten")
@@ -682,9 +705,25 @@ class Projekt:
     # Auf welchen Blaettern die eigenen Felder erscheinen. Ohne
     # Angabe auf allen - wer eines nicht will, nimmt es heraus.
     eigene_felder_auf: set[str] = field(default_factory=lambda: set(BLATTARTEN))
+    # Eigene Woerter fuer die Zeilen des Schriftfeldes. Nur was
+    # abweicht, steht drin - der Rest kommt aus BLATTBESCHRIFTUNG.
+    beschriftungen: dict[str, str] = field(default_factory=dict)
     # Wie Rangierungen geschrieben werden. Eine Anzeigesache: die
     # Projektdatei haelt Adressen immer in der Grundform fest.
     rangierung_schreibweise: str = schreibweisen.STANDARD.id
+
+    def beschriftung(self, marke: str) -> str:
+        """Wie eine Zeile des Schriftfeldes ueberschrieben ist."""
+        eigen = self.beschriftungen.get(marke, "").strip()
+        return eigen or BLATTBESCHRIFTUNG.get(marke, marke)
+
+    def eigene_beschriftungen(self) -> dict[str, str]:
+        """Nur die Woerter, die von der Vorgabe abweichen."""
+        return {
+            marke: wert.strip()
+            for marke, wert in self.beschriftungen.items()
+            if wert.strip() and wert.strip() != BLATTBESCHRIFTUNG.get(marke, marke)
+        }
 
     @property
     def schreibweise(self) -> Schreibweise:

@@ -338,6 +338,61 @@ class TestAnschriftImSchriftfeld(unittest.TestCase):
         self.assertEqual(_schriftfeldanteile(3, (1.0, 1.0)), [0.38, 0.26, 0.36])
 
 
+class TestEigeneBeschriftungen(unittest.TestCase):
+    """Wem „Kunde" nicht passt, schreibt „Auftraggeber" hin."""
+
+    def setUp(self):
+        self.projekt = Projekt(
+            verteiler=Verteiler.aus_geometrie(1, 2, 10, name="Muster", nummer="V-01"),
+            briefkopf={"kunde": "Kunde AG", "firma": "Musterfirma"},
+        )
+
+    def test_das_eigene_wort_steht_auf_dem_blatt(self):
+        self.projekt.beschriftungen["kunde"] = "Auftraggeber"
+        texte = _texte(leistenblatt(self.projekt, 1))
+        self.assertIn("Auftraggeber", texte)
+        self.assertNotIn("Kunde", texte)
+        # Der Inhalt bleibt, nur die Überschrift heißt anders.
+        self.assertIn("Kunde AG", texte)
+
+    def test_auch_auf_dem_deckblatt(self):
+        self.projekt.beschriftungen["kunde"] = "Auftraggeber"
+        texte = _texte(deckblatt(self.projekt))
+        self.assertIn("Auftraggeber", texte)
+        self.assertNotIn("Kunde", texte)
+
+    def test_ohne_eigenes_wort_bleibt_das_deckblatt_ausgeschrieben(self):
+        """Dort ist Platz: „Verteilernummer", nicht „Verteiler-Nr."."""
+        texte = _texte(deckblatt(self.projekt))
+        self.assertIn("Verteilernummer", texte)
+        self.assertIn("Verteiler-Nr.", _texte(leistenblatt(self.projekt, 1)))
+
+    def test_auf_jedem_blatt_dasselbe_wort(self):
+        self.projekt.beschriftungen["geprueft"] = "Kontrolliert"
+        for blatt in blaetter(self.projekt):
+            with self.subTest(blatt=blatt.titel):
+                self.assertNotIn("Geprüft", _texte(blatt))
+
+    def test_auch_in_der_beispielvorlage(self):
+        """Dort stand „Verteiler:" fest im Quelltext."""
+        from verteilerly.blattvorlagen import Blattvorlagen
+        from verteilerly.pfade import mitgeliefert
+
+        vorlage = Blattvorlagen.laden(mitgeliefert() / "blattvorlagen").holen("beispiel")
+        self.projekt.beschriftungen["verteiler"] = "Kasten"
+        texte = _texte(leistenblatt(self.projekt, 1, vorlage))
+        self.assertIn("Kasten:", texte)
+        self.assertNotIn("Verteiler:", texte)
+
+    def test_der_doppelpunkt_verdoppelt_sich_nicht(self):
+        from verteilerly.blattvorlagen import Blattvorlagen
+        from verteilerly.pfade import mitgeliefert
+
+        vorlage = Blattvorlagen.laden(mitgeliefert() / "blattvorlagen").holen("beispiel")
+        self.projekt.beschriftungen["verteiler"] = "Kasten:"
+        self.assertIn("Kasten:", _texte(leistenblatt(self.projekt, 1, vorlage)))
+
+
 class TestSchriftfeldBeispiel(unittest.TestCase):
     """Das Schriftfeld der Mustertabellen, Feld für Feld."""
 
@@ -396,19 +451,19 @@ class TestSchriftfeldBeispiel(unittest.TestCase):
         """Matrix und Verteilerblock beginnen ihre Werte an derselben Stelle."""
         felder = {e.text: e for e in self._blatt().elemente if isinstance(e, Text)}
         self.assertEqual(felder["01.01.1970"].x, felder["Verteiler Name"].x)
-        self.assertEqual(felder["Erstellt"].x, felder["Verteiler Nr."].x)
+        self.assertEqual(felder["Erstellt"].x, felder["Verteiler-Nr."].x)
 
     def test_verteilerblock_unter_der_matrix(self):
         blatt = self._blatt()
         stellen = {e.text: e.y for e in blatt.elemente if isinstance(e, Text)}
         self.assertIn("Verteiler:", stellen)
-        self.assertIn("Verteiler Nr.", stellen)
+        self.assertIn("Verteiler-Nr.", stellen)
         self.assertIn("Leiste:", stellen)
         # Der Block steht unter der Matrix …
         self.assertGreater(stellen["Verteiler:"], stellen["Erstellt"])
         # … und seine Zeilen folgen aufeinander.
-        self.assertGreater(stellen["Verteiler Nr."], stellen["Verteiler:"])
-        self.assertGreater(stellen["Leiste:"], stellen["Verteiler Nr."])
+        self.assertGreater(stellen["Verteiler-Nr."], stellen["Verteiler:"])
+        self.assertGreater(stellen["Leiste:"], stellen["Verteiler-Nr."])
 
     def _verteilerblock(self, blatt):
         """Oberkante und Unterkante der Zeilen in der linken unteren Haelfte."""
@@ -478,7 +533,7 @@ class TestSchriftfeldBeispiel(unittest.TestCase):
         # Teilung liegt links davon - und der Reihe nach untereinander.
         verteilerblock = max(
             e.x + e.breite for e in blatt.elemente
-            if isinstance(e, Text) and e.text == "Verteiler Nr."
+            if isinstance(e, Text) and e.text == "Verteiler-Nr."
         )
         self.assertGreater(min(e.x for e in anschrift), verteilerblock)
         self.assertEqual([e.y for e in anschrift], sorted(e.y for e in anschrift))
@@ -492,7 +547,7 @@ class TestSchriftfeldBeispiel(unittest.TestCase):
         )
         links = max(
             e.x for e in blatt.elemente
-            if isinstance(e, Text) and e.text == "Verteiler Nr."
+            if isinstance(e, Text) and e.text == "Verteiler-Nr."
         )
         self.assertLess(links, trenner)
         # Die linke Hälfte ist die kleinere - so sagt es die Vorlage.

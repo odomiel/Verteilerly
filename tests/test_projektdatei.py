@@ -187,6 +187,21 @@ class TestFeldauswahl(unittest.TestCase):
         projektdatei.speichern(projekt, self.ziel)
         self.assertEqual(projektdatei.laden(self.ziel).eigene_felder_auf, set())
 
+    def test_eigene_beschriftungen_kommen_zurueck(self):
+        """Das eigene Wort steht in der Projektdatei."""
+        projekt = beispielprojekt()
+        projekt.beschriftungen = {"kunde": "Auftraggeber", "firma": "Firma"}
+        projektdatei.speichern(projekt, self.ziel)
+        zurueck = projektdatei.laden(self.ziel)
+        # Nur die Abweichung wird geschrieben, nicht die halbe Vorgabe.
+        self.assertEqual(zurueck.beschriftungen, {"kunde": "Auftraggeber"})
+        self.assertEqual(zurueck.beschriftung("firma"), "Firma")
+
+    def test_datei_ohne_beschriftungen_nimmt_die_vorgabe(self):
+        daten = projektdatei.als_dict(beispielprojekt())
+        del daten["beschriftungen"]
+        self.assertEqual(projektdatei.aus_dict(daten).beschriftung("kunde"), "Kunde")
+
     def test_aeltere_datei_zeigt_die_felder_ueberall(self):
         from verteilerly.modell import BLATTARTEN
 

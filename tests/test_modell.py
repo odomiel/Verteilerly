@@ -367,5 +367,37 @@ class TestEigeneFelderJeBlattart(unittest.TestCase):
         self.assertEqual(self.projekt.eigene_felder_hier("belegung"), {})
 
 
+class TestBeschriftungen(unittest.TestCase):
+    """Eigene Wörter für die Zeilen des Schriftfeldes."""
+
+    def setUp(self):
+        from verteilerly.modell import Projekt
+
+        self.projekt = Projekt()
+
+    def test_ohne_eigenes_wort_gilt_die_vorgabe(self):
+        self.assertEqual(self.projekt.beschriftung("kunde"), "Kunde")
+        self.assertEqual(self.projekt.beschriftung("verteilernummer"), "Verteiler-Nr.")
+
+    def test_eigenes_wort_geht_vor(self):
+        self.projekt.beschriftungen["kunde"] = "Auftraggeber"
+        self.assertEqual(self.projekt.beschriftung("kunde"), "Auftraggeber")
+
+    def test_leeres_wort_faellt_auf_die_vorgabe_zurueck(self):
+        self.projekt.beschriftungen["kunde"] = "   "
+        self.assertEqual(self.projekt.beschriftung("kunde"), "Kunde")
+
+    def test_unbekannte_marke_heisst_wie_sie_heisst(self):
+        self.assertEqual(self.projekt.beschriftung("standort"), "standort")
+
+    def test_gemerkt_wird_nur_die_abweichung(self):
+        self.projekt.beschriftungen = {
+            "kunde": "Auftraggeber", "firma": "Firma", "leiste": "  "
+        }
+        self.assertEqual(
+            self.projekt.eigene_beschriftungen(), {"kunde": "Auftraggeber"}
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

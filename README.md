@@ -83,6 +83,17 @@ keine — und **behält seinen Inhalt**: wer die Anlagennummer nur für diesen A
 weglassen will, muss sie nicht löschen. Die Auswahl steht in der
 Projektdatei.
 
+**Die Beschriftungen selbst** sind änderbar: wo *Kunde* steht, darf
+*Auftraggeber* stehen. Der Schalter *Erweitert: eigene Wörter verwenden*
+klappt die Liste auf — links das Wort der Vorgabe, rechts das eigene —, ein
+Knopf schreibt überall wieder die Vorgabe hinein. Geändert wird nur das Wort:
+Inhalt, Haken und Reihenfolge bleiben, und es gilt auf Deckblatt,
+Verteilerbelegung und Leistenblättern gleichermaßen, auch in der Excel-Mappe.
+Gemerkt wird nur, was abweicht — in der Projektdatei wie in den Vorgaben, so
+dass ein umbenanntes Feld auch im nächsten neuen Verteiler so heißt.
+Das Deckblatt hat mehr Platz und schreibt die Vorgabe aus (*Verteilernummer*
+statt *Verteiler-Nr.*); ein selbst gesetztes Wort gilt überall unverändert.
+
 **Eigene Felder** — frei benannte Paare wie *Standort: Keller* — erscheinen
 im Schriftfeld. Eine Häkchenzeile *Anzeigen auf* sagt, auf welchen
 Blattarten: Deckblatt, Verteilerbelegung, Leistenblättern. Eine abgewählte

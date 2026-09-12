@@ -36,6 +36,7 @@ from ..farbcodes import Kabeltypen
 from ..modell import (
     BLATTART_BESCHRIFTUNG,
     BLATTARTEN,
+    BLATTBESCHRIFTUNG,
     BRIEFKOPF_BESCHRIFTUNG,
     BRIEFKOPF_FELDER,
     Kabel,
@@ -803,6 +804,94 @@ class ProjektdatenFelder(QGroupBox):
         return feld.text().strip()
 
 
+class BeschriftungsFelder(QWidget):
+    """Eigene Woerter fuer die Zeilen des Schriftfeldes.
+
+    Wem "Kunde" nicht passt, schreibt "Auftraggeber" hin. Die Woerter
+    stehen hinter einem Schalter: die Vorgabe taugt fuer die meisten, und
+    ein Dialog voller Textfelder, die niemand anfasst, hilft keinem.
+    Zurueck zur Vorgabe geht mit einem Knopf.
+    """
+
+    def __init__(
+        self,
+        beschriftungen: dict[str, str] | None = None,
+        parent: QWidget | None = None,
+    ) -> None:
+        super().__init__(parent)
+        beschriftungen = beschriftungen or {}
+
+        # Kein Gruppenkasten: zugeklappt soll die Zeile nicht mehr Platz
+        # kosten als eine Zeile - der Dialog ist ohnehin hoch genug.
+        self.schalter = QCheckBox(
+            "Erweitert: Beschriftungen auf dem Blatt ändern"
+        )
+        self.schalter.setToolTip(
+            "Zeigt die Wörter, mit denen das Schriftfeld seine Zeilen "
+            "überschreibt. Der Schalter blendet sie nur ein und aus; "
+            "geändert wird nichts, solange nichts eingetippt ist."
+        )
+
+        self.felder: dict[str, QLineEdit] = {}
+        form = QFormLayout()
+        for marke, vorgabe in BLATTBESCHRIFTUNG.items():
+            feld = QLineEdit(beschriftungen.get(marke, "").strip() or vorgabe)
+            feld.setPlaceholderText(vorgabe)
+            self.felder[marke] = feld
+            # Links steht die Vorgabe: so ist die Zeile auch dann noch zu
+            # erkennen, wenn rechts ein ganz anderes Wort steht.
+            form.addRow(vorgabe, feld)
+
+        inhalt = QWidget()
+        inhalt.setLayout(form)
+        rollen = QScrollArea()
+        rollen.setWidget(inhalt)
+        rollen.setWidgetResizable(True)
+        # Aufgeklappt sollen ein paar Zeilen zu sehen sein, aber nicht
+        # alle dreizehn - der Dialog ist ohnehin hoch.
+        rollen.setMinimumHeight(120)
+        rollen.setMaximumHeight(220)
+
+        zurueck = QPushButton("Auf Vorgabe zurücksetzen")
+        zurueck.setToolTip("Schreibt in jedes Feld wieder das Wort der Vorgabe.")
+        zurueck.clicked.connect(self.zuruecksetzen)
+        knoepfe = QHBoxLayout()
+        knoepfe.addWidget(zurueck)
+        knoepfe.addStretch(1)
+
+        innen = QVBoxLayout()
+        innen.setContentsMargins(0, 0, 0, 0)
+        innen.addWidget(rollen)
+        innen.addLayout(knoepfe)
+        self.kasten = QWidget()
+        self.kasten.setLayout(innen)
+
+        # Wer schon eigene Woerter benutzt, soll sie gleich sehen.
+        eigen = bool(self.werte())
+        self.schalter.setChecked(eigen)
+        self.kasten.setVisible(eigen)
+        self.schalter.toggled.connect(self.kasten.setVisible)
+
+        aufbau = QVBoxLayout()
+        aufbau.setContentsMargins(0, 0, 0, 0)
+        aufbau.addWidget(self.schalter)
+        aufbau.addWidget(self.kasten)
+        self.setLayout(aufbau)
+
+    def zuruecksetzen(self) -> None:
+        """Jedes Feld zurueck auf das Wort der Vorgabe."""
+        for marke, feld in self.felder.items():
+            feld.setText(BLATTBESCHRIFTUNG[marke])
+
+    def werte(self) -> dict[str, str]:
+        """Nur die Woerter, die von der Vorgabe abweichen."""
+        return {
+            marke: feld.text().strip()
+            for marke, feld in self.felder.items()
+            if feld.text().strip() and feld.text().strip() != BLATTBESCHRIFTUNG[marke]
+        }
+
+
 class ProjektdatenDialog(QDialog):
     """Projektdaten und eigene Felder pflegen.
 
@@ -884,6 +973,8 @@ class ProjektdatenDialog(QDialog):
         self.blattkasten.setLayout(blattzeile)
         self.blattkasten.setVisible(not vorgaben)
 
+        self.beschriftungen = BeschriftungsFelder(projekt.beschriftungen, self)
+
         hinzu = QPushButton("Feld hinzufügen")
         hinzu.clicked.connect(lambda: self._zeile_anhaengen("", "", True))
         weg = QPushButton("Feld entfernen")
@@ -919,6 +1010,7 @@ class ProjektdatenDialog(QDialog):
             aufbau.addWidget(verteilerblock)
         aufbau.addWidget(projektdaten)
         aufbau.addWidget(eigene)
+        aufbau.addWidget(self.beschriftungen)
         aufbau.addWidget(_knopfleiste(self))
 
     def _alle_haken(self, an: bool) -> None:
@@ -938,6 +1030,8 @@ class ProjektdatenDialog(QDialog):
         self.eigene.setRowCount(0)
         for name, wert in self.quelle.eigene_felder.items():
             self._zeile_anhaengen(name, wert, self.quelle.sichtbar(name))
+        for marke, feld in self.beschriftungen.felder.items():
+            feld.setText(self.quelle.beschriftung(marke))
 
     def _zeile_anhaengen(self, name: str, wert: str, sichtbar: bool = True) -> None:
         zeile = self.eigene.rowCount()
@@ -981,3 +1075,4 @@ class ProjektdatenDialog(QDialog):
         self.projekt.eigene_felder_auf = {
             art for art, haken in self.blattarten.items() if haken.isChecked()
         }
+        self.projekt.beschriftungen = self.beschriftungen.werte()

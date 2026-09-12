@@ -906,6 +906,36 @@ class TestProjektdatenDialog(unittest.TestCase):
         self.dialog.uebernehmen()
         self.assertEqual(self.projekt.eigene_felder_auf, {"belegung", "leisten"})
 
+    def test_beschriftungen_stehen_hinter_dem_schalter(self):
+        """Die Vorgabe taugt für die meisten - erst der Schalter zeigt sie."""
+        self.assertFalse(self.dialog.beschriftungen.schalter.isChecked())
+        self.assertFalse(self.dialog.beschriftungen.kasten.isVisibleTo(self.dialog))
+        self.dialog.beschriftungen.schalter.setChecked(True)
+        self.assertTrue(self.dialog.beschriftungen.kasten.isVisibleTo(self.dialog))
+
+    def test_eigenes_wort_kommt_ins_projekt(self):
+        self.dialog.beschriftungen.felder["kunde"].setText("Auftraggeber")
+        self.dialog.uebernehmen()
+        self.assertEqual(self.projekt.beschriftung("kunde"), "Auftraggeber")
+        # Nur die Abweichung wird gemerkt.
+        self.assertEqual(self.projekt.beschriftungen, {"kunde": "Auftraggeber"})
+
+    def test_zuruecksetzen_holt_die_vorgabe(self):
+        self.dialog.beschriftungen.felder["kunde"].setText("Auftraggeber")
+        self.dialog.beschriftungen.zuruecksetzen()
+        self.dialog.uebernehmen()
+        self.assertEqual(self.projekt.beschriftungen, {})
+        self.assertEqual(self.projekt.beschriftung("kunde"), "Kunde")
+
+    def test_ein_projekt_mit_eigenen_woertern_zeigt_sie_gleich(self):
+        from verteilerly.gui.dialoge import ProjektdatenDialog
+
+        self.projekt.beschriftungen = {"kunde": "Auftraggeber"}
+        dialog = ProjektdatenDialog(self.projekt)
+        self.assertTrue(dialog.beschriftungen.schalter.isChecked())
+        self.assertEqual(dialog.beschriftungen.felder["kunde"].text(), "Auftraggeber")
+        self.assertEqual(dialog.beschriftungen.felder["firma"].text(), "Firma")
+
     def test_der_dialog_zeigt_die_gespeicherte_wahl(self):
         from verteilerly.gui.dialoge import ProjektdatenDialog
 
