@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QGroupBox,
     QHBoxLayout,
+    QHeaderView,
     QInputDialog,
     QLabel,
     QLineEdit,
@@ -219,8 +220,27 @@ class NeuerVerteilerDialog(QDialog):
         dablock = QWidget()
         dablock.setLayout(dazeile)
 
+        # Erweitert: jede Bucht einzeln. Nicht jeder Verteiler ist
+        # gleichmaessig gewachsen - eine Bucht mit 20-DA-Leisten neben
+        # zweien mit 10 DA ist im Bestand nichts Seltenes.
+        self.erweitert = QCheckBox("Erweiterte Verteiler: Buchten einzeln festlegen")
+        self.erweitert.setToolTip(
+            "Jede Bucht bekommt ihre eigene Zahl an Leisten und ihre eigene "
+            "Leistengröße. Eine Leistengröße je Bucht."
+        )
+        self.erweitert.toggled.connect(self._erweitert_umgeschaltet)
+
+        self.buchtentabelle = QTableWidget(0, 2)
+        self.buchtentabelle.setHorizontalHeaderLabels(["Leisten", "DA je Leiste"])
+        self.buchtentabelle.verticalHeader().setDefaultSectionSize(26)
+        self.buchtentabelle.horizontalHeader().setSectionResizeMode(
+            QHeaderView.ResizeMode.Stretch
+        )
+        self.buchtentabelle.setVisible(False)
+
         for feld in (self.buchten, self.leisten, self.da):
             feld.valueChanged.connect(self._summe_zeigen)
+        self.buchten.valueChanged.connect(self._buchtenzeilen_anpassen)
         self.summe = QLabel()
 
         self.als_vorlage = QPushButton("Als Vorlage speichern…")
@@ -233,10 +253,14 @@ class NeuerVerteilerDialog(QDialog):
 
         eigenform = QFormLayout()
         eigenform.addRow("Buchten:", self.buchten)
+        self.leistenzeile = eigenform.rowCount()
         eigenform.addRow("Leisten je Bucht:", self.leisten)
         eigenform.addRow("DA je Leiste:", dablock)
+        eigenform.addRow("", self.erweitert)
+        eigenform.addRow("", self.buchtentabelle)
         eigenform.addRow("", self.summe)
         eigenform.addRow("", self.als_vorlage)
+        self.eigenform = eigenform
         eigenkasten = QGroupBox()
         eigenkasten.setLayout(eigenform)
 
@@ -305,8 +329,9 @@ class NeuerVerteilerDialog(QDialog):
         return self.dawahl.currentData() or self.da.value()
 
     def _summe_zeigen(self) -> None:
-        gesamt = self.buchten.value() * self.leisten.value() * self.da_je_leiste()
-        leisten = self.buchten.value() * self.leisten.value()
+        bauplan = self.bauplan()
+        leisten = sum(anzahl for anzahl, _ in bauplan)
+        gesamt = sum(anzahl * da for anzahl, da in bauplan)
         self.summe.setText(
             f"ergibt {mehrzahl(leisten, 'Leiste', 'Leisten')}, {gesamt} DA"
         )
@@ -343,12 +368,78 @@ class NeuerVerteilerDialog(QDialog):
         self.vorlagenwahl.blockSignals(False)
         self._beschreibung_zeigen()
 
+    def _erweitert_umgeschaltet(self, an: bool) -> None:
+        """Erweitert: die Tabelle tritt an die Stelle der beiden Zahlen."""
+        self.buchtentabelle.setVisible(an)
+        for zeile in (self.leistenzeile, self.leistenzeile + 1):
+            beschriftung = self.eigenform.itemAt(
+                zeile, QFormLayout.ItemRole.LabelRole
+            )
+            feld = self.eigenform.itemAt(zeile, QFormLayout.ItemRole.FieldRole)
+            for teil in (beschriftung, feld):
+                if teil is not None and teil.widget() is not None:
+                    teil.widget().setVisible(not an)
+        if an:
+            self._buchtenzeilen_anpassen()
+        # Eine Vorlage sind drei Zahlen; ein ungleich besetzter Verteiler
+        # laesst sich damit nicht beschreiben.
+        self.als_vorlage.setEnabled(self.vorlagenordner is not None and not an)
+        self.als_vorlage.setToolTip(
+            "Ungleich besetzte Verteiler lassen sich nicht als Vorlage ablegen — "
+            "eine Vorlage sind drei Zahlen."
+            if an
+            else "Legt diese Geometrie als Vorlage ab, damit sie beim nächsten "
+                 "Verteiler oben zur Wahl steht."
+        )
+        self._summe_zeigen()
+
+    def _buchtenzeilen_anpassen(self) -> None:
+        """So viele Zeilen wie Buchten - neue erben die bisherigen Werte."""
+        gewuenscht = self.buchten.value()
+        while self.buchtentabelle.rowCount() > gewuenscht:
+            self.buchtentabelle.removeRow(self.buchtentabelle.rowCount() - 1)
+        while self.buchtentabelle.rowCount() < gewuenscht:
+            zeile = self.buchtentabelle.rowCount()
+            self.buchtentabelle.insertRow(zeile)
+            leisten = QSpinBox()
+            leisten.setRange(1, 60)
+            leisten.setValue(self.leisten.value())
+            da = QSpinBox()
+            da.setRange(1, 100)
+            da.setSuffix(" DA")
+            da.setValue(self.da_je_leiste())
+            for feld in (leisten, da):
+                feld.valueChanged.connect(self._summe_zeigen)
+            self.buchtentabelle.setCellWidget(zeile, 0, leisten)
+            self.buchtentabelle.setCellWidget(zeile, 1, da)
+        self.buchtentabelle.setVerticalHeaderLabels(
+            [f"Bucht {nr}" for nr in range(1, gewuenscht + 1)]
+        )
+        # Die Tabelle ist so hoch wie ihre Zeilen; leerer Platz darunter
+        # sieht nach einem Fehler aus, den es nicht gibt.
+        kopf = self.buchtentabelle.horizontalHeader().height()
+        rahmen = 2 * self.buchtentabelle.frameWidth()
+        self.buchtentabelle.setFixedHeight(
+            min(kopf + rahmen + gewuenscht * 26 + 2, 260)
+        )
+
+    def bauplan(self) -> list[tuple[int, int]]:
+        """Je Bucht (Leisten, DA je Leiste) - erweitert oder gleichmaessig."""
+        if not self.erweitert.isChecked():
+            return [
+                (self.leisten.value(), self.da_je_leiste())
+            ] * self.buchten.value()
+        return [
+            (
+                self.buchtentabelle.cellWidget(zeile, 0).value(),
+                self.buchtentabelle.cellWidget(zeile, 1).value(),
+            )
+            for zeile in range(self.buchtentabelle.rowCount())
+        ]
+
     def geometrie(self, name: str = "", nummer: str = "") -> Verteiler:
         """Der Verteiler aus den eigenen Angaben, ohne Vorlage."""
-        return Verteiler.aus_geometrie(
-            self.buchten.value(), self.leisten.value(), self.da_je_leiste(),
-            name, nummer,
-        )
+        return Verteiler.aus_buchten(self.bauplan(), name, nummer)
 
     def verteiler(self) -> Verteiler:
         name, nummer = self.name.text().strip(), self.nummer.text().strip()

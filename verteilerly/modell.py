@@ -436,12 +436,39 @@ class Verteiler:
         """
         if min(buchten, leisten_je_bucht, da_je_leiste) < 1:
             raise ModellFehler("Buchten, Leisten und DA muessen mindestens 1 sein")
+        return cls.aus_buchten(
+            [(leisten_je_bucht, da_je_leiste)] * buchten, name, nummer
+        )
+
+    @classmethod
+    def aus_buchten(
+        cls,
+        bauplan: list[tuple[int, int]],
+        name: str = "",
+        nummer: str = "",
+    ) -> Verteiler:
+        """Baut einen Verteiler aus ungleich besetzten Buchten.
+
+        ``bauplan`` nennt je Bucht, wie viele Leisten sie traegt und wie
+        viele Doppeladern jede dieser Leisten hat. Nicht jeder Verteiler
+        ist gleichmaessig gewachsen; vorerst hat aber jede Bucht **eine**
+        Leistenlaenge - alles Weitere hat bisher niemand gebraucht.
+
+        Die Leisten werden ueber alle Buchten hinweg durchlaufend
+        nummeriert.
+        """
+        if not bauplan:
+            raise ModellFehler("Ein Verteiler braucht mindestens eine Bucht")
 
         aufbau: list[Bucht] = []
         naechste_leiste = 1
-        for buchten_nr in range(1, buchten + 1):
+        for buchten_nr, (leisten_anzahl, da_je_leiste) in enumerate(bauplan, 1):
+            if min(leisten_anzahl, da_je_leiste) < 1:
+                raise ModellFehler(
+                    f"Bucht {buchten_nr}: Leisten und DA muessen mindestens 1 sein"
+                )
             leisten = []
-            for _ in range(leisten_je_bucht):
+            for _ in range(leisten_anzahl):
                 leisten.append(Leiste.neu(naechste_leiste, da_je_leiste))
                 naechste_leiste += 1
             aufbau.append(Bucht(buchten_nr, leisten))

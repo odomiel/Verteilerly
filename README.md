@@ -130,7 +130,11 @@ Dialoge, damit sie nicht auseinanderlaufen.
 
 Ein neuer Verteiler entsteht aus einer Vorlage oder aus eigenen Angaben;
 die DA je Leiste stehen dort als 8, 10 und 20 DA zur Wahl, alles andere
-wird eingetippt. Eine so gebaute Grundstruktur lässt sich als Vorlage
+wird eingetippt. Der Haken **Erweiterte Verteiler** stellt an die Stelle der
+beiden Zahlen eine Tabelle mit einer Zeile je Bucht — Leisten und Leistengröße
+einzeln, für ungleich besetzte Verteiler; eine Leistengröße je Bucht. Als
+Vorlage lässt sich so einer nicht ablegen: eine Vorlage sind drei Zahlen, der
+Knopf ist dann aus. Eine so gebaute Grundstruktur lässt sich als Vorlage
 ablegen — im Dialog selbst oder später über *Bearbeiten ▸ Als Vorlage
 speichern*. Sie landet als YAML-Datei im Arbeitsordner (siehe
 *Verpacken ▸ Daten*) und steht sofort im Menü.

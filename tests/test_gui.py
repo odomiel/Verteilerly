@@ -1866,6 +1866,64 @@ class TestNeuerVerteilerDialog(unittest.TestCase):
         )
         self.dialog.eigen.setChecked(True)
 
+    def test_erweitert_ist_zunaechst_aus(self):
+        """Der Regelfall ist der gleichmäßige Verteiler."""
+        self.assertFalse(self.dialog.erweitert.isChecked())
+        self.assertFalse(self.dialog.buchtentabelle.isVisibleTo(self.dialog))
+        self.assertEqual(self.dialog.bauplan(), [(4, 10)])
+
+    def test_erweitert_zeigt_je_bucht_eine_zeile(self):
+        self.dialog.buchten.setValue(3)
+        self.dialog.erweitert.setChecked(True)
+        self.assertTrue(self.dialog.buchtentabelle.isVisibleTo(self.dialog))
+        self.assertEqual(self.dialog.buchtentabelle.rowCount(), 3)
+        # Die bisherigen Zahlen stehen darin, nichts geht verloren.
+        self.assertEqual(self.dialog.bauplan(), [(4, 10)] * 3)
+
+    def test_die_zeilen_folgen_der_zahl_der_buchten(self):
+        self.dialog.erweitert.setChecked(True)
+        self.dialog.buchten.setValue(5)
+        self.assertEqual(self.dialog.buchtentabelle.rowCount(), 5)
+        self.dialog.buchten.setValue(2)
+        self.assertEqual(self.dialog.buchtentabelle.rowCount(), 2)
+
+    def test_jede_bucht_ihre_eigene_groesse(self):
+        self.dialog.buchten.setValue(3)
+        self.dialog.erweitert.setChecked(True)
+        self.dialog.buchtentabelle.cellWidget(1, 0).setValue(2)
+        self.dialog.buchtentabelle.cellWidget(1, 1).setValue(20)
+        self.dialog.buchtentabelle.cellWidget(2, 0).setValue(6)
+        self.dialog.buchtentabelle.cellWidget(2, 1).setValue(8)
+        self.assertEqual(self.dialog.bauplan(), [(4, 10), (2, 20), (6, 8)])
+
+        verteiler = self.dialog.geometrie("Bunt")
+        self.assertEqual([len(b.leisten) for b in verteiler.buchten], [4, 2, 6])
+        self.assertEqual(verteiler.leiste(5).da_anzahl, 20)
+        self.assertEqual(verteiler.da_gesamt, 128)
+
+    def test_die_summenzeile_rechnet_mit(self):
+        self.dialog.buchten.setValue(2)
+        self.dialog.erweitert.setChecked(True)
+        self.dialog.buchtentabelle.cellWidget(1, 1).setValue(20)
+        self.assertIn("8 Leisten", self.dialog.summe.text())
+        self.assertIn("120 DA", self.dialog.summe.text())
+
+    def test_ungleiche_verteiler_taugen_nicht_als_vorlage(self):
+        """Eine Vorlage sind drei Zahlen."""
+        self.assertTrue(self.dialog.als_vorlage.isEnabled())
+        self.dialog.erweitert.setChecked(True)
+        self.assertFalse(self.dialog.als_vorlage.isEnabled())
+        self.dialog.erweitert.setChecked(False)
+        self.assertTrue(self.dialog.als_vorlage.isEnabled())
+
+    def test_zurueckgeschaltet_gilt_wieder_die_gleichmaessige_angabe(self):
+        self.dialog.buchten.setValue(2)
+        self.dialog.erweitert.setChecked(True)
+        self.dialog.buchtentabelle.cellWidget(0, 1).setValue(20)
+        self.dialog.erweitert.setChecked(False)
+        self.assertEqual(self.dialog.bauplan(), [(4, 10), (4, 10)])
+        self.assertTrue(self.dialog.leisten.isVisibleTo(self.dialog))
+
     def test_da_stehen_zur_wahl(self):
         gewaehlt = [
             self.dialog.dawahl.itemText(i)

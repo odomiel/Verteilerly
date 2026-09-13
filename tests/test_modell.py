@@ -609,5 +609,52 @@ class TestKabelGroesseAendern(unittest.TestCase):
             self.v.kabel_verlaengern(self.kabel, 2, 1, 2)
 
 
+class TestUngleicheBuchten(unittest.TestCase):
+    """Nicht jeder Verteiler ist gleichmäßig gewachsen."""
+
+    def test_jede_bucht_ihre_eigene_groesse(self):
+        from verteilerly.modell import Verteiler
+
+        v = Verteiler.aus_buchten([(4, 10), (2, 20), (6, 8)], name="Bunt")
+        self.assertEqual([len(b.leisten) for b in v.buchten], [4, 2, 6])
+        self.assertEqual(
+            [{l.da_anzahl for l in b.leisten} for b in v.buchten],
+            [{10}, {20}, {8}],
+        )
+        self.assertEqual(v.da_gesamt, 4 * 10 + 2 * 20 + 6 * 8)
+
+    def test_die_leisten_zaehlen_durch(self):
+        """Über alle Buchten hinweg, auch bei ungleichen."""
+        from verteilerly.modell import Verteiler
+
+        v = Verteiler.aus_buchten([(2, 10), (3, 20)])
+        self.assertEqual([l.nummer for l in v.alle_leisten], [1, 2, 3, 4, 5])
+        self.assertEqual(v.leiste(3).da_anzahl, 20)
+
+    def test_gleichmaessig_bleibt_gleichmaessig(self):
+        from verteilerly.modell import Verteiler
+
+        aus_zahlen = Verteiler.aus_geometrie(2, 3, 10)
+        aus_plan = Verteiler.aus_buchten([(3, 10), (3, 10)])
+        self.assertEqual(
+            [(l.nummer, l.da_anzahl) for l in aus_zahlen.alle_leisten],
+            [(l.nummer, l.da_anzahl) for l in aus_plan.alle_leisten],
+        )
+
+    def test_ohne_bucht_geht_es_nicht(self):
+        from verteilerly.modell import ModellFehler, Verteiler
+
+        with self.assertRaises(ModellFehler):
+            Verteiler.aus_buchten([])
+
+    def test_null_leisten_oder_null_da_werden_abgelehnt(self):
+        from verteilerly.modell import ModellFehler, Verteiler
+
+        with self.assertRaises(ModellFehler):
+            Verteiler.aus_buchten([(4, 10), (0, 10)])
+        with self.assertRaises(ModellFehler):
+            Verteiler.aus_buchten([(4, 0)])
+
+
 if __name__ == "__main__":
     unittest.main()
