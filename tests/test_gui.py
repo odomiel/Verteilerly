@@ -299,6 +299,19 @@ class TestMehrereZellenAufEinmal(unittest.TestCase):
             [self._ader(z).stil("bezeichnung").fett for z in range(4)], [True] * 4
         )
 
+    def test_marke_in_einer_spalte_ohne_stil_sperrt_die_knoepfe_nicht(self):
+        """Beim Ziehen steht die Marke auf der ersten Zelle - oft der Stift."""
+        modell = self.ansicht.modell
+        self.ansicht.tabelle.setCurrentIndex(modell.index(0, SPALTE_STIFT))
+        self.assertFalse(self.ansicht.fett.isEnabled())
+        self.ansicht.tabelle.selectionModel().select(
+            self.QItemSelection(modell.index(0, SPALTE_STIFT), modell.index(0, SPALTE_KABEL)),
+            self.QItemSelectionModel.SelectionFlag.Select,
+        )
+        self.assertTrue(self.ansicht.fett.isEnabled())
+        self.ansicht.fett.click()
+        self.assertTrue(self._ader(0).stil("bezeichnung").fett)
+
     def test_nicht_gestaltbare_zellen_in_der_auswahl_stoeren_nicht(self):
         modell = self.ansicht.modell
         self.ansicht.tabelle.setCurrentIndex(modell.index(0, SPALTE_BEZEICHNUNG))

@@ -801,9 +801,14 @@ class LeistenAnsicht(QWidget):
         self.delegat = EingabeDelegat(self.tabelle)
         self.tabelle.setItemDelegate(self.delegat)
         self.delegat.weiter.connect(self._eine_zeile_tiefer)
-        self.tabelle.selectionModel().currentChanged.connect(
-            lambda *_: self._knoepfe_auffrischen()
-        )
+        # Auch die Auswahl anhoeren, nicht nur die Marke: beim Ziehen
+        # ueber mehrere Zellen steht die Marke auf der ersten, und liegt
+        # die in einer Spalte ohne Stil, waeren die Knoepfe sonst aus.
+        for melder in (
+            self.tabelle.selectionModel().currentChanged,
+            self.tabelle.selectionModel().selectionChanged,
+        ):
+            melder.connect(lambda *_: self._knoepfe_auffrischen())
 
         # „Stift“ und „Rangierung“ reichen über je zwei Spalten.
         self.tabelle.setHorizontalHeader(
