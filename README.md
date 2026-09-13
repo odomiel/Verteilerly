@@ -29,6 +29,7 @@ verteilerly/        Programmpaket
     leistenansicht.py  Belegung einer Leiste als Tabelle
     vorschau.py     Zeichnet die Blätter neben der Eingabe
     dialoge.py      Neuer Verteiler, Kabel, Überlauf, Projektdaten
+    passform.py     Dialoge bleiben auf dem Bildschirm
     thema.py        Farbsätze hell und dunkel
     sprache.py      Deutsche Beschriftung der Qt-Dialoge
 daten/              Liegt neben dem Programm und ist frei erweiterbar
@@ -397,6 +398,16 @@ sie im dunklen Erscheinungsbild lesbar bleibt. `tests/test_hilfe.py` hält sie i
 Schritt: was im Menü steht, muss dort erklärt sein, und **die gedruckte
 Kürzeltabelle wird gegen die Menüs geprüft** — ein Kürzel, das nichts auslöst,
 wäre schlimmer als keines.
+
+**Jeder Dialog passt auf den Bildschirm** (`gui/passform.py`). Ein
+Fenster, das höher ist als die Anzeige, ist unbedienbar — die Knopfleiste
+stünde unter dem unteren Rand. `PassenderDialog` ist darum die Grundlage aller
+Dialoge: beim Zeigen wird gestutzt, was über die freie Bildschirmfläche
+hinausragt, und hereingeschoben, was daneben steht. Wo der Inhalt nicht
+schrumpfen kann — *Projektdaten* und *Vorgaben für neue Verteiler* sind lauter
+Felder untereinander —, baut der Dialog ihn in ein eigenes Widget und reicht
+es an `inhalt_rollbar()` weiter: der Inhalt rollt, die Knopfleiste bleibt
+außerhalb des Rollbereichs stehen. Gerollt wird nur, wenn es sein muss.
 
 *Hilfe ▸ Über Verteilerly* führt jeden Baustein mit Fassung, Lizenz und
 Aufgabe auf — Python, PySide6, Qt, ReportLab, openpyxl, PyYAML —, dazu

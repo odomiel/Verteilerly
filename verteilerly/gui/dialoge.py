@@ -55,6 +55,7 @@ from ..vorlagen import (
     vorlage_speichern,
     vorlage_umbenennen,
 )
+from .passform import PassenderDialog
 from .sprache import frage
 
 
@@ -132,7 +133,7 @@ def als_vorlage_speichern(
     return vorlage
 
 
-class NeuerVerteilerDialog(QDialog):
+class NeuerVerteilerDialog(PassenderDialog):
     """Vorlage wählen oder eigene Geometrie angeben."""
 
     def __init__(
@@ -307,10 +308,13 @@ class NeuerVerteilerDialog(QDialog):
         nebeneinander.addLayout(links, 4)
         nebeneinander.addWidget(rollbereich, 5)
 
-        aufbau = QVBoxLayout(self)
+        # Der Inhalt steht in einem eigenen Widget: auf einem flachen
+        # Bildschirm rollt er, die Knopfleiste bleibt stehen.
+        inhalt = QWidget()
+        aufbau = QVBoxLayout(inhalt)
         aufbau.addLayout(nebeneinander, 1)
-        aufbau.addWidget(_knopfleiste(self))
         self.resize(1000, 620)
+        self.inhalt_rollbar(inhalt, _knopfleiste(self))
 
         self._beschreibung_zeigen()
         self._summe_zeigen()
@@ -471,7 +475,7 @@ class NeuerVerteilerDialog(QDialog):
         )
 
 
-class PaketDialog(QDialog):
+class PaketDialog(PassenderDialog):
     """Was gesichert oder eingespielt werden soll.
 
     Je Teil ein Haken mit der Zahl der Dateien dahinter. Was es nicht
@@ -533,7 +537,7 @@ class PaketDialog(QDialog):
         return {teil for teil, haken in self.haken.items() if haken.isChecked()}
 
 
-class VerteilervorlagenDialog(QDialog):
+class VerteilervorlagenDialog(PassenderDialog):
     """Verteilervorlagen verwalten: umbenennen, löschen, zurückholen.
 
     Auch die mitgelieferten lassen sich loeschen - wer sie nie braucht,
@@ -699,7 +703,7 @@ class VerteilervorlagenDialog(QDialog):
         self.accept()
 
 
-class BlattvorlagenDialog(QDialog):
+class BlattvorlagenDialog(PassenderDialog):
     """Welche Blattvorlage die Ausgabe benutzt.
 
     Die Wahl gehoert nicht zu einem einzelnen Verteiler, sondern zum
@@ -760,7 +764,7 @@ class BlattvorlagenDialog(QDialog):
         return eintrag.data(Qt.ItemDataRole.UserRole) if eintrag else ""
 
 
-class KabelDialog(QDialog):
+class KabelDialog(PassenderDialog):
     """Ein Kabel auflegen oder ein aufgelegtes bearbeiten.
 
     Beim Bearbeiten liegt das Kabel schon: Leiste, Startpunkt und die Zahl
@@ -923,7 +927,7 @@ class KabelDialog(QDialog):
         }
 
 
-class UeberlaufDialog(QDialog):
+class UeberlaufDialog(PassenderDialog):
     """Was mit dem Rest geschieht, wenn ein Kabel nicht ganz passt."""
 
     FORTSETZEN = "fortsetzen"
@@ -977,7 +981,7 @@ class UeberlaufDialog(QDialog):
         return self.FORTSETZEN, self.leiste.currentData(), self.start.value()
 
 
-class DokumentationDialog(QDialog):
+class DokumentationDialog(PassenderDialog):
     """Die Dokumentation im Programm.
 
     Links das Verzeichnis, rechts der Text. Die Seite bringt keine
@@ -1121,7 +1125,10 @@ class ProjektdatenFelder(QGroupBox):
         feld.setPlaceholderText("Firma Beliebig\nBeliebige Straße 7\n77777 Ort")
         # Drei Zeilen sind die uebliche Anschrift - und sie sollen ganz zu
         # sehen sein, ohne Rollbalken. Rahmen und Innenabstand zaehlen mit,
-        # sonst wird die dritte Zeile angeschnitten.
+        # sonst wird die dritte Zeile angeschnitten. Erst poliert stehen
+        # sie fest: das Erscheinungsbild gibt dem Feld einen breiteren
+        # Rahmen, und der zaehlt mit.
+        feld.ensurePolished()
         rahmen = 2 * feld.frameWidth()
         polster = 2 * int(feld.document().documentMargin())
         zeile = QFontMetrics(feld.font()).lineSpacing()
@@ -1245,7 +1252,7 @@ class BeschriftungsFelder(QWidget):
         }
 
 
-class ProjektdatenDialog(QDialog):
+class ProjektdatenDialog(PassenderDialog):
     """Projektdaten und eigene Felder pflegen.
 
     Jedes Feld hat einen Haken davor: abgewaehlte Felder
@@ -1349,7 +1356,8 @@ class ProjektdatenDialog(QDialog):
         # waere der Dialog hoeher als mancher Bildschirm.
         links = QVBoxLayout()
         links.setContentsMargins(0, 0, 0, 0)
-        aufbau = QVBoxLayout(self)
+        inhalt = QWidget()
+        aufbau = QVBoxLayout(inhalt)
         if vorgaben:
             # Der Verteiler gehoert nicht in die Vorgaben - Name und
             # Nummer sind bei jedem ein anderer.
@@ -1380,7 +1388,10 @@ class ProjektdatenDialog(QDialog):
         nebeneinander.addLayout(links, 1)
         nebeneinander.addLayout(rechts, 0)
         aufbau.addLayout(nebeneinander)
-        aufbau.addWidget(_knopfleiste(self))
+        # Lauter Felder untereinander - das schrumpft nicht. Auf einem
+        # flachen Bildschirm rollt der Inhalt, Übernehmen und Abbrechen
+        # stehen fest darunter.
+        self.inhalt_rollbar(inhalt, _knopfleiste(self))
 
     def _alle_haken(self, an: bool) -> None:
         self.projektdaten.alle_haken(an)

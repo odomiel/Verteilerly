@@ -2002,6 +2002,119 @@ class TestNeuerVerteilerDialog(unittest.TestCase):
 
 
 @unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
+class TestPassform(unittest.TestCase):
+    """Kein Dialog wird größer als der Bildschirm."""
+
+    def setUp(self):
+        from verteilerly.blattvorlagen import Blattvorlagen
+        from verteilerly.farbcodes import Kabeltypen
+        from verteilerly.gui import dialoge
+
+        self.dialoge = dialoge
+        self.ordner = tempfile.TemporaryDirectory()
+        self.addCleanup(self.ordner.cleanup)
+        daten = pathlib.Path(__file__).resolve().parent.parent / "daten"
+        projekt = Projekt(verteiler=Verteiler.aus_geometrie(2, 8, 10))
+        vorlagen = Vorlagen([Vorlage("klein", "Klein", 1, 4, 10, standard=True)])
+        self.alle = {
+            "Neuer Verteiler": dialoge.NeuerVerteilerDialog(
+                vorlagen, None, pathlib.Path(self.ordner.name)
+            ),
+            "Projektdaten": dialoge.ProjektdatenDialog(projekt),
+            "Vorgaben": dialoge.ProjektdatenDialog(projekt, vorgaben=True),
+            "Kabel": dialoge.KabelDialog(
+                projekt.verteiler,
+                Kabeltypen.laden(daten / "kabeltypen"),
+                projekt.verteiler.alle_leisten[0],
+                1,
+            ),
+            "Verteilervorlagen": dialoge.VerteilervorlagenDialog(vorlagen, None),
+            "Blattvorlagen": dialoge.BlattvorlagenDialog(
+                Blattvorlagen.laden(daten / "blattvorlagen")
+            ),
+            "Dokumentation": dialoge.DokumentationDialog(),
+        }
+        for dialog in self.alle.values():
+            self.addCleanup(dialog.deleteLater)
+
+    def _zeigen(self, dialog):
+        dialog.show()
+        ANWENDUNG.processEvents()
+        self.addCleanup(dialog.hide)
+        return dialog
+
+    def test_keiner_ragt_ueber_den_bildschirm_hinaus(self):
+        from verteilerly.gui import passform
+
+        for name, dialog in self.alle.items():
+            with self.subTest(dialog=name):
+                self._zeigen(dialog)
+                mass = passform.hoechstmass(dialog)
+                self.assertLessEqual(dialog.width(), mass.width())
+                self.assertLessEqual(dialog.height(), mass.height())
+
+    def test_die_vorgaben_rollen_statt_ueberzulaufen(self):
+        """Die Felder passen nicht auf 800 Bildpunkte Höhe — also rollen sie."""
+        dialog = self._zeigen(self.alle["Vorgaben"])
+        self.assertIsNotNone(dialog.rollbereich)
+        self.assertTrue(dialog.rollbereich.verticalScrollBar().isVisible())
+
+    def test_mit_platz_ist_kein_balken_zu_sehen(self):
+        dialog = self._zeigen(self.alle["Vorgaben"])
+        dialog.resize(dialog.width(), dialog.rollbereich.widget().sizeHint().height() * 2)
+        ANWENDUNG.processEvents()
+        self.assertFalse(dialog.rollbereich.verticalScrollBar().isVisible())
+
+    def test_die_knopfleiste_rollt_nicht_weg(self):
+        """Übernehmen und Abbrechen stehen außerhalb des Rollbereichs."""
+        from PySide6.QtWidgets import QDialogButtonBox
+
+        for name in ("Vorgaben", "Neuer Verteiler"):
+            with self.subTest(dialog=name):
+                dialog = self._zeigen(self.alle[name])
+                leiste = dialog.findChild(QDialogButtonBox)
+                self.assertIsNotNone(leiste)
+                self.assertFalse(
+                    dialog.rollbereich.isAncestorOf(leiste),
+                    "die Knopfleiste steckt im Rollbereich",
+                )
+                self.assertLessEqual(
+                    leiste.mapTo(dialog, leiste.rect().bottomLeft()).y(),
+                    dialog.height(),
+                )
+
+    def test_ein_zu_grosser_dialog_wird_gestutzt(self):
+        from verteilerly.gui import passform
+
+        dialog = self._zeigen(self.alle["Vorgaben"])
+        flaeche = passform.freie_flaeche(dialog)
+        dialog.resize(flaeche.width() + 400, flaeche.height() + 400)
+        self.assertTrue(passform.einpassen(dialog))
+        self.assertLessEqual(dialog.width(), flaeche.width())
+        self.assertLessEqual(dialog.height(), flaeche.height())
+
+    def test_was_daneben_steht_wird_hereingeschoben(self):
+        from verteilerly.gui import passform
+
+        dialog = self._zeigen(self.alle["Kabel"])
+        flaeche = passform.freie_flaeche(dialog)
+        dialog.move(flaeche.right() - 20, flaeche.bottom() - 20)
+        passform.einpassen(dialog)
+        self.assertTrue(
+            flaeche.contains(dialog.frameGeometry()),
+            f"{dialog.frameGeometry()} liegt nicht in {flaeche}",
+        )
+
+    def test_ein_passender_dialog_bleibt_wie_er_ist(self):
+        from verteilerly.gui import passform
+
+        dialog = self._zeigen(self.alle["Kabel"])
+        vorher = dialog.geometry()
+        self.assertFalse(passform.einpassen(dialog))
+        self.assertEqual(dialog.geometry(), vorher)
+
+
+@unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
 class TestVerteilervorlagenDialog(unittest.TestCase):
     """Verteilervorlagen umbenennen, löschen, zurückholen."""
 
