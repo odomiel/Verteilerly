@@ -161,6 +161,9 @@ Bezeichnung und Bemerkung. Wird die Teilung aufgehoben, bleibt der zweite Text
 erhalten. In Excel und CSV stehen beide hintereinander in einer Zelle — ein
 Raster hat keine halbe Spalte.
 
+**Entf** leert die gewählten Zellen, ohne sie erst zu öffnen — auch mehrere auf
+einmal; gelöscht wird der Inhalt, nicht die Form.
+
 In der Leistenansicht schließt **Enter** die Eingabe und geht
 **eine Zeile tiefer**, wie in einer Tabellenkalkulation; wurde die Eingabe
 nicht angenommen — eine unlesbare Rangierung etwa —, bleibt die Marke stehen.

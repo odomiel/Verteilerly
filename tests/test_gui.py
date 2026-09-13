@@ -391,6 +391,103 @@ class TestKabelDialog(unittest.TestCase):
         self.assertIn("6 DA", dialog.kuerzungshinweis.text())
 
 
+class TestEntfLeertZellen(unittest.TestCase):
+    """Eine Zelle leeren, ohne sie erst zu öffnen."""
+
+    def setUp(self):
+        from PySide6.QtCore import QEvent, QItemSelection, QItemSelectionModel
+        from PySide6.QtGui import QKeyEvent
+        from verteilerly.gui.leistenansicht import LeistenAnsicht
+
+        self.QEvent, self.QKeyEvent = QEvent, QKeyEvent
+        self.QItemSelection = QItemSelection
+        self.QItemSelectionModel = QItemSelectionModel
+        self.ansicht = LeistenAnsicht()
+        self.addCleanup(self.ansicht.close)
+        self.verteiler = Verteiler.aus_geometrie(1, 2, 10)
+        self.verteiler.kabel_anlegen("Leitung", 1, 1, 4)
+        self.ansicht.verteiler_setzen(self.verteiler)
+        self.ansicht.leiste_zeigen(1)
+        self.ader = self.verteiler.leiste(1).stift(1).ader("a")
+
+    def _entf(self):
+        ANWENDUNG.sendEvent(
+            self.ansicht.tabelle,
+            self.QKeyEvent(
+                self.QEvent.Type.KeyPress,
+                Qt.Key.Key_Delete,
+                Qt.KeyboardModifier.NoModifier,
+            ),
+        )
+
+    def _waehlen(self, zeile, spalte):
+        self.ansicht.tabelle.setCurrentIndex(self.ansicht.modell.index(zeile, spalte))
+
+    def test_entf_leert_die_gewaehlte_zelle(self):
+        self.ader.bezeichnung = "Amt 1"
+        self._waehlen(0, SPALTE_BEZEICHNUNG)
+        self._entf()
+        self.assertEqual(self.ader.bezeichnung, "")
+
+    def test_entf_leert_beide_felder_einer_geteilten_zelle(self):
+        from verteilerly.modell import Zellenteilung
+
+        self.ader.bezeichnung = "Amt 1"
+        self.ader.teilung_setzen("bezeichnung", Zellenteilung(30, "Nst. 42"))
+        self._waehlen(0, SPALTE_BEZEICHNUNG)
+        self._entf()
+        self.assertEqual(self.ader.bezeichnung, "")
+        self.assertEqual(self.ader.teilung("bezeichnung").text, "")
+        # Die Teilung selbst bleibt - gelöscht wird der Text, nicht die Form.
+        self.assertTrue(self.ader.teilung("bezeichnung").geteilt)
+
+    def test_entf_nimmt_eine_rangierung_weg(self):
+        self.verteiler.rangierung_anlegen(
+            Aderadresse(1, 1, "a"), Aderadresse(1, 5, "b")
+        )
+        self._waehlen(0, SPALTE_RANGIERUNG)
+        self._entf()
+        self.assertEqual(self.verteiler.rangierungen, [])
+
+    def test_entf_leert_die_kabelbeschriftung_nimmt_aber_kein_kabel_ab(self):
+        self._waehlen(0, SPALTE_KABEL)
+        self._entf()
+        self.assertEqual(self.verteiler.kabel[0].beschriftung, "")
+        self.assertEqual(len(self.verteiler.kabel), 1)
+
+    def test_stift_und_ader_bleiben(self):
+        self._waehlen(0, SPALTE_STIFT)
+        self._entf()
+        self.assertEqual(
+            self.ansicht.modell.data(self.ansicht.modell.index(0, SPALTE_STIFT)), "1"
+        )
+
+    def test_entf_leert_alle_markierten_zellen(self):
+        self.ader.farbe = "rt"
+        self.ader.bezeichnung = "Amt 1"
+        self.ader.bemerkung = "geprüft"
+        modell = self.ansicht.modell
+        self._waehlen(0, SPALTE_FARBE)
+        self.ansicht.tabelle.selectionModel().select(
+            self.QItemSelection(modell.index(0, SPALTE_FARBE),
+                                modell.index(0, SPALTE_BEMERKUNG)),
+            self.QItemSelectionModel.SelectionFlag.Select,
+        )
+        self._entf()
+        self.assertEqual(
+            (self.ader.farbe, self.ader.bezeichnung, self.ader.bemerkung), ("", "", "")
+        )
+
+    def test_beim_bearbeiten_greift_entf_nicht(self):
+        """Dort gehört die Taste dem Eingabefeld - sie löscht Zeichen."""
+        self.ader.bezeichnung = "Bleibt"
+        index = self.ansicht.modell.index(0, SPALTE_BEZEICHNUNG)
+        self.ansicht.tabelle.setCurrentIndex(index)
+        self.ansicht.tabelle.edit(index)
+        self._entf()
+        self.assertEqual(self.ader.bezeichnung, "Bleibt")
+
+
 class TestEnterSpringtWeiter(unittest.TestCase):
     """Enter schließt die Eingabe und geht eine Zeile tiefer."""
 

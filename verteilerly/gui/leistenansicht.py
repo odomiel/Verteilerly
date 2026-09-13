@@ -797,6 +797,8 @@ class LeistenAnsicht(QWidget):
             | QAbstractItemView.EditTrigger.AnyKeyPressed
         )
         self.tabelle.setAlternatingRowColors(False)
+        # Entf leert die gewaehlten Zellen, ohne sie erst zu oeffnen.
+        self.tabelle.installEventFilter(self)
 
         self.delegat = EingabeDelegat(self.tabelle)
         self.tabelle.setItemDelegate(self.delegat)
@@ -1023,6 +1025,40 @@ class LeistenAnsicht(QWidget):
                 index, replace(self.modell.stil(index), **{was: soll})
             )
         self._knoepfe_auffrischen()
+
+    def eventFilter(self, gegenstand, ereignis) -> bool:
+        """Entf leert die gewaehlten Zellen.
+
+        Wer einen Eintrag loswerden will, soll die Zelle nicht erst mit
+        einem Doppelklick oeffnen und den Text markieren muessen. Beim
+        Bearbeiten selbst greift das nicht: dann liegt die Taste beim
+        Eingabefeld, und dort loescht sie Zeichen.
+        """
+        if (
+            gegenstand is self.tabelle
+            and ereignis.type() == QEvent.Type.KeyPress
+            and ereignis.key() == Qt.Key.Key_Delete
+            and not self.tabelle.state() == QTableView.State.EditingState
+        ):
+            if self._zellen_leeren():
+                return True
+        return super().eventFilter(gegenstand, ereignis)
+
+    def _zellen_leeren(self) -> int:
+        """Leert jede gewaehlte Zelle, die sich beschreiben laesst."""
+        geleert = 0
+        for index in self._gewaehlte(lambda spalte: spalte):
+            if not self.modell.flags(index) & Qt.ItemFlag.ItemIsEditable:
+                continue
+            # Eine geteilte Zelle traegt zwei Texte - beide gehoeren zu ihr.
+            teilung = self.modell.teilung(index)
+            if teilung is not None and teilung.text:
+                self.modell.zweittext_setzen(index, "")
+                geleert += 1
+            if str(index.data(Qt.ItemDataRole.EditRole) or ""):
+                if self.modell.setData(index, "", Qt.ItemDataRole.EditRole):
+                    geleert += 1
+        return geleert
 
     def _eine_zeile_tiefer(self) -> None:
         """Nach Enter eine Zeile weiter - wie in einer Tabellenkalkulation.
