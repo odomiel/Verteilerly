@@ -108,7 +108,9 @@ class TestSpec(unittest.TestCase):
 
     def test_der_ballast_bleibt_draussen(self):
         heraus = self.aufrufe["analysis"]["excludes"]
-        for modul in ("PySide6.QtWebEngineCore", "PySide6.QtQml", "tkinter"):
+        for modul in ("PySide6.QtWebEngineCore", "PySide6.QtQml", "tkinter",
+                      "PySide6.QtOpenGL", "PySide6.QtDBus", "PIL._avif",
+                      "PIL._webp", "sqlite3"):
             with self.subTest(modul=modul):
                 self.assertIn(modul, heraus)
         self.assertNotIn("PySide6.QtWidgets", heraus)
@@ -218,6 +220,46 @@ class TestSymbol(unittest.TestCase):
         for name in ("libgdbm", "libgdbm_compat", "libreadline"):
             with self.subTest(bibliothek=name):
                 self.assertIn(name, appimage.UNNOETIGE_BIBLIOTHEKEN)
+
+    def test_ballast_bleibt_draussen(self):
+        """Was die Oberfläche nie anfasst, wiegt trotzdem."""
+        import appimage
+
+        # Gezeichnet wird mit QPainter - OpenGL verweist nur auf sich selbst.
+        self.assertNotIn("OpenGL", appimage.QT_BEHALTEN)
+        # Das Programm liest keine Bilddateien.
+        self.assertNotIn("imageformats", appimage.PLUGINS_BEHALTEN)
+        for werkzeug in ("qmlls", "designer", "assistant", "linguist"):
+            with self.subTest(werkzeug=werkzeug):
+                self.assertIn(werkzeug, appimage.QT_WERKZEUGE)
+        for muster in ("PIL/_avif.*.so", "pillow.libs/libavif-*.so*"):
+            with self.subTest(muster=muster):
+                self.assertIn(muster, appimage.PILLOW_WEG)
+
+    def test_der_kern_von_pillow_bleibt(self):
+        """Ohne PIL._imaging lässt sich reportlab nicht importieren."""
+        import appimage
+
+        gefahr = [m for m in appimage.PILLOW_WEG if "_imaging." in m]
+        self.assertEqual(gefahr, [])
+        self.assertNotIn("pillow.libs/libjpeg-*.so*", appimage.PILLOW_WEG)
+
+    def test_openssl_und_sqlite_bleiben_draussen(self):
+        """Das Programm geht nie ins Netz und führt keine Datenbank."""
+        import appimage
+
+        for modul in ("_ssl", "_hashlib", "_sqlite3"):
+            with self.subTest(modul=modul):
+                self.assertIn(modul, appimage.UNNOETIGE_MODULE)
+        for lib in ("libcrypto", "libssl", "libsqlite3"):
+            with self.subTest(bibliothek=lib):
+                self.assertIn(lib, appimage.UNNOETIGE_BIBLIOTHEKEN)
+
+    def test_ohne_strip_wird_trotzdem_gebaut(self):
+        import appimage
+
+        with mock.patch.object(appimage.shutil, "which", return_value=None):
+            self.assertEqual(appimage.symbole_strippen(), 0)
 
     def test_das_abbild_traegt_die_lizenzen(self):
         import appimage

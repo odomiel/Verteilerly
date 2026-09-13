@@ -438,6 +438,22 @@ Diese Bibliotheken kommen **nicht vom Baurechner**, sondern aus Debian 12
 schnitte damit alles Ältere ab. Das Bauskript holt die Pakete selbst aus
 dem Debian-Archiv und packt nur die benötigte `.so` ein.
 
+**Mitgenommen wird nur, was das Programm anfasst.** Der Bau wirft heraus:
+Qts Entwicklerwerkzeuge (`qmlls`, `designer`, `assistant`, `linguist`,
+`lupdate`, `lrelease` — 13 MB, die nie aufgerufen werden), QtOpenGL samt
+Bibliothek und glx-Steckmodul (gezeichnet wird mit QPainter; nachgesehen mit
+`readelf`, dass sonst niemand darauf verweist), Qts Bildformat-Steckmodule,
+Pillows Codecs für Formate, die hier niemand öffnet (AVIF allein 5 MB),
+OpenSSL samt `_ssl` und `_hashlib` — das Programm geht nie ins Netz,
+und `hashlib` rechnet ohne sie weiter —, SQLite sowie readline und gdbm.
+Zuletzt nimmt `strip` den Bibliotheken die Symboltabellen: PyYAMLs `_yaml.so`
+schrumpft dabei von 2,5 auf 0,35 MB.
+
+Der Kern bleibt: ohne `PIL._imaging` ließe sich ReportLab nicht einmal
+importieren. Fehlt `strip` auf dem Baurechner, wird das gemeldet und
+weitergebaut. Zusammen macht das aus 179 MB entpackt 131 MB und aus 58,7 MB
+Abbild **41,0 MB**.
+
 Damit verlangt das Ergebnis **glibc 2.34 oder neuer** — das ist die
 Untergrenze des Qt-Rads selbst und deckt Ubuntu 22.04, Debian 12, RHEL 9
 und Fedora 35 aufwärts ab. Der Bau meldet den Wert und nennt die

@@ -91,7 +91,22 @@ excludes = [
     "PySide6.QtNetwork",
     "PySide6.QtSql",
     "PySide6.QtTest",
+    # Gezeichnet wird mit QPainter; auf libQt6OpenGL verweist sonst
+    # niemand - im AppImage nachgemessen, hier gilt dasselbe.
+    "PySide6.QtOpenGL",
+    "PySide6.QtOpenGLWidgets",
+    "PySide6.QtDBus",
     "tkinter",
+    # Pillows Codecs fuer Formate, die hier niemand oeffnet. Der Kern
+    # (PIL._imaging) bleibt - ohne ihn laesst sich reportlab nicht
+    # importieren.
+    "PIL._avif",
+    "PIL._webp",
+    "PIL._imagingtk",
+    "PIL._imagingcms",
+    "PIL.AvifImagePlugin",
+    "PIL.WebPImagePlugin",
+    "sqlite3",
     # PIL/Pillow NICHT ausschliessen: reportlab.lib.utils importiert es beim
     # Laden von reportlab.lib.colors - ohne Pillow bricht die .exe beim ersten
     # Import des Hauptfensters ab (ModuleNotFoundError: No module named 'PIL').

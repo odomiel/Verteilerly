@@ -29,6 +29,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import urllib.error
 import urllib.request
 
 WURZEL = pathlib.Path(__file__).resolve().parent.parent
@@ -107,18 +108,44 @@ LIZENZEN = WURZEL / "lizenzen"
 
 # Qt-Module, die die Oberflaeche braucht. Alles andere fliegt raus - der
 # Rest von Qt ist ein Vielfaches des Programms gross.
-QT_BEHALTEN = {"Core", "Gui", "Widgets", "DBus", "XcbQpa", "OpenGL", "Svg"}
+# OpenGL steht bewusst nicht dabei: nachgesehen mit readelf verweist auf
+# libQt6OpenGL nur seine eigene Bindung und das glx-Steckmodul, sonst
+# niemand. Gezeichnet wird mit QPainter.
+QT_BEHALTEN = {"Core", "Gui", "Widgets", "DBus", "XcbQpa", "Svg"}
 # Steckmodule, die die Oberflaeche laedt. Der Rest zieht Fremdes nach:
 # das GTK-Thema die halbe GTK-Welt, das Drucksteckmodul CUPS - und
 # gedruckt wird hier ohnehin über das PDF.
+# imageformats fehlt mit Absicht: das Programm liest keine Bilddateien,
+# sein Symbol zeichnet es selbst (gui/symbol.py).
 PLUGINS_BEHALTEN = {
-    "platforms", "xcbglintegrations", "imageformats", "iconengines",
-    "platforminputcontexts", "styles",
+    "platforms", "iconengines", "platforminputcontexts", "styles",
 }
 PLATTFORMEN_BEHALTEN = {"libqxcb", "libqminimal", "libqoffscreen"}
 # Von Qts Uebersetzungen bleibt die deutsche - sie beschriftet die
 # Datei- und Rueckfragedialoge. Der Rest waere Ballast.
 UEBERSETZUNGEN_BEHALTEN = {"qtbase_de.qm"}
+# Qts Entwicklerwerkzeuge liegen in der PySide6-Auslieferung mit. Sie
+# gehoeren an den Arbeitsplatz des Entwicklers, nicht in ein fertiges
+# Programm - aufgerufen werden sie dort nie.
+QT_WERKZEUGE = (
+    "assistant", "designer", "linguist", "lrelease", "lupdate",
+    "qmlformat", "qmllint", "qmlls", "svgtoqml", "qmltyperegistrar",
+    "qmlimportscanner", "qmlcachegen", "rcc", "uic", "balsam",
+    "qsb", "shiboken6", "pyside6-*",
+)
+# Pillow kommt mit ReportLab mit und bringt Bildcodecs fuer Formate mit,
+# die hier niemand oeffnet - gezeichnet wird mit ReportLab, nicht mit
+# Pillow. Der Kern (_imaging samt libjpeg, libtiff, libopenjp2, zlib)
+# bleibt: ohne ihn laesst sich reportlab nicht einmal importieren.
+PILLOW_WEG = (
+    "PIL/_avif.*.so", "PIL/_webp.*.so", "PIL/_imagingtk.*.so",
+    "PIL/_imagingft.*.so", "PIL/_imagingcms.*.so",
+    "pillow.libs/libavif-*.so*", "pillow.libs/libwebp*-*.so*",
+    "pillow.libs/libsharpyuv-*.so*", "pillow.libs/libfreetype-*.so*",
+    "pillow.libs/libharfbuzz-*.so*", "pillow.libs/liblcms2-*.so*",
+    "pillow.libs/libbrotli*-*.so*",
+)
+
 # Ordner in der PySide6-Auslieferung, die die Oberflaeche nicht anfasst.
 PYSIDE_WEG = (
     "Qt/qml",
@@ -157,15 +184,37 @@ def melden(text: str) -> None:
     print(f"· {text}", flush=True)
 
 
+WARTEZEIT = 30.0          # Sekunden je Versuch
+VERSUCHE = 3
+
+
 def holen(url: str, ziel: pathlib.Path) -> pathlib.Path:
-    """Laedt eine Datei, wenn sie noch nicht daliegt."""
+    """Laedt eine Datei, wenn sie noch nicht daliegt.
+
+    Mit Wartezeit und zweitem Anlauf: ein haengender Spiegel hielt den
+    Bau sonst endlos auf, ohne ein Wort zu sagen. Eine halb geladene
+    Datei wird weggeraeumt - sonst gaelte sie beim naechsten Mal als
+    "schon vorhanden".
+    """
     ziel.parent.mkdir(parents=True, exist_ok=True)
     if ziel.exists() and ziel.stat().st_size > 0:
         melden(f"schon vorhanden: {ziel.name}")
         return ziel
     melden(f"lade {url.rsplit('/', 1)[-1]} …")
-    with urllib.request.urlopen(url) as quelle, ziel.open("wb") as datei:
-        shutil.copyfileobj(quelle, datei)
+    for versuch in range(1, VERSUCHE + 1):
+        try:
+            with urllib.request.urlopen(url, timeout=WARTEZEIT) as quelle:
+                with ziel.open("wb") as datei:
+                    shutil.copyfileobj(quelle, datei)
+            break
+        except (urllib.error.URLError, TimeoutError, OSError) as fehler:
+            ziel.unlink(missing_ok=True)
+            if versuch == VERSUCHE:
+                raise SystemExit(
+                    f"{ziel.name} liess sich nicht laden ({fehler}). "
+                    "Spiegel nicht erreichbar?"
+                ) from None
+            melden(f"  Versuch {versuch} fehlgeschlagen ({fehler}) - noch einmal")
     ziel.chmod(0o755)
     return ziel
 
@@ -241,9 +290,15 @@ def programm_einbauen() -> None:
 # stehen unter der GPL-3: sie hier zu lassen hiesse, ihren Quelltext
 # mit anbieten zu muessen, und das Programm ruft sie nie auf. Tcl/Tk
 # geht mit tkinter denselben Weg, nur aus Platzgruenden.
-UNNOETIGE_MODULE = ("_gdbm", "_dbm", "readline", "_tkinter")
+# _ssl und _hashlib kommen dazu, weil das Programm nie ins Netz geht
+# und hashlib ohne OpenSSL weiterrechnet - md5, sha1 und sha256
+# stecken als eigene Module in Python. _sqlite3 braucht hier niemand:
+# ein Verteiler ist eine Datei, keine Datenbank.
+UNNOETIGE_MODULE = ("_gdbm", "_dbm", "readline", "_tkinter",
+                    "_ssl", "_hashlib", "_sqlite3")
 UNNOETIGE_BIBLIOTHEKEN = ("libgdbm", "libgdbm_compat", "libreadline",
-                          "libtcl", "libtk")
+                          "libtcl", "libtk", "libssl", "libcrypto",
+                          "libsqlite3")
 
 
 def python_abspecken() -> None:
@@ -302,6 +357,61 @@ def qt_abspecken() -> int:
     gespart = vorher - _groesse(APPDIR)
     melden(f"abgespeckt: {gespart / 1024 / 1024:.0f} MB")
     return gespart
+
+
+def werkzeuge_entfernen() -> int:
+    """Qts Entwicklerwerkzeuge aus der PySide6-Auslieferung."""
+    pyside = _site_packages() / "PySide6"
+    if not pyside.is_dir():
+        return 0
+    weg = 0
+    for muster in QT_WERKZEUGE:
+        for datei in pyside.glob(muster):
+            if datei.is_file():
+                weg += datei.stat().st_size
+                datei.unlink()
+            elif datei.is_dir():
+                weg += _groesse(datei)
+                shutil.rmtree(datei, ignore_errors=True)
+    return weg
+
+
+def bildcodecs_entfernen() -> int:
+    """Pillows Codecs fuer Formate, die hier niemand oeffnet."""
+    pakete = _site_packages()
+    weg = 0
+    for muster in PILLOW_WEG:
+        for datei in pakete.glob(muster):
+            weg += datei.stat().st_size
+            datei.unlink()
+    return weg
+
+
+def symbole_strippen() -> int:
+    """Nimmt den Bibliotheken ihre Symboltabellen.
+
+    Qt liefert schon gestrippt aus, die Raeder von Pillow und PyYAML
+    nicht: dort steckt ein Vielfaches der eigentlichen Bibliothek in
+    Symbolen, die zur Laufzeit niemand liest. Fehlt ``strip``, wird das
+    gesagt und weitergebaut - ein Abbild muss sich auch ohne binutils
+    bauen lassen.
+    """
+    werkzeug = shutil.which("strip")
+    if werkzeug is None:
+        melden("strip nicht vorhanden - Symboltabellen bleiben drin")
+        return 0
+    vorher = _groesse(APPDIR)
+    dateien = [
+        str(datei)
+        for datei in APPDIR.rglob("*.so*")
+        if datei.is_file() and not datei.is_symlink()
+    ]
+    for anfang in range(0, len(dateien), 200):      # nicht eine Zeile je Datei
+        subprocess.run(
+            [werkzeug, "--strip-unneeded", *dateien[anfang:anfang + 200]],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False,
+        )
+    return vorher - _groesse(APPDIR)
 
 
 def plugins_abspecken() -> None:
@@ -631,11 +741,19 @@ def main() -> int:
     qt_abspecken()
     plugins_abspecken()
     python_abspecken()
+    ballast = werkzeuge_entfernen() + bildcodecs_entfernen()
+    if ballast:
+        melden(f"Werkzeuge und Bildcodecs heraus: {ballast // 1048576} MB")
     verwaist = verwaiste_entfernen()
     if verwaist:
         melden(f"verwaist und entfernt: {', '.join(sorted(set(verwaist)))}")
     systembibliotheken_mitnehmen()
     huelle_schreiben()
+
+    # Zuletzt, wenn nichts mehr dazukommt: die Symboltabellen.
+    gestrippt = symbole_strippen()
+    if gestrippt:
+        melden(f"gestrippt: {gestrippt // 1048576} MB")
 
     fassung, wegen = glibc_bedarf()
     melden(f"AppDir: {_groesse(APPDIR) / 1024 / 1024:.0f} MB, "
