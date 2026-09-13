@@ -63,6 +63,26 @@ class TestBlattfolge(unittest.TestCase):
                 self.assertLess(frei, 10, "zu viel Luft am rechten Rand")
                 self.assertGreaterEqual(frei, -0.01, "über den Rand hinaus")
 
+    def test_die_leistenbeschriftung_steht_in_einer_flucht(self):
+        """Immer am linken Rand, gleich wie breit die Spalte gerade ist."""
+        for buchten, leisten in ((1, 4), (2, 4), (2, 6), (2, 12), (3, 4)):
+            with self.subTest(buchten=buchten, leisten=leisten):
+                projekt = Projekt(
+                    verteiler=Verteiler.aus_geometrie(buchten, leisten, 10)
+                )
+                blatt = verteilerbelegungen(projekt)[0]
+                beschriftungen = [
+                    e for e in blatt.elemente
+                    if isinstance(e, Text) and e.text.startswith("Leiste ")
+                ]
+                self.assertTrue(beschriftungen)
+                for e in beschriftungen:
+                    self.assertEqual(e.ausrichtung, "links")
+                # Dieselbe Fluchtlinie wie Überschrift und Schriftfeld.
+                self.assertAlmostEqual(
+                    min(e.x for e in beschriftungen), STANDARD.rand, places=6
+                )
+
     def test_die_buchten_stehen_nicht_uebereinander(self):
         """Verteilt wird in die Breite, nicht gestapelt."""
         from verteilerly.layout import Rechteck

@@ -664,8 +664,11 @@ def verteilerbelegung(
     # und der Block zeigt durch seine Breite, wie viele Doppeladern er
     # belegt.
     for nummer, (kx, ky, da) in kaesten.items():
+        # Linksbuendig, nicht an den Kasten geschoben: so beginnt die
+        # Beschriftung jeder Leiste auf derselben Fluchtlinie wie das
+        # Schriftfeld darunter, gleich wie breit die Spalte gerade ist.
         blatt.text(
-            kx - label_b, ky, label_b - 2, zelle_h, f"Leiste {nummer}", schrift, RECHTS
+            kx - label_b, ky, label_b - 2, zelle_h, f"Leiste {nummer}", schrift, LINKS
         )
         blatt.rechteck(kx, ky, da * zelle_b, zelle_h, staerke=0.4)
 

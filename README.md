@@ -263,6 +263,9 @@ wachsen, so weit die Seite es hergibt, bei vielen Leisten dürfen die Zellen
 zusätzlich in die Breite wachsen (bis zum Doppelten ihrer Höhe), und was übrig
 bleibt, wird als Luft zwischen die Buchten und die Leisten verteilt — höchstens
 eine Zellenhöhe je Leiste, sonst wird die Bucht zur Leiter.
+Die Leistenbeschriftung steht dabei **linksbündig** und beginnt damit auf
+derselben Fluchtlinie wie Überschrift und Schriftfeld — vorher hing sie rechts
+an ihrem Kasten und rückte mit der Spaltenbreite hin und her.
 
 Die Blattfolge ist Deckblatt, Verteilerbelegung, dann je Leiste ein Blatt.
 Bis zwei Buchten passt die Verteilerbelegung auf ein Blatt; ab der dritten
