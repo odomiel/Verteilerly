@@ -1,0 +1,95 @@
+Verteilerly - Lizenzen und Quelltext
+====================================
+
+Verteilerly steht unter der GNU General Public License, Version 3 oder
+spaeter (GPL-3.0-or-later). Der vollstaendige Lizenztext liegt daneben
+als GPL-3.0.txt.
+
+    Copyright (C) 2026 Mirik
+
+    Dieses Programm ist freie Software: Sie koennen es weitergeben und
+    aendern unter den Bedingungen der GNU General Public License, wie
+    von der Free Software Foundation veroeffentlicht, entweder Version 3
+    der Lizenz oder (nach Ihrer Wahl) jeder spaeteren Version.
+
+    Dieses Programm wird in der Hoffnung weitergegeben, dass es nuetzlich
+    ist, aber OHNE JEDE GEWAEHRLEISTUNG - sogar ohne die stillschweigende
+    Gewaehrleistung der MARKTGAENGIGKEIT oder EIGNUNG FUER EINEN
+    BESTIMMTEN ZWECK. Naeheres in der GNU General Public License.
+
+Quelltext von Verteilerly
+-------------------------
+Der vollstaendige Quelltext dieser Fassung gehoert zu diesem Programm.
+Er liegt im Git-Verzeichnis des Projekts; die Fassung nennt das Programm
+unter "Hilfe > Ueber Verteilerly". Wer dieses Abbild bekommen hat und
+den Quelltext nicht mitbekam, kann ihn beim Weitergebenden anfordern -
+die GPL Abschnitt 6 verpflichtet ihn dazu.
+
+
+Mitgelieferte Bestandteile
+==========================
+
+Dieses Abbild bringt seine Laufzeit selbst mit. Die folgenden Teile
+stammen von Dritten und stehen unter ihren eigenen Lizenzen; sie bleiben
+es auch, unabhaengig von der GPL fuer Verteilerly selbst.
+
+Qt 6 und PySide6 / shiboken6            LGPL-3.0-only
+    Bindung dynamisch ueber PySide6; die Bibliotheken liegen als
+    libQt6*.so im Abbild und lassen sich austauschen: Abbild mit
+    "--appimage-extract" auspacken, Bibliothek ersetzen, mit
+    appimagetool neu packen. Lizenztext: LGPL-3.0.txt (sie verweist auf
+    GPL-3.0.txt). Quelltext: https://download.qt.io/official_releases/qt/
+    und https://download.qt.io/official_releases/QtForPython/
+    Reverse Engineering zum Beheben von Fehlern ist ausdruecklich
+    gestattet.
+
+Python 3.13                              PSF License 2.0
+    Lizenztext im Abbild unter opt/python3.13/lib/python3.13/LICENSE.txt
+    Quelltext: https://www.python.org/downloads/source/
+
+ReportLab                                BSD-3-Clause
+openpyxl, et_xmlfile, PyYAML             MIT
+Pillow                                   MIT-CMU
+    Lizenztexte je Paket unter
+    opt/python3.13/lib/python3.13/site-packages/<paket>-*.dist-info/
+
+GLib (libgthread-2.0)                    LGPL-2.1-or-later
+    Quelltext: https://deb.debian.org/debian/pool/main/g/glib2.0/
+    Austauschbar auf demselben Weg wie Qt.
+
+libatomic (GCC)                          GPL-3.0 mit GCC Runtime
+                                         Library Exception
+    Die Ausnahme erlaubt ausdruecklich auch die Verwendung in nicht
+    freier Software; hier ist ohnehin alles frei.
+    Quelltext: https://deb.debian.org/debian/pool/main/g/gcc-12/
+
+OpenSSL 3                                Apache-2.0
+SQLite                                   Public Domain
+ICU, HarfBuzz, libjpeg, libwebp,
+libavif, OpenJPEG, lcms2, libtiff,
+libpng, FreeType, Brotli, zstd,
+PCRE2, xz, bzip2, libffi, libmpdec,
+ncurses, Tcl/Tk, libX11, libxcb,
+libXau, libXdmcp, libXft, libXrender,
+libxkbcommon                             MIT / BSD / zlib / FTL /
+                                         Public Domain
+    Die Debian-Pakete und ihre Quellen stehen unter
+    https://deb.debian.org/debian/pool/main/ ; die von den
+    PySide6- und Pillow-Radern mitgebrachten Bibliotheken unter den
+    Adressen der jeweiligen Projekte.
+
+DarkGarden (Schrift in ReportLab)        GPL-2.0-or-later mit
+                                         Font-Ausnahme
+    Die Ausnahme haelt fest, dass ein Dokument, das diese Schrift
+    einbettet, dadurch nicht selbst unter die GPL faellt. Quelle
+    (DarkGarden.sfd) und Lizenztext liegen im Abbild neben der Schrift.
+
+AppImage-Laufzeit (appimagetool)         MIT, mit BSD-Teilen
+    Quelltext: https://github.com/AppImage/appimagetool
+
+
+Werkzeuge, die nicht mitkommen
+==============================
+
+Zum Bauen wird PyInstaller (GPL-2.0-or-later mit Ausnahme fuer die
+erzeugten Programme) benutzt. Es steckt nicht in diesem Abbild.

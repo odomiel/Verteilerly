@@ -375,6 +375,24 @@ den Bericht abbrechen zu lassen.
 Zurückgestellt: Widerstandssymbol,
 Pluginschnittstelle, Blatt „Änderungen“, Strichregel.
 
+## Lizenz
+
+Verteilerly steht unter der **GNU General Public License, Version 3 oder
+später** (`LICENSE`). Weitergeben und ändern ist erlaubt, auch gewerblich; wer
+weitergibt, gibt den Quelltext mit oder bietet ihn an. Ohne jede
+Gewährleistung.
+
+Die Bausteine bleiben bei ihren eigenen Lizenzen: Qt und PySide6 unter der
+LGPLv3 — dynamisch gebunden und im Abbild austauschbar, wie die LGPL es
+verlangt —, ReportLab unter BSD, openpyxl, PyYAML und Pillow unter MIT, Python
+unter der PSF-Lizenz. `lizenzen/` trägt die vollständigen Texte und
+`QUELLEN.txt`, das für jeden Bestandteil Lizenz und Quelltextadresse nennt;
+beides wandert ins AppImage und neben die `.exe`.
+
+Im Abbild steckt nichts, was das Programm nicht braucht: `readline` und `gdbm`
+stehen unter der GPL-3 und werden nie aufgerufen, `python_abspecken()` wirft sie
+samt ihrer Bibliotheken heraus.
+
 ## Verpacken
 
 ```bash

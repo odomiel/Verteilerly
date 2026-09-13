@@ -103,6 +103,7 @@ DEBIANORDNER = BASISORDNER / DEBIAN
 APPDIR = BAUORDNER / f"{ANZEIGENAME}.AppDir"
 ZIELORDNER = WURZEL / "auslieferung"
 DATEN = WURZEL / "daten"
+LIZENZEN = WURZEL / "lizenzen"
 
 # Qt-Module, die die Oberflaeche braucht. Alles andere fliegt raus - der
 # Rest von Qt ist ein Vielfaches des Programms gross.
@@ -219,16 +220,47 @@ def programm_einbauen() -> None:
     datenziel = APPDIR / DATEN.name
     shutil.rmtree(datenziel, ignore_errors=True)
     shutil.copytree(DATEN, datenziel)
-    melden(f"Programm und Daten eingebaut ({ziel.name}, {datenziel.name})")
+
+    # Wer ein Abbild weitergibt, gibt die Lizenzen mit: die GPL fuer das
+    # Programm, die LGPL fuer Qt, und QUELLEN.txt sagt, wo der Quelltext
+    # jedes Bestandteils zu holen ist.
+    lizenzziel = APPDIR / LIZENZEN.name
+    shutil.rmtree(lizenzziel, ignore_errors=True)
+    shutil.copytree(LIZENZEN, lizenzziel)
+    shutil.copy2(WURZEL / "LICENSE", lizenzziel / "LICENSE")
+    melden(
+        f"Programm, Daten und Lizenzen eingebaut "
+        f"({ziel.name}, {datenziel.name}, {lizenzziel.name})"
+    )
+
+
+# Module der Standardbibliothek, die ein fertiges Programm nie aufruft -
+# und dazu die Bibliotheken, an denen sie haengen. readline und gdbm
+# stehen unter der GPL-3: sie hier zu lassen hiesse, ihren Quelltext
+# mit anbieten zu muessen, und das Programm ruft sie nie auf. Tcl/Tk
+# geht mit tkinter denselben Weg, nur aus Platzgruenden.
+UNNOETIGE_MODULE = ("_gdbm", "_dbm", "readline", "_tkinter")
+UNNOETIGE_BIBLIOTHEKEN = ("libgdbm", "libgdbm_compat", "libreadline",
+                          "libtcl", "libtk")
 
 
 def python_abspecken() -> None:
     """Was in einem fertigen Programm niemand aufruft."""
-    stdlib = APPDIR / "opt" / f"python{PYTHONFASSUNG}" / "lib" / f"python{PYTHONFASSUNG}"
+    opt = APPDIR / "opt" / f"python{PYTHONFASSUNG}"
+    stdlib = opt / "lib" / f"python{PYTHONFASSUNG}"
     for teil in ("test", "idlelib", "tkinter", "ensurepip", "lib2to3",
                  "distutils", "turtledemo", "config-*"):
         for ordner in stdlib.glob(teil):
             shutil.rmtree(ordner, ignore_errors=True) if ordner.is_dir() else ordner.unlink()
+
+    for name in UNNOETIGE_MODULE:
+        for datei in (stdlib / "lib-dynload").glob(f"{name}.*.so"):
+            datei.unlink()
+    for name in UNNOETIGE_BIBLIOTHEKEN:
+        for ordner in (APPDIR / "usr" / "lib", opt / "lib"):
+            for datei in ordner.glob(f"{name}.so*") if ordner.is_dir() else ():
+                datei.unlink()
+
     for ordner in APPDIR.rglob("__pycache__"):
         shutil.rmtree(ordner, ignore_errors=True)
 

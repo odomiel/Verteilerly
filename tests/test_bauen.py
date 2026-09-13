@@ -88,6 +88,17 @@ class TestSpec(unittest.TestCase):
         self.assertIn("40da-4x10.yaml", dateien)
         self.assertIn("standard.yaml", dateien)
 
+    def test_die_lizenzen_wandern_mit(self):
+        """Was weitergegeben wird, trägt seine Lizenzen bei sich."""
+        dateien = {
+            pathlib.Path(quelle).name: ziel
+            for quelle, ziel in self.aufrufe["analysis"]["datas"]
+        }
+        self.assertEqual(dateien.get("LICENSE"), ".")
+        for name in ("GPL-3.0.txt", "LGPL-3.0.txt", "QUELLEN.txt"):
+            with self.subTest(datei=name):
+                self.assertEqual(dateien.get(name), "lizenzen")
+
     def test_das_eigene_paket_wird_vollstaendig_eingesammelt(self):
         versteckt = self.aufrufe["analysis"]["hiddenimports"]
         for modul in ("verteilerly.gui.dialoge", "verteilerly.ausgabe.pdf"):
@@ -196,6 +207,24 @@ class TestSelbstbericht(unittest.TestCase):
 
 
 class TestSymbol(unittest.TestCase):
+    def test_gpl_bibliotheken_bleiben_draussen(self):
+        """readline und gdbm stehen unter der GPL-3 und werden nie benutzt."""
+        import appimage
+
+        for name in ("_gdbm", "_dbm", "readline"):
+            with self.subTest(modul=name):
+                self.assertIn(name, appimage.UNNOETIGE_MODULE)
+        for name in ("libgdbm", "libgdbm_compat", "libreadline"):
+            with self.subTest(bibliothek=name):
+                self.assertIn(name, appimage.UNNOETIGE_BIBLIOTHEKEN)
+
+    def test_das_abbild_traegt_die_lizenzen(self):
+        import appimage
+
+        self.assertEqual(appimage.LIZENZEN.name, "lizenzen")
+        self.assertTrue((appimage.LIZENZEN / "QUELLEN.txt").is_file())
+        self.assertTrue((appimage.WURZEL / "LICENSE").is_file())
+
     def test_symboldatei_liegt_bei(self):
         """Die Spec nimmt sie nur, wenn sie da ist."""
         self.assertTrue((WURZEL / "assets" / "Verteilerly.ico").is_file())

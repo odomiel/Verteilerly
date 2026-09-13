@@ -1,9 +1,10 @@
 """Was in diesem Programm steckt.
 
-Alle Bausteine stehen unter LGPL, BSD, MIT oder PSF. Damit das im
-laufenden Programm nachzusehen ist, sammelt dieses Modul die Fassungen
-zur Laufzeit ein: was tatsaechlich geladen ist, nicht was in einer Liste
-steht.
+Verteilerly selbst steht unter der GPL-3.0-or-later, seine Bausteine
+unter LGPL, BSD, MIT oder PSF - nachzulesen im Abbild unter
+``lizenzen/``. Damit das auch im laufenden Programm nachzusehen ist, sammelt dieses Modul
+die Fassungen zur Laufzeit ein: was tatsaechlich geladen ist, nicht was
+in einer Liste steht.
 
 Fehlt ein Baustein, wird das gesagt statt zu scheitern - ein Bericht, der
 am ersten fehlenden Modul abbricht, hilft niemandem.
@@ -16,6 +17,7 @@ import sys
 from dataclasses import dataclass
 
 FEHLT = "nicht vorhanden"
+ORDNER_LIZENZEN = "lizenzen"
 
 
 @dataclass(frozen=True)
@@ -52,7 +54,11 @@ def _qt() -> str:
 
 def abhaengigkeiten() -> list[Baustein]:
     """Die Bausteine des Programms, in fester Reihenfolge."""
+    from .version import VERSION
+    from . import LIZENZ
+
     return [
+        Baustein("Verteilerly", VERSION, LIZENZ, "dieses Programm"),
         Baustein("Python", sys.version.split()[0], "PSF", "Sprache"),
         Baustein("PySide6", _fassung("PySide6"), "LGPLv3", "Oberfläche"),
         Baustein("Qt", _qt(), "LGPLv3", "Oberfläche und Vorschau"),
@@ -62,13 +68,32 @@ def abhaengigkeiten() -> list[Baustein]:
     ]
 
 
+def lizenzordner():
+    """Wo die Lizenztexte liegen - im Abbild, sonst im Quellbaum."""
+    import pathlib
+
+    from . import pfade
+
+    orte = []
+    fertig = pfade.mitgeliefert()
+    if fertig:
+        orte.append(fertig.parent / ORDNER_LIZENZEN)
+    orte.append(pathlib.Path(__file__).resolve().parent.parent / ORDNER_LIZENZEN)
+    for ort in orte:
+        if ort.is_dir():
+            return ort
+    return None
+
+
 def umgebung() -> list[tuple[str, str]]:
     """Wo das Programm laeuft - fuer eine Rueckfrage aus dem Feld."""
     from . import pfade
 
+    lizenzen = lizenzordner()
     return [
         ("System", f"{platform.system()} {platform.release()}"),
         ("Gepackt", "ja" if pfade.gepackt() else "nein, aus dem Quelltext"),
         ("Arbeitsordner", str(pfade.eigener_datenordner())),
         ("Einstellungen", str(pfade.einstellungsdatei())),
+        ("Lizenzen", str(lizenzen) if lizenzen else "nicht gefunden"),
     ]

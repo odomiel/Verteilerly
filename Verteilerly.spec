@@ -44,12 +44,19 @@ if os.path.isdir(_hilfe):
         if name.endswith(".html"):
             datas.append((os.path.join(_hilfe, name), os.path.join("daten", "hilfe")))
 
-# README und Lizenz mit hinein - eine weitergegebene .exe soll sagen koennen,
+# README und Lizenzen mit hinein - eine weitergegebene .exe soll sagen koennen,
 # was sie ist und unter welchen Bedingungen sie weitergegeben werden darf.
-for beigabe in ("README.md"):
+for beigabe in ("README.md", "LICENSE"):
     pfad = os.path.join(_wurzel, beigabe)
     if os.path.exists(pfad):
         datas.append((pfad, "."))
+
+# Die Lizenztexte der Bestandteile und das Quelltextangebot.
+_lizenzen = os.path.join(_wurzel, "lizenzen")
+if os.path.isdir(_lizenzen):
+    for name in sorted(os.listdir(_lizenzen)):
+        if name.endswith(".txt"):
+            datas.append((os.path.join(_lizenzen, name), "lizenzen"))
 
 # Qts deutsche Uebersetzung mitnehmen: sie beschriftet die Datei- und
 # Rueckfragedialoge, die Qt selbst zeichnet. Ohne sie stuenden dort

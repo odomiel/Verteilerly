@@ -32,6 +32,7 @@ from ..modell import (
     Verteiler,
     mehrzahl,
 )
+from .. import URHEBER
 from ..version import VERSION
 from ..vorlagen import Vorlagen
 from .dialoge import (
@@ -1039,9 +1040,13 @@ class Hauptfenster(QMainWindow):
             "Über Verteilerly",
             f"<b>Verteilerly {VERSION}</b><br>"
             "Dokumentation für LSA+-Verteiler in der Fernmeldetechnik."
+            f"<p>© 2026 {URHEBER} — freie Software unter der "
+            "<b>GNU GPL, Version 3 oder später</b>. Ohne jede "
+            "Gewährleistung.</p>"
             f"<p><b>Bausteine</b></p>{bausteine}"
-            "<p><i>Alle unter LGPL, BSD, MIT oder PSF — kein proprietärer "
-            "Bestandteil.</i></p>"
+            "<p><i>Kein proprietärer Bestandteil. Die Lizenztexte und die "
+            "Quellen aller Bestandteile liegen beim Programm im Ordner "
+            "<code>lizenzen/</code>.</i></p>"
             f"<p><b>Umgebung</b></p>{umgebung}",
         )
 
