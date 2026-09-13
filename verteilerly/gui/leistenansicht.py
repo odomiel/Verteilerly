@@ -905,26 +905,57 @@ class LeistenAnsicht(QWidget):
         if hasattr(self, "teilen"):
             self.teilen.setIcon(teilungssymbol(farbe))
 
+    def _gewaehlte(self, taugt) -> list:
+        """Alle markierten Zellen, auf die der Knopf wirken kann.
+
+        Ist mehr als eine Zelle markiert, gilt der Knopf fuer alle auf
+        einmal - eine ganze Spalte mittig zu stellen soll nicht Zeile fuer
+        Zeile gehen. Die Reihenfolge ist die des Blattes, damit die
+        Aenderungen von oben nach unten laufen.
+        """
+        gewaehlt = list(self.tabelle.selectionModel().selectedIndexes())
+        jetzt = self.tabelle.currentIndex()
+        if jetzt.isValid() and not any(
+            i.row() == jetzt.row() and i.column() == jetzt.column() for i in gewaehlt
+        ):
+            gewaehlt.append(jetzt)
+        passend = [i for i in gewaehlt if i.isValid() and taugt(i.column()) is not None]
+        return sorted(passend, key=lambda i: (i.row(), i.column()))
+
+    def _stilzellen(self) -> list:
+        """Die markierten Zellen, an denen sich etwas gestalten laesst."""
+        return self._gewaehlte(self.modell.stilfeld)
+
+    def _teilzellen(self) -> list:
+        """Die markierten Zellen, die sich teilen lassen."""
+        return self._gewaehlte(self.modell.teilfeld)
+
     def _stilzelle(self):
-        """Die gewaehlte Zelle, sofern sich dort etwas gestalten laesst."""
+        """Die Zelle, nach der sich die Knoepfe zeigen - die aktuelle."""
         index = self.tabelle.currentIndex()
-        if not index.isValid() or self.modell.stilfeld(index.column()) is None:
-            return None
-        return index
+        if index.isValid() and self.modell.stilfeld(index.column()) is not None:
+            return index
+        zellen = self._stilzellen()
+        return zellen[0] if zellen else None
 
     def _teilzelle(self):
-        """Die gewaehlte Zelle, sofern sie sich teilen laesst."""
+        """Dasselbe fuer die Teilung."""
         index = self.tabelle.currentIndex()
-        if not index.isValid() or self.modell.teilfeld(index.column()) is None:
-            return None
-        return index
+        if index.isValid() and self.modell.teilfeld(index.column()) is not None:
+            return index
+        zellen = self._teilzellen()
+        return zellen[0] if zellen else None
 
     def _knoepfe_auffrischen(self) -> None:
-        """Zeigt am Knopf, was in der gewaehlten Zelle gilt."""
+        """Zeigt am Knopf, was in der gewaehlten Zelle gilt.
+
+        Angezeigt wird die aktuelle Zelle; gewirkt wird auf alle
+        markierten.
+        """
         index = self._stilzelle()
         stil = self.modell.stil(index) if index is not None else None
         for knopf in (*self.ausrichtungsknoepfe.values(), self.fett, self.kursiv):
-            knopf.setEnabled(stil is not None)
+            knopf.setEnabled(bool(self._stilzellen()))
         for art, knopf in self.ausrichtungsknoepfe.items():
             knopf.setChecked(bool(stil) and stil.ausrichtung == art)
         self.fett.setChecked(bool(stil) and stil.fett)
@@ -932,7 +963,7 @@ class LeistenAnsicht(QWidget):
 
         teilbar = self._teilzelle()
         teilung = self.modell.teilung(teilbar) if teilbar is not None else None
-        self.teilen.setEnabled(teilung is not None)
+        self.teilen.setEnabled(bool(self._teilzellen()))
         self.teilen.setChecked(bool(teilung) and teilung.geteilt)
         # Der Anteil laesst sich nur an einer geteilten Zelle einstellen.
         self.anteil.setEnabled(bool(teilung) and teilung.geteilt)
@@ -942,42 +973,50 @@ class LeistenAnsicht(QWidget):
             self.anteil.blockSignals(False)
 
     def _teilen_umschalten(self) -> None:
-        index = self._teilzelle()
-        if index is None:
+        zellen = self._teilzellen()
+        if not zellen:
             return
-        teilung = self.modell.teilung(index)
-        self.modell.teilung_setzen(
-            index,
-            replace(
-                teilung, geteilt=not teilung.geteilt, anteil=self.anteil.value()
-            ),
-        )
+        # Wohin es gehen soll, sagt die aktuelle Zelle; alle markierten
+        # bekommen dasselbe - nicht jede ihr eigenes Gegenteil.
+        jetzt = self._teilzelle()
+        soll = not self.modell.teilung(jetzt).geteilt
+        for index in zellen:
+            teilung = self.modell.teilung(index)
+            self.modell.teilung_setzen(
+                index,
+                replace(teilung, geteilt=soll, anteil=self.anteil.value()),
+            )
         self._knoepfe_auffrischen()
 
     def _anteil_gesetzt(self, wert: int) -> None:
-        index = self._teilzelle()
-        if index is None:
-            return
-        teilung = self.modell.teilung(index)
-        if teilung.geteilt and teilung.anteil != wert:
-            self.modell.teilung_setzen(index, replace(teilung, anteil=wert))
+        for index in self._teilzellen():
+            teilung = self.modell.teilung(index)
+            if teilung.geteilt and teilung.anteil != wert:
+                self.modell.teilung_setzen(index, replace(teilung, anteil=wert))
 
     def _ausrichten(self, art: str) -> None:
-        index = self._stilzelle()
-        if index is None:
+        zellen = self._stilzellen()
+        if not zellen:
             return
-        alt = self.modell.stil(index)
+        jetzt = self._stilzelle()
         # Nochmals derselbe Knopf: zurueck zur Blattvorlage.
-        neu = replace(alt, ausrichtung="" if alt.ausrichtung == art else art)
-        self.modell.stil_setzen(index, neu)
+        soll = "" if self.modell.stil(jetzt).ausrichtung == art else art
+        for index in zellen:
+            self.modell.stil_setzen(
+                index, replace(self.modell.stil(index), ausrichtung=soll)
+            )
         self._knoepfe_auffrischen()
 
     def _schnitt_umschalten(self, was: str) -> None:
-        index = self._stilzelle()
-        if index is None:
+        zellen = self._stilzellen()
+        if not zellen:
             return
-        alt = self.modell.stil(index)
-        self.modell.stil_setzen(index, replace(alt, **{was: not getattr(alt, was)}))
+        jetzt = self._stilzelle()
+        soll = not getattr(self.modell.stil(jetzt), was)
+        for index in zellen:
+            self.modell.stil_setzen(
+                index, replace(self.modell.stil(index), **{was: soll})
+            )
         self._knoepfe_auffrischen()
 
     def _eine_zeile_tiefer(self) -> None:

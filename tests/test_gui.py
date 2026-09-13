@@ -232,6 +232,88 @@ class TestZelleTeilen(unittest.TestCase):
         self.assertTrue(self.ansicht.delegat.eventFilter(kasten.felder[0], taste))
 
 
+class TestMehrereZellenAufEinmal(unittest.TestCase):
+    """Markierte Zellen werden zusammen gestaltet."""
+
+    def setUp(self):
+        from PySide6.QtCore import QItemSelection, QItemSelectionModel
+        from verteilerly.gui.leistenansicht import LeistenAnsicht
+
+        self.QItemSelection = QItemSelection
+        self.QItemSelectionModel = QItemSelectionModel
+        self.ansicht = LeistenAnsicht()
+        self.addCleanup(self.ansicht.close)
+        self.verteiler = Verteiler.aus_geometrie(1, 2, 10)
+        self.ansicht.verteiler_setzen(self.verteiler)
+        self.ansicht.leiste_zeigen(1)
+
+    def _ader(self, zeile):
+        stift = self.verteiler.leiste(1).stift(zeile // 2 + 1)
+        return stift.ader("a" if zeile % 2 == 0 else "b")
+
+    def _markieren(self, von, bis, spalte):
+        modell = self.ansicht.modell
+        self.ansicht.tabelle.setCurrentIndex(modell.index(von, spalte))
+        self.ansicht.tabelle.selectionModel().select(
+            self.QItemSelection(modell.index(von, spalte), modell.index(bis, spalte)),
+            self.QItemSelectionModel.SelectionFlag.Select,
+        )
+
+    def test_fett_gilt_fuer_alle_markierten(self):
+        self._markieren(0, 3, SPALTE_BEZEICHNUNG)
+        self.ansicht.fett.click()
+        for zeile in range(4):
+            with self.subTest(zeile=zeile):
+                self.assertTrue(self._ader(zeile).stil("bezeichnung").fett)
+        self.assertFalse(self._ader(4).stil("bezeichnung").fett)
+
+    def test_ausrichtung_gilt_fuer_alle_markierten(self):
+        from verteilerly.modell import MITTE
+
+        self._markieren(0, 3, SPALTE_BEZEICHNUNG)
+        self.ansicht.ausrichtungsknoepfe[MITTE].click()
+        self.assertEqual(
+            [self._ader(z).stil("bezeichnung").ausrichtung for z in range(4)],
+            ["mitte"] * 4,
+        )
+
+    def test_teilen_gilt_fuer_alle_markierten(self):
+        self._markieren(0, 3, SPALTE_BEMERKUNG)
+        self.ansicht.teilen.click()
+        self.ansicht.anteil.setValue(25)
+        for zeile in range(4):
+            with self.subTest(zeile=zeile):
+                teilung = self._ader(zeile).teilung("bemerkung")
+                self.assertTrue(teilung.geteilt)
+                self.assertEqual(teilung.anteil, 25)
+        self.assertFalse(self._ader(4).teilung("bemerkung").geteilt)
+
+    def test_alle_bekommen_dasselbe_nicht_ihr_gegenteil(self):
+        """Eine gemischte Auswahl wird gleichgezogen, nicht umgedreht."""
+        from verteilerly.modell import Textstil
+
+        self._ader(1).stil_setzen("bezeichnung", Textstil(fett=True))
+        self._markieren(0, 3, SPALTE_BEZEICHNUNG)
+        self.ansicht.fett.click()      # die aktuelle Zelle (0) ist nicht fett
+        self.assertEqual(
+            [self._ader(z).stil("bezeichnung").fett for z in range(4)], [True] * 4
+        )
+
+    def test_nicht_gestaltbare_zellen_in_der_auswahl_stoeren_nicht(self):
+        modell = self.ansicht.modell
+        self.ansicht.tabelle.setCurrentIndex(modell.index(0, SPALTE_BEZEICHNUNG))
+        self.ansicht.tabelle.selectionModel().select(
+            self.QItemSelection(modell.index(0, SPALTE_STIFT), modell.index(0, SPALTE_KABEL)),
+            self.QItemSelectionModel.SelectionFlag.Select,
+        )
+        self.ansicht.fett.click()
+        self.assertTrue(self._ader(0).stil("bezeichnung").fett)
+        self.assertTrue(self._ader(0).stil("bemerkung").fett)
+        self.assertTrue(self._ader(0).stil("farbe").fett)
+        # Die Kabelspalte hat keinen Stil und wirft auch keinen Fehler.
+        self.assertIsNone(modell.stil(modell.index(0, SPALTE_KABEL)))
+
+
 class TestEnterSpringtWeiter(unittest.TestCase):
     """Enter schließt die Eingabe und geht eine Zeile tiefer."""
 

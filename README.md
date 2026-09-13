@@ -146,6 +146,11 @@ Stift, Ader und Kabel nicht. Der Stil gehört der Ader, steht in der
 Projektdatei und gilt in Leistenansicht, Blatt, PDF und Excel-Mappe
 gleichermaßen.
 
+Sind **mehrere Zellen markiert**, gilt ein Knopfdruck für alle auf einmal —
+Ausrichtung, Schnitt, Teilung und Prozentwert; alle bekommen dasselbe, nicht
+jede ihr eigenes Gegenteil, und was sich nicht gestalten lässt, bleibt
+unberührt.
+
 Daneben **teilt** ein Knopf die gewählte Zelle in **zwei
 Beschriftungsfelder nebeneinander**; ein Prozentfeld sagt, wie breit das
 rechte ist (10–90 %). Bearbeitet wird in zwei Eingabefeldern, Tabulator
