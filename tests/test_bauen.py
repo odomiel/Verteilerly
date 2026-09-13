@@ -253,6 +253,24 @@ class TestAbhaengigkeitspruefung(unittest.TestCase):
             with self.subTest(paket=paket):
                 self.assertIn(paket, namen)
 
+    def test_auch_die_werkzeuge_werden_geprueft(self):
+        """Womit gesetzt wird, soll nicht unbemerkt zurückfallen."""
+        namen = self.modul.gefordert()
+        for paket in ("weasyprint", "fonttools"):
+            with self.subTest(paket=paket):
+                self.assertIn(paket, namen)
+
+    def test_kein_paket_steht_zweimal_da(self):
+        namen = self.modul.gefordert()
+        self.assertEqual(len(namen), len(set(namen)))
+
+    def test_eine_fehlende_liste_stoert_nicht(self):
+        with mock.patch.object(
+            self.modul, "ANFORDERUNGEN",
+            (pathlib.Path(self.ordner.name) / "gibtsnicht.txt",),
+        ):
+            self.assertEqual(self.modul.gefordert(), [])
+
     def test_kommentare_und_bedingungen_fallen_weg(self):
         datei = pathlib.Path(self.ordner.name) / "r.txt"
         datei.write_text(

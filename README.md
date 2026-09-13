@@ -514,8 +514,8 @@ mitgelieferte Datei angefasst wird.
 
 Der **erste Bau eines Tages** sieht nach, ob es neuere Fassungen der
 Abhängigkeiten gibt: `werkzeuge/abhaengigkeiten.py` vergleicht, was installiert
-ist, mit dem, was PyPI meldet — geprüft wird, was in `requirements.txt` steht,
-damit es keine zweite Liste gibt, die veraltet. Gemeldet wird nur; ob eine
+ist, mit dem, was PyPI meldet — geprüft wird, was in `requirements.txt` steht, damit es keine zweite Liste
+gibt, die veraltet. Gemeldet wird nur; ob eine
 neuere Fassung taugt, entscheidet niemand nebenbei, und ohne Netz baut es
 trotzdem weiter. `--ohne-pruefung` lässt den Blick aus, `abhaengigkeiten.py
 --immer` erzwingt ihn.

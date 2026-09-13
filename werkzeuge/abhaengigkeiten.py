@@ -26,25 +26,36 @@ import urllib.error
 import urllib.request
 
 WURZEL = pathlib.Path(__file__).resolve().parent.parent
-ANFORDERUNGEN = WURZEL / "requirements.txt"
+# Zwei Listen, weil zweierlei gebraucht wird: was ins Programm wandert,
+# und womit gebaut und gesetzt wird. Geprueft wird beides.
+ANFORDERUNGEN = (
+    WURZEL / "requirements.txt",
+    WURZEL / "requirements-werkzeuge.txt",
+)
 MERKZETTEL = WURZEL / "bau" / ".geprueft.json"
 PYPI = "https://pypi.org/pypi/{}/json"
 WARTEZEIT = 8.0          # Sekunden je Paket - ein Bau soll nicht haengen
 
 
 def gefordert(datei: pathlib.Path | None = None) -> list[str]:
-    """Die Pakete aus requirements.txt - eine Quelle, keine zweite Liste."""
-    datei = datei or ANFORDERUNGEN
-    if not datei.is_file():
-        return []
-    namen = []
-    for zeile in datei.read_text(encoding="utf-8").splitlines():
-        zeile = zeile.split("#")[0].strip()
-        if not zeile:
+    """Die Pakete aus den Anforderungsdateien.
+
+    Sie sind die eine Quelle; eine zweite Liste im Pruefwerkzeug gaebe es
+    nur, damit sie eines Tages nicht mehr stimmt. Ohne Angabe werden alle
+    gelesen, in ihrer Reihenfolge und ohne Doppelte.
+    """
+    dateien = [datei] if datei is not None else list(ANFORDERUNGEN)
+    namen: list[str] = []
+    for eine in dateien:
+        if not eine.is_file():
             continue
-        treffer = re.match(r"^[A-Za-z0-9._-]+", zeile)
-        if treffer:
-            namen.append(treffer.group(0))
+        for zeile in eine.read_text(encoding="utf-8").splitlines():
+            zeile = zeile.split("#")[0].strip()
+            if not zeile:
+                continue
+            treffer = re.match(r"^[A-Za-z0-9._-]+", zeile)
+            if treffer and treffer.group(0) not in namen:
+                namen.append(treffer.group(0))
     return namen
 
 
