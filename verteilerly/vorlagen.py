@@ -1,9 +1,20 @@
 """Verteilervorlagen.
 
-Eine Vorlage ist nichts weiter als die drei Kennzahlen Buchten, Leisten je
-Bucht und DA je Leiste - dazu ein Name. Sie liegt als YAML-Datei im
-Vorlagenordner neben dem Programm; eine neue Vorlage entsteht
-durch Ablegen einer Datei, ohne dass am Programm etwas zu aendern ist.
+Eine Vorlage ist im Regelfall nichts weiter als die drei Kennzahlen
+Buchten, Leisten je Bucht und DA je Leiste - dazu ein Name. Sie liegt als
+YAML-Datei im Vorlagenordner neben dem Programm; eine neue Vorlage
+entsteht durch Ablegen einer Datei, ohne dass am Programm etwas zu
+aendern ist.
+
+Ungleich besetzte Verteiler brauchen mehr als drei Zahlen. Dafuer traegt
+``buchten`` statt einer Zahl eine Liste, eine Zeile je Bucht:
+
+    buchten:
+      - {leisten: 4, da: 10}
+      - {leisten: 2, da: 20}
+
+Beides steht im selben Feld, weil beides dasselbe meint: die Buchten.
+Aeltere Dateien mit den drei Zahlen werden unveraendert weiter gelesen.
 """
 
 from __future__ import annotations
@@ -34,23 +45,35 @@ class Vorlage:
     da_je_leiste: int
     beschreibung: str = ""
     standard: bool = False
+    # Je Bucht (Leisten, DA je Leiste) - nur bei ungleich besetzten
+    # Verteilern gefuellt. Dann gilt er, und die drei Zahlen darueber
+    # beschreiben die erste Bucht.
+    bauplan: tuple[tuple[int, int], ...] = ()
+
+    @property
+    def gleichmaessig(self) -> bool:
+        """Laesst sich diese Vorlage mit drei Zahlen beschreiben?"""
+        return not self.bauplan or len(set(self.bauplan)) == 1
+
+    @property
+    def buchtenplan(self) -> tuple[tuple[int, int], ...]:
+        """Je Bucht (Leisten, DA) - auch fuer die gleichmaessige Vorlage."""
+        if self.bauplan:
+            return self.bauplan
+        return ((self.leisten_je_bucht, self.da_je_leiste),) * self.buchten
 
     @property
     def da_gesamt(self) -> int:
-        return self.buchten * self.leisten_je_bucht * self.da_je_leiste
+        return sum(leisten * da for leisten, da in self.buchtenplan)
 
     @property
     def leisten_gesamt(self) -> int:
-        return self.buchten * self.leisten_je_bucht
+        return sum(leisten for leisten, _ in self.buchtenplan)
 
     def verteiler(self, name: str = "", nummer: str = "") -> Verteiler:
         """Baut einen leeren Verteiler nach dieser Vorlage."""
-        return Verteiler.aus_geometrie(
-            self.buchten,
-            self.leisten_je_bucht,
-            self.da_je_leiste,
-            name=name,
-            nummer=nummer,
+        return Verteiler.aus_buchten(
+            list(self.buchtenplan), name=name, nummer=nummer
         )
 
     def __str__(self) -> str:
@@ -66,25 +89,33 @@ class Vorlage:
     ) -> Vorlage:
         """Nimmt die Geometrie eines vorhandenen Verteilers als Vorlage.
 
-        Eine Vorlage sind drei Zahlen - ein Verteiler mit ungleich
-        besetzten Buchten laesst sich damit nicht beschreiben.
+        Gleichmaessig besetzt, wird daraus die Vorlage aus drei Zahlen;
+        sonst traegt sie den Bauplan je Bucht. Eine Bucht mit
+        gemischten Leistengroessen laesst sich dagegen nicht abbilden -
+        vorerst hat jede Bucht eine Leistengroesse.
         """
         if not verteiler.buchten:
             raise VorlagenFehler("Der Verteiler hat keine Buchten")
-        leisten = {len(r.leisten) for r in verteiler.buchten}
-        da = {l.da_anzahl for l in verteiler.alle_leisten}
-        if len(leisten) > 1 or len(da) > 1:
-            raise VorlagenFehler(
-                "Der Verteiler ist nicht gleichmäßig aufgebaut und taugt "
-                "deshalb nicht als Vorlage"
-            )
+
+        plan: list[tuple[int, int]] = []
+        for bucht in verteiler.buchten:
+            groessen = {l.da_anzahl for l in bucht.leisten}
+            if len(groessen) > 1:
+                raise VorlagenFehler(
+                    f"Bucht {bucht.nummer} trägt Leisten verschiedener Größe - "
+                    "das lässt sich nicht als Vorlage ablegen"
+                )
+            plan.append((len(bucht.leisten), groessen.pop()))
+
+        erste = plan[0]
         return cls(
             id=kennung or kennung_bilden(name),
             name=name,
-            buchten=len(verteiler.buchten),
-            leisten_je_bucht=leisten.pop(),
-            da_je_leiste=da.pop(),
+            buchten=len(plan),
+            leisten_je_bucht=erste[0],
+            da_je_leiste=erste[1],
             beschreibung=beschreibung,
+            bauplan=() if len(set(plan)) == 1 else tuple(plan),
         )
 
 
@@ -119,10 +150,16 @@ def vorlage_als_yaml(vorlage: Vorlage) -> str:
         "id": vorlage.id,
         "name": vorlage.name,
         "beschreibung": vorlage.beschreibung,
-        "buchten": vorlage.buchten,
-        "leisten_je_bucht": vorlage.leisten_je_bucht,
-        "da_je_leiste": vorlage.da_je_leiste,
     }
+    if vorlage.bauplan:
+        # Ungleich besetzt: eine Zeile je Bucht statt dreier Zahlen.
+        inhalt["buchten"] = [
+            {"leisten": leisten, "da": da} for leisten, da in vorlage.bauplan
+        ]
+    else:
+        inhalt["buchten"] = vorlage.buchten
+        inhalt["leisten_je_bucht"] = vorlage.leisten_je_bucht
+        inhalt["da_je_leiste"] = vorlage.da_je_leiste
     if vorlage.standard:
         inhalt["standard"] = True
     kopf = (
@@ -148,28 +185,57 @@ def vorlage_speichern(
     return ziel
 
 
+def _bauplan_lesen(buchten, wo: str) -> tuple[tuple[int, int], ...]:
+    """Die Liste unter ``buchten`` - je Bucht Leisten und Leistengroesse."""
+    plan: list[tuple[int, int]] = []
+    for nr, eintrag in enumerate(buchten, 1):
+        if not isinstance(eintrag, dict):
+            raise VorlagenFehler(f"{wo}Bucht {nr}: erwartet wird leisten und da")
+        try:
+            leisten = int(eintrag.get("leisten"))
+            da = int(eintrag.get("da"))
+        except (TypeError, ValueError):
+            raise VorlagenFehler(
+                f"{wo}Bucht {nr}: leisten und da muessen Zahlen sein"
+            ) from None
+        if min(leisten, da) < 1:
+            raise VorlagenFehler(
+                f"{wo}Bucht {nr}: Leisten und DA muessen mindestens 1 sein"
+            )
+        plan.append((leisten, da))
+    if not plan:
+        raise VorlagenFehler(f"{wo}Vorlage ohne Buchten")
+    return tuple(plan)
+
+
 def vorlage_aus_yaml(inhalt: dict, herkunft: str = "") -> Vorlage:
-    fehlend = [feld for feld in PFLICHTFELDER if _feld(inhalt, feld) is None]
+    wo = f"{herkunft}: " if herkunft else ""
+    buchten = _feld(inhalt, "buchten")
+    # Eine Liste statt einer Zahl: der ungleich besetzte Verteiler.
+    plan = _bauplan_lesen(buchten, wo) if isinstance(buchten, list) else ()
+
+    pflicht = ("id", "name", "buchten") if plan else PFLICHTFELDER
+    fehlend = [feld for feld in pflicht if _feld(inhalt, feld) is None]
     if fehlend:
-        wo = f"{herkunft}: " if herkunft else ""
         raise VorlagenFehler(f"{wo}Vorlage ohne {', '.join(fehlend)}")
 
     try:
         vorlage = Vorlage(
             id=str(_feld(inhalt, "id")),
             name=str(_feld(inhalt, "name")),
-            buchten=int(_feld(inhalt, "buchten")),
-            leisten_je_bucht=int(_feld(inhalt, "leisten_je_bucht")),
-            da_je_leiste=int(_feld(inhalt, "da_je_leiste")),
+            buchten=len(plan) if plan else int(buchten),
+            leisten_je_bucht=plan[0][0] if plan else int(
+                _feld(inhalt, "leisten_je_bucht")
+            ),
+            da_je_leiste=plan[0][1] if plan else int(_feld(inhalt, "da_je_leiste")),
             beschreibung=str(inhalt.get("beschreibung", "")),
             standard=bool(inhalt.get("standard", False)),
+            bauplan=plan,
         )
     except (TypeError, ValueError) as fehler:
-        wo = f"{herkunft}: " if herkunft else ""
         raise VorlagenFehler(f"{wo}Zahlenangabe nicht lesbar - {fehler}") from None
 
     if min(vorlage.buchten, vorlage.leisten_je_bucht, vorlage.da_je_leiste) < 1:
-        wo = f"{herkunft}: " if herkunft else ""
         raise VorlagenFehler(f"{wo}Buchten, Leisten und DA muessen mindestens 1 sein")
     return vorlage
 

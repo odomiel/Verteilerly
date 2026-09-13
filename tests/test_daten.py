@@ -98,12 +98,48 @@ class TestVorlageSpeichern(unittest.TestCase):
         )
         self.assertEqual(vorlage.id, "keller")
 
-    def test_ungleicher_verteiler_taugt_nicht(self):
-        """Drei Zahlen beschreiben keine ungleich besetzten Buchten."""
+    def test_ungleicher_verteiler_bekommt_einen_bauplan(self):
+        """Was drei Zahlen nicht fassen, fasst die Liste je Bucht."""
         v = Verteiler.aus_geometrie(2, 6, 10)
         v.buchten[1].leisten.pop()
+        vorlage = Vorlage.aus_verteiler(v, "Krumm")
+        self.assertEqual(vorlage.bauplan, ((6, 10), (5, 10)))
+        self.assertFalse(vorlage.gleichmaessig)
+        self.assertEqual(vorlage.leisten_gesamt, 11)
+        self.assertEqual(vorlage.da_gesamt, 110)
+
+    def test_verschiedene_leistengroessen_je_bucht(self):
+        vorlage = Vorlage.aus_verteiler(
+            Verteiler.aus_buchten([(4, 10), (2, 20), (6, 8)]), "Bunt"
+        )
+        self.assertEqual(vorlage.bauplan, ((4, 10), (2, 20), (6, 8)))
+        gebaut = vorlage.verteiler()
+        self.assertEqual(
+            [(len(b.leisten), b.leisten[0].da_anzahl) for b in gebaut.buchten],
+            [(4, 10), (2, 20), (6, 8)],
+        )
+
+    def test_gleichmaessig_bleibt_bei_drei_zahlen(self):
+        """Der Regelfall soll nicht umständlicher werden."""
+        vorlage = Vorlage.aus_verteiler(Verteiler.aus_geometrie(2, 6, 10), "Glatt")
+        self.assertEqual(vorlage.bauplan, ())
+        self.assertTrue(vorlage.gleichmaessig)
+
+    def test_eine_bucht_mit_gemischten_leisten_geht_nicht(self):
+        """Vorerst hat jede Bucht eine Leistengröße."""
+        v = Verteiler.aus_geometrie(1, 4, 10)
+        v.buchten[0].leisten[2].stifte = v.buchten[0].leisten[2].stifte[:5]
         with self.assertRaises(VorlagenFehler):
-            Vorlage.aus_verteiler(v, "Krumm")
+            Vorlage.aus_verteiler(v, "Gemischt")
+
+    def test_bauplan_wandert_durch_die_datei(self):
+        vorlage = Vorlage.aus_verteiler(
+            Verteiler.aus_buchten([(4, 10), (2, 20)]), "Bunt"
+        )
+        vorlage_speichern(vorlage, self.ziel)
+        zurueck = Vorlagen.laden(self.ziel).holen("bunt")
+        self.assertEqual(zurueck, vorlage)
+        self.assertEqual(zurueck.bauplan, ((4, 10), (2, 20)))
 
     def test_gespeicherte_vorlage_wird_wieder_gelesen(self):
         vorlage = Vorlage.aus_verteiler(

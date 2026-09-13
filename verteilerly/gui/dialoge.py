@@ -338,21 +338,33 @@ class NeuerVerteilerDialog(QDialog):
 
     def vorlage_ablegen(self) -> None:
         """Sichert die eingestellte Geometrie als Vorlage."""
-        da = self.da_je_leiste()
+        bauplan = self.bauplan()
+        leisten = sum(anzahl for anzahl, _ in bauplan)
+        gesamt = sum(anzahl * da for anzahl, da in bauplan)
+        if len(set(bauplan)) == 1:
+            da = bauplan[0][1]
+            vorschlag = (
+                f"{gesamt} DA - {mehrzahl(leisten, 'Leiste', 'Leisten')} zu {da} DA"
+            )
+            beschreibung = (
+                f"{mehrzahl(len(bauplan), 'Bucht', 'Buchten')} zu je "
+                f"{mehrzahl(bauplan[0][0], 'Leiste', 'Leisten')} mit "
+                f"{mehrzahl(da, 'Doppelader', 'Doppeladern')}."
+            )
+        else:
+            # Ungleich besetzt: die Beschreibung zaehlt die Buchten auf.
+            vorschlag = f"{gesamt} DA - {mehrzahl(leisten, 'Leiste', 'Leisten')}"
+            beschreibung = "; ".join(
+                f"Bucht {nr}: {mehrzahl(anzahl, 'Leiste', 'Leisten')} zu {da} DA"
+                for nr, (anzahl, da) in enumerate(bauplan, 1)
+            )
         vorlage = als_vorlage_speichern(
             self,
             self.geometrie(),
             self.vorlagen,
             self.vorlagenordner,
-            vorschlag=(
-                f"{self.buchten.value() * self.leisten.value() * da} DA - "
-                f"{mehrzahl(self.leisten.value(), 'Leiste', 'Leisten')} zu {da} DA"
-            ),
-            beschreibung=(
-                f"{mehrzahl(self.buchten.value(), 'Bucht', 'Buchten')} zu je "
-                f"{mehrzahl(self.leisten.value(), 'Leiste', 'Leisten')} mit "
-                f"{mehrzahl(da, 'Doppelader', 'Doppeladern')}."
-            ),
+            vorschlag=vorschlag,
+            beschreibung=beschreibung,
         )
         if vorlage is not None:
             self._vorlagenliste_auffrischen(vorlage.id)
@@ -381,16 +393,6 @@ class NeuerVerteilerDialog(QDialog):
                     teil.widget().setVisible(not an)
         if an:
             self._buchtenzeilen_anpassen()
-        # Eine Vorlage sind drei Zahlen; ein ungleich besetzter Verteiler
-        # laesst sich damit nicht beschreiben.
-        self.als_vorlage.setEnabled(self.vorlagenordner is not None and not an)
-        self.als_vorlage.setToolTip(
-            "Ungleich besetzte Verteiler lassen sich nicht als Vorlage ablegen — "
-            "eine Vorlage sind drei Zahlen."
-            if an
-            else "Legt diese Geometrie als Vorlage ab, damit sie beim nächsten "
-                 "Verteiler oben zur Wahl steht."
-        )
         self._summe_zeigen()
 
     def _buchtenzeilen_anpassen(self) -> None:

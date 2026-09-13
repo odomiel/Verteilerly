@@ -1908,13 +1908,36 @@ class TestNeuerVerteilerDialog(unittest.TestCase):
         self.assertIn("8 Leisten", self.dialog.summe.text())
         self.assertIn("120 DA", self.dialog.summe.text())
 
-    def test_ungleiche_verteiler_taugen_nicht_als_vorlage(self):
-        """Eine Vorlage sind drei Zahlen."""
-        self.assertTrue(self.dialog.als_vorlage.isEnabled())
+    def test_auch_ein_ungleicher_verteiler_wird_vorlage(self):
+        """Dann trägt die Vorlage den Bauplan je Bucht."""
+        from verteilerly.vorlagen import Vorlagen
+
+        self.dialog.buchten.setValue(2)
         self.dialog.erweitert.setChecked(True)
-        self.assertFalse(self.dialog.als_vorlage.isEnabled())
-        self.dialog.erweitert.setChecked(False)
         self.assertTrue(self.dialog.als_vorlage.isEnabled())
+        self.dialog.buchtentabelle.cellWidget(1, 0).setValue(2)
+        self.dialog.buchtentabelle.cellWidget(1, 1).setValue(20)
+
+        from PySide6.QtWidgets import QMessageBox
+
+        with mock.patch(
+            "verteilerly.gui.dialoge.QInputDialog.getText",
+            return_value=("Bunt", True),
+        ), mock.patch.object(QMessageBox, "information", lambda *a: None):
+            self.dialog.vorlage_ablegen()
+
+        abgelegt = Vorlagen.laden(pathlib.Path(self.ordner.name)).holen("bunt")
+        self.assertEqual(abgelegt.bauplan, ((4, 10), (2, 20)))
+        self.assertEqual(abgelegt.da_gesamt, 80)
+        self.assertIn("Bucht 2", abgelegt.beschreibung)
+        # Und sie steht sofort zur Wahl.
+        self.assertIn(
+            "bunt",
+            [
+                self.dialog.vorlagenwahl.itemData(i)
+                for i in range(self.dialog.vorlagenwahl.count())
+            ],
+        )
 
     def test_zurueckgeschaltet_gilt_wieder_die_gleichmaessige_angabe(self):
         self.dialog.buchten.setValue(2)
