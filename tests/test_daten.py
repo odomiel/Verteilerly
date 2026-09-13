@@ -5,8 +5,10 @@ dieselben Farben erzeugen, die dort von Hand eingetragen sind.
 """
 
 import pathlib
+import shutil
 import tempfile
 import unittest
+from unittest import mock
 
 from verteilerly.farbcodes import (
     KabeltypFehler,
@@ -415,6 +417,101 @@ class TestFarbenFolgenDemKabel(unittest.TestCase):
         self.v.leiste(2).stift(1).a.farbe = "vi"
         self.assertEqual(farben_loeschen(self.v, ohne, self.typen), 0)
         self.assertEqual(self.v.leiste(2).stift(1).a.farbe, "vi")
+
+
+class TestVorlagenVerwalten(unittest.TestCase):
+    """Umbenennen, löschen, wiederherstellen."""
+
+    def setUp(self):
+        self.ordner = tempfile.TemporaryDirectory()
+        self.addCleanup(self.ordner.cleanup)
+        self.ziel = pathlib.Path(self.ordner.name)
+        for datei in (DATEN / "vorlagen").glob("*.yaml"):
+            shutil.copy2(datei, self.ziel)
+
+    def _alle(self):
+        return [v.id for v in Vorlagen.laden(self.ziel).alle]
+
+    def test_loeschen_nimmt_die_datei_weg(self):
+        from verteilerly.vorlagen import vorlage_loeschen
+
+        kennung = self._alle()[0]
+        self.assertTrue(vorlage_loeschen(kennung, self.ziel))
+        self.assertNotIn(kennung, self._alle())
+        self.assertFalse((self.ziel / f"{kennung}.yaml").exists())
+
+    def test_loeschen_ohne_datei_sagt_das(self):
+        from verteilerly.vorlagen import vorlage_loeschen
+
+        self.assertFalse(vorlage_loeschen("gibtsnicht", self.ziel))
+
+    def test_umbenennen_aendert_den_namen_nicht_die_kennung(self):
+        from verteilerly.vorlagen import vorlage_umbenennen
+
+        vorlage = Vorlagen.laden(self.ziel).holen(self._alle()[0])
+        neu = vorlage_umbenennen(vorlage, "Mein Liebling", self.ziel)
+        self.assertEqual(neu.name, "Mein Liebling")
+        self.assertEqual(neu.id, vorlage.id)
+        # Und es steht so in der Datei.
+        zurueck = Vorlagen.laden(self.ziel).holen(vorlage.id)
+        self.assertEqual(zurueck.name, "Mein Liebling")
+        self.assertEqual(zurueck.da_gesamt, vorlage.da_gesamt)
+
+    def test_ein_leerer_name_wird_abgelehnt(self):
+        from verteilerly.vorlagen import vorlage_umbenennen
+
+        vorlage = Vorlagen.laden(self.ziel).holen(self._alle()[0])
+        with self.assertRaises(VorlagenFehler):
+            vorlage_umbenennen(vorlage, "   ", self.ziel)
+
+    def test_geloeschte_bleiben_beim_laden_draussen(self):
+        kennung = self._alle()[0]
+        uebrig = Vorlagen.aus_ordnern(
+            [self.ziel], {f"vorlagen/{kennung}.yaml"}
+        )
+        self.assertNotIn(kennung, [v.id for v in uebrig.alle])
+        self.assertTrue((self.ziel / f"{kennung}.yaml").exists())
+
+
+class TestLoeschvermerke(unittest.TestCase):
+    """Was gelöscht ist, legt der nächste Start nicht wieder aus."""
+
+    def setUp(self):
+        self.ordner = tempfile.TemporaryDirectory()
+        self.addCleanup(self.ordner.cleanup)
+        self.ziel = pathlib.Path(self.ordner.name) / "Verteilerly"
+        self.ziel.mkdir()
+        from verteilerly import pfade
+
+        self.pfade = pfade
+        flicken = mock.patch.object(
+            pfade, "eigener_datenordner", return_value=self.ziel
+        )
+        flicken.start()
+        self.addCleanup(flicken.stop)
+
+    def test_ein_vermerk_haelt_die_datei_draussen(self):
+        self.pfade.grundausstattung_auslegen()
+        datei = next((self.ziel / "vorlagen").glob("*.yaml"))
+        marke = f"vorlagen/{datei.name}"
+
+        datei.unlink()
+        self.pfade.loeschen_merken(marke)
+        self.pfade.grundausstattung_auslegen()
+        self.assertFalse(datei.exists(), "wurde wieder ausgelegt")
+
+    def test_ohne_vermerk_kommt_sie_wieder(self):
+        self.pfade.grundausstattung_auslegen()
+        datei = next((self.ziel / "vorlagen").glob("*.yaml"))
+        datei.unlink()
+        self.pfade.grundausstattung_auslegen()
+        self.assertTrue(datei.exists())
+
+    def test_vermerke_lassen_sich_wieder_aufheben(self):
+        self.pfade.loeschen_merken("vorlagen/a.yaml")
+        self.pfade.loeschen_merken("blattvorlagen/b.yaml")
+        self.assertEqual(self.pfade.loeschvermerke_aufheben("vorlagen"), 1)
+        self.assertEqual(self.pfade.geloeschte(), {"blattvorlagen/b.yaml"})
 
 
 if __name__ == "__main__":

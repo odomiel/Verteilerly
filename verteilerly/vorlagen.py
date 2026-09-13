@@ -23,7 +23,7 @@ import datetime
 import pathlib
 import re
 import unicodedata
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import yaml
 
@@ -119,6 +119,8 @@ class Vorlage:
         )
 
 
+ORDNERNAME = "vorlagen"
+ENDUNG = ".yaml"
 PFLICHTFELDER = ("id", "name", "buchten", "leisten_je_bucht", "da_je_leiste")
 # Vor der Umbenennung hiessen die Buchten Reihen - alte Dateien gelten weiter.
 FRUEHERE_NAMEN = {"buchten": "reihen", "leisten_je_bucht": "leisten_je_reihe"}
@@ -208,6 +210,39 @@ def _bauplan_lesen(buchten, wo: str) -> tuple[tuple[int, int], ...]:
     return tuple(plan)
 
 
+def vorlage_loeschen(kennung: str, ordner: pathlib.Path) -> bool:
+    """Loescht die Datei einer Vorlage im Arbeitsordner.
+
+    Zurueck kommt, ob dort eine lag: eine mitgelieferte Vorlage, die noch
+    nie ausgelegt wurde, gibt es hier nicht - sie wird stattdessen
+    vermerkt, damit der naechste Start sie nicht wieder auslegt.
+    """
+    ziel = pathlib.Path(ordner) / f"{kennung}{ENDUNG}"
+    if not ziel.is_file():
+        return False
+    try:
+        ziel.unlink()
+    except OSError as fehler:
+        raise VorlagenFehler(f"Vorlage nicht gelöscht: {fehler}") from fehler
+    return True
+
+
+def vorlage_umbenennen(
+    vorlage: Vorlage, name: str, ordner: pathlib.Path
+) -> Vorlage:
+    """Schreibt die Vorlage unter neuem Namen - die Kennung bleibt.
+
+    Die Kennung ist der Dateiname; sie zu aendern hiesse, die Vorlage zu
+    ersetzen. Umbenannt wird, was der Anwender sieht.
+    """
+    name = name.strip()
+    if not name:
+        raise VorlagenFehler("Eine Vorlage braucht einen Namen")
+    neu = replace(vorlage, name=name)
+    vorlage_speichern(neu, ordner, ueberschreiben=True)
+    return neu
+
+
 def vorlage_aus_yaml(inhalt: dict, herkunft: str = "") -> Vorlage:
     wo = f"{herkunft}: " if herkunft else ""
     buchten = _feld(inhalt, "buchten")
@@ -255,18 +290,32 @@ class Vorlagen:
         return cls(gefunden)
 
     @classmethod
-    def aus_ordnern(cls, ordner) -> Vorlagen:
+    def aus_ordnern(cls, ordner, ausgelassen=()) -> Vorlagen:
         """Aus mehreren Ordnern; bei gleicher Kennung gilt der letzte.
 
         So kann eine eigene Vorlage eine mitgelieferte ersetzen, ohne
         dass die mitgelieferte Datei angefasst wird.
+
+        ``ausgelassen`` nennt Marken wie ``vorlagen/40da-4x10.yaml``, die
+        der Anwender geloescht hat: die mitgelieferte Datei liegt im
+        Abbild weiter, gezeigt wird sie nicht mehr.
         """
+        weg = set(ausgelassen)
         gefunden: list[Vorlage] = []
         for ort in ordner:
             ort = pathlib.Path(ort)
-            if ort.is_dir():
-                gefunden += cls.laden(ort).alle
+            if not ort.is_dir():
+                continue
+            for datei in sorted(ort.glob("*.yaml")):
+                if f"{ORDNERNAME}/{datei.name}" in weg:
+                    continue
+                inhalt = yaml.safe_load(datei.read_text(encoding="utf-8")) or {}
+                gefunden.append(vorlage_aus_yaml(inhalt, datei.name))
         return cls(gefunden)
+
+    def entfernen(self, kennung: str) -> None:
+        """Nimmt eine Vorlage aus der laufenden Sitzung heraus."""
+        self._vorlagen.pop(kennung, None)
 
     def aufnehmen(self, vorlage: Vorlage) -> None:
         """Nimmt eine Vorlage in die laufende Sitzung auf."""

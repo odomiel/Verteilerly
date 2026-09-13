@@ -146,6 +146,14 @@ ablegen — im Dialog selbst oder später über *Bearbeiten ▸ Als Vorlage
 speichern*. Sie landet als YAML-Datei im Arbeitsordner (siehe
 *Verpacken ▸ Daten*) und steht sofort im Menü.
 
+Verwaltet werden die Vorlagen unter *Einstellungen ▸ Verteilervorlagen*
+(Strg+Umschalt+V): umbenennen, löschen — auch die mitgelieferten. Gelöscht
+wird die Datei im Arbeitsordner; damit der nächste Start eine mitgelieferte
+nicht gleich wieder auslegt, merkt sich `.geloescht.json` daneben, was weg
+soll. Der Knopf **Mitgelieferte wiederherstellen** hebt diese Vermerke auf
+und legt die ausgelieferten Vorlagen erneut hin — geänderte eingeschlossen,
+eigene bleiben unberührt.
+
 Der Editor zeigt links die Verteilerübersicht und rechts die Belegung der
 gewählten Leiste. Neben dem Aufklappmenü stehen zwei Pfeile, die Leiste
 für Leiste weiterschalten (Alt+← und Alt+→); am ersten und letzten
@@ -526,6 +534,12 @@ unangetastet — eigene Änderungen wiegen schwerer als jede Vorgabe. Wer
 was mitgebracht hat, steht im Merkzettel `.ausgelegt.json` daneben; ohne
 ihn (Arbeitsordner aus einer älteren Fassung) wird nichts aufgefrischt.
 Dorthin wird auch geschrieben, wenn eine Vorlage gesichert wird.
+
+Wer eine mitgelieferte Datei **löscht**, will sie los sein und nicht beim
+nächsten Start wiederhaben: `.geloescht.json` hält daneben fest, was
+weggeworfen wurde, und das Auslegen geht darüber hinweg. Erst
+*Mitgelieferte wiederherstellen* im Vorlagendialog hebt die Vermerke
+wieder auf.
 
 **Umziehen und sichern.** *Einstellungen ▸ Vorlagen und Einstellungen
 sichern…* packt Verteilervorlagen, Blattvorlagen, Kabeltypen und die

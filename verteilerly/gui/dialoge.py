@@ -47,7 +47,14 @@ from ..modell import (
     Verteiler,
     mehrzahl,
 )
-from ..vorlagen import Vorlage, VorlagenFehler, Vorlagen, vorlage_speichern
+from ..vorlagen import (
+    Vorlage,
+    VorlagenFehler,
+    Vorlagen,
+    vorlage_loeschen,
+    vorlage_speichern,
+    vorlage_umbenennen,
+)
 from .sprache import frage
 
 
@@ -524,6 +531,172 @@ class PaketDialog(QDialog):
 
     def auswahl(self) -> set[str]:
         return {teil for teil, haken in self.haken.items() if haken.isChecked()}
+
+
+class VerteilervorlagenDialog(QDialog):
+    """Verteilervorlagen verwalten: umbenennen, löschen, zurückholen.
+
+    Auch die mitgelieferten lassen sich loeschen - wer sie nie braucht,
+    soll sie nicht jedes Mal im Menue haben. Sie bleiben im Abbild
+    liegen; ein Knopf holt sie zurueck.
+    """
+
+    def __init__(
+        self,
+        vorlagen: Vorlagen,
+        ordner,
+        parent: QWidget | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Verteilervorlagen")
+        self.vorlagen = vorlagen
+        self.ordner = ordner
+        # Was der Dialog getan hat - das Hauptfenster liest es aus.
+        self.geloescht: list[str] = []
+        self.umbenannt: dict[str, str] = {}
+        self.wiederhergestellt = False
+
+        self.liste = QListWidget()
+        self.liste.itemDoubleClicked.connect(lambda _: self.umbenennen())
+
+        self.umbenennen_knopf = QPushButton("Umbenennen…")
+        self.umbenennen_knopf.clicked.connect(self.umbenennen)
+        self.loeschen_knopf = QPushButton("Löschen")
+        self.loeschen_knopf.clicked.connect(self.loeschen)
+        self.zurueck_knopf = QPushButton("Mitgelieferte wiederherstellen")
+        self.zurueck_knopf.setToolTip(
+            "Holt die mitgelieferten Vorlagen zurück, so wie sie ausgeliefert "
+            "wurden. Eigene Vorlagen bleiben unberührt."
+        )
+        self.zurueck_knopf.clicked.connect(self.wiederherstellen)
+
+        knoepfe = QHBoxLayout()
+        knoepfe.addWidget(self.umbenennen_knopf)
+        knoepfe.addWidget(self.loeschen_knopf)
+        knoepfe.addStretch(1)
+        knoepfe.addWidget(self.zurueck_knopf)
+
+        self.hinweis = QLabel()
+        self.hinweis.setWordWrap(True)
+        self.hinweis.setMinimumHeight(48)
+        self.liste.currentRowChanged.connect(lambda _: self._hinweis_zeigen())
+
+        schliessen = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        schliessen.rejected.connect(self.accept)
+        schliessen.button(QDialogButtonBox.StandardButton.Close).setText("Schließen")
+
+        aufbau = QVBoxLayout(self)
+        aufbau.addWidget(QLabel(
+            "Grundstrukturen für neue Verteiler — Buchten, Leisten und "
+            "Doppeladern:"
+        ))
+        aufbau.addWidget(self.liste, 1)
+        aufbau.addLayout(knoepfe)
+        aufbau.addWidget(self.hinweis)
+        aufbau.addWidget(schliessen)
+        self.resize(460, 380)
+        self._liste_fuellen()
+
+    # -- Anzeige -----------------------------------------------------------
+
+    def _liste_fuellen(self, auswahl: str = "") -> None:
+        self.liste.clear()
+        for vorlage in self.vorlagen.alle:
+            eintrag = QListWidgetItem(str(vorlage))
+            eintrag.setData(Qt.ItemDataRole.UserRole, vorlage.id)
+            if vorlage.beschreibung:
+                eintrag.setToolTip(vorlage.beschreibung)
+            self.liste.addItem(eintrag)
+        stelle = max(
+            (i for i in range(self.liste.count())
+             if self.liste.item(i).data(Qt.ItemDataRole.UserRole) == auswahl),
+            default=0,
+        )
+        self.liste.setCurrentRow(stelle)
+        self._hinweis_zeigen()
+
+    def _hinweis_zeigen(self) -> None:
+        kennung = self.gewaehlt()
+        if not kennung:
+            self.hinweis.setText("Keine Vorlage vorhanden.")
+            for knopf in (self.umbenennen_knopf, self.loeschen_knopf):
+                knopf.setEnabled(False)
+            return
+        vorlage = self.vorlagen.holen(kennung)
+        zeilen = [vorlage.beschreibung] if vorlage.beschreibung else []
+        zeilen.append(
+            f"{mehrzahl(len(vorlage.buchtenplan), 'Bucht', 'Buchten')}, "
+            f"{mehrzahl(vorlage.leisten_gesamt, 'Leiste', 'Leisten')}, "
+            f"{vorlage.da_gesamt} DA"
+        )
+        self.hinweis.setText("\n".join(zeilen))
+        for knopf in (self.umbenennen_knopf, self.loeschen_knopf):
+            knopf.setEnabled(self.ordner is not None)
+
+    def gewaehlt(self) -> str:
+        eintrag = self.liste.currentItem()
+        return eintrag.data(Qt.ItemDataRole.UserRole) if eintrag else ""
+
+    # -- Tun ---------------------------------------------------------------
+
+    def umbenennen(self) -> None:
+        kennung = self.gewaehlt()
+        if not kennung or self.ordner is None:
+            return
+        vorlage = self.vorlagen.holen(kennung)
+        name, gewaehlt = QInputDialog.getText(
+            self, "Vorlage umbenennen", "Name der Vorlage:", text=vorlage.name
+        )
+        if not gewaehlt or not name.strip() or name.strip() == vorlage.name:
+            return
+        try:
+            neu = vorlage_umbenennen(vorlage, name, self.ordner)
+        except VorlagenFehler as fehler:
+            QMessageBox.warning(self, "Nicht umbenannt", str(fehler))
+            return
+        self.vorlagen.aufnehmen(neu)
+        self.umbenannt[kennung] = neu.name
+        self._liste_fuellen(kennung)
+
+    def loeschen(self) -> None:
+        kennung = self.gewaehlt()
+        if not kennung or self.ordner is None:
+            return
+        vorlage = self.vorlagen.holen(kennung)
+        antwort = frage(
+            self,
+            "Vorlage löschen?",
+            f"Die Vorlage „{vorlage.name}“ löschen?\n"
+            "Mitgelieferte Vorlagen holt der Knopf „Mitgelieferte "
+            "wiederherstellen“ zurück.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if antwort != QMessageBox.StandardButton.Yes:
+            return
+        try:
+            vorlage_loeschen(kennung, self.ordner)
+        except VorlagenFehler as fehler:
+            QMessageBox.warning(self, "Nicht gelöscht", str(fehler))
+            return
+        self.geloescht.append(kennung)
+        self.vorlagen.entfernen(kennung)
+        self._liste_fuellen()
+
+    def wiederherstellen(self) -> None:
+        antwort = frage(
+            self,
+            "Mitgelieferte Vorlagen wiederherstellen?",
+            "Die mitgelieferten Vorlagen kommen zurück, so wie sie "
+            "ausgeliefert wurden — auch gelöschte und geänderte.\n"
+            "Eigene Vorlagen bleiben unberührt.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.Yes,
+        )
+        if antwort != QMessageBox.StandardButton.Yes:
+            return
+        self.wiederhergestellt = True
+        self.accept()
 
 
 class BlattvorlagenDialog(QDialog):

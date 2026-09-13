@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pathlib
+import shutil
 import tempfile
 
 from PySide6.QtCore import QSettings, Qt, QTimer
@@ -44,6 +45,7 @@ from ..version import VERSION
 from ..vorlagen import Vorlagen
 from .dialoge import (
     BlattvorlagenDialog,
+    VerteilervorlagenDialog,
     ProjektdatenDialog,
     KabelDialog,
     NeuerVerteilerDialog,
@@ -66,6 +68,8 @@ LIZENZVERWEISE = (
     ("GNU LGPL v3", "https://www.gnu.org/licenses/lgpl-3.0.html"),
     ("Qt-Quelltext", "https://download.qt.io/official_releases/qt/"),
 )
+
+VORLAGENORDNER = "vorlagen"
 
 DATEIFILTER = "Verteilerly-Projekt (*.vtly.json);;Alle Dateien (*)"
 PDFFILTER = "PDF (*.pdf)"
@@ -251,6 +255,12 @@ class Hauptfenster(QMainWindow):
             "&Blattvorlage…", self.blattvorlage_waehlen, "Ctrl+Shift+B",
             menue=einstellungen,
             hinweis="Wie die Blätter aussehen — Spalten, Schriftgrößen, Ränder",
+        )
+        aktion(
+            "&Verteilervorlagen…", self.vorlagen_verwalten, "Ctrl+Shift+V",
+            menue=einstellungen,
+            hinweis="Vorlagen umbenennen, löschen und die mitgelieferten "
+                    "zurückholen",
         )
         aktion(
             "&Vorgaben für neue Verteiler…", self.vorgaben_bearbeiten,
@@ -1029,12 +1039,17 @@ class Hauptfenster(QMainWindow):
         return Blattvorlagen.aus_ordnern(orte)
 
     def _vorlagen_laden(self) -> Vorlagen:
-        """Alle Vorlagenordner zusammen; eigene gehen vor mitgelieferten."""
+        """Alle Vorlagenordner zusammen; eigene gehen vor mitgelieferten.
+
+        Was der Anwender geloescht hat, bleibt draussen - die
+        mitgelieferte Datei liegt im Abbild weiter.
+        """
         try:
             orte = list(reversed(pfade.vorlagenordner_alle()))
+            weg = pfade.geloeschte()
         except OSError:
-            orte = []
-        return Vorlagen.aus_ordnern(orte)
+            orte, weg = [], set()
+        return Vorlagen.aus_ordnern(orte, weg)
 
     def _vorlagenordner(self):
         """Wohin eigene Vorlagen kommen - None, wenn dort nichts geht."""
@@ -1056,6 +1071,57 @@ class Hauptfenster(QMainWindow):
             vorschlag=verteiler.name or f"{verteiler.da_gesamt} DA",
             beschreibung=f"Nach dem Verteiler {verteiler.name}." if verteiler.name else "",
         )
+
+    def vorlagen_verwalten(self) -> None:
+        """Verteilervorlagen umbenennen, löschen, zurückholen."""
+        dialog = VerteilervorlagenDialog(
+            self.vorlagen, self._vorlagenordner(), self
+        )
+        dialog.exec()
+
+        for kennung in dialog.geloescht:
+            # Eine mitgelieferte Vorlage liegt im Abbild weiter; ohne
+            # Vermerk legte der nächste Start sie wieder aus.
+            pfade.loeschen_merken(f"{VORLAGENORDNER}/{kennung}.yaml")
+        if dialog.wiederhergestellt:
+            self._vorlagen_wiederherstellen()
+
+        self.vorlagen = self._vorlagen_laden()
+        if dialog.geloescht or dialog.umbenannt or dialog.wiederhergestellt:
+            gesagt = []
+            if dialog.umbenannt:
+                gesagt.append(mehrzahl(len(dialog.umbenannt), "Vorlage", "Vorlagen")
+                              + " umbenannt")
+            if dialog.geloescht:
+                gesagt.append(mehrzahl(len(dialog.geloescht), "Vorlage", "Vorlagen")
+                              + " gelöscht")
+            if dialog.wiederhergestellt:
+                gesagt.append("mitgelieferte Vorlagen wiederhergestellt")
+            satz = ", ".join(gesagt)
+            self.statusBar().showMessage(satz[:1].upper() + satz[1:], 8000)
+
+    def _vorlagen_wiederherstellen(self) -> None:
+        """Holt die mitgelieferten Vorlagen zurück, wie ausgeliefert."""
+        ordner = self._vorlagenordner()
+        if ordner is None:
+            return
+        pfade.loeschvermerke_aufheben(VORLAGENORDNER)
+        quelle = pfade.mitgeliefert()
+        if quelle is None or not (quelle / VORLAGENORDNER).is_dir():
+            return
+        zurueck = 0
+        for datei in sorted((quelle / VORLAGENORDNER).glob("*.yaml")):
+            try:
+                shutil.copy2(datei, ordner / datei.name)
+                zurueck += 1
+            except OSError as fehler:
+                QMessageBox.warning(
+                    self, "Nicht wiederhergestellt", str(fehler)
+                )
+                return
+        # Der Merkzettel gilt danach wieder: die Dateien liegen so da,
+        # wie sie ausgeliefert wurden.
+        self.ausgelegt = pfade.grundausstattung_auslegen()
 
     def projektdaten_bearbeiten(self) -> None:
         if self.projekt is None:

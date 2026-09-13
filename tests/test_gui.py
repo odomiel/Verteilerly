@@ -1446,7 +1446,8 @@ class TestMenuezustaende(unittest.TestCase):
         ]
         self.assertEqual(
             eintraege,
-            ["Blattvorlage…", "Vorgaben für neue Verteiler…",
+            ["Blattvorlage…", "Verteilervorlagen…",
+             "Vorgaben für neue Verteiler…",
              "Vorlagen und Einstellungen sichern…",
              "Vorlagen und Einstellungen einspielen…",
              "Schreibweise der Rangierungen", "Freitext im Rangierfeld zulassen"],
@@ -1998,6 +1999,99 @@ class TestNeuerVerteilerDialog(unittest.TestCase):
     def test_ohne_ordner_kein_speichern(self):
         dialog = NeuerVerteilerDialog(self.vorlagen, None, None)
         self.assertFalse(dialog.als_vorlage.isEnabled())
+
+
+@unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
+class TestVerteilervorlagenDialog(unittest.TestCase):
+    """Verteilervorlagen umbenennen, löschen, zurückholen."""
+
+    def setUp(self):
+        from verteilerly.gui.dialoge import VerteilervorlagenDialog
+        from verteilerly.vorlagen import vorlage_speichern
+
+        self.ordner = tempfile.TemporaryDirectory()
+        self.addCleanup(self.ordner.cleanup)
+        self.ziel = pathlib.Path(self.ordner.name)
+        self.vorlagen = Vorlagen([
+            Vorlage("klein", "Klein", 1, 4, 10, standard=True),
+            Vorlage("gross", "Groß", 2, 8, 10),
+        ])
+        for vorlage in self.vorlagen.alle:
+            vorlage_speichern(vorlage, self.ziel)
+        self.dialog = VerteilervorlagenDialog(self.vorlagen, self.ziel)
+
+    def _waehlen(self, kennung):
+        stelle = next(
+            i for i in range(self.dialog.liste.count())
+            if self.dialog.liste.item(i).data(Qt.ItemDataRole.UserRole) == kennung
+        )
+        self.dialog.liste.setCurrentRow(stelle)
+
+    def test_die_liste_zeigt_alle_vorlagen(self):
+        self.assertEqual(self.dialog.liste.count(), 2)
+        self.assertIn("Bucht", self.dialog.hinweis.text())
+
+    def test_umbenennen_aendert_namen_und_datei(self):
+        from verteilerly.gui import dialoge
+
+        self._waehlen("gross")
+        with mock.patch.object(
+            dialoge.QInputDialog, "getText", return_value=("Keller", True)
+        ):
+            self.dialog.umbenennen()
+        self.assertEqual(self.dialog.umbenannt, {"gross": "Keller"})
+        self.assertEqual(self.vorlagen.holen("gross").name, "Keller")
+        self.assertIn("Keller", Vorlagen.laden(self.ziel).holen("gross").name)
+
+    def test_abgebrochenes_umbenennen_aendert_nichts(self):
+        from verteilerly.gui import dialoge
+
+        self._waehlen("gross")
+        with mock.patch.object(
+            dialoge.QInputDialog, "getText", return_value=("Keller", False)
+        ):
+            self.dialog.umbenennen()
+        self.assertEqual(self.dialog.umbenannt, {})
+        self.assertEqual(self.vorlagen.holen("gross").name, "Groß")
+
+    def test_loeschen_fragt_nach_und_nimmt_sie_aus_der_liste(self):
+        from verteilerly.gui import dialoge
+
+        self._waehlen("klein")
+        with mock.patch.object(
+            dialoge, "frage", return_value=QMessageBox.StandardButton.Yes
+        ):
+            self.dialog.loeschen()
+        self.assertEqual(self.dialog.geloescht, ["klein"])
+        self.assertEqual(self.dialog.liste.count(), 1)
+        self.assertFalse((self.ziel / "klein.yaml").exists())
+
+    def test_ein_nein_laesst_die_vorlage_stehen(self):
+        from verteilerly.gui import dialoge
+
+        self._waehlen("klein")
+        with mock.patch.object(
+            dialoge, "frage", return_value=QMessageBox.StandardButton.No
+        ):
+            self.dialog.loeschen()
+        self.assertEqual(self.dialog.geloescht, [])
+        self.assertTrue((self.ziel / "klein.yaml").exists())
+
+    def test_wiederherstellen_meldet_sich_und_schliesst(self):
+        from verteilerly.gui import dialoge
+
+        with mock.patch.object(
+            dialoge, "frage", return_value=QMessageBox.StandardButton.Yes
+        ):
+            self.dialog.wiederherstellen()
+        self.assertTrue(self.dialog.wiederhergestellt)
+
+    def test_ohne_ordner_bleibt_nur_das_ansehen(self):
+        from verteilerly.gui.dialoge import VerteilervorlagenDialog
+
+        dialog = VerteilervorlagenDialog(self.vorlagen, None)
+        self.assertFalse(dialog.umbenennen_knopf.isEnabled())
+        self.assertFalse(dialog.loeschen_knopf.isEnabled())
 
 
 if __name__ == "__main__":

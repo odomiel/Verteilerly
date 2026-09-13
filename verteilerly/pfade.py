@@ -33,6 +33,9 @@ ANWENDUNG = "Verteilerly"
 # Merkzettel im Arbeitsordner: welche Datei mit welchem Inhalt ausgelegt
 # wurde. Daran ist spaeter zu erkennen, ob der Anwender sie angefasst hat.
 MERKZETTEL = ".ausgelegt.json"
+# Wer eine mitgelieferte Vorlage loescht, will sie los sein - ohne
+# Vermerk legte der naechste Start sie wieder aus.
+LOESCHZETTEL = ".geloescht.json"
 
 
 def gepackt() -> bool:
@@ -316,6 +319,51 @@ def lizenzen_auslegen() -> list[pathlib.Path]:
     return geschrieben
 
 
+def geloeschte(ordner: pathlib.Path | None = None) -> set[str]:
+    """Welche mitgelieferten Dateien der Anwender weghaben will.
+
+    Vermerkt wird die Marke, nicht der Pfad: "vorlagen/40da-4x10.yaml".
+    """
+    ziel = pathlib.Path(ordner) if ordner else eigener_datenordner()
+    try:
+        gelesen = json.loads((ziel / LOESCHZETTEL).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return set()
+    return {str(marke) for marke in gelesen or ()}
+
+
+def _loeschzettel_schreiben(marken: set[str], ziel: pathlib.Path) -> None:
+    try:
+        if marken:
+            (ziel / LOESCHZETTEL).write_text(
+                json.dumps(sorted(marken), indent=2), encoding="utf-8"
+            )
+        else:
+            (ziel / LOESCHZETTEL).unlink(missing_ok=True)
+    except OSError:
+        pass
+
+
+def loeschen_merken(marke: str, ordner: pathlib.Path | None = None) -> None:
+    """Haelt fest, dass diese mitgelieferte Datei nicht wiederkommen soll."""
+    ziel = pathlib.Path(ordner) if ordner else eigener_datenordner()
+    _loeschzettel_schreiben(geloeschte(ziel) | {marke}, ziel)
+
+
+def loeschvermerke_aufheben(
+    bereich: str = "", ordner: pathlib.Path | None = None
+) -> int:
+    """Nimmt die Vermerke zurueck - alle oder die eines Unterordners."""
+    ziel = pathlib.Path(ordner) if ordner else eigener_datenordner()
+    vorher = geloeschte(ziel)
+    bleiben = {
+        marke for marke in vorher
+        if bereich and not marke.startswith(f"{bereich}/")
+    }
+    _loeschzettel_schreiben(bleiben, ziel)
+    return len(vorher) - len(bleiben)
+
+
 def grundausstattung_auslegen() -> list[pathlib.Path]:
     """Legt die mitgelieferten Dateien in den Arbeitsordner.
 
@@ -341,6 +389,7 @@ def _vorlagen_auslegen() -> list[pathlib.Path]:
         return []
 
     merkzettel = _merkzettel_lesen(ziel)
+    weggeworfen = geloeschte(ziel)
     geschrieben: list[pathlib.Path] = []
     for name in UNTERORDNER:
         von = quelle / name
@@ -351,6 +400,8 @@ def _vorlagen_auslegen() -> list[pathlib.Path]:
         for datei in sorted(von.glob("*.yaml")):
             fertig = nach / datei.name
             marke = f"{name}/{datei.name}"
+            if marke in weggeworfen:
+                continue
             mitgebracht = _fingerabdruck(datei)
             if fertig.exists():
                 unberuehrt = merkzettel.get(marke) == _fingerabdruck(fertig)
