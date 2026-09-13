@@ -285,6 +285,28 @@ class TestTabellen(unittest.TestCase):
         self.assertTrue(feld.font.italic)
         self.assertEqual(feld.alignment.horizontal, "right")
 
+    def test_geteilte_zelle_steht_im_raster_hintereinander(self):
+        """Excel hat keine halbe Spalte."""
+        from openpyxl import load_workbook
+        from verteilerly.modell import Zellenteilung
+
+        ader = self.projekt.verteiler.leiste(1).stift(1).ader("a")
+        ader.bezeichnung = "Amt 1"
+        ader.teilung_setzen("bezeichnung", Zellenteilung(30, "Nst. 42"))
+        ziel = xlsx_schreiben(self.projekt, Path(self.ordner.name) / "probe.xlsx")
+
+        mappe = load_workbook(ziel)
+        werte = [
+            z.value for r in mappe["Leiste 1"].iter_rows() for z in r
+            if isinstance(z.value, str) and z.value.startswith("Amt 1")
+        ]
+        self.assertEqual(werte, ["Amt 1 Nst. 42"])
+        daten = [
+            r[6] for r in mappe["Daten je Ader"].iter_rows(values_only=True)
+            if r[6] and str(r[6]).startswith("Amt 1")
+        ]
+        self.assertEqual(daten, ["Amt 1 Nst. 42"])
+
     def test_briefkopf_erscheint_mit_beschriftung(self):
         ziel = xlsx_schreiben(self.projekt, Path(self.ordner.name) / "probe.xlsx")
         from openpyxl import load_workbook

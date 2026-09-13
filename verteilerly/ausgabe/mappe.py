@@ -24,9 +24,11 @@ from ..layout import (
     schriftfeldwerte,
     schriftfeldzeilen,
     zeilenstile,
+    zeilenteilungen,
     zeilenwerte,
+    zellentext,
 )
-from ..modell import LEERER_STIL, Projekt
+from ..modell import LEERER_STIL, UNGETEILT, Projekt
 
 SCHRIFTART = "Arial"          # was Helvetica im PDF am naechsten kommt
 PT_JE_MM = 72.0 / 25.4
@@ -272,8 +274,15 @@ def _leistenblatt(
         for seite in ("a", "b"):
             werte = zeilenwerte(projekt, leiste_nr, stift.nummer, seite)
             stile = zeilenstile(projekt, leiste_nr, stift.nummer, seite)
+            teilungen = zeilenteilungen(projekt, leiste_nr, stift.nummer, seite)
             for i, spalte in enumerate(spalten, 1):
-                feld = blatt.cell(row=zeile, column=i, value=werte.get(spalte.feld, ""))
+                # Eine geteilte Zelle gibt es im Raster nicht: beide
+                # Felder stehen hier hintereinander.
+                text = zellentext(
+                    werte.get(spalte.feld, ""),
+                    teilungen.get(spalte.feld, UNGETEILT),
+                )
+                feld = blatt.cell(row=zeile, column=i, value=text)
                 # Derselbe Zellenstil wie auf dem Blatt.
                 stil = stile.get(spalte.feld, LEERER_STIL)
                 feld.font = zeug.schrift(

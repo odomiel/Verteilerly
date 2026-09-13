@@ -146,6 +146,16 @@ Stift, Ader und Kabel nicht. Der Stil gehört der Ader, steht in der
 Projektdatei und gilt in Leistenansicht, Blatt, PDF und Excel-Mappe
 gleichermaßen.
 
+Daneben **teilt** ein Knopf die gewählte Zelle in **zwei
+Beschriftungsfelder nebeneinander**; ein Prozentfeld sagt, wie breit das
+rechte ist (10–90 %). Bearbeitet wird in zwei Eingabefeldern, Tabulator
+springt vom linken ins rechte. Auf dem Blatt steht zwischen beiden **kein
+Strich** — dort sieht es aus wie eine Zelle mit zwei Angaben; nur die
+Leistenansicht deutet es mit einem feinen Punktstrich an. Teilbar sind
+Bezeichnung und Bemerkung. Wird die Teilung aufgehoben, bleibt der zweite Text
+erhalten. In Excel und CSV stehen beide hintereinander in einer Zelle — ein
+Raster hat keine halbe Spalte.
+
 In der Leistenansicht schließt **Enter** die Eingabe und geht
 **eine Zeile tiefer**, wie in einer Tabellenkalkulation; wurde die Eingabe
 nicht angenommen — eine unlesbare Rangierung etwa —, bleibt die Marke stehen.

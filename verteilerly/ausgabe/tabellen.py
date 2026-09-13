@@ -11,6 +11,7 @@ import csv
 import pathlib
 
 from ..blattvorlagen import STANDARD, Blattvorlage
+from ..layout import zellentext
 from ..modell import (
     BRIEFKOPF_BESCHRIFTUNG,
     Aderadresse,
@@ -65,9 +66,9 @@ def belegungszeilen(projekt: Projekt) -> list[list]:
                             seite,
                             adresse.anzeige(projekt.schreibweise),
                             ader.farbe,
-                            ader.bezeichnung,
+                            zellentext(ader.bezeichnung, ader.teilung("bezeichnung")),
                             v.rangierfeld(adresse, projekt.schreibweise),
-                            ader.bemerkung,
+                            zellentext(ader.bemerkung, ader.teilung("bemerkung")),
                             kabel.beschriftung if kabel else "",
                             kabel.kabeltyp if kabel else "",
                         ]

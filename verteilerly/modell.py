@@ -152,6 +152,66 @@ class Textstil:
 LEERER_STIL = Textstil()
 
 
+# Die Spalten, deren Zelle sich in zwei Beschriftungsfelder teilen
+# laesst. Farbe und Rangierung nicht: dort steht ein Kuerzel
+# beziehungsweise ein Ziel, kein freier Text.
+TEILBARE_FELDER = ("bezeichnung", "bemerkung")
+# Wie viel Prozent der Zellenbreite das rechte Feld bekommen darf. Unter
+# einem Zehntel bliebe kein Platz fuer Text, ueber neun Zehnteln keiner
+# fuer das linke Feld.
+ANTEIL_MIN, ANTEIL_MAX, ANTEIL_VORGABE = 10, 90, 40
+
+
+@dataclass(frozen=True)
+class Zellenteilung:
+    """Eine Zelle als zwei Beschriftungsfelder nebeneinander.
+
+    ``anteil`` ist die Breite des rechten Feldes in Prozent. Auf dem
+    Blatt steht zwischen beiden kein Strich - es soll aussehen wie eine
+    Zelle, in der zwei Angaben stehen.
+
+    Wird die Teilung aufgehoben, bleibt der Text des rechten Feldes
+    erhalten: abwaehlen ist kein Loeschen. Er erscheint dann nur
+    nirgends mehr.
+    """
+
+    anteil: int = ANTEIL_VORGABE
+    text: str = ""
+    geteilt: bool = True
+
+    def __post_init__(self) -> None:
+        if not ANTEIL_MIN <= self.anteil <= ANTEIL_MAX:
+            raise ModellFehler(
+                f"Der Anteil des zweiten Feldes muss zwischen {ANTEIL_MIN} "
+                f"und {ANTEIL_MAX} Prozent liegen, nicht {self.anteil}"
+            )
+
+    @property
+    def leer(self) -> bool:
+        return not self.geteilt and not self.text
+
+    def als_dict(self) -> dict:
+        daten: dict[str, object] = {"anteil": self.anteil}
+        if self.text:
+            daten["text"] = self.text
+        if not self.geteilt:
+            daten["geteilt"] = False
+        return daten
+
+    @classmethod
+    def aus_dict(cls, daten: dict | None) -> Zellenteilung:
+        daten = daten or {}
+        anteil = int(daten.get("anteil") or ANTEIL_VORGABE)
+        return cls(
+            anteil=min(max(anteil, ANTEIL_MIN), ANTEIL_MAX),
+            text=str(daten.get("text") or ""),
+            geteilt=daten.get("geteilt", True) is not False,
+        )
+
+
+UNGETEILT = Zellenteilung(geteilt=False)
+
+
 @dataclass
 class Ader:
     """Eine Ader mit ihren vier Feldern.
@@ -174,10 +234,25 @@ class Ader:
     vermerk_zuerst: bool = False
     # Textstil je Spalte - nur, was von der Blattvorlage abweicht.
     stile: dict[str, Textstil] = field(default_factory=dict)
+    # Geteilte Zellen je Spalte.
+    teilungen: dict[str, Zellenteilung] = field(default_factory=dict)
 
     def stil(self, feld: str) -> Textstil:
         """Wie der Text dieser Spalte steht - ohne Angabe wie die Vorlage."""
         return self.stile.get(feld, LEERER_STIL)
+
+    def teilung(self, feld: str) -> Zellenteilung:
+        """Ob und wie diese Zelle in zwei Felder geteilt ist."""
+        return self.teilungen.get(feld, UNGETEILT)
+
+    def teilung_setzen(self, feld: str, teilung: Zellenteilung) -> None:
+        """Setzt die Teilung einer Zelle; eine leere wird geloescht."""
+        if feld not in TEILBARE_FELDER:
+            raise ModellFehler(f"{feld!r} laesst sich nicht teilen")
+        if teilung.leer:
+            self.teilungen.pop(feld, None)
+        else:
+            self.teilungen[feld] = teilung
 
     def stil_setzen(self, feld: str, stil: Textstil) -> None:
         """Setzt den Stil einer Spalte; ein leerer wird geloescht."""

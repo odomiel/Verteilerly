@@ -18,10 +18,13 @@ from .modell import (
     BLATTBESCHRIFTUNG,
     LEERER_STIL,
     STILFELDER,
+    TEILBARE_FELDER,
+    UNGETEILT,
     Bucht,
     Projekt,
     Textstil,
     Verteiler,
+    Zellenteilung,
     mehrzahl,
 )
 
@@ -730,6 +733,26 @@ def zeilenstile(
     return {feld: ader.stil(feld) for feld in STILFELDER}
 
 
+def zellentext(wert: str, teilung: Zellenteilung) -> str:
+    """Beide Felder einer Zelle als ein Text.
+
+    Fuer Tabellen: Excel und CSV sind ein Raster, dort gibt es keine
+    halbe Spalte. Was auf dem Blatt nebeneinander steht, steht dort
+    hintereinander.
+    """
+    if not teilung.geteilt or not teilung.text:
+        return wert
+    return f"{wert} {teilung.text}".strip()
+
+
+def zeilenteilungen(
+    projekt: Projekt, leiste_nr: int, stift_nr: int, seite: str
+) -> dict[str, Zellenteilung]:
+    """Welche Zellen dieser Zeile zwei Beschriftungsfelder tragen."""
+    ader = projekt.verteiler.leiste(leiste_nr).stift(stift_nr).ader(seite)
+    return {feld: ader.teilung(feld) for feld in TEILBARE_FELDER}
+
+
 def leistenblatt(
     projekt: Projekt, leiste_nr: int, vorlage: Blattvorlage = STANDARD
 ) -> Blatt:
@@ -773,16 +796,25 @@ def leistenblatt(
         for seite in ("a", "b"):
             werte = zeilenwerte(projekt, leiste_nr, stift.nummer, seite)
             stile = zeilenstile(projekt, leiste_nr, stift.nummer, seite)
+            teilungen = zeilenteilungen(projekt, leiste_nr, stift.nummer, seite)
             x = rand
             for spalte, breite in zip(vorlage.spalten, breiten):
                 # Der Zellenstil geht vor; wo keiner gesetzt ist, gilt,
                 # was die Blattvorlage fuer die Spalte haelt.
                 stil = stile.get(spalte.feld, LEERER_STIL)
-                blatt.text(
-                    x + 1.5, y, breite - 3, zeile_h, werte.get(spalte.feld, ""),
-                    vorlage.schrift_normal, stil.ausrichtung or spalte.ausrichtung,
-                    stil.fett, TINTE, 0.0, stil.kursiv,
-                )
+                lage = stil.ausrichtung or spalte.ausrichtung
+                teilung = teilungen.get(spalte.feld, UNGETEILT)
+                # Eine geteilte Zelle traegt zwei Felder nebeneinander -
+                # ohne Strich dazwischen: auf dem Blatt soll es aussehen
+                # wie eine Zelle mit zwei Angaben.
+                for text, teil_x, teil_b in _zellenfelder(
+                    x + 1.5, breite - 3, werte.get(spalte.feld, ""), teilung
+                ):
+                    blatt.text(
+                        teil_x, y, teil_b, zeile_h, text,
+                        vorlage.schrift_normal, lage,
+                        stil.fett, TINTE, 0.0, stil.kursiv,
+                    )
                 x += breite
             # Feine Linie zwischen a und b, kraeftige zwischen den Stiften.
             fein = seite == "a"
@@ -807,6 +839,25 @@ def leistenblatt(
 
     schriftfeld(blatt, projekt, leiste_nr, vorlage, "leisten")
     return blatt
+
+
+def _zellenfelder(
+    x: float, breite: float, text: str, teilung: Zellenteilung
+) -> list[tuple[str, float, float]]:
+    """Die Felder einer Zelle: eines, oder zwei nebeneinander.
+
+    Der Anteil gilt dem rechten Feld; zwischen beiden bleibt ein
+    Fingerbreit Luft, damit die Texte sich nicht beruehren.
+    """
+    if not teilung.geteilt:
+        return [(text, x, breite)]
+    luft = 1.0
+    rechts_b = breite * teilung.anteil / 100.0
+    links_b = breite - rechts_b - luft
+    return [
+        (text, x, max(links_b, 1.0)),
+        (teilung.text, x + breite - rechts_b, rechts_b),
+    ]
 
 
 def _zeilenhoehe(

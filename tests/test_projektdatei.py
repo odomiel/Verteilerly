@@ -215,6 +215,20 @@ class TestFeldauswahl(unittest.TestCase):
         stil = zurueck.verteiler.leiste(1).stift(1).ader("a").stil("bezeichnung")
         self.assertEqual(stil, Textstil("mitte", fett=True, kursiv=True))
 
+    def test_geteilte_zelle_ueberlebt_das_speichern(self):
+        """Anteil und zweiter Text gehören zum Verteiler."""
+        from verteilerly.modell import Zellenteilung
+
+        projekt = beispielprojekt()
+        ader = projekt.verteiler.leiste(1).stift(1).ader("a")
+        ader.teilung_setzen("bemerkung", Zellenteilung(25, "T. M."))
+        projektdatei.speichern(projekt, self.ziel)
+
+        zurueck = projektdatei.laden(self.ziel)
+        teilung = zurueck.verteiler.leiste(1).stift(1).ader("a").teilung("bemerkung")
+        self.assertTrue(teilung.geteilt)
+        self.assertEqual((teilung.anteil, teilung.text), (25, "T. M."))
+
     def test_ohne_stil_steht_nichts_in_der_datei(self):
         daten = projektdatei.als_dict(beispielprojekt())
         erste = daten["verteiler"]["buchten"][0]["leisten"][0]["stifte"][0]

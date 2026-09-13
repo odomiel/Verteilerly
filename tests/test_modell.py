@@ -471,5 +471,66 @@ class TestTextstil(unittest.TestCase):
         self.assertEqual(Textstil().als_dict(), {})
 
 
+class TestZellenteilung(unittest.TestCase):
+    """Eine Zelle als zwei Beschriftungsfelder."""
+
+    def setUp(self):
+        from verteilerly.modell import Ader
+
+        self.ader = Ader("a")
+
+    def test_zunaechst_ungeteilt(self):
+        self.assertFalse(self.ader.teilung("bezeichnung").geteilt)
+        self.assertEqual(self.ader.teilungen, {})
+
+    def test_teilen_und_beschriften(self):
+        from verteilerly.modell import Zellenteilung
+
+        self.ader.teilung_setzen("bezeichnung", Zellenteilung(30, "Nst. 42"))
+        teilung = self.ader.teilung("bezeichnung")
+        self.assertTrue(teilung.geteilt)
+        self.assertEqual(teilung.anteil, 30)
+        self.assertEqual(teilung.text, "Nst. 42")
+        self.assertFalse(self.ader.teilung("bemerkung").geteilt)
+
+    def test_aufheben_behaelt_den_text(self):
+        """Abwählen ist kein Löschen - wie bei den Feldern."""
+        from dataclasses import replace
+        from verteilerly.modell import Zellenteilung
+
+        self.ader.teilung_setzen("bezeichnung", Zellenteilung(30, "Nst. 42"))
+        alt = self.ader.teilung("bezeichnung")
+        self.ader.teilung_setzen("bezeichnung", replace(alt, geteilt=False))
+        self.assertFalse(self.ader.teilung("bezeichnung").geteilt)
+        self.assertEqual(self.ader.teilung("bezeichnung").text, "Nst. 42")
+
+    def test_ohne_text_und_ohne_teilung_bleibt_nichts_stehen(self):
+        from verteilerly.modell import Zellenteilung
+
+        self.ader.teilung_setzen("bezeichnung", Zellenteilung(30))
+        self.ader.teilung_setzen("bezeichnung", Zellenteilung(geteilt=False))
+        self.assertEqual(self.ader.teilungen, {})
+
+    def test_nicht_teilbare_spalte(self):
+        from verteilerly.modell import ModellFehler, Zellenteilung
+
+        with self.assertRaises(ModellFehler):
+            self.ader.teilung_setzen("farbe", Zellenteilung())
+
+    def test_der_anteil_hat_grenzen(self):
+        from verteilerly.modell import ANTEIL_MAX, ANTEIL_MIN, ModellFehler, Zellenteilung
+
+        with self.assertRaises(ModellFehler):
+            Zellenteilung(ANTEIL_MIN - 1)
+        with self.assertRaises(ModellFehler):
+            Zellenteilung(ANTEIL_MAX + 1)
+        self.assertEqual(Zellenteilung(ANTEIL_MIN).anteil, ANTEIL_MIN)
+
+    def test_eine_datei_mit_unsinnigem_anteil_wird_gerade_gezogen(self):
+        from verteilerly.modell import ANTEIL_MAX, Zellenteilung
+
+        self.assertEqual(Zellenteilung.aus_dict({"anteil": 300}).anteil, ANTEIL_MAX)
+
+
 if __name__ == "__main__":
     unittest.main()

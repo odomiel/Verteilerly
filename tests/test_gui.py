@@ -124,6 +124,114 @@ class TestTextknoepfe(unittest.TestCase):
         self.assertTrue(lage & int(Qt.AlignmentFlag.AlignRight))
 
 
+class TestZelleTeilen(unittest.TestCase):
+    """Knopf und Prozentfeld für zwei Beschriftungsfelder."""
+
+    def setUp(self):
+        from verteilerly.gui.leistenansicht import LeistenAnsicht
+
+        self.ansicht = LeistenAnsicht()
+        self.addCleanup(self.ansicht.close)
+        self.verteiler = Verteiler.aus_geometrie(1, 2, 10)
+        self.ansicht.verteiler_setzen(self.verteiler)
+        self.ansicht.leiste_zeigen(1)
+        self.ader = self.verteiler.leiste(1).stift(1).ader("a")
+
+    def _waehlen(self, zeile, spalte):
+        self.ansicht.tabelle.setCurrentIndex(self.ansicht.modell.index(zeile, spalte))
+
+    def test_nur_bezeichnung_und_bemerkung_lassen_sich_teilen(self):
+        for spalte, teilbar in (
+            (SPALTE_BEZEICHNUNG, True),
+            (SPALTE_BEMERKUNG, True),
+            (SPALTE_FARBE, False),
+            (SPALTE_RANGIERUNG, False),
+            (SPALTE_STIFT, False),
+        ):
+            with self.subTest(spalte=spalte):
+                self._waehlen(0, spalte)
+                self.assertEqual(self.ansicht.teilen.isEnabled(), teilbar)
+
+    def test_der_knopf_teilt_und_hebt_wieder_auf(self):
+        self._waehlen(0, SPALTE_BEZEICHNUNG)
+        self.ansicht.teilen.click()
+        self.assertTrue(self.ader.teilung("bezeichnung").geteilt)
+        self.ansicht.teilen.click()
+        self.assertFalse(self.ader.teilung("bezeichnung").geteilt)
+
+    def test_das_prozentfeld_gilt_nur_bei_geteilter_zelle(self):
+        self._waehlen(0, SPALTE_BEZEICHNUNG)
+        self.assertFalse(self.ansicht.anteil.isEnabled())
+        self.ansicht.teilen.click()
+        self.assertTrue(self.ansicht.anteil.isEnabled())
+
+    def test_der_anteil_landet_in_der_ader(self):
+        self._waehlen(0, SPALTE_BEZEICHNUNG)
+        self.ansicht.teilen.click()
+        self.ansicht.anteil.setValue(25)
+        self.assertEqual(self.ader.teilung("bezeichnung").anteil, 25)
+
+    def test_die_knoepfe_zeigen_die_gewaehlte_zelle(self):
+        from verteilerly.modell import Zellenteilung
+
+        self.ader.teilung_setzen("bezeichnung", Zellenteilung(35, "Nst. 42"))
+        self._waehlen(0, SPALTE_BEZEICHNUNG)
+        self.assertTrue(self.ansicht.teilen.isChecked())
+        self.assertEqual(self.ansicht.anteil.value(), 35)
+        self._waehlen(1, SPALTE_BEZEICHNUNG)
+        self.assertFalse(self.ansicht.teilen.isChecked())
+
+    def test_aufheben_behaelt_den_zweiten_text(self):
+        from verteilerly.modell import Zellenteilung
+
+        self.ader.teilung_setzen("bezeichnung", Zellenteilung(35, "Nst. 42"))
+        self._waehlen(0, SPALTE_BEZEICHNUNG)
+        self.ansicht.teilen.click()
+        self.assertEqual(self.ader.teilung("bezeichnung").text, "Nst. 42")
+
+    def test_der_editor_hat_zwei_felder(self):
+        from verteilerly.modell import Zellenteilung
+
+        self.ader.bezeichnung = "Amt 1"
+        self.ader.teilung_setzen("bezeichnung", Zellenteilung(30, "Nst. 42"))
+        index = self.ansicht.modell.index(0, SPALTE_BEZEICHNUNG)
+        self.ansicht.tabelle.setCurrentIndex(index)
+        self.ansicht.tabelle.edit(index)
+        kasten = getattr(self.ansicht.tabelle.focusWidget(), "behaelter", None)
+        self.assertIsNotNone(kasten)
+        self.assertEqual([f.text() for f in kasten.felder], ["Amt 1", "Nst. 42"])
+
+    def test_beide_felder_werden_gespeichert(self):
+        from verteilerly.modell import Zellenteilung
+
+        self.ader.bezeichnung = "Amt 1"
+        self.ader.teilung_setzen("bezeichnung", Zellenteilung(30, "Nst. 42"))
+        index = self.ansicht.modell.index(0, SPALTE_BEZEICHNUNG)
+        self.ansicht.tabelle.setCurrentIndex(index)
+        self.ansicht.tabelle.edit(index)
+        kasten = getattr(self.ansicht.tabelle.focusWidget(), "behaelter", None)
+        kasten.felder[0].setText("Amt 2")
+        kasten.felder[1].setText("Nst. 7")
+        self.ansicht.delegat.setModelData(kasten, self.ansicht.modell, index)
+        self.assertEqual(self.ader.bezeichnung, "Amt 2")
+        self.assertEqual(self.ader.teilung("bezeichnung").text, "Nst. 7")
+
+    def test_tab_geht_ins_zweite_feld_statt_in_die_naechste_zelle(self):
+        from PySide6.QtCore import QEvent
+        from PySide6.QtGui import QKeyEvent
+        from verteilerly.modell import Zellenteilung
+
+        self.ader.teilung_setzen("bezeichnung", Zellenteilung(30, "Nst. 42"))
+        index = self.ansicht.modell.index(0, SPALTE_BEZEICHNUNG)
+        self.ansicht.tabelle.setCurrentIndex(index)
+        self.ansicht.tabelle.edit(index)
+        kasten = getattr(self.ansicht.tabelle.focusWidget(), "behaelter", None)
+        taste = QKeyEvent(
+            QEvent.Type.KeyPress, Qt.Key.Key_Tab, Qt.KeyboardModifier.NoModifier
+        )
+        self.assertTrue(self.ansicht.delegat.eventFilter(kasten.felder[0], taste))
+
+
 class TestEnterSpringtWeiter(unittest.TestCase):
     """Enter schließt die Eingabe und geht eine Zeile tiefer."""
 

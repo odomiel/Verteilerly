@@ -382,6 +382,78 @@ class TestTextstilAufDemBlatt(unittest.TestCase):
         self.assertFalse(andere[0].fett)
 
 
+class TestGeteilteZelle(unittest.TestCase):
+    """Zwei Beschriftungsfelder nebeneinander, ohne Trennstrich."""
+
+    def setUp(self):
+        from verteilerly.modell import Zellenteilung
+
+        self.Zellenteilung = Zellenteilung
+        self.projekt = Projekt(
+            verteiler=Verteiler.aus_geometrie(1, 2, 10, name="M", nummer="1")
+        )
+        self.ader = self.projekt.verteiler.leiste(1).stift(1).ader("a")
+        self.ader.bezeichnung = "Amt 1"
+
+    def _felder(self, *texte):
+        gefunden = {
+            e.text: e for e in leistenblatt(self.projekt, 1).elemente
+            if isinstance(e, Text) and e.text in texte
+        }
+        return [gefunden.get(t) for t in texte]
+
+    def test_ungeteilt_steht_nur_ein_feld(self):
+        self.ader.teilung_setzen("bezeichnung", self.Zellenteilung(30, "Nst. 42"))
+        self.ader.teilung_setzen(
+            "bezeichnung",
+            self.Zellenteilung(30, "Nst. 42", geteilt=False),
+        )
+        links, rechts = self._felder("Amt 1", "Nst. 42")
+        self.assertIsNotNone(links)
+        self.assertIsNone(rechts)
+
+    def test_geteilt_stehen_beide_nebeneinander(self):
+        self.ader.teilung_setzen("bezeichnung", self.Zellenteilung(30, "Nst. 42"))
+        links, rechts = self._felder("Amt 1", "Nst. 42")
+        self.assertIsNotNone(rechts)
+        self.assertGreater(rechts.x, links.x + links.breite - 0.01)
+        self.assertAlmostEqual(rechts.y, links.y)
+
+    def test_der_anteil_bestimmt_die_breite(self):
+        self.ader.teilung_setzen("bezeichnung", self.Zellenteilung(25, "Nst. 42"))
+        links, rechts = self._felder("Amt 1", "Nst. 42")
+        gesamt = links.breite + rechts.breite
+        self.assertAlmostEqual(rechts.breite / (gesamt + 1.0), 0.25, places=2)
+
+    def test_zwischen_beiden_steht_kein_strich(self):
+        """Auf dem Blatt soll es aussehen wie eine Zelle."""
+        from verteilerly.layout import Linie
+
+        self.ader.teilung_setzen("bezeichnung", self.Zellenteilung(30, "Nst. 42"))
+        links, rechts = self._felder("Amt 1", "Nst. 42")
+        oben, unten = links.y, links.y + links.hoehe
+        senkrecht = [
+            e for e in leistenblatt(self.projekt, 1).elemente
+            if isinstance(e, Linie) and e.x1 == e.x2
+            and links.x < e.x1 < rechts.x
+            # Nur, was diese Zeile durchschneidet - die Spaltenstriche
+            # der Tabelle und das Schriftfeld gehen uns hier nichts an.
+            and min(e.y1, e.y2) < unten and max(e.y1, e.y2) > oben
+        ]
+        self.assertEqual(senkrecht, [])
+
+    def test_fuer_die_tabelle_stehen_beide_hintereinander(self):
+        from verteilerly.layout import zellentext
+
+        teilung = self.Zellenteilung(30, "Nst. 42")
+        self.assertEqual(zellentext("Amt 1", teilung), "Amt 1 Nst. 42")
+        from dataclasses import replace
+
+        self.assertEqual(
+            zellentext("Amt 1", replace(teilung, geteilt=False)), "Amt 1"
+        )
+
+
 class TestAufbauzeile(unittest.TestCase):
     """Das Deckblatt zählt Buchten und Leisten in der richtigen Zahlform."""
 

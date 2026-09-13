@@ -17,7 +17,16 @@ from PySide6.QtCore import (
     Qt,
     Signal,
 )
-from PySide6.QtGui import QColor, QFont, QIcon, QKeySequence, QPainter, QPen, QPixmap
+from PySide6.QtGui import (
+    QColor,
+    QFont,
+    QIcon,
+    QKeySequence,
+    QPainter,
+    QPalette,
+    QPen,
+    QPixmap,
+)
 from PySide6.QtWidgets import (
     QAbstractItemDelegate,
     QAbstractItemView,
@@ -26,6 +35,10 @@ from PySide6.QtWidgets import (
     QHeaderView,
     QLabel,
     QPushButton,
+    QLineEdit,
+    QSpinBox,
+    QStyle,
+    QStyleOptionViewItem,
     QStyledItemDelegate,
     QTableView,
     QToolButton,
@@ -35,8 +48,13 @@ from PySide6.QtWidgets import (
 
 from .. import schreibweisen
 from ..modell import (
+    ANTEIL_MAX,
+    ANTEIL_MIN,
+    ANTEIL_VORGABE,
     AUSRICHTUNGEN,
     LEERER_STIL,
+    TEILBARE_FELDER,
+    UNGETEILT,
     LINKS,
     MITTE,
     RECHTS,
@@ -44,6 +62,7 @@ from ..modell import (
     ModellFehler,
     Textstil,
     Verteiler,
+    Zellenteilung,
     adressen_lesen,
 )
 from ..schreibweisen import Schreibweise
@@ -61,6 +80,12 @@ SPALTE_BEMERKUNG = 6
 SPALTE_KABEL = 7
 
 RANGIERSPALTEN = (SPALTE_RANGIERUNG, SPALTE_RANGIERUNG_2)
+
+# Welche Spalten sich in zwei Beschriftungsfelder teilen lassen.
+TEILSPALTEN = {
+    SPALTE_BEZEICHNUNG: "bezeichnung",
+    SPALTE_BEMERKUNG: "bemerkung",
+}
 
 # Welche Tabellenspalte welches Feld auf dem Blatt gestaltet.
 # Beide Rangierfelder gehoeren zu derselben Zelle des Blattes - dort
@@ -203,6 +228,43 @@ class LeistenModell(QAbstractTableModel):
         self.dataChanged.emit(links, rechts)
         self.belegung_geaendert.emit()
         return True
+
+    # -- Geteilte Zellen -------------------------------------------
+
+    def teilfeld(self, spalte: int) -> str | None:
+        """Welches Feld sich in dieser Spalte teilen laesst - oder keines."""
+        return TEILSPALTEN.get(spalte)
+
+    def _ader_zu(self, index: QModelIndex):
+        if not index.isValid() or self._leiste is None:
+            return None
+        stift_nr, seite = self._stelle(index.row())
+        return self._leiste.stift(stift_nr).ader(seite)
+
+    def teilung(self, index: QModelIndex) -> Zellenteilung | None:
+        """Die Teilung dieser Zelle; None, wo sich nichts teilen laesst."""
+        feld = self.teilfeld(index.column())
+        ader = self._ader_zu(index)
+        if feld is None or ader is None:
+            return None
+        return ader.teilung(feld)
+
+    def teilung_setzen(self, index: QModelIndex, teilung: Zellenteilung) -> bool:
+        feld = self.teilfeld(index.column())
+        ader = self._ader_zu(index)
+        if feld is None or ader is None:
+            return False
+        ader.teilung_setzen(feld, teilung)
+        self.dataChanged.emit(index, index)
+        self.belegung_geaendert.emit()
+        return True
+
+    def zweittext_setzen(self, index: QModelIndex, text: str) -> bool:
+        """Was im rechten Feld einer geteilten Zelle steht."""
+        teilung = self.teilung(index)
+        if teilung is None:
+            return False
+        return self.teilung_setzen(index, replace(teilung, text=text.strip()))
 
     def headerData(self, abschnitt, ausrichtung, rolle=Qt.ItemDataRole.DisplayRole):
         if ausrichtung == Qt.Orientation.Horizontal:
@@ -475,28 +537,176 @@ def ausrichtungssymbol(art: str, farbe: str = "#000000") -> QIcon:
     return QIcon(bild)
 
 
-class EingabeDelegat(QStyledItemDelegate):
-    """Enter schliesst die Eingabe und geht eine Zeile tiefer.
+LUFT_ZWISCHEN_FELDERN = 4          # Bildpunkte, wie der Fingerbreit auf dem Blatt
 
-    Qt laesst die Eingabemarke sonst stehen, wo sie war. Wer eine Spalte
-    von oben nach unten ausfuellt, tippt dann jedes Mal zweimal: einmal
-    den Wert und einmal den Pfeil nach unten.
+
+def teilungssymbol(farbe: str = "#000000", anteil: int = ANTEIL_VORGABE) -> QIcon:
+    """Ein Kasten mit einem Strich darin - die geteilte Zelle."""
+    kante = 16
+    bild = QPixmap(kante, kante)
+    bild.fill(Qt.GlobalColor.transparent)
+    maler = QPainter(bild)
+    maler.setPen(QPen(QColor(farbe), 1))
+    rahmen = QRect(2, 4, kante - 5, kante - 9)
+    maler.drawRect(rahmen)
+    trenner = rahmen.right() - int(rahmen.width() * anteil / 100)
+    maler.setPen(QPen(QColor(farbe), 1, Qt.PenStyle.DotLine))
+    maler.drawLine(trenner, rahmen.top() + 1, trenner, rahmen.bottom() - 1)
+    maler.end()
+    return QIcon(bild)
+
+
+class EingabeDelegat(QStyledItemDelegate):
+    """Die Zelle zeichnen und bearbeiten.
+
+    Zweierlei steckt darin. Erstens: Enter schliesst die Eingabe und geht
+    eine Zeile tiefer - Qt laesst die Eingabemarke sonst stehen, wo sie
+    war, und wer eine Spalte von oben nach unten ausfuellt, tippt dann
+    jedes Mal zweimal.
+
+    Zweitens die geteilte Zelle: sie traegt zwei Beschriftungsfelder
+    nebeneinander. Gezeichnet werden beide Texte in einer Zelle,
+    bearbeitet wird in zwei Eingabefeldern. Der feine Strich dazwischen
+    steht nur hier - auf dem Blatt soll nicht zu sehen sein, dass es
+    zwei Felder sind.
     """
 
     weiter = Signal()
 
-    def eventFilter(self, editor, ereignis) -> bool:
-        if (
-            ereignis.type() == QEvent.Type.KeyPress
-            and ereignis.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter)
-            and not ereignis.modifiers() & Qt.KeyboardModifier.AltModifier
-        ):
-            self.commitData.emit(editor)
-            self.closeEditor.emit(
-                editor, QAbstractItemDelegate.EndEditHint.SubmitModelCache
+    # -- Zeichnen ----------------------------------------------------------
+
+    def _teilung(self, index) -> Zellenteilung | None:
+        modell = index.model()
+        teilung = modell.teilung(index) if hasattr(modell, "teilung") else None
+        return teilung if teilung is not None and teilung.geteilt else None
+
+    def _haelften(self, kasten: QRect, anteil: int) -> tuple[QRect, QRect]:
+        rechts_b = int(kasten.width() * anteil / 100)
+        links = QRect(
+            kasten.left(), kasten.top(),
+            kasten.width() - rechts_b - LUFT_ZWISCHEN_FELDERN, kasten.height(),
+        )
+        rechts = QRect(
+            kasten.right() - rechts_b, kasten.top(), rechts_b, kasten.height()
+        )
+        return links, rechts
+
+    def paint(self, maler, option, index) -> None:
+        teilung = self._teilung(index)
+        if teilung is None:
+            super().paint(maler, option, index)
+            return
+
+        lage = QStyleOptionViewItem(option)
+        self.initStyleOption(lage, index)
+        texte = (lage.text, teilung.text)
+        # Den Hintergrund samt Auswahl zeichnet der Stil, den Text nicht:
+        # den setzen wir selbst in die beiden Haelften.
+        lage.text = ""
+        stil = lage.widget.style() if lage.widget else None
+        if stil is not None:
+            stil.drawControl(
+                QStyle.ControlElement.CE_ItemViewItem, lage, maler, lage.widget
             )
-            self.weiter.emit()
-            return True
+
+        maler.save()
+        gewaehlt = bool(lage.state & QStyle.StateFlag.State_Selected)
+        maler.setPen(
+            lage.palette.color(
+                QPalette.ColorGroup.Normal,
+                QPalette.ColorRole.HighlightedText if gewaehlt
+                else QPalette.ColorRole.Text,
+            )
+        )
+        maler.setFont(lage.font)
+        innen = lage.rect.adjusted(4, 0, -4, 0)
+        links, rechts = self._haelften(innen, teilung.anteil)
+        flaggen = int(lage.displayAlignment) or int(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+        )
+        for kasten, text in zip((links, rechts), texte):
+            if text:
+                maler.drawText(
+                    kasten, flaggen,
+                    maler.fontMetrics().elidedText(
+                        str(text), Qt.TextElideMode.ElideRight, kasten.width()
+                    ),
+                )
+        # Nur im Editor: ein feiner Strich zeigt, dass hier zwei Felder
+        # sind. Auf dem Blatt steht dort nichts.
+        trenner = links.right() + LUFT_ZWISCHEN_FELDERN // 2
+        stift = QPen(maler.pen().color(), 1, Qt.PenStyle.DotLine)
+        stift.setColor(QColor(stift.color().red(), stift.color().green(),
+                              stift.color().blue(), 90))
+        maler.setPen(stift)
+        maler.drawLine(trenner, links.top() + 3, trenner, links.bottom() - 3)
+        maler.restore()
+
+    # -- Bearbeiten --------------------------------------------------------
+
+    def createEditor(self, eltern, option, index):
+        teilung = self._teilung(index)
+        if teilung is None:
+            return super().createEditor(eltern, option, index)
+
+        kasten = QWidget(eltern)
+        kasten.setAutoFillBackground(True)
+        aufbau = QHBoxLayout(kasten)
+        aufbau.setContentsMargins(0, 0, 0, 0)
+        aufbau.setSpacing(LUFT_ZWISCHEN_FELDERN)
+        kasten.felder = []
+        for anteil in (100 - teilung.anteil, teilung.anteil):
+            feld = QLineEdit(kasten)
+            feld.behaelter = kasten
+            feld.installEventFilter(self)
+            aufbau.addWidget(feld, anteil)
+            kasten.felder.append(feld)
+        kasten.setFocusProxy(kasten.felder[0])
+        return kasten
+
+    def setEditorData(self, editor, index) -> None:
+        felder = getattr(editor, "felder", None)
+        if felder is None:
+            super().setEditorData(editor, index)
+            return
+        teilung = index.model().teilung(index)
+        felder[0].setText(str(index.data(Qt.ItemDataRole.EditRole) or ""))
+        felder[1].setText(teilung.text if teilung else "")
+
+    def setModelData(self, editor, modell, index) -> None:
+        felder = getattr(editor, "felder", None)
+        if felder is None:
+            super().setModelData(editor, modell, index)
+            return
+        # Beide Texte vorher ablesen: das erste Schreiben meldet eine
+        # Aenderung, worauf die Ansicht den Editor neu fuellt - das zweite
+        # Feld stuende sonst wieder auf dem alten Wert.
+        links, rechts = felder[0].text(), felder[1].text()
+        modell.setData(index, links, Qt.ItemDataRole.EditRole)
+        modell.zweittext_setzen(index, rechts)
+
+    def eventFilter(self, editor, ereignis) -> bool:
+        if ereignis.type() == QEvent.Type.KeyPress:
+            felder = getattr(getattr(editor, "behaelter", None), "felder", None)
+            # Innerhalb einer geteilten Zelle springt Tab ins zweite Feld,
+            # statt gleich in die naechste Zelle zu gehen.
+            if felder and ereignis.key() == Qt.Key.Key_Tab and editor is felder[0]:
+                felder[1].setFocus()
+                return True
+            if felder and ereignis.key() == Qt.Key.Key_Backtab and editor is felder[1]:
+                felder[0].setFocus()
+                return True
+            if (
+                ereignis.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter)
+                and not ereignis.modifiers() & Qt.KeyboardModifier.AltModifier
+            ):
+                ziel = getattr(editor, "behaelter", editor)
+                self.commitData.emit(ziel)
+                self.closeEditor.emit(
+                    ziel, QAbstractItemDelegate.EndEditHint.SubmitModelCache
+                )
+                self.weiter.emit()
+                return True
         return super().eventFilter(editor, ereignis)
 
 
@@ -662,16 +872,38 @@ class LeistenAnsicht(QWidget):
                 lambda _an=False, was=schnitt: self._schnitt_umschalten(was)
             )
 
+        # Die geteilte Zelle: Knopf und der Anteil des rechten Feldes.
+        self.teilen = QToolButton()
+        self.teilen.setCheckable(True)
+        self.teilen.setAutoRaise(True)
+        self.teilen.setToolTip(
+            "Zelle in zwei Beschriftungsfelder teilen — auf dem Blatt ohne "
+            "Trennstrich"
+        )
+        self.teilen.clicked.connect(self._teilen_umschalten)
+
+        self.anteil = QSpinBox()
+        self.anteil.setRange(ANTEIL_MIN, ANTEIL_MAX)
+        self.anteil.setValue(ANTEIL_VORGABE)
+        self.anteil.setSuffix(" %")
+        self.anteil.setFixedWidth(66)
+        self.anteil.setToolTip("Wie breit das rechte Feld ist")
+        self.anteil.valueChanged.connect(self._anteil_gesetzt)
+
         self.textknoepfe = [
-            *self.ausrichtungsknoepfe.values(), self.fett, self.kursiv
+            *self.ausrichtungsknoepfe.values(), self.fett, self.kursiv,
+            self.teilen,
         ]
         self._symbole_auffrischen()
-        return self.textknoepfe
+        return [*self.textknoepfe, self.anteil]
 
     def _symbole_auffrischen(self) -> None:
         """Die gezeichneten Sinnbilder folgen dem Farbsatz."""
+        farbe = self.modell.farben.schrift
         for art, knopf in getattr(self, "ausrichtungsknoepfe", {}).items():
-            knopf.setIcon(ausrichtungssymbol(art, self.modell.farben.schrift))
+            knopf.setIcon(ausrichtungssymbol(art, farbe))
+        if hasattr(self, "teilen"):
+            self.teilen.setIcon(teilungssymbol(farbe))
 
     def _stilzelle(self):
         """Die gewaehlte Zelle, sofern sich dort etwas gestalten laesst."""
@@ -680,16 +912,55 @@ class LeistenAnsicht(QWidget):
             return None
         return index
 
+    def _teilzelle(self):
+        """Die gewaehlte Zelle, sofern sie sich teilen laesst."""
+        index = self.tabelle.currentIndex()
+        if not index.isValid() or self.modell.teilfeld(index.column()) is None:
+            return None
+        return index
+
     def _knoepfe_auffrischen(self) -> None:
         """Zeigt am Knopf, was in der gewaehlten Zelle gilt."""
         index = self._stilzelle()
         stil = self.modell.stil(index) if index is not None else None
-        for knopf in self.textknoepfe:
+        for knopf in (*self.ausrichtungsknoepfe.values(), self.fett, self.kursiv):
             knopf.setEnabled(stil is not None)
         for art, knopf in self.ausrichtungsknoepfe.items():
             knopf.setChecked(bool(stil) and stil.ausrichtung == art)
         self.fett.setChecked(bool(stil) and stil.fett)
         self.kursiv.setChecked(bool(stil) and stil.kursiv)
+
+        teilbar = self._teilzelle()
+        teilung = self.modell.teilung(teilbar) if teilbar is not None else None
+        self.teilen.setEnabled(teilung is not None)
+        self.teilen.setChecked(bool(teilung) and teilung.geteilt)
+        # Der Anteil laesst sich nur an einer geteilten Zelle einstellen.
+        self.anteil.setEnabled(bool(teilung) and teilung.geteilt)
+        if teilung is not None:
+            self.anteil.blockSignals(True)
+            self.anteil.setValue(teilung.anteil)
+            self.anteil.blockSignals(False)
+
+    def _teilen_umschalten(self) -> None:
+        index = self._teilzelle()
+        if index is None:
+            return
+        teilung = self.modell.teilung(index)
+        self.modell.teilung_setzen(
+            index,
+            replace(
+                teilung, geteilt=not teilung.geteilt, anteil=self.anteil.value()
+            ),
+        )
+        self._knoepfe_auffrischen()
+
+    def _anteil_gesetzt(self, wert: int) -> None:
+        index = self._teilzelle()
+        if index is None:
+            return
+        teilung = self.modell.teilung(index)
+        if teilung.geteilt and teilung.anteil != wert:
+            self.modell.teilung_setzen(index, replace(teilung, anteil=wert))
 
     def _ausrichten(self, art: str) -> None:
         index = self._stilzelle()
