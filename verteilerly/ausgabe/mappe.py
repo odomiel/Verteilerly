@@ -221,7 +221,9 @@ def _belegung(mappe, projekt: Projekt, vorlage: Blattvorlage, zeug) -> object:
             zeile += 1
         zeile += 1
 
-    _seiteneinrichtung(blatt, quer=True)
+    # Wie auf dem gezeichneten Blatt: eine Bucht steht hochkant, ab zwei
+    # quer.
+    _seiteneinrichtung(blatt, quer=len(v.buchten) > 1)
     return blatt
 
 

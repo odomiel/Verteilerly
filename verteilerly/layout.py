@@ -44,6 +44,10 @@ LINIE_FEIN = "#B4B4B4"
 FUELLUNG_KOPF = "#E8E8E8"
 FUELLUNG_KABEL = "#EFEFEF"
 
+# Wie breit eine DA-Zelle der Verteilerbelegung hoechstens werden darf,
+# gemessen an ihrer Hoehe: breiter gezogen wird sie zum Balken.
+BREITE_HOECHSTENS = 2.0
+
 # Wie viel der linken Schriftfeldhaelfte die Beschriftungen bekommen
 # (Bauart "beispiel"). "Erstellt", "Geprueft" und "Verteiler Nr." sind
 # kurz; was darueber hinausgeht, fehlt den Werten daneben - ein Name wie
@@ -580,17 +584,23 @@ def verteilerbelegung(
 ) -> Blatt:
     """Jede Leiste ein Kasten aus DA-Zellen, Kabel als Block.
 
-    Querformat, weil zwei Buchten im Hochformat nicht nebeneinander
-    passen. Die Zellen werden so weit vergroessert, wie das Blatt
-    es hergibt - ein 40-DA-Verteiler soll die Seite nicht als Briefmarke
-    in der Ecke fuellen.
+    **Eine** Bucht steht hochkant: sie ist schmal und hoch, im Querformat
+    bliebe die halbe Seite leer. Ab zwei Buchten quer, weil zwei
+    nebeneinander im Hochformat nicht passen.
+
+    Die Zellen werden so weit vergroessert, wie das Blatt es hergibt - ein
+    40-DA-Verteiler soll die Seite nicht als Briefmarke in der Ecke
+    fuellen -, und was dann noch uebrig ist, wird als Luft verteilt:
+    zwischen die Buchten in der Breite, zwischen die Leisten in der Hoehe.
+    Sonst draengte sich alles oben links zusammen.
     """
     v = projekt.verteiler
     buchten = list(v.buchten if buchten is None else buchten)
     rand = vorlage.rand
 
     titel = buchtnamen(buchten) if benennen else "Verteilerbelegung"
-    blatt = Blatt(*A4_QUER, titel=titel)
+    hochkant = len(buchten) <= 1
+    blatt = Blatt(*(A4_HOCH if hochkant else A4_QUER), titel=titel)
     ueberschrift = f"Verteilerbelegung — {titel}" if benennen else "Verteilerbelegung"
     blatt.text(rand, rand, 170, 8, ueberschrift, vorlage.schrift_mittel, LINKS, True)
 
@@ -599,23 +609,55 @@ def verteilerbelegung(
     platz_h = blatt.hoehe - rand - vorlage.schriftfeld_hoehe - 6 - oben
     faktor = _belegungsfaktor(buchten, platz_b, platz_h, vorlage)
 
-    zelle_b = vorlage.zelle_breite * faktor
     zelle_h = vorlage.zelle_hoehe * faktor
+    zelle_b = vorlage.zelle_breite * faktor
     # Die Beschriftung waechst nur begrenzt mit - sonst frisst sie die Zellen.
     label_b = vorlage.leistenlabel * min(faktor, 1.5)
     luft_l = vorlage.abstand_leisten * faktor
     luft_r = vorlage.abstand_buchten * faktor
     schrift = vorlage.schrift_klein if faktor < 1.4 else vorlage.schrift_normal
 
+    # Bleibt in der Breite etwas uebrig, weil die Hoehe das Mass setzt,
+    # duerfen die Zellen breiter werden - bis zum Doppelten. Eine etwas
+    # breitere Zelle faellt kaum auf, ein leeres Drittel Blatt schon.
+    spalten = sum(max((l.da_anzahl for l in b.leisten), default=0) for b in buchten)
+    if spalten:
+        passend = (
+            platz_b - label_b * len(buchten) - luft_r * (len(buchten) - 1)
+        ) / spalten
+        zelle_b = max(zelle_b, min(passend, zelle_b * BREITE_HOECHSTENS))
+
+    # Was nach dem Vergroessern uebrig bleibt, wird verteilt statt am
+    # rechten und unteren Rand liegen zu lassen.
+    breiten = [
+        label_b + max((l.da_anzahl for l in b.leisten), default=0) * zelle_b
+        for b in buchten
+    ]
+    # Der Rest ist, was nach den Buchten und der bisherigen Luft bleibt.
+    luecken_b = len(buchten) - 1
+    luft_r = _luft_verteilen(
+        platz_b - sum(breiten) - luft_r * luecken_b, luecken_b, luft_r, platz_b
+    )
+    zeilen = max((len(b.leisten) for b in buchten), default=0)
+    luecken_h = zeilen - 1
+    # In der Hoehe hoechstens eine Zellenhoehe Luft je Leiste: weiter
+    # auseinandergezogen sieht die Bucht aus wie eine Leiter.
+    luft_l = _luft_verteilen(
+        platz_h - zeilen * zelle_h - luft_l * luecken_h, luecken_h, luft_l, zelle_h
+    )
+
+    gesamt_b = sum(breiten) + luft_r * (len(buchten) - 1)
+    gesamt_h = zeilen * zelle_h + luft_l * max(zeilen - 1, 0)
     kaesten: dict[int, tuple[float, float, int]] = {}
-    x = rand
-    for bucht in buchten:
-        breiteste = max((l.da_anzahl for l in bucht.leisten), default=0)
-        y = oben
+    # Was jetzt noch uebrig ist, liegt als Rand aussen herum.
+    x = rand + max(platz_b - gesamt_b, 0) / 2
+    oben_mitte = oben + max(platz_h - gesamt_h, 0) / 2
+    for bucht, breite in zip(buchten, breiten):
+        y = oben_mitte
         for leiste in bucht.leisten:
             kaesten[leiste.nummer] = (x + label_b, y, leiste.da_anzahl)
             y += zelle_h + luft_l
-        x += label_b + breiteste * zelle_b + luft_r
+        x += breite + luft_r
 
     # Kein Raster in der Leiste: gezeichnet werden nur die Kabel. Was frei
     # ist - links, rechts oder beides -, bleibt eine durchgehende Flaeche,
@@ -654,6 +696,19 @@ def verteilerbelegung(
 
     schriftfeld(blatt, projekt, None, vorlage, "belegung")
     return blatt
+
+
+def _luft_verteilen(
+    rest: float, luecken: int, grundluft: float, hoechstens: float
+) -> float:
+    """Verteilt uebrigen Platz auf die Luecken - bis zu einem Mass.
+
+    Ohne Luecke gibt es nichts zu verteilen; dann bleibt der Rest als
+    Rand aussen herum, und der Aufrufer setzt das Ganze in die Mitte.
+    """
+    if rest <= 0 or luecken < 1:
+        return grundluft
+    return min(grundluft + rest / luecken, hoechstens)
 
 
 def _belegungsfaktor(

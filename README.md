@@ -256,6 +256,14 @@ Verteiler, Aufbau, Kennzahlen und die Projektdaten stehen dort als Liste.
 Ein zweiter Kasten am Blattfuß hätte nur wiederholt, was darüber schon
 steht.
 
+Die **Verteilerbelegung** richtet sich nach dem, was auf ihr steht: **eine
+Bucht steht hochkant** — sie ist schmal und hoch, quer bliebe die halbe Seite
+leer —, **ab zwei Buchten quer**. Das Blatt wird dabei ausgefüllt: die Kästen
+wachsen, so weit die Seite es hergibt, bei vielen Leisten dürfen die Zellen
+zusätzlich in die Breite wachsen (bis zum Doppelten ihrer Höhe), und was übrig
+bleibt, wird als Luft zwischen die Buchten und die Leisten verteilt — höchstens
+eine Zellenhöhe je Leiste, sonst wird die Bucht zur Leiter.
+
 Die Blattfolge ist Deckblatt, Verteilerbelegung, dann je Leiste ein Blatt.
 Bis zwei Buchten passt die Verteilerbelegung auf ein Blatt; ab der dritten
 Bucht bekommt je zwei Buchten ein eigenes Blatt, benannt nach dem, was

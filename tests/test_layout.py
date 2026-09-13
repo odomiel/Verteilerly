@@ -37,8 +37,59 @@ class TestBlattfolge(unittest.TestCase):
                 folge = blaetter(Projekt(verteiler=v))
                 self.assertEqual(len(folge), erwartet)
                 self.assertEqual(folge[0].titel, "Deckblatt")
-                self.assertTrue(folge[1].quer)   # die Verteilerbelegung
+                # Eine Bucht steht hochkant, ab zwei quer.
+                self.assertEqual(folge[1].quer, buchten > 1)
                 self.assertEqual(folge[-1].titel, f"Leiste {buchten * leisten}")
+
+    def test_die_belegung_fuellt_das_blatt(self):
+        """Kein leerer Streifen am rechten Rand."""
+        from verteilerly.layout import Rechteck
+
+        for buchten, leisten in ((1, 4), (2, 4), (2, 10), (2, 2)):
+            with self.subTest(buchten=buchten, leisten=leisten):
+                projekt = Projekt(
+                    verteiler=Verteiler.aus_geometrie(buchten, leisten, 10)
+                )
+                blatt = verteilerbelegungen(projekt)[0]
+                grenze = (
+                    blatt.hoehe - STANDARD.rand - STANDARD.schriftfeld_hoehe - 6
+                )
+                kaesten = [
+                    e for e in blatt.elemente
+                    if isinstance(e, Rechteck) and e.y + e.hoehe <= grenze + 0.1
+                ]
+                rechts = max(e.x + e.breite for e in kaesten)
+                frei = blatt.breite - STANDARD.rand - rechts
+                self.assertLess(frei, 10, "zu viel Luft am rechten Rand")
+                self.assertGreaterEqual(frei, -0.01, "über den Rand hinaus")
+
+    def test_die_buchten_stehen_nicht_uebereinander(self):
+        """Verteilt wird in die Breite, nicht gestapelt."""
+        from verteilerly.layout import Rechteck
+
+        projekt = Projekt(verteiler=Verteiler.aus_geometrie(2, 4, 10))
+        blatt = verteilerbelegungen(projekt)[0]
+        oben = min(
+            e.y for e in blatt.elemente
+            if isinstance(e, Rechteck) and e.hoehe < 30
+        )
+        erste_zeile = [
+            e for e in blatt.elemente
+            if isinstance(e, Rechteck) and abs(e.y - oben) < 0.1
+        ]
+        self.assertEqual(len(erste_zeile), 2, "je Bucht ein Kasten nebeneinander")
+
+    def test_eine_bucht_steht_hochkant(self):
+        """Schmal und hoch - quer bliebe die halbe Seite leer."""
+        eine = verteilerbelegungen(
+            Projekt(verteiler=Verteiler.aus_geometrie(1, 4, 10))
+        )[0]
+        zwei = verteilerbelegungen(
+            Projekt(verteiler=Verteiler.aus_geometrie(2, 4, 10))
+        )[0]
+        self.assertFalse(eine.quer)
+        self.assertGreater(eine.hoehe, eine.breite)
+        self.assertTrue(zwei.quer)
 
     def test_ab_drei_buchten_eine_bucht_je_blatt(self):
         """Mehr als zwei Buchten nebeneinander waeren nur noch gequetscht."""

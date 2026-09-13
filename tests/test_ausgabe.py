@@ -87,9 +87,20 @@ class TestPdf(unittest.TestCase):
         seiten = PdfReader(str(self.ziel)).pages
         masse = [(float(s.mediabox.width), float(s.mediabox.height)) for s in seiten]
         self.assertLess(masse[0][0], masse[0][1])   # Deckblatt hoch
-        self.assertGreater(masse[1][0], masse[1][1])  # Verteilerbelegung quer
+        # Der Probeverteiler hat eine Bucht - die Belegung steht hochkant.
+        self.assertLess(masse[1][0], masse[1][1])
         self.assertLess(masse[2][0], masse[2][1])   # Leiste 1 hoch
         self.assertAlmostEqual(masse[0][0], 210 * PT_JE_MM, places=3)
+
+    def test_zwei_buchten_legen_die_belegung_quer(self):
+        """Zwei Buchten passen im Hochformat nicht nebeneinander."""
+        from pypdf import PdfReader
+
+        projekt = _projekt()
+        projekt.verteiler = Verteiler.aus_geometrie(2, 4, 10, name="Breit")
+        pdf_schreiben(projekt, self.ziel)
+        seite = PdfReader(str(self.ziel)).pages[1]
+        self.assertGreater(float(seite.mediabox.width), float(seite.mediabox.height))
 
     def test_inhalte_stehen_im_pdf(self):
         pdf_schreiben(_projekt(), self.ziel)

@@ -129,8 +129,11 @@ class TestBlattbild(unittest.TestCase):
         self.assertEqual(blatt.page_setup.orientation, "portrait")
         self.assertEqual(str(blatt.page_setup.paperSize), str(blatt.PAPERSIZE_A4))
         self.assertEqual(blatt.page_setup.fitToWidth, 1)
-        # Die Verteilerbelegung liegt quer - wie im PDF.
-        self.assertEqual(mappe["Verteilerbelegung"].page_setup.orientation, "landscape")
+        # Die Verteilerbelegung folgt dem gezeichneten Blatt: eine Bucht
+        # hochkant, ab zwei quer.
+        self.assertEqual(
+            mappe["Verteilerbelegung"].page_setup.orientation, "portrait"
+        )
 
     def test_belegung_zeigt_die_kabel_als_block(self):
         blatt = self._mappe()["Verteilerbelegung"]
