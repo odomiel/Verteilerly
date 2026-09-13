@@ -880,6 +880,56 @@ class TestMenuezustaende(unittest.TestCase):
         self.assertTrue(kabel.gekuerzt)
         self.assertIn(kabel, f.projekt.verteiler.kabel)
 
+    def test_bearbeiten_zieht_die_farben_nach(self):
+        """Die Farbfolge hängt am Kabel, also folgt sie ihm."""
+        from verteilerly.gui.dialoge import KabelDialog
+
+        f = self.fenster
+        verteiler = Verteiler.aus_geometrie(1, 4, 10, name="Probe")
+        kabel = verteiler.kabel_anlegen(
+            "Leitung", 1, 1, 10, kabeltyp="jystyv", da_gesamt=10
+        )
+        f._projekt_setzen(Projekt(verteiler=verteiler), None)
+        from verteilerly.farbcodes import farben_eintragen
+
+        farben_eintragen(verteiler, kabel, f.kabeltypen)
+        self.assertEqual(verteiler.leiste(1).stift(9).a.farbe, "rt")
+        verteiler.leiste(1).stift(1).a.farbe = "türkis"      # von Hand
+
+        def groesser(dialog):
+            dialog.kabel_da.setValue(20)
+            return KabelDialog.DialogCode.Accepted
+
+        with mock.patch.object(KabelDialog, "exec", groesser):
+            f.kabel_bearbeiten(kabel)
+
+        self.assertEqual(verteiler.leiste(1).stift(9).a.farbe, "ws")
+        self.assertEqual(verteiler.leiste(1).stift(1).a.farbe, "türkis")
+        self.assertIn("nachgezogen", f.statusBar().currentMessage())
+
+    def test_abnehmen_nimmt_die_farben_mit(self):
+        """Sonst stünde die alte Folge noch da, wenn die nächste aufliegt."""
+        from verteilerly.gui.dialoge import KabelDialog
+        from verteilerly.farbcodes import farben_eintragen
+
+        f = self.fenster
+        verteiler = Verteiler.aus_geometrie(1, 4, 10, name="Probe")
+        kabel = verteiler.kabel_anlegen("Leitung", 1, 1, 4, kabeltyp="jystyv")
+        f._projekt_setzen(Projekt(verteiler=verteiler), None)
+        farben_eintragen(verteiler, kabel, f.kabeltypen)
+        verteiler.leiste(1).stift(2).a.farbe = "türkis"      # von Hand
+
+        def entfernen(dialog):
+            dialog._entfernen()
+            return KabelDialog.DialogCode.Accepted
+
+        with mock.patch.object(KabelDialog, "exec", entfernen):
+            f.kabel_bearbeiten(kabel)
+
+        self.assertEqual(verteiler.leiste(1).stift(1).a.farbe, "")
+        self.assertEqual(verteiler.leiste(1).stift(2).a.farbe, "türkis")
+        self.assertIn("mit entfernt", f.statusBar().currentMessage())
+
     def test_bearbeiten_kann_das_kabel_abnehmen(self):
         from verteilerly.gui.dialoge import KabelDialog
 

@@ -553,9 +553,11 @@ class KabelDialog(QDialog):
         self.kuerzungshinweis.setWordWrap(True)
         self.auflegen_da.valueChanged.connect(self._kuerzung_zeigen)
 
-        self.farben_neu = QCheckBox("Adernfarben nach diesem Kabeltyp neu eintragen")
+        self.farben_neu = QCheckBox("Auch von Hand geänderte Adernfarben ersetzen")
         self.farben_neu.setToolTip(
-            "Überschreibt auch von Hand gesetzte Farben dieses Kabels"
+            "Die Farben folgen Kabeltyp und Größe ohnehin — solange sie "
+            "noch so dastehen, wie die Automatik sie gesetzt hat. Mit "
+            "diesem Haken werden auch von Hand geänderte überschrieben."
         )
 
         form = QFormLayout()

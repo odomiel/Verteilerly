@@ -22,7 +22,7 @@ from .. import einstellungen as einstellungsspeicher
 from .. import bestand, paket, pfade, projektdatei, schreibweisen
 from ..ausgabe import AusgabeFehler, csv_schreiben, pdf_schreiben, xlsx_schreiben
 from ..blattvorlagen import Blattvorlagen
-from ..farbcodes import Kabeltypen, farben_eintragen
+from ..farbcodes import Kabeltypen, farben_eintragen, farben_loeschen, farbplan
 from ..modell import (
     BRIEFKOPF_FELDER,
     Kabelabschnitt,
@@ -893,21 +893,24 @@ class Hauptfenster(QMainWindow):
             self._kabel_abnehmen(kabel)
             return
 
+        # Der bisherige Farbplan ist der Massstab: was noch genau so
+        # dasteht, hat die Automatik gesetzt und darf ihr folgen.
+        vorher = farbplan(self.projekt.verteiler, kabel, self.kabeltypen)
+
         kabel.beschriftung = angaben["beschriftung"]
         kabel.kabeltyp = angaben["kabeltyp"]
         kabel.da_gesamt = max(angaben["da_gesamt"], kabel.da_aufgelegt)
 
-        gefuellt = 0
-        if angaben["farben_neu"]:
-            gefuellt = farben_eintragen(
-                self.projekt.verteiler, kabel, self.kabeltypen, ueberschreiben=True
-            )
+        gefuellt = farben_eintragen(
+            self.projekt.verteiler, kabel, self.kabeltypen,
+            ueberschreiben=angaben["farben_neu"], statt=vorher,
+        )
         self._belegung_geaendert()
         self.leistenansicht.aktualisieren()
 
         meldung = f"Kabel geändert: {kabel.beschriftung or 'ohne Beschriftung'}"
         if gefuellt:
-            meldung += f", {gefuellt} Adernfarben neu eingetragen"
+            meldung += f", {gefuellt} Adernfarben nachgezogen"
             meldung += self._lagenhinweis(kabel)
         self.statusBar().showMessage(meldung, 8000)
 
@@ -920,7 +923,8 @@ class Hauptfenster(QMainWindow):
             self,
             "Kabel entfernen?",
             f"Das Kabel „{kabel.beschriftung}“ von der Leiste nehmen?\n"
-            "Die Adernfarben bleiben stehen.",
+            "Seine Adernfarben werden mit entfernt; von Hand eingetragene "
+            "bleiben stehen.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
@@ -928,13 +932,18 @@ class Hauptfenster(QMainWindow):
             self._kabel_abnehmen(kabel)
 
     def _kabel_abnehmen(self, kabel) -> None:
+        # Die Farbfolge gehoert zum Kabel: ist es weg, gehoert sie nicht
+        # mehr in die Leiste - sonst stuende sie noch da, wenn die
+        # naechste Leitung mit einer anderen Folge aufliegt.
+        geleert = farben_loeschen(self.projekt.verteiler, kabel, self.kabeltypen)
         self.projekt.verteiler.kabel_entfernen(kabel)
         self._belegung_geaendert()
         self.leistenansicht.aktualisieren()
         self.aktionen_auffrischen()
-        self.statusBar().showMessage(
-            f"Kabel entfernt: {kabel.beschriftung or 'ohne Beschriftung'}", 8000
-        )
+        meldung = f"Kabel entfernt: {kabel.beschriftung or 'ohne Beschriftung'}"
+        if geleert:
+            meldung += f", {geleert} Adernfarben mit entfernt"
+        self.statusBar().showMessage(meldung, 8000)
 
     # -- Sonstiges ---------------------------------------------------------
 

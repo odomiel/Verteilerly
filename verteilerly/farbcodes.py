@@ -167,11 +167,33 @@ class Kabeltypen:
             ) from None
 
 
+def farbplan(
+    verteiler: Verteiler, kabel: Kabel, kabeltypen: Kabeltypen
+) -> dict[tuple[int, int, str], str]:
+    """Welche Farbe die Automatik fuer jede Ader dieses Kabels vorsieht.
+
+    Der Plan ist der Massstab fuer alles Weitere: steht in einer Ader
+    genau das, was hier steht, hat es die Automatik gesetzt und darf von
+    ihr auch wieder geaendert werden. Steht etwas anderes, war es der
+    Anwender - und das bleibt.
+    """
+    if not kabel.kabeltyp:
+        return {}
+    typ = kabeltypen.holen(kabel.kabeltyp)
+    plan: dict[tuple[int, int, str], str] = {}
+    for kabel_da, leiste_nr, leisten_da in kabel.positionen():
+        farbe_a, farbe_b = typ.farben(kabel_da, kabel.da_gesamt)
+        plan[(leiste_nr, leisten_da, "a")] = farbe_a
+        plan[(leiste_nr, leisten_da, "b")] = farbe_b
+    return plan
+
+
 def farben_eintragen(
     verteiler: Verteiler,
     kabel: Kabel,
     kabeltypen: Kabeltypen,
     ueberschreiben: bool = False,
+    statt: dict[tuple[int, int, str], str] | None = None,
 ) -> int:
     """Traegt die Adernfarben eines Kabels in die Leiste ein.
 
@@ -179,20 +201,48 @@ def farben_eintragen(
     gesetzt ist - die Automatik ist Vorschlag, nicht Sperre.
     Gibt zurueck, wie viele Adern gefuellt wurden.
 
+    ``statt`` ist der Farbplan von vorher: was noch genau so dasteht, hat
+    die Automatik gesetzt und wird ersetzt. So folgen die Farben einem
+    geaenderten Kabeltyp oder einer geaenderten Groesse, ohne dass von
+    Hand Eingetragenes verlorenginge.
+
     Ohne Kabeltyp passiert nichts: dann bleibt die Farbspalte leer und
     wird von Hand ausgefuellt.
     """
     if not kabel.kabeltyp:
         return 0
 
-    typ = kabeltypen.holen(kabel.kabeltyp)
+    vorher = statt or {}
     gefuellt = 0
-    for kabel_da, leiste_nr, leisten_da in kabel.positionen():
-        farbe_a, farbe_b = typ.farben(kabel_da, kabel.da_gesamt)
-        stift = verteiler.leiste(leiste_nr).stift(leisten_da)
-        for ader, farbe in ((stift.a, farbe_a), (stift.b, farbe_b)):
-            if ader.farbe and not ueberschreiben:
-                continue
-            ader.farbe = farbe
-            gefuellt += 1
+    for (leiste_nr, leisten_da, seite), farbe in farbplan(
+        verteiler, kabel, kabeltypen
+    ).items():
+        ader = verteiler.leiste(leiste_nr).stift(leisten_da).ader(seite)
+        von_der_automatik = ader.farbe == vorher.get((leiste_nr, leisten_da, seite))
+        if ader.farbe and not ueberschreiben and not von_der_automatik:
+            continue
+        if ader.farbe == farbe:
+            continue
+        ader.farbe = farbe
+        gefuellt += 1
     return gefuellt
+
+
+def farben_loeschen(
+    verteiler: Verteiler, kabel: Kabel, kabeltypen: Kabeltypen
+) -> int:
+    """Nimmt die Farben wieder heraus, die dieses Kabel gesetzt hat.
+
+    Wird ein Kabel abgenommen, gehoert seine Farbfolge nicht mehr dorthin:
+    die naechste Leitung hat eine eigene. Was jemand von Hand eingetragen
+    hat, bleibt stehen - dafuer ist der Farbplan der Massstab.
+    """
+    geleert = 0
+    for (leiste_nr, leisten_da, seite), farbe in farbplan(
+        verteiler, kabel, kabeltypen
+    ).items():
+        ader = verteiler.leiste(leiste_nr).stift(leisten_da).ader(seite)
+        if ader.farbe and ader.farbe == farbe:
+            ader.farbe = ""
+            geleert += 1
+    return geleert

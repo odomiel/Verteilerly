@@ -171,8 +171,10 @@ Knopf zum Entfernen. Beim Auflegen folgt *Davon auflegen* der Kabelgröße —
 ganz aufgelegt ist der Regelfall, gekürzt wird danach von Hand.
 Leiste, Startpunkt und Zahl der aufgelegten
 Doppeladern stehen dort fest — wer die Lage ändern will, nimmt das Kabel
-ab und legt es neu auf. Ein neuer Kabeltyp färbt die Adern nur auf
-Verlangen um. Die Beschriftung ist außerdem direkt in der Kabelspalte der
+ab und legt es neu auf. Die Farbfolge gehört dem Kabel: ändert sich Kabeltyp
+oder Größe, ziehen die Farben nach, und beim Abnehmen gehen sie mit — Maßstab
+ist, was die Automatik gesetzt hat. Von Hand Eingetragenes bleibt stehen, nur
+ein ausdrücklicher Haken überschreibt auch das. Die Beschriftung ist außerdem direkt in der Kabelspalte der
 Leistenansicht überschreibbar, dort, wo sie steht; passt ein Kabel nicht mehr auf die
 Leiste, fragt der Überlaufdialog nach der Fortsetzung. Rangierungen werden
 in zwei Felder getippt — je Rangierung eines, mit einer Überschrift

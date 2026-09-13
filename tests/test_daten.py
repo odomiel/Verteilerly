@@ -8,7 +8,13 @@ import pathlib
 import tempfile
 import unittest
 
-from verteilerly.farbcodes import KabeltypFehler, Kabeltypen, farben_eintragen
+from verteilerly.farbcodes import (
+    KabeltypFehler,
+    Kabeltypen,
+    farben_eintragen,
+    farben_loeschen,
+    farbplan,
+)
 from verteilerly.modell import Verteiler
 from verteilerly.vorlagen import (
     Vorlage,
@@ -289,6 +295,90 @@ class TestFarbenEintragen(unittest.TestCase):
         self.assertEqual(self.v.leiste(1).stift(10).b.farbe, "ge")
         self.assertEqual(self.v.leiste(2).stift(1).b.farbe, "gn")
         self.assertEqual(self.v.leiste(2).stift(4).b.farbe, "bl")
+
+
+class TestFarbenFolgenDemKabel(unittest.TestCase):
+    """Was die Automatik gesetzt hat, darf sie auch wieder ändern."""
+
+    def setUp(self):
+        self.typen = Kabeltypen.laden(DATEN / "kabeltypen")
+        self.v = Verteiler.aus_geometrie(1, 4, 10)
+        self.kabel = self.v.kabel_anlegen("4DA", 1, 1, 4, kabeltyp="jystyv")
+        farben_eintragen(self.v, self.kabel, self.typen)
+
+    def _farben(self, bis=4):
+        leiste = self.v.leiste(1)
+        return [
+            (leiste.stift(n).a.farbe, leiste.stift(n).b.farbe)
+            for n in range(1, bis + 1)
+        ]
+
+    def test_abnehmen_nimmt_die_farben_mit(self):
+        """Sonst stünde die alte Folge noch da, wenn die nächste aufliegt."""
+        self.assertEqual(farben_loeschen(self.v, self.kabel, self.typen), 8)
+        self.assertEqual(self._farben(), [("", "")] * 4)
+
+    def test_von_hand_eingetragenes_bleibt_beim_abnehmen(self):
+        self.v.leiste(1).stift(2).a.farbe = "türkis"
+        farben_loeschen(self.v, self.kabel, self.typen)
+        self.assertEqual(self.v.leiste(1).stift(2).a.farbe, "türkis")
+        self.assertEqual(self.v.leiste(1).stift(2).b.farbe, "")
+
+    def test_ein_neues_kabel_faerbt_die_freien_adern(self):
+        farben_loeschen(self.v, self.kabel, self.typen)
+        self.v.kabel_entfernen(self.kabel)
+        neu = self.v.kabel_anlegen("neu", 1, 1, 4, kabeltyp="fernmeldekabel")
+        farben_eintragen(self.v, neu, self.typen)
+        self.assertNotEqual(self._farben()[1], ("ws", "ge"))
+        self.assertTrue(all(a and b for a, b in self._farben()))
+
+    def test_geaenderte_groesse_zieht_die_farben_nach(self):
+        """Wo eine neue Lage beginnt, hängt an der Gesamtgröße."""
+        lang = self.v.kabel_anlegen("10DA", 2, 1, 10, kabeltyp="jystyv", da_gesamt=10)
+        farben_eintragen(self.v, lang, self.typen)
+        # Bei 10 DA beginnt mit der neunten Doppelader die zweite Lage.
+        self.assertEqual(self.v.leiste(2).stift(9).a.farbe, "rt")
+
+        vorher = farbplan(self.v, lang, self.typen)
+        lang.da_gesamt = 20
+        gefuellt = farben_eintragen(self.v, lang, self.typen, statt=vorher)
+        self.assertEqual(self.v.leiste(2).stift(9).a.farbe, "ws")
+        self.assertTrue(gefuellt)
+
+    def test_geaenderter_kabeltyp_zieht_die_farben_nach(self):
+        vorher = farbplan(self.v, self.kabel, self.typen)
+        self.kabel.kabeltyp = "din47100"
+        farben_eintragen(self.v, self.kabel, self.typen, statt=vorher)
+        self.assertNotEqual(self._farben()[0], ("rt", "bl"))
+
+    def test_dabei_bleibt_von_hand_eingetragenes_stehen(self):
+        """Die Automatik ist Vorschlag, nicht Sperre."""
+        self.v.leiste(1).stift(1).a.farbe = "türkis"
+        vorher = farbplan(self.v, self.kabel, self.typen)
+        self.kabel.kabeltyp = "din47100"
+        farben_eintragen(self.v, self.kabel, self.typen, statt=vorher)
+        self.assertEqual(self.v.leiste(1).stift(1).a.farbe, "türkis")
+
+    def test_mit_ueberschreiben_geht_auch_das(self):
+        self.v.leiste(1).stift(1).a.farbe = "türkis"
+        vorher = farbplan(self.v, self.kabel, self.typen)
+        self.kabel.kabeltyp = "din47100"
+        farben_eintragen(
+            self.v, self.kabel, self.typen, ueberschreiben=True, statt=vorher
+        )
+        self.assertNotEqual(self.v.leiste(1).stift(1).a.farbe, "türkis")
+
+    def test_ohne_aenderung_wird_nichts_gezaehlt(self):
+        vorher = farbplan(self.v, self.kabel, self.typen)
+        self.assertEqual(
+            farben_eintragen(self.v, self.kabel, self.typen, statt=vorher), 0
+        )
+
+    def test_ohne_kabeltyp_gibt_es_nichts_zu_loeschen(self):
+        ohne = self.v.kabel_anlegen("ohne Typ", 2, 1, 4)
+        self.v.leiste(2).stift(1).a.farbe = "vi"
+        self.assertEqual(farben_loeschen(self.v, ohne, self.typen), 0)
+        self.assertEqual(self.v.leiste(2).stift(1).a.farbe, "vi")
 
 
 if __name__ == "__main__":
