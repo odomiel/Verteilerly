@@ -353,9 +353,10 @@ Dateien, Menüs mit Tastenkürzeln. Sie liegt als HTML in
 `daten/hilfe/dokumentation.html`, wird über dieselbe Suchreihenfolge gefunden
 wie die übrigen mitgelieferten Dateien und **nicht** in den Arbeitsordner
 ausgelegt — sie gehört zum Programm. Eigene Farben bringt sie nicht mit, damit
-sie im dunklen Erscheinungsbild lesbar bleibt. `tests/test_hilfe.py` vergleicht
-die Einträge der Menüleiste mit dem Text: was im Menü steht, muss dort erklärt
-sein.
+sie im dunklen Erscheinungsbild lesbar bleibt. `tests/test_hilfe.py` hält sie in
+Schritt: was im Menü steht, muss dort erklärt sein, und **die gedruckte
+Kürzeltabelle wird gegen die Menüs geprüft** — ein Kürzel, das nichts auslöst,
+wäre schlimmer als keines.
 
 *Hilfe ▸ Über Verteilerly* führt jeden Baustein mit Fassung, Lizenz und
 Aufgabe auf — Python, PySide6, Qt, ReportLab, openpyxl, PyYAML —, dazu

@@ -22,6 +22,11 @@ except ImportError:                              # pragma: no cover
 ANWENDUNG = QApplication.instance() or QApplication([]) if QApplication else None
 
 
+def _sauber(text: str) -> str:
+    """Ein Menüeintrag ohne Merktaste und Auslassungspunkte."""
+    return text.replace("&", "").replace("…", "").strip()
+
+
 def _klartext(html: str) -> str:
     ohne = re.sub(r"<[^>]+>", " ", html)
     return re.sub(r"\s+", " ", ohne.replace("&nbsp;", " "))
@@ -103,6 +108,53 @@ class TestGegenDieMenues(unittest.TestCase):
     def test_jeder_menueeintrag_steht_im_text(self):
         fehlend = [name for name in self._eintraege() if name not in self.text]
         self.assertEqual(fehlend, [])
+
+    def test_die_kuerzeltabelle_stimmt_mit_den_menues_ueberein(self):
+        """Ein gedrucktes Kürzel, das nichts auslöst, ist schlimmer als keines."""
+        import re
+
+        roh = hilfe.dokumentation()
+        tabelle = re.search(r"<tr><th>Menü</th>.*?</table>", roh, re.S)
+        self.assertIsNotNone(tabelle, "Die Tabelle der Menüeinträge fehlt")
+
+        gedruckt = {}
+        for zeile in re.findall(r"<tr>(.*?)</tr>", tabelle.group(0), re.S):
+            zellen = [
+                _sauber(re.sub(r"<[^>]+>", "", z))
+                for z in re.findall(r"<t[dh][^>]*>(.*?)</t[dh]>", zeile, re.S)
+            ]
+            if len(zellen) >= 2 and zellen[0] != "Menü":
+                gedruckt[zellen[-2]] = zellen[-1]
+
+        abweichung = []
+        for name, kuerzel in self._kuerzel().items():
+            soll = kuerzel.replace("Ctrl", "Strg").replace("Shift", "Umschalt")
+            ist = gedruckt.get(name)
+            if ist is None or ist != soll:
+                abweichung.append(f"{name}: Programm {soll!r}, Doku {ist!r}")
+        self.assertEqual(abweichung, [])
+
+    def _kuerzel(self) -> dict:
+        """Jeder Menüeintrag mit seinem Tastenkürzel."""
+        gefunden: dict[str, str] = {}
+
+        def sammeln(menue):
+            for handlung in menue.actions():
+                if handlung.isSeparator():
+                    continue
+                if handlung.menu() is not None:
+                    sammeln(handlung.menu())
+                    continue
+                # Die Schreibweisen heißen wie ihr Beispiel und stehen
+                # nicht als Menüeintrag in der Tabelle.
+                if handlung.actionGroup() is not None:
+                    continue
+                gefunden[_sauber(handlung.text())] = handlung.shortcut().toString()
+
+        for handlung in self.fenster.menuBar().actions():
+            if handlung.menu() is not None:
+                sammeln(handlung.menu())
+        return gefunden
 
     def test_kein_kuerzel_ist_doppelt_vergeben(self):
         """Zwei Einträge auf derselben Taste heben sich gegenseitig auf."""
