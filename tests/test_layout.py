@@ -30,15 +30,16 @@ class TestBlattfolge(unittest.TestCase):
             (1, 4, 10, 6),
             (1, 2, 20, 4),
             (2, 6, 10, 14),
-            (4, 6, 10, 27),   # Deckblatt, zwei Buchten, 24 Leistenblätter
+            (4, 6, 10, 29),   # Deckblatt, vier Buchten, 24 Leistenblätter
         ]:
             with self.subTest(geometrie=(buchten, leisten, da)):
                 v = Verteiler.aus_geometrie(buchten, leisten, da)
                 folge = blaetter(Projekt(verteiler=v))
                 self.assertEqual(len(folge), erwartet)
                 self.assertEqual(folge[0].titel, "Deckblatt")
-                # Eine Bucht steht hochkant, ab zwei quer.
-                self.assertEqual(folge[1].quer, buchten > 1)
+                # Eine Bucht je Blatt steht hochkant, zwei nebeneinander
+                # quer.
+                self.assertEqual(folge[1].quer, buchten == 2)
                 self.assertEqual(folge[-1].titel, f"Leiste {buchten * leisten}")
 
     def test_die_belegung_fuellt_das_blatt(self):
@@ -112,25 +113,47 @@ class TestBlattfolge(unittest.TestCase):
         self.assertTrue(zwei.quer)
 
     def test_ab_drei_buchten_eine_bucht_je_blatt(self):
-        """Mehr als zwei Buchten nebeneinander waeren nur noch gequetscht."""
-        for buchten, erwartet in [(1, 1), (2, 1), (3, 2), (4, 2), (5, 3)]:
+        """Zu zweit gruppiert bliebe für die letzte ein halbes Blatt."""
+        for buchten, erwartet in [(1, 1), (2, 1), (3, 3), (4, 4), (5, 5)]:
             with self.subTest(buchten=buchten):
                 v = Verteiler.aus_geometrie(buchten, 4, 10)
                 belegung = verteilerbelegungen(Projekt(verteiler=v))
                 self.assertEqual(len(belegung), erwartet)
+                # Eine Bucht je Blatt heißt hochkant.
+                if buchten > 2:
+                    self.assertFalse(any(b.quer for b in belegung))
+
+    def test_lange_buchten_bekommen_eigene_blaetter(self):
+        """Zwei lange Buchten nebeneinander wären nur noch Striche."""
+        for leisten, erwartet in [(13, 1), (14, 1), (15, 2), (20, 2)]:
+            with self.subTest(leisten=leisten):
+                v = Verteiler.aus_geometrie(2, leisten, 10)
+                belegung = verteilerbelegungen(Projekt(verteiler=v))
+                self.assertEqual(len(belegung), erwartet)
+                if erwartet > 1:
+                    self.assertFalse(any(b.quer for b in belegung))
+                    self.assertEqual(belegung[0].titel, "Bucht 1")
 
     def test_bis_zwei_buchten_bleibt_es_ein_blatt_ohne_bucht(self):
         v = Verteiler.aus_geometrie(2, 6, 10)
         belegung = verteilerbelegungen(Projekt(verteiler=v))
         self.assertEqual([b.titel for b in belegung], ["Verteilerbelegung"])
 
-    def test_blatt_heisst_nach_seinen_buchten(self):
+    def test_blatt_heisst_nach_seiner_bucht(self):
         v = Verteiler.aus_geometrie(5, 4, 10)
         belegung = verteilerbelegungen(Projekt(verteiler=v))
         self.assertEqual(
             [b.titel for b in belegung],
-            ["Buchten 1 und 2", "Buchten 3 und 4", "Bucht 5"],
+            ["Bucht 1", "Bucht 2", "Bucht 3", "Bucht 4", "Bucht 5"],
         )
+
+    def test_zwei_buchten_teilen_sich_ein_blatt(self):
+        """Nur dort steht noch der Doppelname."""
+        v = Verteiler.aus_geometrie(2, 4, 10)
+        belegung = verteilerbelegungen(
+            Projekt(verteiler=v), Blattvorlage(id="eng", buchten_je_blatt=1)
+        )
+        self.assertEqual([b.titel for b in belegung], ["Bucht 1", "Bucht 2"])
 
     def test_jede_leiste_steht_auf_genau_einer_bucht(self):
         v = Verteiler.aus_geometrie(4, 6, 10)
@@ -140,11 +163,12 @@ class TestBlattfolge(unittest.TestCase):
         self.assertEqual(len(gefunden), len(v.alle_leisten))
         self.assertEqual(len(set(gefunden)), len(v.alle_leisten))
 
-    def test_kopfzeile_nennt_die_buchten_des_blattes(self):
+    def test_kopfzeile_nennt_die_bucht_des_blattes(self):
         v = Verteiler.aus_geometrie(4, 6, 10)
-        erste, zweite = verteilerbelegungen(Projekt(verteiler=v))
-        self.assertIn("Verteilerbelegung — Buchten 1 und 2", _texte(erste))
-        self.assertIn("Verteilerbelegung — Buchten 3 und 4", _texte(zweite))
+        blaetter_ = verteilerbelegungen(Projekt(verteiler=v))
+        for nummer, blatt in enumerate(blaetter_, 1):
+            with self.subTest(bucht=nummer):
+                self.assertIn(f"Verteilerbelegung — Bucht {nummer}", _texte(blatt))
 
     def test_bleibt_eine_bucht_uebrig_steht_sie_allein(self):
         v = Verteiler.aus_geometrie(3, 4, 10)

@@ -268,11 +268,12 @@ derselben Fluchtlinie wie Überschrift und Schriftfeld — vorher hing sie recht
 an ihrem Kasten und rückte mit der Spaltenbreite hin und her.
 
 Die Blattfolge ist Deckblatt, Verteilerbelegung, dann je Leiste ein Blatt.
-Bis zwei Buchten passt die Verteilerbelegung auf ein Blatt; ab der dritten
-Bucht bekommt je zwei Buchten ein eigenes Blatt, benannt nach dem, was
-darauf steht: **Buchten 1 und 2**, **Buchten 3 und 4**, bei einer
-einzelnen **Bucht 5**. Ein Verteiler mit vier Buchten ergibt also zwei
-Blätter — gequetscht wird nichts.
+Zwei Buchten teilen sich ein Blatt und liegen quer. **Jede Bucht bekommt ein
+eigenes Blatt im Hochformat**, sobald der Verteiler mehr als zwei Buchten hat
+— zu zweit gruppiert bliebe für die letzte ein halbes Blatt — oder eine Bucht
+mehr als vierzehn Leisten trägt; zwei solche nebeneinander wären nur noch
+Striche. Jedes Blatt heißt nach dem, was darauf steht: **Bucht 3**, bei zweien
+nebeneinander **Buchten 1 und 2**.
 
 Was das Programm **Bucht** nennt, hieß bis zur Umbenennung *Reihe*. Ältere
 Projektdateien und selbst geschriebene Vorlagen mit den alten Feldnamen

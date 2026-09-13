@@ -194,9 +194,11 @@ class TestWirkungAufDasBlatt(unittest.TestCase):
         self.assertIn("Linie", texte)
 
     def test_eine_bucht_je_blatt_ergibt_mehr_blaetter(self):
+        """Bei zwei Buchten: Standard ein Belegungsblatt, Ausführlich zwei."""
         ausfuehrlich = self.vorlagen.holen("ausfuehrlich")
-        with_standard = blaetter(self.projekt, STANDARD)
-        with_ausf = blaetter(self.projekt, ausfuehrlich)
+        zwei = Projekt(verteiler=Verteiler.aus_geometrie(2, 4, 10))
+        with_standard = blaetter(zwei, STANDARD)
+        with_ausf = blaetter(zwei, ausfuehrlich)
         self.assertEqual(len(with_standard) + 1, len(with_ausf))
         self.assertEqual(with_ausf[1].titel, "Bucht 1")
 

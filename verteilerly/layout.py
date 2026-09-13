@@ -47,6 +47,9 @@ FUELLUNG_KABEL = "#EFEFEF"
 # Wie breit eine DA-Zelle der Verteilerbelegung hoechstens werden darf,
 # gemessen an ihrer Hoehe: breiter gezogen wird sie zum Balken.
 BREITE_HOECHSTENS = 2.0
+# Ab wie vielen Leisten je Bucht diese ein eigenes Blatt bekommt.
+# Zwei lange Buchten nebeneinander waeren nur noch Striche.
+LEISTEN_JE_BLATT = 14
 
 # Wie viel der linken Schriftfeldhaelfte die Beschriftungen bekommen
 # (Bauart "beispiel"). "Erstellt", "Geprueft" und "Verteiler Nr." sind
@@ -556,9 +559,17 @@ def verteilerbelegungen(
     Mehr Buchten nebeneinander, als die Vorlage zulaesst, waeren auf A4
     quer nur noch gequetscht. Die weiteren bekommen deshalb eigene
     Blaetter, benannt nach den Buchten, die darauf stehen.
+
+    Zwei Faelle bekommen **jede Bucht auf ein eigenes Blatt**, und damit
+    hochkant: mehr als zwei Buchten - zu zweit gruppiert bliebe
+    sonst ein halbes Blatt fuer die letzte - und lange Buchten von mehr
+    als vierzehn Leisten, die nebeneinander nur noch Striche waeren.
     """
     alle = projekt.verteiler.buchten
     je_blatt = max(1, vorlage.buchten_je_blatt)
+    lang = any(len(b.leisten) > LEISTEN_JE_BLATT for b in alle)
+    if len(alle) > 2 or lang:
+        je_blatt = 1
     gruppen = [alle[i:i + je_blatt] for i in range(0, len(alle), je_blatt)] or [[]]
     if len(gruppen) == 1:
         return [verteilerbelegung(projekt, gruppen[0], vorlage=vorlage)]

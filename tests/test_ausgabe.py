@@ -67,17 +67,20 @@ class TestPdf(unittest.TestCase):
         self.assertEqual(len(seiten), 6)
 
     def test_buchten_landen_als_eigene_seiten_im_pdf(self):
-        """Ab drei Buchten bekommt je Bucht eine eigene Seite."""
+        """Ab drei Buchten bekommt jede Bucht eine eigene Seite."""
         projekt = _projekt()
         projekt.verteiler = Verteiler.aus_geometrie(4, 4, 10, name="Groß")
         pdf_schreiben(projekt, self.ziel)
         from pypdf import PdfReader
 
         seiten = PdfReader(str(self.ziel)).pages
-        self.assertEqual(len(seiten), 1 + 2 + 16)
-        kopf = "\n".join(s.extract_text() for s in seiten[1:3])
-        self.assertIn("Buchten 1 und 2", kopf)
-        self.assertIn("Buchten 3 und 4", kopf)
+        self.assertEqual(len(seiten), 1 + 4 + 16)
+        kopf = "\n".join(s.extract_text() for s in seiten[1:5])
+        for nummer in range(1, 5):
+            self.assertIn(f"Bucht {nummer}", kopf)
+        # Eine Bucht je Blatt heißt hochkant.
+        for seite in seiten[1:5]:
+            self.assertLess(float(seite.mediabox.width), float(seite.mediabox.height))
 
     def test_hoch_und_querformat(self):
         """Die Verteilerbelegung liegt quer, die Leistenblätter hoch."""
