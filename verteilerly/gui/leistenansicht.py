@@ -7,15 +7,24 @@ Kabelspalte rechts zeigt, welches Kabel die Doppelader belegt.
 
 from __future__ import annotations
 
-from PySide6.QtCore import QAbstractTableModel, QModelIndex, QRect, Qt, Signal
+from PySide6.QtCore import (
+    QAbstractTableModel,
+    QEvent,
+    QModelIndex,
+    QRect,
+    Qt,
+    Signal,
+)
 from PySide6.QtGui import QColor, QFont, QKeySequence
 from PySide6.QtWidgets import (
+    QAbstractItemDelegate,
     QAbstractItemView,
     QComboBox,
     QHBoxLayout,
     QHeaderView,
     QLabel,
     QPushButton,
+    QStyledItemDelegate,
     QTableView,
     QVBoxLayout,
     QWidget,
@@ -80,6 +89,9 @@ class LeistenModell(QAbstractTableModel):
         # eintraegt, will einen Tippfehler als Fehler gemeldet bekommen
         # und nicht als Vermerk stehen haben.
         self.freitext_erlaubt = False
+        # Ob die letzte Eingabe angenommen wurde - danach richtet sich,
+        # ob Enter eine Zeile weiterspringt.
+        self.eingabe_angenommen = True
 
     def freitext_erlauben(self, an: bool) -> None:
         """Darf ins Rangierfeld auch etwas anderes als ein Ziel?"""
@@ -267,6 +279,12 @@ class LeistenModell(QAbstractTableModel):
         return f"{text} (gekürzt)" if kabel.gekuerzt else text
 
     def setData(self, index: QModelIndex, wert, rolle=Qt.ItemDataRole.EditRole) -> bool:
+        # Ob die Eingabe angenommen wurde, merkt sich das Modell: die
+        # Ansicht springt danach nur weiter, wenn sie es wurde.
+        self.eingabe_angenommen = self._eintragen(index, wert, rolle)
+        return self.eingabe_angenommen
+
+    def _eintragen(self, index: QModelIndex, wert, rolle) -> bool:
         if rolle != Qt.ItemDataRole.EditRole or self._leiste is None:
             return False
 
@@ -358,6 +376,31 @@ class LeistenModell(QAbstractTableModel):
         return True
 
 
+class EingabeDelegat(QStyledItemDelegate):
+    """Enter schliesst die Eingabe und geht eine Zeile tiefer.
+
+    Qt laesst die Eingabemarke sonst stehen, wo sie war. Wer eine Spalte
+    von oben nach unten ausfuellt, tippt dann jedes Mal zweimal: einmal
+    den Wert und einmal den Pfeil nach unten.
+    """
+
+    weiter = Signal()
+
+    def eventFilter(self, editor, ereignis) -> bool:
+        if (
+            ereignis.type() == QEvent.Type.KeyPress
+            and ereignis.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter)
+            and not ereignis.modifiers() & Qt.KeyboardModifier.AltModifier
+        ):
+            self.commitData.emit(editor)
+            self.closeEditor.emit(
+                editor, QAbstractItemDelegate.EndEditHint.SubmitModelCache
+            )
+            self.weiter.emit()
+            return True
+        return super().eventFilter(editor, ereignis)
+
+
 class ZusammengefassteKopfzeile(QHeaderView):
     """Kopfzeile, in der eine Ueberschrift ueber mehrere Spalten reicht.
 
@@ -443,6 +486,10 @@ class LeistenAnsicht(QWidget):
         )
         self.tabelle.setAlternatingRowColors(False)
 
+        self.delegat = EingabeDelegat(self.tabelle)
+        self.tabelle.setItemDelegate(self.delegat)
+        self.delegat.weiter.connect(self._eine_zeile_tiefer)
+
         # „Stift“ und „Rangierung“ reichen über je zwei Spalten.
         self.tabelle.setHorizontalHeader(
             ZusammengefassteKopfzeile((STIFTSPALTEN, RANGIERSPALTEN), self.tabelle)
@@ -467,6 +514,21 @@ class LeistenAnsicht(QWidget):
         aufbau.setContentsMargins(10, 8, 10, 10)
         aufbau.addLayout(kopf)
         aufbau.addWidget(self.tabelle)
+
+    def _eine_zeile_tiefer(self) -> None:
+        """Nach Enter eine Zeile weiter - wie in einer Tabellenkalkulation.
+
+        Wurde die Eingabe nicht angenommen - eine unlesbare Rangierung
+        etwa -, bleibt die Marke stehen: dort ist etwas zu richten.
+        """
+        if not self.modell.eingabe_angenommen:
+            return
+        jetzt = self.tabelle.currentIndex()
+        if not jetzt.isValid():
+            return
+        naechste = jetzt.sibling(jetzt.row() + 1, jetzt.column())
+        if naechste.isValid():
+            self.tabelle.setCurrentIndex(naechste)
 
     def farben_setzen(self, farben) -> None:
         self.modell.farben_setzen(farben)

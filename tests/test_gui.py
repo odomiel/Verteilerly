@@ -21,6 +21,7 @@ try:
     from verteilerly.gui.leistenansicht import (
         SPALTE_ADER,
         SPALTE_BEMERKUNG,
+        SPALTE_BEZEICHNUNG,
         SPALTE_FARBE,
         SPALTE_KABEL,
         SPALTE_RANGIERUNG,
@@ -41,6 +42,60 @@ from verteilerly.vorlagen import Vorlage, Vorlagen
 
 
 @unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
+
+
+class TestEnterSpringtWeiter(unittest.TestCase):
+    """Enter schließt die Eingabe und geht eine Zeile tiefer."""
+
+    def setUp(self):
+        from PySide6.QtCore import QEvent
+        from PySide6.QtGui import QKeyEvent
+        from verteilerly.gui.leistenansicht import LeistenAnsicht
+
+        self.QEvent, self.QKeyEvent = QEvent, QKeyEvent
+        self.ansicht = LeistenAnsicht()
+        self.addCleanup(self.ansicht.close)
+        self.ansicht.verteiler_setzen(Verteiler.aus_geometrie(1, 2, 10))
+        self.ansicht.leiste_zeigen(1)
+        self.tabelle = self.ansicht.tabelle
+
+    def _tippen(self, zeile, spalte, text):
+        index = self.ansicht.modell.index(zeile, spalte)
+        self.tabelle.setCurrentIndex(index)
+        self.tabelle.edit(index)
+        feld = self.tabelle.focusWidget()
+        feld.setText(text)
+        ANWENDUNG.sendEvent(
+            feld,
+            self.QKeyEvent(
+                self.QEvent.Type.KeyPress,
+                Qt.Key.Key_Return,
+                Qt.KeyboardModifier.NoModifier,
+            ),
+        )
+
+    def test_der_wert_steht_und_die_marke_ist_eine_zeile_tiefer(self):
+        self._tippen(0, SPALTE_BEZEICHNUNG, "Probe")
+        self.assertEqual(
+            self.ansicht.modell.data(self.ansicht.modell.index(0, SPALTE_BEZEICHNUNG)),
+            "Probe",
+        )
+        self.assertEqual(self.tabelle.currentIndex().row(), 1)
+        self.assertEqual(self.tabelle.currentIndex().column(), SPALTE_BEZEICHNUNG)
+
+    def test_in_der_letzten_zeile_bleibt_die_marke_stehen(self):
+        letzte = self.ansicht.modell.rowCount() - 1
+        self._tippen(letzte, SPALTE_BEZEICHNUNG, "Ende")
+        self.assertEqual(self.tabelle.currentIndex().row(), letzte)
+
+    def test_nach_einer_abgelehnten_eingabe_bleibt_sie_stehen(self):
+        """Eine unlesbare Rangierung ist dort zu richten, wo sie steht."""
+        self._tippen(2, SPALTE_RANGIERUNG, "kein Ziel")
+        self.assertEqual(self.tabelle.currentIndex().row(), 2)
+
+    def test_eine_angenommene_rangierung_springt_weiter(self):
+        self._tippen(2, SPALTE_RANGIERUNG, "2 3a")
+        self.assertEqual(self.tabelle.currentIndex().row(), 3)
 
 
 class TestLeistenModell(unittest.TestCase):
