@@ -47,8 +47,8 @@ Grundstrukturen stehen im Aufklappmenü.</li>
 wird über <i>Benutzerdefiniert</i> eingetippt. Darunter steht laufend, was das
 ergibt: <i>4 Leisten, 40 DA</i>. Ein Haken legt die Maße gleich als Vorlage
 ab.</li>
-<li><b>Erweiterte Verteiler</b> — der Haken stellt an die Stelle der beiden
-Zahlen eine Tabelle mit <b>einer Zeile je Bucht</b>: wie viele Leisten sie
+<li><b>Erweiterte Verteiler: Buchten einzeln festlegen</b> — der Haken stellt
+an die Stelle der beiden Zahlen eine Tabelle mit <b>einer Zeile je Bucht</b>: wie viele Leisten sie
 trägt und wie groß diese sind. So entsteht ein ungleich besetzter Verteiler —
 etwa eine Bucht mit zwei 20-DA-Leisten neben zweien mit zehn 10-DA-Leisten.
 Eine Leistengröße je Bucht. Als <b>Vorlage</b> lässt sich auch so ein
@@ -267,7 +267,8 @@ Beschriftung nur an der ersten Zeile.</p>
 
 <p><b>Eigene Felder</b> sind frei benannte Paare wie <i>Standort: Keller</i>.
 <i>Feld hinzufügen</i> hängt eine Zeile an, <i>Feld entfernen</i> nimmt die
-gewählte heraus; Name und Inhalt werden in der Liste selbst getippt.
+gewählte heraus; <i>Feldname</i> und <i>Inhalt</i> werden in der Liste selbst
+getippt.
 Die Häkchenzeile <i>Anzeigen auf</i> sagt, auf welchen Blattarten sie
 erscheinen — Deckblatt, Verteilerbelegung, Leistenblättern. Eine abgewählte
 Blattart lässt den Inhalt unberührt, sie zeigt ihn nur nicht. Auf der
@@ -383,6 +384,31 @@ und <code>kabeltypen/</code> als YAML. Fehlendes legt das Programm beim Start
 an. Eine mitgelieferte Datei wird nur dann aufgefrischt, wenn sie noch genau
 so daliegt, wie sie ausgelegt wurde — <b>eigene Änderungen bleiben
 unangetastet</b>.</p>
+
+<p>Eine <b>Verteilervorlage</b> ist eine Datei in <code>vorlagen/</code>. Der
+gleichmäßige Verteiler braucht drei Zahlen:</p>
+
+<pre>id: 40da-4x10
+name: "40 DA - 4 Leisten zu 10 DA"
+beschreibung: "Vier Leisten in einer Bucht, je 10 Doppeladern."
+buchten: 1
+leisten_je_bucht: 4
+da_je_leiste: 10</pre>
+
+<p>Ein ungleich besetzter trägt unter <code>buchten</code> statt der Zahl eine
+<b>Liste — eine Zeile je Bucht</b>:</p>
+
+<pre>id: bunter-keller
+name: "Bunter Keller"
+buchten:
+  - {leisten: 4, da: 10}
+  - {leisten: 2, da: 20}
+  - {leisten: 6, da: 8}</pre>
+
+<p>Beides schreibt das Programm selbst, wenn Sie im Dialog <i>Als Vorlage
+speichern</i> wählen; von Hand angelegt wird es genauso gelesen. Eine neue
+Datei im Ordner steht beim nächsten Start zur Wahl, ohne dass am Programm
+etwas zu ändern wäre.</p>
 
 <p>In der <code>Verteilerly.conf</code> stehen die Blattvorlage, die
 Schreibweise der Rangierungen, der Freitext-Schalter, das Erscheinungsbild und
