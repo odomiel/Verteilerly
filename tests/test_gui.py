@@ -1103,6 +1103,10 @@ class TestMenuezustaende(unittest.TestCase):
         beschriftungen = [k for k in kasten.findChildren(QLabel) if k.text()]
         self.assertTrue(all(k.openExternalLinks() for k in beschriftungen))
 
+    def test_ueber_nennt_keinen_proprietaeren_bestandteil(self):
+        text = self._ueber_text()
+        self.assertNotIn("proprietär", text)
+
     def test_ueber_nennt_die_lizenz_des_programms(self):
         text = self._ueber_text()
         self.assertIn("GNU GPL, Version 3", text)

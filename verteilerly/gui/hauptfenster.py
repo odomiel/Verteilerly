@@ -1073,7 +1073,6 @@ class Hauptfenster(QMainWindow):
             "<b>GNU GPL, Version 3 oder später</b>. Ohne jede "
             "Gewährleistung.</p>"
             f"<p><b>Bausteine</b></p>{bausteine}"
-            "<p><i>Kein proprietärer Bestandteil.</i></p>"
             f"<p><b>Lizenztexte</b><br>{verweise}{vor_ort}</p>"
             f"<p><b>Umgebung</b></p>{umgebung}"
         )

@@ -5,6 +5,8 @@ muessen. Die Dokumentation liegt deshalb als HTML bei und wird im
 Programm angezeigt - dieselbe Datei im Quellbaum, im AppImage und in der
 .exe, gefunden ueber dieselbe Suchreihenfolge wie die uebrigen
 mitgelieferten Dateien.
+
+Sie sagt, wie das Programm bedient wird.
 """
 
 from __future__ import annotations
