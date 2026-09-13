@@ -1112,6 +1112,12 @@ class TestMenuezustaende(unittest.TestCase):
         self.assertIn("GNU GPL, Version 3", text)
         self.assertIn("GPL-3.0-or-later", text)
 
+    def test_ueber_nennt_die_ki_unterstuetzung(self):
+        """Wie es entstanden ist, gehört dazu."""
+        text = self._ueber_text()
+        self.assertIn("KI-Unterstützung", text)
+        self.assertIn("Claude Code", text)
+
     def test_speichern_nur_wenn_es_etwas_zu_speichern_gibt(self):
         self._projekt()
         f = self.fenster
