@@ -13,6 +13,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 WURZEL = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(WURZEL / "werkzeuge"))
@@ -232,3 +233,100 @@ class TestSymbol(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestAbhaengigkeitspruefung(unittest.TestCase):
+    """Der erste Bau des Tages sieht nach neueren Fassungen."""
+
+    def setUp(self):
+        import abhaengigkeiten
+
+        self.modul = abhaengigkeiten
+        self.ordner = tempfile.TemporaryDirectory()
+        self.addCleanup(self.ordner.cleanup)
+        self.merkzettel = pathlib.Path(self.ordner.name) / ".geprueft.json"
+
+    def test_die_pakete_kommen_aus_requirements(self):
+        """Eine Quelle, keine zweite Liste, die veraltet."""
+        namen = self.modul.gefordert()
+        for paket in ("PySide6", "reportlab", "openpyxl", "PyYAML", "pyinstaller"):
+            with self.subTest(paket=paket):
+                self.assertIn(paket, namen)
+
+    def test_kommentare_und_bedingungen_fallen_weg(self):
+        datei = pathlib.Path(self.ordner.name) / "r.txt"
+        datei.write_text(
+            "# Kopfzeile\nPySide6>=6.9      # LGPLv3\n\nreportlab>=4.2\n",
+            encoding="utf-8",
+        )
+        self.assertEqual(self.modul.gefordert(datei), ["PySide6", "reportlab"])
+
+    def test_fassungen_werden_der_reihe_nach_verglichen(self):
+        self.assertTrue(self.modul.veraltet("6.9.1", "6.11.2"))
+        self.assertTrue(self.modul.veraltet("6.22.2", "6.22.3"))
+        self.assertFalse(self.modul.veraltet("6.11.2", "6.11.2"))
+        self.assertFalse(self.modul.veraltet("6.11.2", "6.9.1"))
+
+    def test_unvergleichbares_gilt_nicht_als_veraltet(self):
+        """Lieber nichts melden als Unsinn melden."""
+        self.assertFalse(self.modul.veraltet("", "6.11.2"))
+        self.assertFalse(self.modul.veraltet("6.11.2", ""))
+        self.assertFalse(self.modul.veraltet("1.0", "1.0rc1"))
+
+    def test_ohne_netz_wird_gemeldet_statt_abgebrochen(self):
+        """Gebaut wird auch im Keller."""
+        import urllib.error
+
+        with mock.patch.object(
+            self.modul.urllib.request, "urlopen",
+            side_effect=urllib.error.URLError("kein Netz"),
+        ):
+            self.assertEqual(self.modul.neueste("PySide6"), "")
+        stand = [("PySide6", "6.11.2", "")]
+        self.assertIn("PyPI nicht erreicht", self.modul.bericht(stand))
+
+    def test_der_bericht_nennt_die_neuere_fassung(self):
+        stand = [("pyinstaller", "6.22.2", "6.22.3")]
+        self.assertIn("neuer: 6.22.3", self.modul.bericht(stand))
+
+    def test_einmal_am_tag(self):
+        self.assertFalse(self.modul.schon_geprueft(self.merkzettel))
+        self.modul.merken([("PySide6", "6.11.2", "6.11.2")], self.merkzettel)
+        self.assertTrue(self.modul.schon_geprueft(self.merkzettel))
+
+    def test_ein_alter_merkzettel_zaehlt_nicht(self):
+        self.merkzettel.write_text('{"tag": "1970-01-01"}', encoding="utf-8")
+        self.assertFalse(self.modul.schon_geprueft(self.merkzettel))
+
+    def test_ein_kaputter_merkzettel_stoert_nicht(self):
+        self.merkzettel.write_text("kein JSON", encoding="utf-8")
+        self.assertFalse(self.modul.schon_geprueft(self.merkzettel))
+
+    def _taeglich(self, **kw) -> None:
+        """Ruft die Prüfung auf, ohne den Testlauf vollzuschreiben."""
+        import contextlib
+        import io
+
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.modul.taeglich(**kw)
+
+    def test_der_zweite_bau_des_tages_fragt_nicht_noch_einmal(self):
+        with mock.patch.object(self.modul, "MERKZETTEL", self.merkzettel), \
+             mock.patch.object(self.modul, "pruefen",
+                               return_value=[("PySide6", "6.11.2", "6.11.2")]) as gefragt:
+            self._taeglich()
+            self._taeglich()
+        self.assertEqual(gefragt.call_count, 1)
+
+    def test_mit_immer_wird_trotzdem_gefragt(self):
+        with mock.patch.object(self.modul, "MERKZETTEL", self.merkzettel), \
+             mock.patch.object(self.modul, "pruefen",
+                               return_value=[("PySide6", "6.11.2", "6.11.2")]) as gefragt:
+            self._taeglich()
+            self._taeglich(immer=True)
+        self.assertEqual(gefragt.call_count, 2)
+
+    def test_bauen_ruft_die_pruefung_auf(self):
+        quelle = (WURZEL / "werkzeuge" / "bauen.py").read_text(encoding="utf-8")
+        self.assertIn("abhaengigkeiten.taeglich()", quelle)
+        self.assertIn("--ohne-pruefung", quelle)

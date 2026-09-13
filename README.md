@@ -512,6 +512,22 @@ Arbeitsordner, zuletzt das Mitgelieferte im Abbild. Eine eigene Vorlage
 geht vor einer mitgelieferten gleicher Kennung, ohne dass die
 mitgelieferte Datei angefasst wird.
 
+Der **erste Bau eines Tages** sieht nach, ob es neuere Fassungen der
+Abhängigkeiten gibt: `werkzeuge/abhaengigkeiten.py` vergleicht, was installiert
+ist, mit dem, was PyPI meldet — geprüft wird, was in `requirements.txt` steht,
+damit es keine zweite Liste gibt, die veraltet. Gemeldet wird nur; ob eine
+neuere Fassung taugt, entscheidet niemand nebenbei, und ohne Netz baut es
+trotzdem weiter. `--ohne-pruefung` lässt den Blick aus, `abhaengigkeiten.py
+--immer` erzwingt ihn.
+
+```
+Abhängigkeiten (einmal täglich geprüft):
+  PySide6        6.11.2         aktuell
+  pyinstaller    6.22.2         neuer: 6.22.3
+  → neuere Fassungen vorhanden. Aktualisieren mit:
+      .venv/bin/pip install -U pyinstaller
+```
+
 ## Versionen
 
 Eine Version ist das Releasedatum im Format `jahr.monat.tag`. Wird an einem
