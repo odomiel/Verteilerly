@@ -49,7 +49,7 @@ FUELLUNG_KABEL = "#EFEFEF"
 BREITE_HOECHSTENS = 2.0
 # Ab wie vielen Leisten je Bucht diese ein eigenes Blatt bekommt.
 # Zwei lange Buchten nebeneinander waeren nur noch Striche.
-LEISTEN_JE_BLATT = 14
+LEISTEN_JE_BLATT = 13
 
 # Wie viel der linken Schriftfeldhaelfte die Beschriftungen bekommen
 # (Bauart "beispiel"). "Erstellt", "Geprueft" und "Verteiler Nr." sind
@@ -563,7 +563,7 @@ def verteilerbelegungen(
     Zwei Faelle bekommen **jede Bucht auf ein eigenes Blatt**, und damit
     hochkant: mehr als zwei Buchten - zu zweit gruppiert bliebe
     sonst ein halbes Blatt fuer die letzte - und lange Buchten von mehr
-    als vierzehn Leisten, die nebeneinander nur noch Striche waeren.
+    als dreizehn Leisten, die nebeneinander nur noch Striche waeren.
     """
     alle = projekt.verteiler.buchten
     je_blatt = max(1, vorlage.buchten_je_blatt)

@@ -271,7 +271,7 @@ Die Blattfolge ist Deckblatt, Verteilerbelegung, dann je Leiste ein Blatt.
 Zwei Buchten teilen sich ein Blatt und liegen quer. **Jede Bucht bekommt ein
 eigenes Blatt im Hochformat**, sobald der Verteiler mehr als zwei Buchten hat
 — zu zweit gruppiert bliebe für die letzte ein halbes Blatt — oder eine Bucht
-mehr als vierzehn Leisten trägt; zwei solche nebeneinander wären nur noch
+mehr als dreizehn Leisten trägt; zwei solche nebeneinander wären nur noch
 Striche. Jedes Blatt heißt nach dem, was darauf steht: **Bucht 3**, bei zweien
 nebeneinander **Buchten 1 und 2**.
 

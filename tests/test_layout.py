@@ -125,7 +125,7 @@ class TestBlattfolge(unittest.TestCase):
 
     def test_lange_buchten_bekommen_eigene_blaetter(self):
         """Zwei lange Buchten nebeneinander wären nur noch Striche."""
-        for leisten, erwartet in [(13, 1), (14, 1), (15, 2), (20, 2)]:
+        for leisten, erwartet in [(12, 1), (13, 1), (14, 2), (20, 2)]:
             with self.subTest(leisten=leisten):
                 v = Verteiler.aus_geometrie(2, leisten, 10)
                 belegung = verteilerbelegungen(Projekt(verteiler=v))
