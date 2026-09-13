@@ -148,14 +148,17 @@ def taeglich(immer: bool = False, leise: bool = False) -> list[tuple[str, str, s
         return []
     merken(stand)
     neues = [zeile for zeile in stand if veraltet(zeile[1], zeile[2])]
+    # flush: der Bau reicht danach an ein Unterprogramm weiter, dessen
+    # Ausgabe sonst vor dieser hier stuende.
     if neues or not leise:
         print("Abhängigkeiten (einmal täglich geprüft):")
-        print(bericht(stand))
+        print(bericht(stand), flush=True)
     if neues:
         print(
             "  → neuere Fassungen vorhanden. Aktualisieren mit:\n"
             "      .venv/bin/pip install -U "
-            + " ".join(name for name, _, _ in neues)
+            + " ".join(name for name, _, _ in neues),
+            flush=True,
         )
     return stand
 

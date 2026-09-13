@@ -78,6 +78,16 @@ def main() -> int:
                           help="die tägliche Prüfung der Abhängigkeiten auslassen")
     argumente, rest = zerleger.parse_known_args()
 
+    windows = argumente.exe or (
+        not argumente.appimage and sys.platform.startswith("win")
+    )
+    # flush, weil das Verpacken gleich an ein Unterprogramm weiterreicht:
+    # dessen Ausgabe ginge sonst dieser hier voraus.
+    print(
+        f"Verteilerly {VERSION} — {'Windows-.exe' if windows else 'AppImage'}",
+        flush=True,
+    )
+
     if argumente.sauber:
         for ordner in (BAUORDNER, ZIELORDNER):
             shutil.rmtree(ordner, ignore_errors=True)
@@ -87,10 +97,6 @@ def main() -> int:
     if not argumente.ohne_pruefung:
         abhaengigkeiten.taeglich()
 
-    windows = argumente.exe or (
-        not argumente.appimage and sys.platform.startswith("win")
-    )
-    print(f"Verteilerly {VERSION} — {'Windows-.exe' if windows else 'AppImage'}")
     return exe_bauen(rest) if windows else appimage_bauen(rest)
 
 
