@@ -9,6 +9,7 @@ from PySide6.QtCore import QSettings, Qt, QTimer
 from PySide6.QtGui import QAction, QActionGroup, QKeySequence
 from PySide6.QtWidgets import (
     QFileDialog,
+    QLabel,
     QMainWindow,
     QMessageBox,
     QScrollArea,
@@ -50,6 +51,15 @@ from .symbol import symbol_icon
 from .thema import SAETZE, anwenden
 from .uebersicht import Uebersicht
 from .vorschau import Vorschau
+
+# Wohin das Über-Fenster für die Lizenztexte verweist. Das Programm
+# braucht das Netz nicht - die Texte liegen auch im Arbeitsordner;
+# im Netz stehen sie in jeder Sprache und immer vollständig.
+LIZENZVERWEISE = (
+    ("GNU GPL v3", "https://www.gnu.org/licenses/gpl-3.0.html"),
+    ("GNU LGPL v3", "https://www.gnu.org/licenses/lgpl-3.0.html"),
+    ("Qt-Quelltext", "https://download.qt.io/official_releases/qt/"),
+)
 
 DATEIFILTER = "Verteilerly-Projekt (*.vtly.json);;Alle Dateien (*)"
 PDFFILTER = "PDF (*.pdf)"
@@ -1035,20 +1045,41 @@ class Hauptfenster(QMainWindow):
             for name, wert in bestand.umgebung()
         )
 
-        QMessageBox.about(
-            self,
-            "Über Verteilerly",
+        # Die Lizenzen stehen als Verweis da: im Netz immer zu erreichen,
+        # und ausgelegt im Arbeitsordner auch ohne Netz.
+        ordner = bestand.lizenzordner()
+        verweise = " · ".join(
+            f'<a href="{ziel}">{name}</a>' for name, ziel in LIZENZVERWEISE
+        )
+        vor_ort = (
+            f'<br>Im Arbeitsordner: <a href="{pathlib.Path(ordner).as_uri()}">'
+            f"{ordner}</a>"
+            if ordner
+            else ""
+        )
+
+        kasten = QMessageBox(self)
+        kasten.setIconPixmap(self.windowIcon().pixmap(64, 64))
+        kasten.setWindowTitle("Über Verteilerly")
+        kasten.setTextFormat(Qt.TextFormat.RichText)
+        # Ohne diese beiden Zeilen sind die Verweise nur blauer Text.
+        kasten.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextBrowserInteraction
+        )
+        kasten.setText(
             f"<b>Verteilerly {VERSION}</b><br>"
             "Dokumentation für LSA+-Verteiler in der Fernmeldetechnik."
             f"<p>© 2026 {URHEBER} — freie Software unter der "
             "<b>GNU GPL, Version 3 oder später</b>. Ohne jede "
             "Gewährleistung.</p>"
             f"<p><b>Bausteine</b></p>{bausteine}"
-            "<p><i>Kein proprietärer Bestandteil. Die Lizenztexte und die "
-            "Quellen aller Bestandteile liegen beim Programm im Ordner "
-            "<code>lizenzen/</code>.</i></p>"
-            f"<p><b>Umgebung</b></p>{umgebung}",
+            "<p><i>Kein proprietärer Bestandteil.</i></p>"
+            f"<p><b>Lizenztexte</b><br>{verweise}{vor_ort}</p>"
+            f"<p><b>Umgebung</b></p>{umgebung}"
         )
+        for kind in kasten.findChildren(QLabel):
+            kind.setOpenExternalLinks(True)
+        kasten.exec()
 
     def dokumentation(self) -> None:
         """Die Dokumentation im Programm."""

@@ -17,7 +17,6 @@ import sys
 from dataclasses import dataclass
 
 FEHLT = "nicht vorhanden"
-ORDNER_LIZENZEN = "lizenzen"
 
 
 @dataclass(frozen=True)
@@ -69,20 +68,14 @@ def abhaengigkeiten() -> list[Baustein]:
 
 
 def lizenzordner():
-    """Wo die Lizenztexte liegen - im Abbild, sonst im Quellbaum."""
-    import pathlib
+    """Wo die Lizenztexte zu lesen sind.
 
+    Die Wege kennt ``pfade``; hier steht nur, dass der Bestandsbericht
+    danach fragt.
+    """
     from . import pfade
 
-    orte = []
-    fertig = pfade.mitgeliefert()
-    if fertig:
-        orte.append(fertig.parent / ORDNER_LIZENZEN)
-    orte.append(pathlib.Path(__file__).resolve().parent.parent / ORDNER_LIZENZEN)
-    for ort in orte:
-        if ort.is_dir():
-            return ort
-    return None
+    return pfade.lizenzordner()
 
 
 def umgebung() -> list[tuple[str, str]]:

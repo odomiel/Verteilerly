@@ -25,6 +25,10 @@ import sys
 
 DATENORDNER = "daten"
 UNTERORDNER = ("vorlagen", "kabeltypen", "blattvorlagen")
+# Die Lizenztexte liegen neben dem Datenordner, nicht darin: sie gehoeren
+# zum Programm, nicht zum Bestand des Anwenders.
+LIZENZORDNER = "lizenzen"
+LIZENZ_EIGEN = "GPL-3.0.txt"
 ANWENDUNG = "Verteilerly"
 # Merkzettel im Arbeitsordner: welche Datei mit welchem Inhalt ausgelegt
 # wurde. Daran ist spaeter zu erkennen, ob der Anwender sie angefasst hat.
@@ -237,6 +241,81 @@ def _merkzettel_schreiben(ordner: pathlib.Path, stand: dict[str, str]) -> None:
         pass
 
 
+def mitgelieferte_lizenzen() -> pathlib.Path | None:
+    """Der Ordner mit den Lizenztexten, wie das Programm ihn mitbringt.
+
+    Im AppImage liegt er im Einhaengepunkt unter ``/tmp`` und ist nach
+    dem Beenden weg; ``lizenzen_auslegen()`` legt darum eine Kopie in den
+    Arbeitsordner.
+    """
+    orte = []
+    fertig = mitgeliefert()
+    if fertig:
+        orte.append(fertig.parent / LIZENZORDNER)
+    entpackt = getattr(sys, "_MEIPASS", None)       # PyInstaller
+    if entpackt:
+        orte.append(pathlib.Path(entpackt) / LIZENZORDNER)
+    orte.append(pathlib.Path(__file__).resolve().parent.parent / LIZENZORDNER)
+    for ort in orte:
+        if ort.is_dir():
+            return ort
+    return None
+
+
+def lizenzordner() -> pathlib.Path | None:
+    """Wo die Lizenztexte zu lesen sind - die ausgelegte Kopie zuerst.
+
+    Sie bleibt liegen, wenn das Programm beendet ist; der mitgelieferte
+    Ordner im Abbild tut das nicht.
+    """
+    ausgelegt = eigener_datenordner() / LIZENZORDNER
+    if ausgelegt.is_dir() and any(ausgelegt.glob("*.txt")):
+        return ausgelegt
+    return mitgelieferte_lizenzen()
+
+
+def lizenzen_auslegen() -> list[pathlib.Path]:
+    """Legt die Lizenztexte neben die Einstellungen.
+
+    Im AppImage stecken sie im Einhaengepunkt; wer nach dem Beenden
+    nachlesen will, was er weitergeben darf, faende dort nichts mehr.
+    Sie werden darum wie die Grundausstattung ausgelegt - und wie diese
+    nur aufgefrischt, solange sie unberuehrt sind.
+    """
+    quelle = mitgelieferte_lizenzen()
+    ziel = eigener_datenordner()
+    if quelle is None or quelle == ziel / LIZENZORDNER or not _beschreibbar(ziel):
+        return []
+
+    merkzettel = _merkzettel_lesen(ziel)
+    nach = ziel / LIZENZORDNER
+    nach.mkdir(parents=True, exist_ok=True)
+    texte = {datei.name: datei for datei in sorted(quelle.glob("*.txt"))}
+    # Im Quellbaum heisst die eigene Lizenz LICENSE und liegt neben dem
+    # Ordner; im Abbild liegt sie als GPL-3.0.txt darin. Ausgelegt wird
+    # sie in beiden Faellen unter demselben Namen.
+    eigene = quelle.parent / "LICENSE"
+    if LIZENZ_EIGEN not in texte and eigene.is_file():
+        texte[LIZENZ_EIGEN] = eigene
+
+    geschrieben: list[pathlib.Path] = []
+    for name, datei in sorted(texte.items()):
+        fertig = nach / name
+        marke = f"{LIZENZORDNER}/{name}"
+        mitgebracht = _fingerabdruck(datei)
+        if fertig.exists():
+            unberuehrt = merkzettel.get(marke) == _fingerabdruck(fertig)
+            if not unberuehrt or merkzettel.get(marke) == mitgebracht:
+                continue
+        shutil.copy2(datei, fertig)
+        merkzettel[marke] = mitgebracht
+        geschrieben.append(fertig)
+
+    if geschrieben:
+        _merkzettel_schreiben(ziel, merkzettel)
+    return geschrieben
+
+
 def grundausstattung_auslegen() -> list[pathlib.Path]:
     """Legt die mitgelieferten Dateien in den Arbeitsordner.
 
@@ -246,8 +325,16 @@ def grundausstattung_auslegen() -> list[pathlib.Path]:
     verbessern. Sobald jemand eine Zeile geaendert hat, bleibt sie
     unangetastet - eigene Aenderungen wiegen schwerer als jede Vorgabe.
 
+    Die Lizenztexte gehen denselben Weg, damit sie nach dem Beenden noch
+    dasind.
+
     Zurueckgegeben wird, was angelegt oder aufgefrischt wurde.
     """
+    return _vorlagen_auslegen() + lizenzen_auslegen()
+
+
+def _vorlagen_auslegen() -> list[pathlib.Path]:
+    """Vorlagen, Kabeltypen und Blattvorlagen - der Bestand des Anwenders."""
     quelle = mitgeliefert()
     ziel = eigener_datenordner()
     if quelle is None or quelle == ziel or not _beschreibbar(ziel):

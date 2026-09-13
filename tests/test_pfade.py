@@ -268,8 +268,54 @@ class TestGrundausstattung(unittest.TestCase):
         self.assertEqual(datei.read_text(encoding="utf-8"), vorher)
 
     def test_ohne_mitgeliefertes_passiert_nichts(self):
-        with mock.patch.object(pfade, "mitgeliefert", return_value=None):
+        with mock.patch.object(pfade, "mitgeliefert", return_value=None), \
+             mock.patch.object(pfade, "mitgelieferte_lizenzen", return_value=None):
             self.assertEqual(pfade.grundausstattung_auslegen(), [])
+
+
+class TestLizenzenAuslegen(unittest.TestCase):
+    """Die Lizenztexte bleiben liegen, wenn das Programm endet."""
+
+    def setUp(self):
+        self.ordner = tempfile.TemporaryDirectory()
+        self.addCleanup(self.ordner.cleanup)
+        self.ziel = pathlib.Path(self.ordner.name) / "Verteilerly"
+        self.ziel.mkdir()
+        self.flicken = mock.patch.object(
+            pfade, "eigener_datenordner", return_value=self.ziel
+        )
+        self.flicken.start()
+        self.addCleanup(self.flicken.stop)
+
+    def test_sie_werden_ausgelegt(self):
+        angelegt = pfade.lizenzen_auslegen()
+        namen = {datei.name for datei in angelegt}
+        for name in ("GPL-3.0.txt", "LGPL-3.0.txt", "QUELLEN.txt"):
+            with self.subTest(datei=name):
+                self.assertIn(name, namen)
+                self.assertTrue((self.ziel / "lizenzen" / name).is_file())
+
+    def test_die_eigene_lizenz_ist_die_gpl(self):
+        """Im Quellbaum heißt sie LICENSE, ausgelegt wird sie als GPL-3.0."""
+        pfade.lizenzen_auslegen()
+        text = (self.ziel / "lizenzen" / "GPL-3.0.txt").read_text(encoding="utf-8")
+        self.assertIn("GNU GENERAL PUBLIC LICENSE", text)
+
+    def test_ein_zweiter_start_legt_nichts_nach(self):
+        pfade.lizenzen_auslegen()
+        self.assertEqual(pfade.lizenzen_auslegen(), [])
+
+    def test_der_ordner_wird_dort_gelesen_und_nicht_im_abbild(self):
+        """Der Einhängepunkt des AppImage ist nach dem Beenden weg."""
+        pfade.lizenzen_auslegen()
+        self.assertEqual(pfade.lizenzordner(), self.ziel / "lizenzen")
+
+    def test_ohne_ausgelegte_texte_gilt_das_mitgelieferte(self):
+        self.assertEqual(pfade.lizenzordner(), pfade.mitgelieferte_lizenzen())
+
+    def test_die_grundausstattung_legt_sie_mit_aus(self):
+        angelegt = pfade.grundausstattung_auslegen()
+        self.assertIn("QUELLEN.txt", {datei.name for datei in angelegt})
 
 
 if __name__ == "__main__":

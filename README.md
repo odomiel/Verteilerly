@@ -389,6 +389,12 @@ unter der PSF-Lizenz. `lizenzen/` trägt die vollständigen Texte und
 `QUELLEN.txt`, das für jeden Bestandteil Lizenz und Quelltextadresse nennt;
 beides wandert ins AppImage und neben die `.exe`.
 
+Gelesen werden sie an zwei Stellen: das Über-Fenster **verweist** auf gnu.org
+und auf den Qt-Quelltext, und `grundausstattung_auslegen()` legt die Texte beim
+ersten Start in den Arbeitsordner — im AppImage stecken sie sonst im
+Einhängepunkt unter `/tmp`, der beim Beenden verschwindet. Offline lesbar
+bleiben sie damit auch.
+
 Im Abbild steckt nichts, was das Programm nicht braucht: `readline` und `gdbm`
 stehen unter der GPL-3 und werden nie aufgerufen, `python_abspecken()` wirft sie
 samt ihrer Bibliotheken heraus.

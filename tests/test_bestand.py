@@ -62,9 +62,11 @@ class TestLizenz(unittest.TestCase):
         for name in ("LGPL-3.0.txt", "QUELLEN.txt"):
             with self.subTest(datei=name):
                 self.assertIn(name, vorhanden)
-        # Der GPL-Text liegt im Quellbaum als LICENSE und kommt beim Bauen
-        # unter dem Namen GPL-3.0.txt in den Ordner.
-        self.assertTrue((ordner.parent / "LICENSE").is_file())
+        # Der GPL-Text heißt im Quellbaum LICENSE und liegt neben dem
+        # Ordner; ausgelegt und im Abbild heißt er GPL-3.0.txt.
+        self.assertTrue(
+            "GPL-3.0.txt" in vorhanden or (ordner.parent / "LICENSE").is_file()
+        )
 
     def test_die_lizenz_des_programms_liegt_im_wurzelverzeichnis(self):
         import pathlib

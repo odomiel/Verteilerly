@@ -1074,6 +1074,40 @@ class TestMenuezustaende(unittest.TestCase):
         f._auswahl_gemeldet(None)
         self.assertFalse(f.aktion_kabel_weg.isEnabled())
 
+    def _ueber_kasten(self):
+        """Zeigt das Über-Fenster, ohne es stehen zu lassen."""
+        from PySide6.QtWidgets import QMessageBox
+
+        gezeigt = {}
+        with mock.patch.object(
+            QMessageBox, "exec", lambda kasten: gezeigt.update(kasten=kasten) or 0
+        ):
+            self.fenster.ueber()
+        return gezeigt["kasten"]
+
+    def _ueber_text(self) -> str:
+        return self._ueber_kasten().text()
+
+    def test_ueber_verweist_auf_die_lizenztexte(self):
+        """Im Netz und im Arbeitsordner - der Einhängepunkt ist weg."""
+        import re
+
+        from PySide6.QtWidgets import QLabel
+
+        kasten = self._ueber_kasten()
+        verweise = re.findall(r'href="([^"]+)"', kasten.text())
+        self.assertIn("https://www.gnu.org/licenses/gpl-3.0.html", verweise)
+        self.assertIn("https://www.gnu.org/licenses/lgpl-3.0.html", verweise)
+        self.assertTrue(any(z.startswith("file://") for z in verweise))
+        # Blauer Text allein nützt nichts - die Verweise müssen aufgehen.
+        beschriftungen = [k for k in kasten.findChildren(QLabel) if k.text()]
+        self.assertTrue(all(k.openExternalLinks() for k in beschriftungen))
+
+    def test_ueber_nennt_die_lizenz_des_programms(self):
+        text = self._ueber_text()
+        self.assertIn("GNU GPL, Version 3", text)
+        self.assertIn("GPL-3.0-or-later", text)
+
     def test_speichern_nur_wenn_es_etwas_zu_speichern_gibt(self):
         self._projekt()
         f = self.fenster
@@ -1198,17 +1232,9 @@ class TestMenuezustaende(unittest.TestCase):
 
     def test_ueber_nennt_die_bausteine_mit_fassung(self):
         """Was drinsteckt, ist im Programm nachzusehen."""
-        from PySide6.QtWidgets import QMessageBox
-
         from verteilerly import bestand
 
-        gezeigt = {}
-
-        def fangen(eltern, titel, text):
-            gezeigt["text"] = text
-
-        with mock.patch.object(QMessageBox, "about", fangen):
-            self.fenster.ueber()
+        gezeigt = {"text": self._ueber_text()}
 
         for teil in bestand.abhaengigkeiten():
             with self.subTest(baustein=teil.name):
