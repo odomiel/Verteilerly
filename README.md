@@ -167,7 +167,9 @@ nicht angenommen — eine unlesbare Rangierung etwa —, bleibt die Marke stehen
 Ein Doppelklick auf eine freie Doppelader legt ein Kabel
 auf, einer auf ein aufgelegtes Kabel **bearbeitet** es: Beschriftung,
 Kabeltyp und Kabelgröße lassen sich ändern, und der Dialog trägt auch den
-Knopf zum Entfernen. Leiste, Startpunkt und Zahl der aufgelegten
+Knopf zum Entfernen. Beim Auflegen folgt *Davon auflegen* der Kabelgröße —
+ganz aufgelegt ist der Regelfall, gekürzt wird danach von Hand.
+Leiste, Startpunkt und Zahl der aufgelegten
 Doppeladern stehen dort fest — wer die Lage ändern will, nimmt das Kabel
 ab und legt es neu auf. Ein neuer Kabeltyp färbt die Adern nur auf
 Verlangen um. Die Beschriftung ist außerdem direkt in der Kabelspalte der

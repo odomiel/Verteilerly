@@ -561,7 +561,7 @@ class KabelDialog(QDialog):
         form = QFormLayout()
         form.addRow("Beschriftung:", self.beschriftung)
         form.addRow("Leiste:", self.leiste)
-        form.addRow("Ab Doppelader:", self.start)
+        form.addRow("Ab Stift:", self.start)
         form.addRow("Kabelgröße:", self.kabel_da)
         form.addRow("Davon auflegen:", self.auflegen_da)
         form.addRow("Kabeltyp:", self.kabeltyp)
@@ -615,9 +615,17 @@ class KabelDialog(QDialog):
         self.accept()
 
     def _kabelgroesse_geaendert(self, wert: int) -> None:
-        if self.auflegen_da.value() > wert:
-            self.auflegen_da.setValue(wert)
+        """Die Kabelgroesse zieht "Davon auflegen" mit.
+
+        Der Regelfall ist, dass ein Kabel ganz aufgelegt wird; wer kuerzen
+        will, sagt es danach. Beim Bearbeiten liegt die Zahl fest - dort
+        bleibt sie stehen, wie sie ist.
+        """
         self.auflegen_da.setMaximum(wert)
+        if self.bearbeitet is None:
+            self.auflegen_da.setValue(wert)
+        elif self.auflegen_da.value() > wert:
+            self.auflegen_da.setValue(wert)
         self._kuerzung_zeigen()
 
     def _kuerzung_zeigen(self) -> None:
@@ -677,7 +685,7 @@ class UeberlaufDialog(QDialog):
 
         fortsetzung = QFormLayout()
         fortsetzung.addRow("Weiter auf:", self.leiste)
-        fortsetzung.addRow("Ab Doppelader:", self.start)
+        fortsetzung.addRow("Ab Stift:", self.start)
         kasten = QGroupBox()
         kasten.setLayout(fortsetzung)
         self.fortsetzen.toggled.connect(kasten.setEnabled)

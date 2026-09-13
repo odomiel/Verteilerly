@@ -327,6 +327,70 @@ class TestMehrereZellenAufEinmal(unittest.TestCase):
         self.assertIsNone(modell.stil(modell.index(0, SPALTE_KABEL)))
 
 
+class TestKabelDialog(unittest.TestCase):
+    """Kabel auflegen und bearbeiten."""
+
+    def setUp(self):
+        from verteilerly import pfade
+        from verteilerly.farbcodes import Kabeltypen
+        from verteilerly.gui.dialoge import KabelDialog
+
+        self.KabelDialog = KabelDialog
+        self.typen = Kabeltypen.laden(pfade.kabeltypenordner())
+        self.verteiler = Verteiler.aus_geometrie(1, 2, 10)
+
+    def _dialog(self, kabel=None, leiste=1, start=1):
+        dialog = self.KabelDialog(
+            self.verteiler, self.typen, leiste, start, kabel=kabel
+        )
+        self.addCleanup(dialog.close)
+        return dialog
+
+    def _beschriftungen(self, dialog):
+        from PySide6.QtWidgets import QFormLayout
+
+        form = dialog.findChild(QFormLayout)
+        return [
+            form.itemAt(i, QFormLayout.ItemRole.LabelRole).widget().text()
+            for i in range(form.rowCount())
+            if form.itemAt(i, QFormLayout.ItemRole.LabelRole)
+        ]
+
+    def test_der_startpunkt_heisst_stift(self):
+        beschriftungen = self._beschriftungen(self._dialog())
+        self.assertIn("Ab Stift:", beschriftungen)
+        self.assertNotIn("Ab Doppelader:", beschriftungen)
+
+    def test_die_kabelgroesse_zieht_das_auflegen_mit(self):
+        """Der Regelfall ist, dass ein Kabel ganz aufgelegt wird."""
+        dialog = self._dialog()
+        dialog.kabel_da.setValue(6)
+        self.assertEqual(dialog.auflegen_da.value(), 6)
+        dialog.kabel_da.setValue(12)
+        self.assertEqual(dialog.auflegen_da.value(), 12)
+        self.assertEqual(dialog.kuerzungshinweis.text(), "")
+
+    def test_kuerzen_bleibt_moeglich(self):
+        dialog = self._dialog()
+        dialog.kabel_da.setValue(6)
+        dialog.auflegen_da.setValue(4)
+        self.assertEqual(dialog.angaben()["anzahl_da"], 4)
+        self.assertEqual(dialog.angaben()["da_gesamt"], 6)
+        self.assertIn("2 DA", dialog.kuerzungshinweis.text())
+
+    def test_beim_bearbeiten_bleibt_das_aufgelegte_stehen(self):
+        """Die Lage steht fest, auch wenn die Größe sich ändert."""
+        kabel = self.verteiler.kabel_anlegen(
+            "Probe", 1, 1, 4, kabeltyp="jystyv", da_gesamt=6
+        )
+        dialog = self._dialog(kabel=kabel)
+        self.assertEqual(dialog.auflegen_da.value(), 4)
+        self.assertFalse(dialog.auflegen_da.isEnabled())
+        dialog.kabel_da.setValue(10)
+        self.assertEqual(dialog.auflegen_da.value(), 4)
+        self.assertIn("6 DA", dialog.kuerzungshinweis.text())
+
+
 class TestEnterSpringtWeiter(unittest.TestCase):
     """Enter schließt die Eingabe und geht eine Zeile tiefer."""
 
