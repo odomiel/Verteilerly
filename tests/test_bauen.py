@@ -95,7 +95,7 @@ class TestSpec(unittest.TestCase):
             for quelle, ziel in self.aufrufe["analysis"]["datas"]
         }
         self.assertEqual(dateien.get("LICENSE"), ".")
-        for name in ("GPL-3.0.txt", "LGPL-3.0.txt", "QUELLEN.txt"):
+        for name in ("LGPL-3.0.txt", "QUELLEN.txt"):
             with self.subTest(datei=name):
                 self.assertEqual(dateien.get(name), "lizenzen")
 

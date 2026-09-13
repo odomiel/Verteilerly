@@ -227,7 +227,9 @@ def programm_einbauen() -> None:
     lizenzziel = APPDIR / LIZENZEN.name
     shutil.rmtree(lizenzziel, ignore_errors=True)
     shutil.copytree(LIZENZEN, lizenzziel)
-    shutil.copy2(WURZEL / "LICENSE", lizenzziel / "LICENSE")
+    # Die GPL liegt im Quellbaum als LICENSE, wo sie jedes Werkzeug sucht;
+    # im Abbild heisst sie wie die uebrigen Lizenztexte.
+    shutil.copy2(WURZEL / "LICENSE", lizenzziel / "GPL-3.0.txt")
     melden(
         f"Programm, Daten und Lizenzen eingebaut "
         f"({ziel.name}, {datenziel.name}, {lizenzziel.name})"
@@ -258,7 +260,9 @@ def python_abspecken() -> None:
             datei.unlink()
     for name in UNNOETIGE_BIBLIOTHEKEN:
         for ordner in (APPDIR / "usr" / "lib", opt / "lib"):
-            for datei in ordner.glob(f"{name}.so*") if ordner.is_dir() else ():
+            # "libtcl8.6.so" traegt die Fassung im Namen, "libgdbm.so.4"
+            # dahinter - das Muster muss beides fangen.
+            for datei in ordner.glob(f"{name}*.so*") if ordner.is_dir() else ():
                 datei.unlink()
 
     for ordner in APPDIR.rglob("__pycache__"):
