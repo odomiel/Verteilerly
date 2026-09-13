@@ -338,6 +338,50 @@ class TestAnschriftImSchriftfeld(unittest.TestCase):
         self.assertEqual(_schriftfeldanteile(3, (1.0, 1.0)), [0.38, 0.26, 0.36])
 
 
+class TestTextstilAufDemBlatt(unittest.TestCase):
+    """Der Zellenstil geht vor, die Blattvorlage bleibt Vorgabe."""
+
+    def setUp(self):
+        from verteilerly.modell import Textstil
+
+        self.Textstil = Textstil
+        self.projekt = Projekt(
+            verteiler=Verteiler.aus_geometrie(1, 2, 10, name="M", nummer="1")
+        )
+        self.ader = self.projekt.verteiler.leiste(1).stift(1).ader("a")
+        self.ader.bezeichnung = "Probe"
+
+    def _feld(self):
+        for element in leistenblatt(self.projekt, 1).elemente:
+            if isinstance(element, Text) and element.text == "Probe":
+                return element
+        self.fail("Die Bezeichnung steht nicht auf dem Blatt")
+
+    def test_ohne_stil_gilt_die_blattvorlage(self):
+        feld = self._feld()
+        self.assertEqual(feld.ausrichtung, STANDARD.spalten[3].ausrichtung)
+        self.assertFalse(feld.fett)
+        self.assertFalse(feld.kursiv)
+
+    def test_der_zellenstil_geht_vor(self):
+        self.ader.stil_setzen(
+            "bezeichnung", self.Textstil("rechts", fett=True, kursiv=True)
+        )
+        feld = self._feld()
+        self.assertEqual(feld.ausrichtung, "rechts")
+        self.assertTrue(feld.fett)
+        self.assertTrue(feld.kursiv)
+
+    def test_nur_diese_zelle(self):
+        self.ader.stil_setzen("bezeichnung", self.Textstil(fett=True))
+        self.projekt.verteiler.leiste(1).stift(2).ader("a").bezeichnung = "Andere"
+        andere = [
+            e for e in leistenblatt(self.projekt, 1).elemente
+            if isinstance(e, Text) and e.text == "Andere"
+        ]
+        self.assertFalse(andere[0].fett)
+
+
 class TestAufbauzeile(unittest.TestCase):
     """Das Deckblatt zählt Buchten und Leisten in der richtigen Zahlform."""
 

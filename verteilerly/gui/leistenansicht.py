@@ -7,6 +7,8 @@ Kabelspalte rechts zeigt, welches Kabel die Doppelader belegt.
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 from PySide6.QtCore import (
     QAbstractTableModel,
     QEvent,
@@ -15,7 +17,7 @@ from PySide6.QtCore import (
     Qt,
     Signal,
 )
-from PySide6.QtGui import QColor, QFont, QKeySequence
+from PySide6.QtGui import QColor, QFont, QIcon, QKeySequence, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemDelegate,
     QAbstractItemView,
@@ -26,12 +28,24 @@ from PySide6.QtWidgets import (
     QPushButton,
     QStyledItemDelegate,
     QTableView,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
 
 from .. import schreibweisen
-from ..modell import Aderadresse, ModellFehler, Verteiler, adressen_lesen
+from ..modell import (
+    AUSRICHTUNGEN,
+    LEERER_STIL,
+    LINKS,
+    MITTE,
+    RECHTS,
+    Aderadresse,
+    ModellFehler,
+    Textstil,
+    Verteiler,
+    adressen_lesen,
+)
 from ..schreibweisen import Schreibweise
 from .thema import HELL, Farben
 
@@ -47,6 +61,22 @@ SPALTE_BEMERKUNG = 6
 SPALTE_KABEL = 7
 
 RANGIERSPALTEN = (SPALTE_RANGIERUNG, SPALTE_RANGIERUNG_2)
+
+# Welche Tabellenspalte welches Feld auf dem Blatt gestaltet.
+# Beide Rangierfelder gehoeren zu derselben Zelle des Blattes - dort
+# stehen sie nebeneinander in einer.
+STILSPALTEN = {
+    SPALTE_FARBE: "farbe",
+    SPALTE_BEZEICHNUNG: "bezeichnung",
+    SPALTE_RANGIERUNG: "rangierung",
+    SPALTE_RANGIERUNG_2: "rangierung",
+    SPALTE_BEMERKUNG: "bemerkung",
+}
+WAAGERECHT = {
+    LINKS: Qt.AlignmentFlag.AlignLeft,
+    MITTE: Qt.AlignmentFlag.AlignHCenter,
+    RECHTS: Qt.AlignmentFlag.AlignRight,
+}
 # „Stift“ steht über der Nummer und über a und b, wie auf dem Blatt.
 STIFTSPALTEN = (SPALTE_STIFT, SPALTE_ADER)
 
@@ -147,6 +177,33 @@ class LeistenModell(QAbstractTableModel):
         stift, seite = self._stelle(zeile)
         return Aderadresse(self.leiste_nr, stift, seite)
 
+    # -- Textstil je Zelle -----------------------------------------
+
+    def stilfeld(self, spalte: int) -> str | None:
+        """Welches Feld des Blattes diese Spalte gestaltet - oder keines."""
+        return STILSPALTEN.get(spalte)
+
+    def stil(self, index: QModelIndex) -> Textstil | None:
+        """Der Stil dieser Zelle; None, wo sich nichts gestalten laesst."""
+        feld = self.stilfeld(index.column())
+        if feld is None or not index.isValid() or self._leiste is None:
+            return None
+        stift_nr, seite = self._stelle(index.row())
+        return self._leiste.stift(stift_nr).ader(seite).stil(feld)
+
+    def stil_setzen(self, index: QModelIndex, stil: Textstil) -> bool:
+        feld = self.stilfeld(index.column())
+        if feld is None or not index.isValid() or self._leiste is None:
+            return False
+        stift_nr, seite = self._stelle(index.row())
+        self._leiste.stift(stift_nr).ader(seite).stil_setzen(feld, stil)
+        # Beide Rangierfelder zeigen dieselbe Zelle des Blattes.
+        links = self.index(index.row(), 0)
+        rechts = self.index(index.row(), self.columnCount() - 1)
+        self.dataChanged.emit(links, rechts)
+        self.belegung_geaendert.emit()
+        return True
+
     def headerData(self, abschnitt, ausrichtung, rolle=Qt.ItemDataRole.DisplayRole):
         if ausrichtung == Qt.Orientation.Horizontal:
             if rolle == Qt.ItemDataRole.DisplayRole:
@@ -203,16 +260,31 @@ class LeistenModell(QAbstractTableModel):
                     return kabel.beschriftung
                 return self._kabeltext(stift_nr, seite)
 
+        feldstil = ader.stil(STILSPALTEN[spalte]) if spalte in STILSPALTEN else LEERER_STIL
+
         if rolle == Qt.ItemDataRole.TextAlignmentRole:
+            if feldstil.ausrichtung:
+                return int(
+                    WAAGERECHT[feldstil.ausrichtung] | Qt.AlignmentFlag.AlignVCenter
+                )
             if spalte in (SPALTE_STIFT, SPALTE_ADER):
                 return int(Qt.AlignmentFlag.AlignCenter)
             return int(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
 
         if rolle == Qt.ItemDataRole.FontRole:
+            schrift = QFont()
+            eigen = False
             if spalte in (SPALTE_STIFT, SPALTE_ADER, SPALTE_FARBE, *RANGIERSPALTEN):
-                schrift = QFont()
                 schrift.setStyleHint(QFont.StyleHint.Monospace)
                 schrift.setFamilies(["IBM Plex Mono", "DejaVu Sans Mono", "monospace"])
+                eigen = True
+            if feldstil.fett:
+                schrift.setBold(True)
+                eigen = True
+            if feldstil.kursiv:
+                schrift.setItalic(True)
+                eigen = True
+            if eigen:
                 return schrift
 
         if rolle == Qt.ItemDataRole.ForegroundRole:
@@ -376,6 +448,33 @@ class LeistenModell(QAbstractTableModel):
         return True
 
 
+def ausrichtungssymbol(art: str, farbe: str = "#000000") -> QIcon:
+    """Ein Sinnbild fuer links-, mittig- oder rechtsbuendig.
+
+    Vier Striche, zwei davon kurz und an der gemeinten Seite - so zeigen
+    es Textprogramme seit jeher. Gezeichnet statt geladen: das Programm
+    bringt keine Symboldateien mit, und die Farbe folgt dem Farbsatz.
+    """
+    kante = 16
+    bild = QPixmap(kante, kante)
+    bild.fill(Qt.GlobalColor.transparent)
+    maler = QPainter(bild)
+    maler.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+    maler.setPen(QPen(QColor(farbe), 2))
+    rand, lang, kurz = 2, kante - 4, int((kante - 4) * 0.6)
+    for i, y in enumerate((3, 7, 11, 15)):
+        breite = lang if i % 2 == 0 else kurz
+        if art == RECHTS:
+            x = rand + lang - breite
+        elif art == MITTE:
+            x = rand + (lang - breite) // 2
+        else:
+            x = rand
+        maler.drawLine(x, y - 1, x + breite, y - 1)
+    maler.end()
+    return QIcon(bild)
+
+
 class EingabeDelegat(QStyledItemDelegate):
     """Enter schliesst die Eingabe und geht eine Zeile tiefer.
 
@@ -461,18 +560,21 @@ class LeistenAnsicht(QWidget):
 
         self.hinweis = QLabel("")
 
+        self.modell = LeistenModell(self)
+        self.modell.belegung_geaendert.connect(self.belegung_geaendert)
+        self.modell.fehler_gemeldet.connect(self.fehler_gemeldet)
+
         kopf = QHBoxLayout()
         kopf.setContentsMargins(0, 0, 0, 6)
         kopf.addWidget(QLabel("Leiste:"))
         kopf.addWidget(self.auswahl)
         kopf.addWidget(self.zurueck)
         kopf.addWidget(self.vor)
+        kopf.addSpacing(16)
+        for knopf in self._textknoepfe():
+            kopf.addWidget(knopf)
         kopf.addSpacing(12)
         kopf.addWidget(self.hinweis, 1)
-
-        self.modell = LeistenModell(self)
-        self.modell.belegung_geaendert.connect(self.belegung_geaendert)
-        self.modell.fehler_gemeldet.connect(self.fehler_gemeldet)
 
         self.tabelle = QTableView()
         self.tabelle.setModel(self.modell)
@@ -489,6 +591,9 @@ class LeistenAnsicht(QWidget):
         self.delegat = EingabeDelegat(self.tabelle)
         self.tabelle.setItemDelegate(self.delegat)
         self.delegat.weiter.connect(self._eine_zeile_tiefer)
+        self.tabelle.selectionModel().currentChanged.connect(
+            lambda *_: self._knoepfe_auffrischen()
+        )
 
         # „Stift“ und „Rangierung“ reichen über je zwei Spalten.
         self.tabelle.setHorizontalHeader(
@@ -515,6 +620,95 @@ class LeistenAnsicht(QWidget):
         aufbau.addLayout(kopf)
         aufbau.addWidget(self.tabelle)
 
+        self._knoepfe_auffrischen()
+
+    def _textknoepfe(self) -> list[QToolButton]:
+        """Ausrichtung, fett und kursiv fuer die gewaehlte Zelle.
+
+        Sie stehen neben der Leistenwahl, weil sie dorthin gehoeren, wo
+        gearbeitet wird. Nochmaliges Druecken nimmt die Einstellung
+        zurueck: dann gilt wieder, was die Blattvorlage fuer die Spalte
+        haelt.
+        """
+        self.ausrichtungsknoepfe: dict[str, QToolButton] = {}
+        for art, hinweis in (
+            (LINKS, "Linksbündig"),
+            (MITTE, "Mittig"),
+            (RECHTS, "Rechtsbündig"),
+        ):
+            knopf = QToolButton()
+            knopf.setCheckable(True)
+            knopf.setAutoRaise(True)
+            knopf.setToolTip(f"{hinweis} — nochmals drücken: wie die Blattvorlage")
+            knopf.clicked.connect(
+                lambda _an=False, gewaehlt=art: self._ausrichten(gewaehlt)
+            )
+            self.ausrichtungsknoepfe[art] = knopf
+
+        self.fett = QToolButton()
+        self.fett.setText("F")
+        self.fett.setToolTip("Fett")
+        self.kursiv = QToolButton()
+        self.kursiv.setText("K")
+        self.kursiv.setToolTip("Kursiv")
+        for knopf, schnitt in ((self.fett, "fett"), (self.kursiv, "kursiv")):
+            knopf.setCheckable(True)
+            knopf.setAutoRaise(True)
+            schrift = knopf.font()
+            schrift.setBold(schnitt == "fett")
+            schrift.setItalic(schnitt == "kursiv")
+            knopf.setFont(schrift)
+            knopf.clicked.connect(
+                lambda _an=False, was=schnitt: self._schnitt_umschalten(was)
+            )
+
+        self.textknoepfe = [
+            *self.ausrichtungsknoepfe.values(), self.fett, self.kursiv
+        ]
+        self._symbole_auffrischen()
+        return self.textknoepfe
+
+    def _symbole_auffrischen(self) -> None:
+        """Die gezeichneten Sinnbilder folgen dem Farbsatz."""
+        for art, knopf in getattr(self, "ausrichtungsknoepfe", {}).items():
+            knopf.setIcon(ausrichtungssymbol(art, self.modell.farben.schrift))
+
+    def _stilzelle(self):
+        """Die gewaehlte Zelle, sofern sich dort etwas gestalten laesst."""
+        index = self.tabelle.currentIndex()
+        if not index.isValid() or self.modell.stilfeld(index.column()) is None:
+            return None
+        return index
+
+    def _knoepfe_auffrischen(self) -> None:
+        """Zeigt am Knopf, was in der gewaehlten Zelle gilt."""
+        index = self._stilzelle()
+        stil = self.modell.stil(index) if index is not None else None
+        for knopf in self.textknoepfe:
+            knopf.setEnabled(stil is not None)
+        for art, knopf in self.ausrichtungsknoepfe.items():
+            knopf.setChecked(bool(stil) and stil.ausrichtung == art)
+        self.fett.setChecked(bool(stil) and stil.fett)
+        self.kursiv.setChecked(bool(stil) and stil.kursiv)
+
+    def _ausrichten(self, art: str) -> None:
+        index = self._stilzelle()
+        if index is None:
+            return
+        alt = self.modell.stil(index)
+        # Nochmals derselbe Knopf: zurueck zur Blattvorlage.
+        neu = replace(alt, ausrichtung="" if alt.ausrichtung == art else art)
+        self.modell.stil_setzen(index, neu)
+        self._knoepfe_auffrischen()
+
+    def _schnitt_umschalten(self, was: str) -> None:
+        index = self._stilzelle()
+        if index is None:
+            return
+        alt = self.modell.stil(index)
+        self.modell.stil_setzen(index, replace(alt, **{was: not getattr(alt, was)}))
+        self._knoepfe_auffrischen()
+
     def _eine_zeile_tiefer(self) -> None:
         """Nach Enter eine Zeile weiter - wie in einer Tabellenkalkulation.
 
@@ -532,6 +726,7 @@ class LeistenAnsicht(QWidget):
 
     def farben_setzen(self, farben) -> None:
         self.modell.farben_setzen(farben)
+        self._symbole_auffrischen()
 
     def schreibweise_setzen(self, schreibweise: Schreibweise) -> None:
         self.modell.schreibweise_setzen(schreibweise)

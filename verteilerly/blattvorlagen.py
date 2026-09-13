@@ -17,9 +17,9 @@ from dataclasses import dataclass, field, replace
 
 import yaml
 
-from .modell import ModellFehler
+from .modell import LINKS, MITTE, RECHTS, ModellFehler
 
-LINKS, MITTE, RECHTS = "links", "mitte", "rechts"
+__all_ausrichtungen__ = (LINKS, MITTE, RECHTS)
 AUSRICHTUNGEN = (LINKS, MITTE, RECHTS)
 
 # Wie das Schriftfeld aufgebaut ist. "standard" reiht Beschriftung und

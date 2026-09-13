@@ -23,9 +23,10 @@ from ..layout import (
     kopfgruppen,
     schriftfeldwerte,
     schriftfeldzeilen,
+    zeilenstile,
     zeilenwerte,
 )
-from ..modell import Projekt
+from ..modell import LEERER_STIL, Projekt
 
 SCHRIFTART = "Arial"          # was Helvetica im PDF am naechsten kommt
 PT_JE_MM = 72.0 / 25.4
@@ -72,9 +73,11 @@ class _Werkzeug:
     def rahmen(self, **seiten):
         return self.Border(**seiten)
 
-    def schrift(self, groesse: float, fett: bool = False, farbe: str = "#000000"):
+    def schrift(self, groesse: float, fett: bool = False, farbe: str = "#000000",
+                kursiv: bool = False):
         return self.Font(
-            name=SCHRIFTART, size=groesse, bold=fett, color=_hex(farbe)
+            name=SCHRIFTART, size=groesse, bold=fett, italic=kursiv,
+            color=_hex(farbe),
         )
 
     def lage(self, ausrichtung: str = "links", gedreht: int = 0):
@@ -268,10 +271,15 @@ def _leistenblatt(
     for stift in leiste.stifte:
         for seite in ("a", "b"):
             werte = zeilenwerte(projekt, leiste_nr, stift.nummer, seite)
+            stile = zeilenstile(projekt, leiste_nr, stift.nummer, seite)
             for i, spalte in enumerate(spalten, 1):
                 feld = blatt.cell(row=zeile, column=i, value=werte.get(spalte.feld, ""))
-                feld.font = zeug.schrift(vorlage.schrift_normal)
-                feld.alignment = zeug.lage(spalte.ausrichtung)
+                # Derselbe Zellenstil wie auf dem Blatt.
+                stil = stile.get(spalte.feld, LEERER_STIL)
+                feld.font = zeug.schrift(
+                    vorlage.schrift_normal, stil.fett, kursiv=stil.kursiv
+                )
+                feld.alignment = zeug.lage(stil.ausrichtung or spalte.ausrichtung)
                 # Unter der b-Zeile trennt ein kraeftiger Strich die Stifte.
                 feld.border = zeug.rahmen(
                     left=zeug.strich(LINIE_FEIN), right=zeug.strich(LINIE_FEIN),

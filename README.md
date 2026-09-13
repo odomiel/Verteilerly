@@ -138,7 +138,15 @@ speichern*. Sie landet als YAML-Datei im Arbeitsordner (siehe
 Der Editor zeigt links die Verteilerübersicht und rechts die Belegung der
 gewählten Leiste. Neben dem Aufklappmenü stehen zwei Pfeile, die Leiste
 für Leiste weiterschalten (Alt+← und Alt+→); am ersten und letzten
-Eintrag ist der jeweilige Pfeil aus. In der Leistenansicht schließt **Enter** die Eingabe und geht
+Eintrag ist der jeweilige Pfeil aus. Neben der Leistenwahl stehen **Textoptionen** für die gewählte Zelle:
+linksbündig, mittig, rechtsbündig, **F** und *K*. Nochmaliges Drücken einer
+Ausrichtung nimmt sie zurück — dann gilt wieder, was die Blattvorlage für die
+Spalte hält. Gestaltbar sind Farbe, Bezeichnung, Rangierung und Bemerkung;
+Stift, Ader und Kabel nicht. Der Stil gehört der Ader, steht in der
+Projektdatei und gilt in Leistenansicht, Blatt, PDF und Excel-Mappe
+gleichermaßen.
+
+In der Leistenansicht schließt **Enter** die Eingabe und geht
 **eine Zeile tiefer**, wie in einer Tabellenkalkulation; wurde die Eingabe
 nicht angenommen — eine unlesbare Rangierung etwa —, bleibt die Marke stehen.
 Ein Doppelklick auf eine freie Doppelader legt ein Kabel

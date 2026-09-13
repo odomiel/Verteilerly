@@ -22,6 +22,8 @@ from . import AusgabeFehler
 PT_JE_MM = 72.0 / 25.4
 SCHRIFT = "Helvetica"
 SCHRIFT_FETT = "Helvetica-Bold"
+SCHRIFT_KURSIV = "Helvetica-Oblique"
+SCHRIFT_FETT_KURSIV = "Helvetica-BoldOblique"
 KUERZUNG = "…"
 # Wie weit ein Text schrumpfen darf, damit er in sein Feld passt. Unter
 # 5 pt liest es niemand mehr - dann wird lieber gekuerzt.
@@ -103,8 +105,19 @@ def _linie(blech: canvas.Canvas, element: Linie, hoehe_pt: float) -> None:
     )
 
 
+def _schriftschnitt(fett: bool, kursiv: bool) -> str:
+    """Der Schnitt zu fett und kursiv - alle vier gehoeren zum PDF-Standard."""
+    if fett and kursiv:
+        return SCHRIFT_FETT_KURSIV
+    if fett:
+        return SCHRIFT_FETT
+    if kursiv:
+        return SCHRIFT_KURSIV
+    return SCHRIFT
+
+
 def _text(blech: canvas.Canvas, element: Text, hoehe_pt: float) -> None:
-    schrift = SCHRIFT_FETT if element.fett else SCHRIFT
+    schrift = _schriftschnitt(element.fett, element.kursiv)
     laenge_pt = element.zeilenlaenge * PT_JE_MM
     groesse = _passende_groesse(str(element.text), schrift, element.groesse, laenge_pt)
     text = _einpassen(str(element.text), schrift, groesse, laenge_pt)

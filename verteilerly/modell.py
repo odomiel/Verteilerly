@@ -95,6 +95,63 @@ class Aderadresse:
 # --------------------------------------------------------------------------
 
 
+# Wie ein Text in seinem Feld steht. Dieselben Woerter wie in den
+# Blattvorlagen - dort werden sie ebenfalls gebraucht, und zwei Listen
+# derselben drei Woerter waeren eine zu viel.
+LINKS, MITTE, RECHTS = "links", "mitte", "rechts"
+AUSRICHTUNGEN = (LINKS, MITTE, RECHTS)
+
+# Die Spalten, deren Text sich gestalten laesst. Stift und Ader
+# stehen nicht darunter: sie sind Nummern, keine Eintraege. Die
+# Kabelspalte auch nicht - dort steht ein Block ueber viele Zeilen, kein
+# Zellentext.
+STILFELDER = ("farbe", "bezeichnung", "rangierung", "bemerkung")
+
+
+@dataclass(frozen=True)
+class Textstil:
+    """Wie der Text einer Zelle gesetzt ist.
+
+    Eine leere ``ausrichtung`` heisst: so, wie die Blattvorlage es fuer
+    diese Spalte haelt. Ein leerer Stil wird nicht gespeichert - die
+    Projektdatei soll nur tragen, was jemand eingestellt hat.
+    """
+
+    ausrichtung: str = ""
+    fett: bool = False
+    kursiv: bool = False
+
+    def __post_init__(self) -> None:
+        if self.ausrichtung and self.ausrichtung not in AUSRICHTUNGEN:
+            raise ModellFehler(f"Unbekannte Ausrichtung: {self.ausrichtung!r}")
+
+    @property
+    def leer(self) -> bool:
+        return not (self.ausrichtung or self.fett or self.kursiv)
+
+    def als_dict(self) -> dict:
+        daten: dict[str, object] = {}
+        if self.ausrichtung:
+            daten["ausrichtung"] = self.ausrichtung
+        if self.fett:
+            daten["fett"] = True
+        if self.kursiv:
+            daten["kursiv"] = True
+        return daten
+
+    @classmethod
+    def aus_dict(cls, daten: dict | None) -> Textstil:
+        daten = daten or {}
+        return cls(
+            ausrichtung=str(daten.get("ausrichtung") or ""),
+            fett=bool(daten.get("fett")),
+            kursiv=bool(daten.get("kursiv")),
+        )
+
+
+LEERER_STIL = Textstil()
+
+
 @dataclass
 class Ader:
     """Eine Ader mit ihren vier Feldern.
@@ -115,6 +172,21 @@ class Ader:
     # spraenge er beim Eintragen eines Ziels ins erste Feld - die Eintraege
     # sollen ihre Plaetze behalten.
     vermerk_zuerst: bool = False
+    # Textstil je Spalte - nur, was von der Blattvorlage abweicht.
+    stile: dict[str, Textstil] = field(default_factory=dict)
+
+    def stil(self, feld: str) -> Textstil:
+        """Wie der Text dieser Spalte steht - ohne Angabe wie die Vorlage."""
+        return self.stile.get(feld, LEERER_STIL)
+
+    def stil_setzen(self, feld: str, stil: Textstil) -> None:
+        """Setzt den Stil einer Spalte; ein leerer wird geloescht."""
+        if feld not in STILFELDER:
+            raise ModellFehler(f"Fuer {feld!r} gibt es keinen Textstil")
+        if stil.leer:
+            self.stile.pop(feld, None)
+        else:
+            self.stile[feld] = stil
 
 
 @dataclass

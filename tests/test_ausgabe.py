@@ -41,6 +41,18 @@ def _projekt() -> Projekt:
     )
 
 
+class TestSchriftschnitt(unittest.TestCase):
+    """Fett und kursiv gibt es im PDF als eigene Schnitte."""
+
+    def test_die_vier_schnitte(self):
+        from verteilerly.ausgabe.pdf import _schriftschnitt
+
+        self.assertEqual(_schriftschnitt(False, False), "Helvetica")
+        self.assertEqual(_schriftschnitt(True, False), "Helvetica-Bold")
+        self.assertEqual(_schriftschnitt(False, True), "Helvetica-Oblique")
+        self.assertEqual(_schriftschnitt(True, True), "Helvetica-BoldOblique")
+
+
 class TestPdf(unittest.TestCase):
     def setUp(self):
         self.ordner = tempfile.TemporaryDirectory()
@@ -251,6 +263,27 @@ class TestTabellen(unittest.TestCase):
         blatt = load_workbook(ziel)["Daten je Ader"]
         self.assertEqual(blatt.cell(row=2, column=2).value, 1)
         self.assertIsInstance(blatt.cell(row=2, column=3).value, int)
+
+    def test_xlsx_uebernimmt_den_zellenstil(self):
+        """Fett, kursiv und Ausrichtung kommen mit nach Excel."""
+        from openpyxl import load_workbook
+        from verteilerly.modell import Textstil
+
+        ader = self.projekt.verteiler.leiste(1).stift(1).ader("a")
+        ader.bezeichnung = "Hausanschluss"
+        ader.stil_setzen("bezeichnung", Textstil("rechts", fett=True, kursiv=True))
+        ziel = xlsx_schreiben(self.projekt, Path(self.ordner.name) / "probe.xlsx")
+
+        blatt = load_workbook(ziel)["Leiste 1"]
+        feld = next(
+            zelle
+            for zeile in blatt.iter_rows()
+            for zelle in zeile
+            if zelle.value == "Hausanschluss"
+        )
+        self.assertTrue(feld.font.bold)
+        self.assertTrue(feld.font.italic)
+        self.assertEqual(feld.alignment.horizontal, "right")
 
     def test_briefkopf_erscheint_mit_beschriftung(self):
         ziel = xlsx_schreiben(self.projekt, Path(self.ordner.name) / "probe.xlsx")

@@ -202,6 +202,24 @@ class TestFeldauswahl(unittest.TestCase):
         del daten["beschriftungen"]
         self.assertEqual(projektdatei.aus_dict(daten).beschriftung("kunde"), "Kunde")
 
+    def test_textstil_ueberlebt_das_speichern(self):
+        """Der Stil gehört zum Verteiler, nicht zum Arbeitsplatz."""
+        from verteilerly.modell import Textstil
+
+        projekt = beispielprojekt()
+        ader = projekt.verteiler.leiste(1).stift(1).ader("a")
+        ader.stil_setzen("bezeichnung", Textstil("mitte", fett=True, kursiv=True))
+        projektdatei.speichern(projekt, self.ziel)
+
+        zurueck = projektdatei.laden(self.ziel)
+        stil = zurueck.verteiler.leiste(1).stift(1).ader("a").stil("bezeichnung")
+        self.assertEqual(stil, Textstil("mitte", fett=True, kursiv=True))
+
+    def test_ohne_stil_steht_nichts_in_der_datei(self):
+        daten = projektdatei.als_dict(beispielprojekt())
+        erste = daten["verteiler"]["buchten"][0]["leisten"][0]["stifte"][0]
+        self.assertNotIn("stile", erste["a"])
+
     def test_aeltere_datei_zeigt_die_felder_ueberall(self):
         from verteilerly.modell import BLATTARTEN
 

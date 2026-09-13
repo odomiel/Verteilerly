@@ -14,7 +14,16 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from .blattvorlagen import LINKS, MITTE, RECHTS, STANDARD, Blattvorlage
-from .modell import BLATTBESCHRIFTUNG, Bucht, Projekt, Verteiler, mehrzahl
+from .modell import (
+    BLATTBESCHRIFTUNG,
+    LEERER_STIL,
+    STILFELDER,
+    Bucht,
+    Projekt,
+    Textstil,
+    Verteiler,
+    mehrzahl,
+)
 
 # -- Papier ----------------------------------------------------------------
 
@@ -83,6 +92,8 @@ class Text:
     fett: bool = False
     farbe: str = TINTE
     drehung: float = 0.0
+    # Am Ende, damit die vorhandenen Aufrufe mit festen Stellen bleiben.
+    kursiv: bool = False
 
     @property
     def zeilenlaenge(self) -> float:
@@ -707,6 +718,18 @@ def zeilenwerte(
     }
 
 
+def zeilenstile(
+    projekt: Projekt, leiste_nr: int, stift_nr: int, seite: str
+) -> dict[str, Textstil]:
+    """Wie der Text in den Spalten dieser Zeile steht.
+
+    Wie ``zeilenwerte`` eine Stelle fuer beide Wege: Blatt und Mappe
+    fragen dasselbe.
+    """
+    ader = projekt.verteiler.leiste(leiste_nr).stift(stift_nr).ader(seite)
+    return {feld: ader.stil(feld) for feld in STILFELDER}
+
+
 def leistenblatt(
     projekt: Projekt, leiste_nr: int, vorlage: Blattvorlage = STANDARD
 ) -> Blatt:
@@ -749,11 +772,16 @@ def leistenblatt(
     for stift in leiste.stifte:
         for seite in ("a", "b"):
             werte = zeilenwerte(projekt, leiste_nr, stift.nummer, seite)
+            stile = zeilenstile(projekt, leiste_nr, stift.nummer, seite)
             x = rand
             for spalte, breite in zip(vorlage.spalten, breiten):
+                # Der Zellenstil geht vor; wo keiner gesetzt ist, gilt,
+                # was die Blattvorlage fuer die Spalte haelt.
+                stil = stile.get(spalte.feld, LEERER_STIL)
                 blatt.text(
                     x + 1.5, y, breite - 3, zeile_h, werte.get(spalte.feld, ""),
-                    vorlage.schrift_normal, spalte.ausrichtung,
+                    vorlage.schrift_normal, stil.ausrichtung or spalte.ausrichtung,
+                    stil.fett, TINTE, 0.0, stil.kursiv,
                 )
                 x += breite
             # Feine Linie zwischen a und b, kraeftige zwischen den Stiften.

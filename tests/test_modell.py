@@ -416,5 +416,60 @@ class TestMehrzahl(unittest.TestCase):
         self.assertEqual(mehrzahl(12, "Leiste", "Leisten"), "12 Leisten")
 
 
+class TestTextstil(unittest.TestCase):
+    """Wie der Text einer Zelle gesetzt ist."""
+
+    def setUp(self):
+        from verteilerly.modell import Ader
+
+        self.ader = Ader("a")
+
+    def test_ohne_angabe_ist_der_stil_leer(self):
+        from verteilerly.modell import Textstil
+
+        self.assertEqual(self.ader.stil("bezeichnung"), Textstil())
+        self.assertTrue(self.ader.stil("bezeichnung").leer)
+
+    def test_setzen_und_lesen(self):
+        from verteilerly.modell import Textstil
+
+        self.ader.stil_setzen("bezeichnung", Textstil("mitte", fett=True))
+        stil = self.ader.stil("bezeichnung")
+        self.assertEqual(stil.ausrichtung, "mitte")
+        self.assertTrue(stil.fett)
+        self.assertFalse(stil.kursiv)
+        # Andere Spalten bleiben unberührt.
+        self.assertTrue(self.ader.stil("bemerkung").leer)
+
+    def test_ein_leerer_stil_wird_nicht_aufgehoben(self):
+        """Die Projektdatei soll nur tragen, was jemand eingestellt hat."""
+        from verteilerly.modell import Textstil
+
+        self.ader.stil_setzen("bezeichnung", Textstil("mitte"))
+        self.ader.stil_setzen("bezeichnung", Textstil())
+        self.assertEqual(self.ader.stile, {})
+
+    def test_unbekanntes_feld_wird_abgelehnt(self):
+        from verteilerly.modell import ModellFehler, Textstil
+
+        with self.assertRaises(ModellFehler):
+            self.ader.stil_setzen("stift", Textstil(fett=True))
+
+    def test_unbekannte_ausrichtung_wird_abgelehnt(self):
+        from verteilerly.modell import ModellFehler, Textstil
+
+        with self.assertRaises(ModellFehler):
+            Textstil("schraeg")
+
+    def test_hin_und_zurueck_als_dict(self):
+        from verteilerly.modell import Textstil
+
+        stil = Textstil("rechts", kursiv=True)
+        self.assertEqual(stil.als_dict(), {"ausrichtung": "rechts", "kursiv": True})
+        self.assertEqual(Textstil.aus_dict(stil.als_dict()), stil)
+        self.assertEqual(Textstil.aus_dict({}), Textstil())
+        self.assertEqual(Textstil().als_dict(), {})
+
+
 if __name__ == "__main__":
     unittest.main()

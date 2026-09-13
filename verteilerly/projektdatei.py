@@ -13,6 +13,8 @@ from typing import Any
 from .modell import (
     Ader,
     BLATTARTEN,
+    STILFELDER,
+    Textstil,
     Aderadresse,
     Kabel,
     Kabelabschnitt,
@@ -26,13 +28,14 @@ from .modell import (
 )
 
 DATEIKENNUNG = "verteilerly-projekt"
-FORMATVERSION = 6
+FORMATVERSION = 7
 # Fassung 1 nannte die Buchten noch Reihen, Fassung 2 kannte noch keine
 # abgewaehlten Felder, Fassung 3 noch keinen Vermerk im Rangierfeld,
 # Fassung 4 noch keine Wahl der Blattarten fuer die eigenen Felder,
-# Fassung 5 noch keine eigenen Beschriftungen. Solche Dateien werden
-# weiter gelesen; geschrieben wird immer die neue Fassung.
-LESBARE_VERSIONEN = (1, 2, 3, 4, 5, 6)
+# Fassung 5 noch keine eigenen Beschriftungen, Fassung 6 noch keinen
+# Textstil je Zelle. Solche Dateien werden weiter gelesen; geschrieben
+# wird immer die neue Fassung.
+LESBARE_VERSIONEN = (1, 2, 3, 4, 5, 6, 7)
 
 
 class ProjektdateiFehler(ModellFehler):
@@ -53,6 +56,14 @@ def _ader_raus(ader: Ader) -> dict[str, Any]:
             daten[feld] = wert
     if ader.vermerk and ader.vermerk_zuerst:
         daten["vermerk_zuerst"] = True
+    # Nur eingestellte Stile, und nur die von Hand gesetzten Angaben darin.
+    stile = {
+        feld: stil.als_dict()
+        for feld, stil in sorted(ader.stile.items())
+        if not stil.leer
+    }
+    if stile:
+        daten["stile"] = stile
     return daten
 
 
@@ -145,6 +156,11 @@ def _ader_rein(daten: dict[str, Any], seite: str) -> Ader:
         bemerkung=daten.get("bemerkung", ""),
         vermerk=daten.get("vermerk", ""),
         vermerk_zuerst=bool(daten.get("vermerk_zuerst")),
+        stile={
+            feld: Textstil.aus_dict(wert)
+            for feld, wert in (daten.get("stile") or {}).items()
+            if feld in STILFELDER
+        },
     )
 
 

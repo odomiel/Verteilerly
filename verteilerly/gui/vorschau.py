@@ -121,6 +121,7 @@ class Blattflaeche(QWidget):
         laenge = umriss.height() if element.drehung else umriss.width()
         schrift = QFont(self.font())
         schrift.setBold(element.fett)
+        schrift.setItalic(element.kursiv)
         schrift.setPixelSize(self._passende_pixel(element, laenge, skala))
         masse = QFontMetricsF(schrift)
         # Was auch bei kleinster Schrift nicht hineinpasst, wird gekuerzt -
@@ -163,6 +164,7 @@ class Blattflaeche(QWidget):
 
         schrift = QFont(self.font())
         schrift.setBold(element.fett)
+        schrift.setItalic(element.kursiv)
         groesse = gewuenscht
         while groesse > kleinste:
             schrift.setPixelSize(groesse)

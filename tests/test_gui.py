@@ -44,6 +44,86 @@ from verteilerly.vorlagen import Vorlage, Vorlagen
 @unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
 
 
+class TestTextknoepfe(unittest.TestCase):
+    """Ausrichtung, fett und kursiv für die gewählte Zelle."""
+
+    def setUp(self):
+        from verteilerly.gui.leistenansicht import LeistenAnsicht
+
+        self.ansicht = LeistenAnsicht()
+        self.addCleanup(self.ansicht.close)
+        self.ansicht.verteiler_setzen(Verteiler.aus_geometrie(1, 2, 10))
+        self.ansicht.leiste_zeigen(1)
+        self.ader = self.ansicht.modell._leiste.stift(1).ader("a")
+
+    def _waehlen(self, zeile, spalte):
+        self.ansicht.tabelle.setCurrentIndex(self.ansicht.modell.index(zeile, spalte))
+
+    def test_ohne_gestaltbare_zelle_sind_sie_aus(self):
+        """Was nicht geht, ist ausgegraut."""
+        self._waehlen(0, SPALTE_STIFT)
+        self.assertFalse(any(k.isEnabled() for k in self.ansicht.textknoepfe))
+
+    def test_bei_einer_textzelle_sind_sie_an(self):
+        self._waehlen(0, SPALTE_BEZEICHNUNG)
+        self.assertTrue(all(k.isEnabled() for k in self.ansicht.textknoepfe))
+
+    def test_mittig_und_fett_landen_in_der_ader(self):
+        from verteilerly.modell import MITTE
+
+        self._waehlen(0, SPALTE_BEZEICHNUNG)
+        self.ansicht.ausrichtungsknoepfe[MITTE].click()
+        self.ansicht.fett.click()
+        stil = self.ader.stil("bezeichnung")
+        self.assertEqual(stil.ausrichtung, "mitte")
+        self.assertTrue(stil.fett)
+
+    def test_nochmals_derselbe_knopf_nimmt_die_ausrichtung_zurueck(self):
+        from verteilerly.modell import RECHTS
+
+        self._waehlen(0, SPALTE_BEZEICHNUNG)
+        self.ansicht.ausrichtungsknoepfe[RECHTS].click()
+        self.ansicht.ausrichtungsknoepfe[RECHTS].click()
+        self.assertEqual(self.ader.stil("bezeichnung").ausrichtung, "")
+
+    def test_kursiv_schaltet_hin_und_her(self):
+        self._waehlen(0, SPALTE_BEZEICHNUNG)
+        self.ansicht.kursiv.click()
+        self.assertTrue(self.ader.stil("bezeichnung").kursiv)
+        self.ansicht.kursiv.click()
+        self.assertFalse(self.ader.stil("bezeichnung").kursiv)
+
+    def test_die_knoepfe_zeigen_die_gewaehlte_zelle(self):
+        from verteilerly.modell import MITTE, Textstil
+
+        self.ader.stil_setzen("bezeichnung", Textstil(MITTE, fett=True))
+        self._waehlen(0, SPALTE_BEZEICHNUNG)
+        self.assertTrue(self.ansicht.ausrichtungsknoepfe[MITTE].isChecked())
+        self.assertTrue(self.ansicht.fett.isChecked())
+        self.assertFalse(self.ansicht.kursiv.isChecked())
+        # Eine andere Zelle hat ihren eigenen Stil.
+        self._waehlen(1, SPALTE_BEZEICHNUNG)
+        self.assertFalse(self.ansicht.fett.isChecked())
+
+    def test_beide_rangierfelder_gehoeren_zu_einer_zelle(self):
+        """Auf dem Blatt stehen sie nebeneinander in einer."""
+        self._waehlen(0, SPALTE_RANGIERUNG)
+        self.ansicht.fett.click()
+        self._waehlen(0, SPALTE_RANGIERUNG_2)
+        self.assertTrue(self.ansicht.fett.isChecked())
+
+    def test_die_tabelle_zeigt_den_stil(self):
+        from verteilerly.modell import RECHTS, Textstil
+
+        self.ader.stil_setzen("bezeichnung", Textstil(RECHTS, fett=True, kursiv=True))
+        index = self.ansicht.modell.index(0, SPALTE_BEZEICHNUNG)
+        schrift = self.ansicht.modell.data(index, Qt.ItemDataRole.FontRole)
+        self.assertTrue(schrift.bold())
+        self.assertTrue(schrift.italic())
+        lage = self.ansicht.modell.data(index, Qt.ItemDataRole.TextAlignmentRole)
+        self.assertTrue(lage & int(Qt.AlignmentFlag.AlignRight))
+
+
 class TestEnterSpringtWeiter(unittest.TestCase):
     """Enter schließt die Eingabe und geht eine Zeile tiefer."""
 
