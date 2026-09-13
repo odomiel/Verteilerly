@@ -338,6 +338,26 @@ class TestAnschriftImSchriftfeld(unittest.TestCase):
         self.assertEqual(_schriftfeldanteile(3, (1.0, 1.0)), [0.38, 0.26, 0.36])
 
 
+class TestAufbauzeile(unittest.TestCase):
+    """Das Deckblatt zählt Buchten und Leisten in der richtigen Zahlform."""
+
+    def _aufbau(self, buchten, leisten, da=10):
+        projekt = Projekt(
+            verteiler=Verteiler.aus_geometrie(buchten, leisten, da, name="M")
+        )
+        texte = _texte(deckblatt(projekt))
+        return texte[texte.index("Aufbau") + 1]
+
+    def test_eine_bucht_ist_eine_bucht(self):
+        self.assertEqual(self._aufbau(1, 4), "1 Bucht × 4 Leisten × 10 DA")
+
+    def test_eine_leiste_ist_eine_leiste(self):
+        self.assertEqual(self._aufbau(1, 1), "1 Bucht × 1 Leiste × 10 DA")
+
+    def test_mehrere_bleiben_mehrzahl(self):
+        self.assertEqual(self._aufbau(2, 4), "2 Buchten × 4 Leisten × 10 DA")
+
+
 class TestEigeneBeschriftungen(unittest.TestCase):
     """Wem „Kunde" nicht passt, schreibt „Auftraggeber" hin."""
 

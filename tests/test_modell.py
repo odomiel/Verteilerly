@@ -399,5 +399,22 @@ class TestBeschriftungen(unittest.TestCase):
         )
 
 
+class TestMehrzahl(unittest.TestCase):
+    """Ein Verteiler mit einer Bucht hat nicht "1 Buchten"."""
+
+    def test_eins_bleibt_einzahl(self):
+        from verteilerly.modell import mehrzahl
+
+        self.assertEqual(mehrzahl(1, "Bucht", "Buchten"), "1 Bucht")
+        self.assertEqual(mehrzahl(1, "Leiste", "Leisten"), "1 Leiste")
+
+    def test_alles_andere_ist_mehrzahl(self):
+        from verteilerly.modell import mehrzahl
+
+        self.assertEqual(mehrzahl(0, "Bucht", "Buchten"), "0 Buchten")
+        self.assertEqual(mehrzahl(2, "Bucht", "Buchten"), "2 Buchten")
+        self.assertEqual(mehrzahl(12, "Leiste", "Leisten"), "12 Leisten")
+
+
 if __name__ == "__main__":
     unittest.main()

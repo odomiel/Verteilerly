@@ -14,7 +14,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from .blattvorlagen import LINKS, MITTE, RECHTS, STANDARD, Blattvorlage
-from .modell import BLATTBESCHRIFTUNG, Bucht, Projekt, Verteiler
+from .modell import BLATTBESCHRIFTUNG, Bucht, Projekt, Verteiler, mehrzahl
 
 # -- Papier ----------------------------------------------------------------
 
@@ -520,7 +520,11 @@ def _aufbau(v: Verteiler) -> str:
         return ""
     leisten = len(v.buchten[0].leisten)
     da = v.buchten[0].leisten[0].da_anzahl if leisten else 0
-    return f"{len(v.buchten)} Buchten × {leisten} Leisten × {da} DA"
+    return " × ".join((
+        mehrzahl(len(v.buchten), "Bucht", "Buchten"),
+        mehrzahl(leisten, "Leiste", "Leisten"),
+        f"{da} DA",
+    ))
 
 
 # -- Verteilerbelegung -----------------------------------------------------

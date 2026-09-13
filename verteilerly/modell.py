@@ -609,6 +609,15 @@ def adressen_lesen(text: str) -> list[Aderadresse]:
     ]
 
 
+def mehrzahl(zahl: int, eins: str, viele: str) -> str:
+    """Zahl mit dem passenden Hauptwort: "1 Bucht", aber "2 Buchten".
+
+    Ein Verteiler mit einer einzigen Bucht las sich sonst als "1 Buchten"
+    - richtig gerechnet, falsch geschrieben.
+    """
+    return f"{zahl} {eins if zahl == 1 else viele}"
+
+
 def adressen_schreiben(
     adressen: list[Aderadresse], schreibweise: Schreibweise | None = None
 ) -> str:

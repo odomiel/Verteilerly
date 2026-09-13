@@ -30,6 +30,7 @@ from ..modell import (
     Projekt,
     UeberlaufFehler,
     Verteiler,
+    mehrzahl,
 )
 from ..version import VERSION
 from ..vorlagen import Vorlagen
@@ -513,7 +514,7 @@ class Hauptfenster(QMainWindow):
         uebernommen = len(projekt.briefkopf) + len(projekt.eigene_felder)
         self.statusBar().showMessage(
             f"Neuer Verteiler: {self.projekt.verteiler.da_gesamt} DA auf "
-            f"{len(self.projekt.verteiler.alle_leisten)} Leisten"
+            + mehrzahl(len(self.projekt.verteiler.alle_leisten), "Leiste", "Leisten")
             + (f", {uebernommen} Felder Projektdaten übernommen" if uebernommen else "")
         )
 

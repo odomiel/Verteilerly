@@ -44,6 +44,7 @@ from ..modell import (
     Kabel,
     Projekt,
     Verteiler,
+    mehrzahl,
 )
 from ..vorlagen import Vorlage, VorlagenFehler, Vorlagen, vorlage_speichern
 from .sprache import frage
@@ -306,7 +307,9 @@ class NeuerVerteilerDialog(QDialog):
     def _summe_zeigen(self) -> None:
         gesamt = self.buchten.value() * self.leisten.value() * self.da_je_leiste()
         leisten = self.buchten.value() * self.leisten.value()
-        self.summe.setText(f"ergibt {leisten} Leisten, {gesamt} DA")
+        self.summe.setText(
+            f"ergibt {mehrzahl(leisten, 'Leiste', 'Leisten')}, {gesamt} DA"
+        )
 
     def vorlage_ablegen(self) -> None:
         """Sichert die eingestellte Geometrie als Vorlage."""
@@ -318,11 +321,12 @@ class NeuerVerteilerDialog(QDialog):
             self.vorlagenordner,
             vorschlag=(
                 f"{self.buchten.value() * self.leisten.value() * da} DA - "
-                f"{self.leisten.value()} Leisten zu {da} DA"
+                f"{mehrzahl(self.leisten.value(), 'Leiste', 'Leisten')} zu {da} DA"
             ),
             beschreibung=(
-                f"{self.buchten.value()} Buchten zu je {self.leisten.value()} "
-                f"Leisten mit {da} Doppeladern."
+                f"{mehrzahl(self.buchten.value(), 'Bucht', 'Buchten')} zu je "
+                f"{mehrzahl(self.leisten.value(), 'Leiste', 'Leisten')} mit "
+                f"{mehrzahl(da, 'Doppelader', 'Doppeladern')}."
             ),
         )
         if vorlage is not None:
