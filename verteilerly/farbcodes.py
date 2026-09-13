@@ -228,6 +228,29 @@ def farben_eintragen(
     return gefuellt
 
 
+def farben_verwaist_loeschen(
+    verteiler: Verteiler,
+    vorher: dict[tuple[int, int, str], str],
+    jetzt: dict[tuple[int, int, str], str],
+) -> int:
+    """Raeumt die Farben der Adern, die das Kabel nicht mehr belegt.
+
+    Wird ein Kabel kuerzer, gehoert seine Farbfolge dort nicht mehr hin.
+    Massstab ist wie ueberall der Farbplan: nur was die Automatik gesetzt
+    hat, nimmt sie auch wieder mit.
+    """
+    geleert = 0
+    for stelle, farbe in vorher.items():
+        if stelle in jetzt:
+            continue
+        leiste_nr, leisten_da, seite = stelle
+        ader = verteiler.leiste(leiste_nr).stift(leisten_da).ader(seite)
+        if ader.farbe and ader.farbe == farbe:
+            ader.farbe = ""
+            geleert += 1
+    return geleert
+
+
 def farben_loeschen(
     verteiler: Verteiler, kabel: Kabel, kabeltypen: Kabeltypen
 ) -> int:

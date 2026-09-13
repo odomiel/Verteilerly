@@ -169,12 +169,14 @@ In der Leistenansicht schließt **Enter** die Eingabe und geht
 nicht angenommen — eine unlesbare Rangierung etwa —, bleibt die Marke stehen.
 Ein Doppelklick auf eine freie Doppelader legt ein Kabel
 auf, einer auf ein aufgelegtes Kabel **bearbeitet** es: Beschriftung,
-Kabeltyp und Kabelgröße lassen sich ändern, und der Dialog trägt auch den
-Knopf zum Entfernen. Beim Auflegen folgt *Davon auflegen* der Kabelgröße —
-ganz aufgelegt ist der Regelfall, gekürzt wird danach von Hand.
-Leiste, Startpunkt und Zahl der aufgelegten
-Doppeladern stehen dort fest — wer die Lage ändern will, nimmt das Kabel
-ab und legt es neu auf. Die Farbfolge gehört dem Kabel: ändert sich Kabeltyp
+Kabeltyp, Kabelgröße und Länge lassen sich ändern, und der Dialog trägt auch
+den Knopf zum Entfernen. *Davon auflegen* folgt der Kabelgröße — ganz
+aufgelegt ist der Regelfall, gekürzt wird danach von Hand — und lässt sich
+auch am liegenden Kabel ändern: es **wächst und schrumpft am Ende**, der
+Anfang bleibt. Was frei wird, ist wieder frei, samt der Adernfarben, die die
+Automatik dort gesetzt hat; reicht die Leiste nicht, fragt der Überlaufdialog
+wie beim Auflegen. Leiste und Startpunkt stehen fest — wer die Lage
+ändern will, nimmt das Kabel ab und legt es neu auf. Die Farbfolge gehört dem Kabel: ändert sich Kabeltyp
 oder Größe, ziehen die Farben nach, und beim Abnehmen gehen sie mit — Maßstab
 ist, was die Automatik gesetzt hat. Von Hand Eingetragenes bleibt stehen, nur
 ein ausdrücklicher Haken überschreibt auch das. Die Beschriftung ist außerdem direkt in der Kabelspalte der

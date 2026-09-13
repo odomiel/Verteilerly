@@ -532,5 +532,82 @@ class TestZellenteilung(unittest.TestCase):
         self.assertEqual(Zellenteilung.aus_dict({"anteil": 300}).anteil, ANTEIL_MAX)
 
 
+class TestKabelGroesseAendern(unittest.TestCase):
+    """Ein aufgelegtes Kabel wächst und schrumpft am Ende."""
+
+    def setUp(self):
+        from verteilerly.modell import Verteiler
+
+        self.v = Verteiler.aus_geometrie(1, 2, 10)
+        self.kabel = self.v.kabel_anlegen("Probe", 1, 3, 4, da_gesamt=4)
+
+    def _lage(self):
+        return [(a.leiste, a.start_da, a.anzahl_da) for a in self.kabel.abschnitte]
+
+    def test_waechst_am_ende(self):
+        self.v.kabel_auflegen_aendern(self.kabel, 6)
+        self.assertEqual(self._lage(), [(1, 3, 6)])
+        self.assertEqual(self.kabel.da_gesamt, 6)
+
+    def test_schrumpft_am_ende(self):
+        self.v.kabel_auflegen_aendern(self.kabel, 2)
+        self.assertEqual(self._lage(), [(1, 3, 2)])
+        # Die Nennweite bleibt - das Kabel ist dann eben gekürzt.
+        self.assertEqual(self.kabel.da_gesamt, 4)
+        self.assertTrue(self.kabel.gekuerzt)
+
+    def test_die_freien_doppeladern_sind_wieder_frei(self):
+        self.v.kabel_auflegen_aendern(self.kabel, 2)
+        self.assertIsNone(self.v.kabel_an(1, 5))
+        self.assertIs(self.v.kabel_an(1, 4), self.kabel)
+
+    def test_gleich_gross_aendert_nichts(self):
+        self.v.kabel_auflegen_aendern(self.kabel, 4)
+        self.assertEqual(self._lage(), [(1, 3, 4)])
+
+    def test_unter_eine_doppelader_geht_nicht(self):
+        from verteilerly.modell import ModellFehler
+
+        with self.assertRaises(ModellFehler):
+            self.v.kabel_auflegen_aendern(self.kabel, 0)
+
+    def test_ueber_das_leistenende_hinaus_meldet_ueberlauf(self):
+        from verteilerly.modell import UeberlaufFehler
+
+        with self.assertRaises(UeberlaufFehler) as gefangen:
+            self.v.kabel_auflegen_aendern(self.kabel, 12)
+        # Ab DA 3 passen acht auf die Leiste, vier bleiben übrig.
+        self.assertEqual((gefangen.exception.passend, gefangen.exception.rest), (8, 4))
+        self.assertEqual(self._lage(), [(1, 3, 4)], "nichts halb geändert")
+
+    def test_ein_fremdes_kabel_im_weg_wird_gemeldet(self):
+        from verteilerly.modell import ModellFehler
+
+        self.v.kabel_anlegen("Nachbar", 1, 8, 2)
+        with self.assertRaises(ModellFehler):
+            self.v.kabel_auflegen_aendern(self.kabel, 8)
+
+    def test_verlaengern_haengt_einen_abschnitt_an(self):
+        self.v.kabel_auflegen_aendern(self.kabel, 8)      # bis ans Leistenende
+        self.v.kabel_verlaengern(self.kabel, 2, 1, 4)
+        self.assertEqual(self._lage(), [(1, 3, 8), (2, 1, 4)])
+        self.assertEqual(self.kabel.da_aufgelegt, 12)
+        self.assertEqual(self.kabel.da_gesamt, 12)
+
+    def test_die_farbfolge_laeuft_ueber_den_neuen_abschnitt_weiter(self):
+        self.v.kabel_auflegen_aendern(self.kabel, 8)
+        self.v.kabel_verlaengern(self.kabel, 2, 1, 2)
+        stellen = self.kabel.positionen()
+        self.assertEqual(stellen[0][0], 1)
+        self.assertEqual(stellen[-1], (10, 2, 2))
+
+    def test_ein_belegter_platz_nimmt_keinen_abschnitt(self):
+        from verteilerly.modell import ModellFehler
+
+        self.v.kabel_anlegen("Nachbar", 2, 1, 3)
+        with self.assertRaises(ModellFehler):
+            self.v.kabel_verlaengern(self.kabel, 2, 1, 2)
+
+
 if __name__ == "__main__":
     unittest.main()

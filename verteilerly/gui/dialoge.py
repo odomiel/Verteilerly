@@ -586,18 +586,26 @@ class KabelDialog(QDialog):
         if stelle >= 0:
             self.leiste.setCurrentIndex(stelle)
         self.start.setValue(abschnitt.start_da)
-        self.auflegen_da.setValue(kabel.da_aufgelegt)
-        self.kabel_da.setMinimum(kabel.da_aufgelegt)
+        # Erst die Groesse, dann das Aufgelegte: die Groesse zieht es mit,
+        # und gekuerzt war es vielleicht schon.
         self.kabel_da.setValue(kabel.da_gesamt)
+        self.auflegen_da.setValue(kabel.da_aufgelegt)
         stelle = self.kabeltyp.findData(kabel.kabeltyp)
         self.kabeltyp.setCurrentIndex(max(stelle, 0))
 
-        for feld in (self.leiste, self.start, self.auflegen_da):
+        # Leiste und Startpunkt stehen fest: dort haengt das Kabel. Wie
+        # viel davon aufliegt, laesst sich dagegen aendern - gewachsen
+        # und geschrumpft wird am Ende.
+        for feld in (self.leiste, self.start):
             feld.setEnabled(False)
             feld.setToolTip(
                 "Steht fest — für eine andere Lage das Kabel abnehmen "
                 "und neu auflegen"
             )
+        self.auflegen_da.setToolTip(
+            "Wächst und schrumpft am Ende des Kabels; der Anfang bleibt, "
+            "wo er ist"
+        )
         if len(kabel.abschnitte) > 1:
             self.leiste.setToolTip(
                 f"Das Kabel läuft über {len(kabel.abschnitte)} Abschnitte"
@@ -624,10 +632,7 @@ class KabelDialog(QDialog):
         bleibt sie stehen, wie sie ist.
         """
         self.auflegen_da.setMaximum(wert)
-        if self.bearbeitet is None:
-            self.auflegen_da.setValue(wert)
-        elif self.auflegen_da.value() > wert:
-            self.auflegen_da.setValue(wert)
+        self.auflegen_da.setValue(wert)
         self._kuerzung_zeigen()
 
     def _kuerzung_zeigen(self) -> None:

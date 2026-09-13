@@ -23,7 +23,13 @@ from .. import einstellungen as einstellungsspeicher
 from .. import bestand, paket, pfade, projektdatei, schreibweisen
 from ..ausgabe import AusgabeFehler, csv_schreiben, pdf_schreiben, xlsx_schreiben
 from ..blattvorlagen import Blattvorlagen
-from ..farbcodes import Kabeltypen, farben_eintragen, farben_loeschen, farbplan
+from ..farbcodes import (
+    Kabeltypen,
+    farben_eintragen,
+    farben_loeschen,
+    farben_verwaist_loeschen,
+    farbplan,
+)
 from ..modell import (
     BRIEFKOPF_FELDER,
     Kabelabschnitt,
@@ -880,10 +886,13 @@ class Hauptfenster(QMainWindow):
         self.kabel_bearbeiten(kabel)
 
     def kabel_bearbeiten(self, kabel=None) -> None:
-        """Beschriftung, Kabeltyp und Kabelgröße eines Kabels ändern.
+        """Beschriftung, Kabeltyp und Größe eines Kabels ändern.
 
-        Die Lage bleibt, wie sie ist - dafür gibt es Abnehmen und neu
-        Auflegen. Der Dialog trägt aber den Knopf zum Entfernen.
+        Leiste und Startpunkt bleiben, wie sie sind - dort hängt das
+        Kabel. Wie viel davon aufliegt, wächst und schrumpft dagegen am
+        Ende; passt die Verlängerung nicht mehr, fragt der Überlaufdialog
+        wie beim Auflegen. Der Dialog trägt auch den Knopf zum
+        Entfernen.
         """
         if self.projekt is None:
             return
@@ -910,11 +919,17 @@ class Hauptfenster(QMainWindow):
 
         kabel.beschriftung = angaben["beschriftung"]
         kabel.kabeltyp = angaben["kabeltyp"]
+        if not self._auflegen_aendern(kabel, angaben["anzahl_da"]):
+            return
         kabel.da_gesamt = max(angaben["da_gesamt"], kabel.da_aufgelegt)
 
         gefuellt = farben_eintragen(
             self.projekt.verteiler, kabel, self.kabeltypen,
             ueberschreiben=angaben["farben_neu"], statt=vorher,
+        )
+        geleert = farben_verwaist_loeschen(
+            self.projekt.verteiler, vorher,
+            farbplan(self.projekt.verteiler, kabel, self.kabeltypen),
         )
         self._belegung_geaendert()
         self.leistenansicht.aktualisieren()
@@ -923,7 +938,43 @@ class Hauptfenster(QMainWindow):
         if gefuellt:
             meldung += f", {gefuellt} Adernfarben nachgezogen"
             meldung += self._lagenhinweis(kabel)
+        if geleert:
+            meldung += f", {geleert} Adernfarben freigeräumt"
         self.statusBar().showMessage(meldung, 8000)
+
+    def _auflegen_aendern(self, kabel, anzahl_da: int) -> bool:
+        """Legt mehr oder weniger Doppeladern auf.
+
+        Gibt zurueck, ob es geklappt hat; bei einem Ueberlauf entscheidet
+        der Anwender, ob fortgesetzt wird oder der Rest verfaellt.
+        """
+        verteiler = self.projekt.verteiler
+        try:
+            verteiler.kabel_auflegen_aendern(kabel, anzahl_da)
+            return True
+        except UeberlaufFehler as ueberlauf:
+            return self._ueberlauf_beim_wachsen(kabel, ueberlauf)
+        except ModellFehler as fehler:
+            QMessageBox.warning(self, "Kabel nicht geändert", str(fehler))
+            return False
+
+    def _ueberlauf_beim_wachsen(self, kabel, ueberlauf: UeberlaufFehler) -> bool:
+        """Das Kabel waechst ueber seine Leiste hinaus."""
+        verteiler = self.projekt.verteiler
+        dialog = UeberlaufDialog(verteiler, ueberlauf.passend, ueberlauf.rest, self)
+        if dialog.exec() != UeberlaufDialog.DialogCode.Accepted:
+            return False
+
+        wahl, leiste, start = dialog.entscheidung()
+        try:
+            # So weit es auf der eigenen Leiste geht, geht es zuerst.
+            verteiler.kabel_auflegen_aendern(kabel, ueberlauf.passend)
+            if wahl == UeberlaufDialog.FORTSETZEN:
+                verteiler.kabel_verlaengern(kabel, leiste, start, ueberlauf.rest)
+        except ModellFehler as fehler:
+            QMessageBox.warning(self, "Kabel nicht geändert", str(fehler))
+            return False
+        return True
 
     def kabel_entfernen(self) -> None:
         """Der Eintrag ist nur da anklickbar, wo wirklich ein Kabel liegt."""

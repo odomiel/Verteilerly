@@ -378,17 +378,30 @@ class TestKabelDialog(unittest.TestCase):
         self.assertEqual(dialog.angaben()["da_gesamt"], 6)
         self.assertIn("2 DA", dialog.kuerzungshinweis.text())
 
-    def test_beim_bearbeiten_bleibt_das_aufgelegte_stehen(self):
-        """Die Lage steht fest, auch wenn die Größe sich ändert."""
+    def test_beim_bearbeiten_bleibt_nur_die_lage_stehen(self):
+        """Leiste und Anfang stehen fest, die Länge nicht."""
         kabel = self.verteiler.kabel_anlegen(
             "Probe", 1, 1, 4, kabeltyp="jystyv", da_gesamt=6
         )
         dialog = self._dialog(kabel=kabel)
+        self.assertFalse(dialog.leiste.isEnabled())
+        self.assertFalse(dialog.start.isEnabled())
+        self.assertTrue(dialog.auflegen_da.isEnabled())
+        self.assertEqual(dialog.kabel_da.value(), 6)
         self.assertEqual(dialog.auflegen_da.value(), 4)
-        self.assertFalse(dialog.auflegen_da.isEnabled())
+        self.assertIn("2 DA", dialog.kuerzungshinweis.text())
+
+    def test_die_groesse_zieht_das_aufgelegte_auch_beim_bearbeiten_mit(self):
+        kabel = self.verteiler.kabel_anlegen(
+            "Probe", 1, 1, 4, kabeltyp="jystyv", da_gesamt=6
+        )
+        dialog = self._dialog(kabel=kabel)
         dialog.kabel_da.setValue(10)
-        self.assertEqual(dialog.auflegen_da.value(), 4)
-        self.assertIn("6 DA", dialog.kuerzungshinweis.text())
+        self.assertEqual(dialog.auflegen_da.value(), 10)
+        self.assertEqual(dialog.kuerzungshinweis.text(), "")
+        # Und kürzen bleibt möglich.
+        dialog.auflegen_da.setValue(7)
+        self.assertIn("3 DA", dialog.kuerzungshinweis.text())
 
 
 class TestEntfLeertZellen(unittest.TestCase):
@@ -973,8 +986,10 @@ class TestMenuezustaende(unittest.TestCase):
             f.kabel_bearbeiten(kabel)
 
         self.assertEqual(kabel.beschriftung, "Linie 1 — neu")
-        self.assertEqual(kabel.da_gesamt, kabel.da_aufgelegt + 2)
-        self.assertTrue(kabel.gekuerzt)
+        # Die Größe zieht das Aufgelegte mit: aus 4 DA werden 6.
+        self.assertEqual(kabel.da_gesamt, 6)
+        self.assertEqual(kabel.da_aufgelegt, 6)
+        self.assertFalse(kabel.gekuerzt)
         self.assertIn(kabel, f.projekt.verteiler.kabel)
 
     def test_bearbeiten_zieht_die_farben_nach(self):
@@ -994,7 +1009,10 @@ class TestMenuezustaende(unittest.TestCase):
         verteiler.leiste(1).stift(1).a.farbe = "türkis"      # von Hand
 
         def groesser(dialog):
+            # Nennweite 20 DA, aufgelegt bleiben die zehn der Leiste -
+            # das Kabel ist damit gekürzt, die Lagenfolge eine andere.
             dialog.kabel_da.setValue(20)
+            dialog.auflegen_da.setValue(10)
             return KabelDialog.DialogCode.Accepted
 
         with mock.patch.object(KabelDialog, "exec", groesser):
@@ -1003,6 +1021,116 @@ class TestMenuezustaende(unittest.TestCase):
         self.assertEqual(verteiler.leiste(1).stift(9).a.farbe, "ws")
         self.assertEqual(verteiler.leiste(1).stift(1).a.farbe, "türkis")
         self.assertIn("nachgezogen", f.statusBar().currentMessage())
+
+    def test_bearbeiten_legt_mehr_doppeladern_auf(self):
+        """Die Leitung wird größer und belegt mehr."""
+        from verteilerly.gui.dialoge import KabelDialog
+
+        f = self.fenster
+        self._projekt()
+        kabel = f.projekt.verteiler.kabel[0]
+
+        with mock.patch.object(
+            KabelDialog, "exec",
+            lambda dialog: dialog.kabel_da.setValue(7) or KabelDialog.DialogCode.Accepted,
+        ):
+            f.kabel_bearbeiten(kabel)
+
+        self.assertEqual(kabel.da_aufgelegt, 7)
+        self.assertIs(f.projekt.verteiler.kabel_an(1, 7), kabel)
+
+    def test_bearbeiten_legt_weniger_auf_und_raeumt_die_farben(self):
+        from verteilerly.farbcodes import farben_eintragen
+        from verteilerly.gui.dialoge import KabelDialog
+
+        f = self.fenster
+        verteiler = Verteiler.aus_geometrie(1, 4, 10, name="Probe")
+        kabel = verteiler.kabel_anlegen("Leitung", 1, 1, 6, kabeltyp="jystyv")
+        f._projekt_setzen(Projekt(verteiler=verteiler), None)
+        farben_eintragen(verteiler, kabel, f.kabeltypen)
+        self.assertTrue(verteiler.leiste(1).stift(6).a.farbe)
+
+        with mock.patch.object(
+            KabelDialog, "exec",
+            lambda dialog: dialog.auflegen_da.setValue(3) or KabelDialog.DialogCode.Accepted,
+        ):
+            f.kabel_bearbeiten(kabel)
+
+        self.assertEqual(kabel.da_aufgelegt, 3)
+        self.assertIsNone(verteiler.kabel_an(1, 6))
+        # Die Farben der freigewordenen Doppeladern gehen mit.
+        self.assertEqual(verteiler.leiste(1).stift(6).a.farbe, "")
+        self.assertTrue(verteiler.leiste(1).stift(3).a.farbe)
+        self.assertIn("freigeräumt", f.statusBar().currentMessage())
+
+    def test_waechst_das_kabel_ueber_die_leiste_fragt_der_ueberlauf(self):
+        """Fortsetzen oder Rest verfallen lassen."""
+        from verteilerly.gui.dialoge import KabelDialog, UeberlaufDialog
+
+        f = self.fenster
+        verteiler = Verteiler.aus_geometrie(1, 4, 10, name="Probe")
+        kabel = verteiler.kabel_anlegen("Leitung", 1, 7, 4)
+        f._projekt_setzen(Projekt(verteiler=verteiler), None)
+
+        def fortsetzen(dialog):
+            dialog.fortsetzen.setChecked(True)
+            dialog.leiste.setCurrentIndex(dialog.leiste.findData(2))
+            dialog.start.setValue(1)
+            return UeberlaufDialog.DialogCode.Accepted
+
+        with mock.patch.object(
+            KabelDialog, "exec",
+            lambda dialog: dialog.auflegen_da.setValue(8) or KabelDialog.DialogCode.Accepted,
+        ), mock.patch.object(UeberlaufDialog, "exec", fortsetzen):
+            f.kabel_bearbeiten(kabel)
+
+        self.assertEqual(kabel.da_aufgelegt, 8)
+        self.assertEqual(len(kabel.abschnitte), 2)
+        self.assertIs(verteiler.kabel_an(2, 1), kabel)
+
+    def test_der_rest_darf_auch_verfallen(self):
+        from verteilerly.gui.dialoge import KabelDialog, UeberlaufDialog
+
+        f = self.fenster
+        verteiler = Verteiler.aus_geometrie(1, 4, 10, name="Probe")
+        kabel = verteiler.kabel_anlegen("Leitung", 1, 7, 4)
+        f._projekt_setzen(Projekt(verteiler=verteiler), None)
+
+        def verfallen(dialog):
+            dialog.verfaellt.setChecked(True)
+            return UeberlaufDialog.DialogCode.Accepted
+
+        with mock.patch.object(
+            KabelDialog, "exec",
+            lambda dialog: dialog.auflegen_da.setValue(8) or KabelDialog.DialogCode.Accepted,
+        ), mock.patch.object(UeberlaufDialog, "exec", verfallen):
+            f.kabel_bearbeiten(kabel)
+
+        self.assertEqual(kabel.da_aufgelegt, 4)      # bis zum Leistenende
+        self.assertEqual(len(kabel.abschnitte), 1)
+
+    def test_ein_fremdes_kabel_im_weg_wird_gemeldet(self):
+        from PySide6.QtWidgets import QMessageBox
+        from verteilerly.gui.dialoge import KabelDialog
+
+        f = self.fenster
+        verteiler = Verteiler.aus_geometrie(1, 4, 10, name="Probe")
+        kabel = verteiler.kabel_anlegen("Leitung", 1, 1, 4)
+        verteiler.kabel_anlegen("Nachbar", 1, 6, 2)
+        f._projekt_setzen(Projekt(verteiler=verteiler), None)
+
+        gemeldet = {}
+        with mock.patch.object(
+            KabelDialog, "exec",
+            lambda dialog: dialog.auflegen_da.setValue(8) or KabelDialog.DialogCode.Accepted,
+        ), mock.patch.object(
+            QMessageBox, "warning",
+            lambda eltern, titel, text: gemeldet.update(titel=titel, text=text),
+        ):
+            f.kabel_bearbeiten(kabel)
+
+        self.assertEqual(gemeldet.get("titel"), "Kabel nicht geändert")
+        self.assertEqual(kabel.da_aufgelegt, 4)
 
     def test_abnehmen_nimmt_die_farben_mit(self):
         """Sonst stünde die alte Folge noch da, wenn die nächste aufliegt."""

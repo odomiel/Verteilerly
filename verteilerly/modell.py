@@ -580,6 +580,67 @@ class Verteiler:
         self.kabel.append(kabel)
         return kabel
 
+    def kabel_auflegen_aendern(self, kabel: Kabel, anzahl_da: int) -> None:
+        """Aendert, wie viele Doppeladern eines Kabels aufliegen.
+
+        Gewachsen und geschrumpft wird am Ende: der Anfang bleibt, wo er
+        ist, denn dort haengt das Kabel. Passt die Verlaengerung nicht auf
+        die Leiste, wird ``UeberlaufFehler`` ausgeloest - die Oberflaeche
+        fragt dann wie beim Auflegen, ob fortgesetzt wird oder der Rest
+        verfaellt.
+        """
+        if anzahl_da < 1:
+            raise ModellFehler("Ein Kabel muss mindestens eine Doppelader haben")
+        jetzt = kabel.da_aufgelegt
+        if anzahl_da == jetzt:
+            return
+
+        if anzahl_da < jetzt:
+            self._kabel_kuerzen(kabel, jetzt - anzahl_da)
+            return
+
+        zusatz = anzahl_da - jetzt
+        letzter = kabel.abschnitte[-1]
+        weiter = letzter.start_da + letzter.anzahl_da
+        if weiter > self.leiste(letzter.leiste).da_anzahl:
+            # Das Kabel endet schon am Leistenende - hier waechst nichts
+            # mehr, ohne dass jemand eine Fortsetzung waehlt.
+            raise UeberlaufFehler(jetzt, zusatz)
+        passend, rest = self.platz_pruefen(letzter.leiste, weiter, zusatz)
+        if rest:
+            raise UeberlaufFehler(jetzt + passend, rest)
+        letzter.anzahl_da += zusatz
+        if kabel.da_gesamt is not None and kabel.da_gesamt < kabel.da_aufgelegt:
+            kabel.da_gesamt = kabel.da_aufgelegt
+
+    def _kabel_kuerzen(self, kabel: Kabel, weniger: int) -> None:
+        """Nimmt Doppeladern vom Ende weg; leere Abschnitte fallen fort."""
+        while weniger:
+            letzter = kabel.abschnitte[-1]
+            weg = min(weniger, letzter.anzahl_da)
+            letzter.anzahl_da -= weg
+            weniger -= weg
+            if letzter.anzahl_da == 0:
+                kabel.abschnitte.pop()
+
+    def kabel_verlaengern(
+        self, kabel: Kabel, leiste: int, start_da: int, anzahl_da: int
+    ) -> None:
+        """Haengt einen weiteren Abschnitt an ein Kabel an.
+
+        So geht es nach einem Ueberlauf weiter, wenn ein aufgelegtes Kabel
+        groesser wird, als auf seiner Leiste noch Platz ist.
+        """
+        passend, rest = self.platz_pruefen(leiste, start_da, anzahl_da)
+        if rest:
+            raise ModellFehler(
+                f"Auf Leiste {leiste} ab DA {start_da} passen nur {passend} "
+                f"von {anzahl_da} DA"
+            )
+        kabel.abschnitte.append(Kabelabschnitt(leiste, start_da, anzahl_da))
+        if kabel.da_gesamt is not None and kabel.da_gesamt < kabel.da_aufgelegt:
+            kabel.da_gesamt = kabel.da_aufgelegt
+
     def kabel_entfernen(self, kabel: Kabel) -> None:
         self.kabel.remove(kabel)
 
