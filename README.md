@@ -457,9 +457,10 @@ samt ihrer Bibliotheken heraus.
 **Linux — AppImage.** `werkzeuge/appimage.py` baut ein AppImage, das seine
 Abhängigkeiten selbst mitbringt: Python, Qt, ReportLab, openpyxl und
 PyYAML stecken darin. Grundlage ist eine fertige Python-AppImage von
-[python-appimage](https://github.com/niess/python-appimage) — ein auf
-manylinux2014 gebautes Python. Auf dem Zielrechner muss weder Python noch
-Qt installiert sein.
+[python-appimage](https://github.com/niess/python-appimage) — **Python 3.14**,
+auf manylinux2014 gebaut. Auf dem Zielrechner muss weder Python noch
+Qt installiert sein. Welche Fassung es ist, sagen `PYTHONFASSUNG` und
+`BASIS_URL` in `werkzeuge/appimage.py`; beide gehören zusammen geändert.
 
 Was das Programm dem Zielsystem überlässt, ist dessen eigener Unterbau:
 glibc, `libGL`, `libX11`, `libxcb`, glib, fontconfig, freetype und dbus.
@@ -488,7 +489,8 @@ schrumpft dabei von 2,5 auf 0,35 MB.
 Der Kern bleibt: ohne `PIL._imaging` ließe sich ReportLab nicht einmal
 importieren. Fehlt `strip` auf dem Baurechner, wird das gemeldet und
 weitergebaut. Zusammen macht das aus 179 MB entpackt 131 MB und aus 58,7 MB
-Abbild **41,0 MB**.
+Abbild **41,0 MB** — so gemessen mit Python 3.13. Mit Python 3.14 liegt das
+fertige AppDir bei 132 MB und die Datei bei **41,5 MB**.
 
 Damit verlangt das Ergebnis **glibc 2.34 oder neuer** — das ist die
 Untergrenze des Qt-Rads selbst und deckt Ubuntu 22.04, Debian 12, RHEL 9
