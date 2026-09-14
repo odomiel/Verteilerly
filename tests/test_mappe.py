@@ -58,41 +58,41 @@ class TestBlattbild(unittest.TestCase):
     def test_spalten_folgen_der_blattvorlage(self):
         blatt = self._mappe()["Leiste 1"]
         self.assertEqual(
-            [zelle.value or "" for zelle in blatt[3]],
+            [zelle.value or "" for zelle in blatt[1]],
             [spalte.ueberschrift for spalte in STANDARD.spalten],
         )
 
     def test_stiftueberschrift_reicht_ueber_beide_spalten(self):
         blatt = self._mappe()["Leiste 1"]
-        self.assertIn("A3:B3", [str(r) for r in blatt.merged_cells.ranges])
-        self.assertEqual(blatt["A3"].value, "Stift")
+        self.assertIn("A1:B1", [str(r) for r in blatt.merged_cells.ranges])
+        self.assertEqual(blatt["A1"].value, "Stift")
 
     def test_zwei_zeilen_je_stift(self):
         blatt = self._mappe()["Leiste 1"]
-        self.assertEqual(blatt.cell(row=4, column=1).value, "1")
-        self.assertEqual(blatt.cell(row=4, column=2).value, "a")
-        self.assertFalse(blatt.cell(row=5, column=1).value)   # b-Zeile
-        self.assertEqual(blatt.cell(row=5, column=2).value, "b")
-        self.assertEqual(blatt.cell(row=4, column=4).value, "Melder 1a")
-        self.assertEqual(blatt.cell(row=4, column=5).value, "2 2a")
+        self.assertEqual(blatt.cell(row=2, column=1).value, "1")
+        self.assertEqual(blatt.cell(row=2, column=2).value, "a")
+        self.assertFalse(blatt.cell(row=3, column=1).value)   # b-Zeile
+        self.assertEqual(blatt.cell(row=3, column=2).value, "b")
+        self.assertEqual(blatt.cell(row=2, column=4).value, "Melder 1a")
+        self.assertEqual(blatt.cell(row=2, column=5).value, "2 2a")
 
     def test_kabelblock_ist_verbunden_und_gedreht(self):
         blatt = self._mappe()["Leiste 1"]
         bereiche = [str(r) for r in blatt.merged_cells.ranges]
-        self.assertIn("G4:G13", bereiche)     # 5 DA sind zehn Zeilen
-        zelle = blatt["G4"]
+        self.assertIn("G2:G11", bereiche)     # 5 DA sind zehn Zeilen
+        zelle = blatt["G2"]
         self.assertEqual(zelle.value, "Linie 1 — Melderkreis")
         self.assertEqual(zelle.alignment.text_rotation, 90)
 
     def test_gekuerztes_kabel_sagt_es(self):
         blatt = self._mappe()["Leiste 1"]
-        self.assertIn("gekürzt: 3 von 4 DA", blatt["G16"].value)
+        self.assertIn("gekürzt: 3 von 4 DA", blatt["G14"].value)
 
     def test_waagerechte_vorlage_dreht_nicht(self):
         knapp = Blattvorlagen.laden(mitgeliefert() / "blattvorlagen").holen("knapp")
         blatt = self._mappe(knapp)["Leiste 1"]
         stelle = [s.feld for s in knapp.spalten].index("kabel") + 1
-        zelle = blatt.cell(row=4, column=stelle)
+        zelle = blatt.cell(row=2, column=stelle)
         self.assertEqual(zelle.alignment.text_rotation, 0)
         self.assertEqual(zelle.value, "Linie 1 — Melderkreis")
 
@@ -108,13 +108,26 @@ class TestBlattbild(unittest.TestCase):
         )
 
     def test_schriftgroessen_kommen_aus_der_vorlage(self):
+        """Die Tabelle beginnt in Zeile 1 - kein Blattkopf darüber."""
         blatt = self._mappe()["Leiste 1"]
-        self.assertEqual(blatt["A3"].font.sz, STANDARD.schrift_klein)   # Kopfzeile
-        self.assertEqual(blatt["D4"].font.sz, STANDARD.schrift_normal)  # Aderzeile
-        self.assertTrue(blatt["A3"].font.b)
+        self.assertEqual(blatt["A1"].value, "Stift")
+        self.assertEqual(blatt["A1"].font.sz, STANDARD.schrift_klein)   # Kopfzeile
+        self.assertEqual(blatt["D2"].font.sz, STANDARD.schrift_normal)  # Aderzeile
+        self.assertTrue(blatt["A1"].font.b)
 
-    def _schriftfeldpaare(self, blatt, ab: int = 24) -> dict:
+    @staticmethod
+    def _schriftfeldbeginn(blatt) -> int:
+        """Die erste Zeile unter der Tabelle - dort steht das Schriftfeld."""
+        letzte = max(
+            (z.row for zeile in blatt.iter_rows(min_col=2, max_col=2)
+             for z in zeile if z.value in ("a", "b")),
+            default=1,
+        )
+        return letzte + 1
+
+    def _schriftfeldpaare(self, blatt, ab: int = 0) -> dict:
         """Beschriftung und Wert daneben - gleich in welchem Block."""
+        ab = ab or self._schriftfeldbeginn(blatt)
         paare = {}
         for zeile in range(ab, ab + 20):
             for spalte in range(1, 9):
@@ -136,7 +149,7 @@ class TestBlattbild(unittest.TestCase):
         """Auf dem Blatt ist es ein Kasten — im Raster sind es Ränder."""
         blatt = self._mappe()["Leiste 1"]
         ecke = None
-        for zeile in range(24, 44):
+        for zeile in range(self._schriftfeldbeginn(blatt), blatt.max_row + 1):
             if blatt.cell(row=zeile, column=1).value:
                 ecke = blatt.cell(row=zeile, column=1)
                 break
@@ -156,12 +169,38 @@ class TestBlattbild(unittest.TestCase):
             mappe["Verteilerbelegung"].page_setup.orientation, "portrait"
         )
 
+    @staticmethod
+    def _leistenzeile(blatt, nummer: int = 1) -> int:
+        """In welcher Zeile die Leiste steht - die Luft dazwischen zählt mit."""
+        for zeile in blatt.iter_rows(min_col=1, max_col=1):
+            if zeile[0].value == f"Leiste {nummer}":
+                return zeile[0].row
+        raise AssertionError(f"Leiste {nummer} steht nicht im Blatt")
+
     def test_belegung_zeigt_die_kabel_als_block(self):
         blatt = self._mappe()["Verteilerbelegung"]
-        self.assertEqual(blatt.cell(row=1, column=1).value, "Bucht 1")
-        self.assertEqual(blatt.cell(row=2, column=1).value, "Leiste 1")
-        self.assertIn("B2:F2", [str(r) for r in blatt.merged_cells.ranges])
-        self.assertEqual(blatt["B2"].value, "Linie 1 — Melderkreis")
+        # Überschrift oben, darunter die Bucht mit ihren Leisten.
+        self.assertEqual(blatt.cell(row=1, column=1).value, "Verteilerbelegung")
+        texte = [z.value for zeile in blatt.iter_rows(max_col=1) for z in zeile]
+        self.assertIn("Bucht 1", texte)
+        zeile = self._leistenzeile(blatt)
+        self.assertIn(
+            f"B{zeile}:F{zeile}", [str(r) for r in blatt.merged_cells.ranges]
+        )
+        self.assertEqual(blatt[f"B{zeile}"].value, "Linie 1 — Melderkreis")
+
+    def test_die_leisten_fuellen_das_blatt_wie_im_pdf(self):
+        """Die Zellenmaße kommen aus dem Blattmodell."""
+        from verteilerly.ausgabe.mappe import zeilenhoehe
+        from verteilerly.layout import belegungsmasse
+
+        blatt = self._mappe()["Verteilerbelegung"]
+        masse = belegungsmasse(self.projekt.verteiler.buchten, STANDARD)
+        zeile = self._leistenzeile(blatt)
+        self.assertAlmostEqual(
+            blatt.row_dimensions[zeile].height,
+            zeilenhoehe(masse.zelle_hoehe), places=1,
+        )
 
     def test_anschrift_steht_zeilenweise_im_schriftfeld(self):
         """Firma und Kunde wie in den Mustertabellen."""
@@ -171,7 +210,7 @@ class TestBlattbild(unittest.TestCase):
         blatt = self._mappe()["Leiste 1"]
         gefunden = [
             (blatt.cell(row=z, column=1).value, blatt.cell(row=z, column=2).value)
-            for z in range(24, 42)
+            for z in range(self._schriftfeldbeginn(blatt), blatt.max_row + 1)
         ]
         self.assertIn(("Firma", "Firma Beliebig"), gefunden)
         self.assertIn((None, "Beliebige Straße 7"), gefunden)
@@ -298,14 +337,22 @@ class TestSchriftfeldWieAufDemBlatt(unittest.TestCase):
         # Dieses Blatt zeigt alle Leisten, also keine einzelne.
         self.assertNotIn("Leiste:", felder)
 
+    @staticmethod
+    def _leistenzeile(blatt, nummer: int = 1) -> int:
+        for zeile in blatt.iter_rows(min_col=1, max_col=1):
+            if zeile[0].value == f"Leiste {nummer}":
+                return zeile[0].row
+        raise AssertionError(f"Leiste {nummer} steht nicht im Blatt")
+
     def test_keine_da_nummern_wenn_die_vorlage_keine_fuehrt(self):
         """Die Vorlage sagt „da_nummern: false" - dann steht dort nichts."""
         blatt = self.mappe["Verteilerbelegung"]
         self.assertFalse(self.vorlage.da_nummern)
-        zellen = [blatt.cell(row=2, column=s).value for s in range(2, 12)]
+        zeile = self._leistenzeile(blatt)
+        zellen = [blatt.cell(row=zeile, column=s).value for s in range(2, 12)]
         self.assertEqual([z for z in zellen if z], [])
         # Der Kasten um die Leiste bleibt trotzdem.
-        self.assertTrue(blatt.cell(row=2, column=2).border.top.style)
+        self.assertTrue(blatt.cell(row=zeile, column=2).border.top.style)
 
     def test_mit_da_nummern_stehen_sie_darin(self):
         from dataclasses import replace
@@ -313,7 +360,64 @@ class TestSchriftfeldWieAufDemBlatt(unittest.TestCase):
         ziel = pathlib.Path(self.ordner.name) / "nummern.xlsx"
         xlsx_schreiben(self.projekt, ziel, replace(self.vorlage, da_nummern=True))
         blatt = load_workbook(ziel)["Verteilerbelegung"]
-        self.assertEqual(blatt.cell(row=2, column=2).value, "1")
+        zeile = self._leistenzeile(blatt)
+        self.assertEqual(blatt.cell(row=zeile, column=2).value, "1")
+
+    def test_die_zeilenhoehe_kommt_vom_blatt(self):
+        """Die Tabelle nutzt die Seite aus wie im PDF."""
+        from verteilerly.ausgabe.mappe import zeilenhoehe
+        from verteilerly.layout import zeilenhoehe_leiste
+
+        blatt = self.mappe["Leiste 1"]
+        soll = zeilenhoehe(zeilenhoehe_leiste(10, self.vorlage))
+        self.assertAlmostEqual(blatt.row_dimensions[2].height, soll, places=1)
+        # Und das füllt die Seite: 20 Zeilen tragen mehr als die Hälfte.
+        gesamt = sum(
+            (blatt.row_dimensions[z].height or 15)
+            for z in range(1, blatt.max_row + 1)
+        )
+        self.assertGreater(gesamt / (72 / 25.4), 0.7 * (297 - 25.4))
+
+    def test_die_buchten_stehen_nebeneinander(self):
+        """Wie im PDF: zwei Buchten teilen sich ein Blatt quer."""
+        ziel = pathlib.Path(self.ordner.name) / "zwei.xlsx"
+        projekt = Projekt(
+            verteiler=Verteiler.aus_geometrie(2, 3, 10, name="Zwei"),
+            briefkopf={"firma": "Netzbau GmbH"},
+        )
+        xlsx_schreiben(projekt, ziel, self.vorlage)
+        blatt = load_workbook(ziel)["Verteilerbelegung"]
+        self.assertEqual(blatt.page_setup.orientation, "landscape")
+        zeilen = {
+            z.value: z.row
+            for zeile in blatt.iter_rows(max_col=15) for z in zeile
+            if isinstance(z.value, str) and z.value.startswith("Leiste ")
+        }
+        # Leiste 1 (Bucht 1) und Leiste 4 (Bucht 2) stehen auf gleicher Höhe.
+        self.assertEqual(zeilen["Leiste 1"], zeilen["Leiste 4"])
+        spalten = {
+            z.value: z.column
+            for zeile in blatt.iter_rows(max_col=30) for z in zeile
+            if isinstance(z.value, str) and z.value.startswith("Leiste ")
+        }
+        self.assertGreater(spalten["Leiste 4"], spalten["Leiste 1"] + 10)
+
+    def test_je_blatt_der_zeichnung_eines_in_der_mappe(self):
+        """Ab drei Buchten bekommt jede ihr eigenes Blatt."""
+        ziel = pathlib.Path(self.ordner.name) / "drei.xlsx"
+        projekt = Projekt(verteiler=Verteiler.aus_geometrie(3, 3, 10, name="Drei"))
+        xlsx_schreiben(projekt, ziel, self.vorlage)
+        namen = load_workbook(ziel).sheetnames
+        for name in ("Bucht 1", "Bucht 2", "Bucht 3"):
+            with self.subTest(blatt=name):
+                self.assertIn(name, namen)
+        self.assertNotIn("Verteilerbelegung", namen)
+
+    def test_eine_seite_ist_eine_seite(self):
+        """Breite und Höhe werden auf ein Blatt gebracht, nicht nur die Breite."""
+        blatt = self.mappe["Leiste 1"]
+        self.assertEqual(blatt.page_setup.fitToWidth, 1)
+        self.assertEqual(blatt.page_setup.fitToHeight, 1)
 
     def test_das_deckblatt_fuehrt_dieselben_zeilen_wie_im_pdf(self):
         from verteilerly.layout import deckblattzeilen

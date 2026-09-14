@@ -400,7 +400,13 @@ Blöcke nebeneinander, jeder gerahmt. Auch die Verteilerbelegung trägt es,
 und das Deckblatt führt dieselben Zeilen wie das gezeichnete. Gefüllt wird
 aus denselben Werten wie die Zeichnung (`layout.deckblattzeilen`,
 `schriftfeldspalten`, `beispielschriftfeld`) — zwei Auslesungen liefen
-sonst auseinander. Nachbilden lässt sich ein PDF damit trotzdem nicht:
+sonst auseinander. **Die Seiten füllen das Blatt wie im PDF**: Zeilenhöhen, Zellengrößen und
+die Luft dazwischen kommen aus dem Blattmodell (`zeilenhoehe_leiste`,
+`belegungsmasse`), die Buchten der Verteilerbelegung stehen nebeneinander,
+und die Aufteilung auf mehrere Blätter ist dieselbe (`belegungsgruppen`) —
+ab drei Buchten eines je Bucht, benannt wie dort. Gedruckt wird auf eine
+Seite in Breite *und* Höhe. Nachbilden lässt sich ein PDF damit trotzdem
+nicht:
 Excel ist ein Raster, das Blatt eine Zeichnung; das Schriftfeld steht darum
 unter der Tabelle statt am Blattfuß.
 Die CSV bleibt reine Daten — eine Zeile je Ader.

@@ -635,12 +635,7 @@ def verteilerbelegungen(
     sonst ein halbes Blatt fuer die letzte - und lange Buchten von mehr
     als dreizehn Leisten, die nebeneinander nur noch Striche waeren.
     """
-    alle = projekt.verteiler.buchten
-    je_blatt = max(1, vorlage.buchten_je_blatt)
-    lang = any(len(b.leisten) > LEISTEN_JE_BLATT for b in alle)
-    if len(alle) > 2 or lang:
-        je_blatt = 1
-    gruppen = [alle[i:i + je_blatt] for i in range(0, len(alle), je_blatt)] or [[]]
+    gruppen = belegungsgruppen(projekt, vorlage)
     if len(gruppen) == 1:
         return [verteilerbelegung(projekt, gruppen[0], vorlage=vorlage)]
     return [
@@ -649,12 +644,103 @@ def verteilerbelegungen(
     ]
 
 
+def belegungsgruppen(
+    projekt: Projekt, vorlage: Blattvorlage = STANDARD
+) -> list[list[Bucht]]:
+    """Welche Buchten sich ein Blatt teilen.
+
+    Die Excel-Mappe legt danach ihre Blaetter an: dieselbe Aufteilung wie
+    im PDF, damit auf beiden Wegen dasselbe zusammensteht.
+    """
+    alle = projekt.verteiler.buchten
+    je_blatt = max(1, vorlage.buchten_je_blatt)
+    lang = any(len(b.leisten) > LEISTEN_JE_BLATT for b in alle)
+    if len(alle) > 2 or lang:
+        je_blatt = 1
+    return [alle[i:i + je_blatt] for i in range(0, len(alle), je_blatt)] or [[]]
+
+
 def buchtnamen(buchten: list[Bucht]) -> str:
     """Wie das Blatt heisst, das diese Buchten traegt."""
     if not buchten:
         return "Verteilerbelegung"
     erste, letzte = buchten[0].nummer, buchten[-1].nummer
     return f"Bucht {erste}" if erste == letzte else f"Buchten {erste} und {letzte}"
+
+
+@dataclass(frozen=True)
+class Belegungsmasse:
+    """Wie gross die Zellen der Verteilerbelegung auf dem Blatt werden.
+
+    Die Masse haengen am Blatt, nicht an der Vorlage allein: ein
+    40-DA-Verteiler soll die Seite nicht als Briefmarke in der Ecke
+    fuellen. Damit die Excel-Mappe dasselbe Blatt fuellt, rechnet sie
+    nicht selbst, sondern fragt hier.
+    """
+
+    zelle_breite: float
+    zelle_hoehe: float
+    label_breite: float
+    luft_leisten: float
+    luft_buchten: float
+    schrift: float
+    hochkant: bool
+    platz_breite: float
+    platz_hoehe: float
+
+
+def belegungsmasse(
+    buchten: list[Bucht], vorlage: Blattvorlage = STANDARD
+) -> Belegungsmasse:
+    """Zellenmass und Luft fuer diese Buchten auf einem Blatt."""
+    rand = vorlage.rand
+    hochkant = len(buchten) <= 1
+    blatt_b, blatt_h = A4_HOCH if hochkant else A4_QUER
+    oben = rand + 12
+    platz_b = blatt_b - 2 * rand
+    platz_h = blatt_h - rand - vorlage.schriftfeld_hoehe - 6 - oben
+
+    faktor = _belegungsfaktor(buchten, platz_b, platz_h, vorlage)
+    zelle_h = vorlage.zelle_hoehe * faktor
+    zelle_b = vorlage.zelle_breite * faktor
+    # Die Beschriftung waechst nur begrenzt mit - sonst frisst sie die Zellen.
+    label_b = vorlage.leistenlabel * min(faktor, 1.5)
+    luft_l = vorlage.abstand_leisten * faktor
+    luft_r = vorlage.abstand_buchten * faktor
+    schrift = vorlage.schrift_klein if faktor < 1.4 else vorlage.schrift_normal
+
+    # Bleibt in der Breite etwas uebrig, weil die Hoehe das Mass setzt,
+    # duerfen die Zellen breiter werden - bis zum Doppelten. Eine etwas
+    # breitere Zelle faellt kaum auf, ein leeres Drittel Blatt schon.
+    spalten = sum(max((l.da_anzahl for l in b.leisten), default=0) for b in buchten)
+    if spalten:
+        passend = (
+            platz_b - label_b * len(buchten) - luft_r * (len(buchten) - 1)
+        ) / spalten
+        zelle_b = max(zelle_b, min(passend, zelle_b * BREITE_HOECHSTENS))
+
+    # Was nach dem Vergroessern uebrig bleibt, wird verteilt statt am
+    # rechten und unteren Rand liegen zu lassen.
+    breiten = [
+        label_b + max((l.da_anzahl for l in b.leisten), default=0) * zelle_b
+        for b in buchten
+    ]
+    luecken_b = len(buchten) - 1
+    luft_r = _luft_verteilen(
+        platz_b - sum(breiten) - luft_r * luecken_b, luecken_b, luft_r, platz_b
+    )
+    zeilen = max((len(b.leisten) for b in buchten), default=0)
+    luecken_h = zeilen - 1
+    # In der Hoehe hoechstens eine Zellenhoehe Luft je Leiste: weiter
+    # auseinandergezogen sieht die Bucht aus wie eine Leiter.
+    luft_l = _luft_verteilen(
+        platz_h - zeilen * zelle_h - luft_l * luecken_h, luecken_h, luft_l, zelle_h
+    )
+    return Belegungsmasse(
+        zelle_breite=zelle_b, zelle_hoehe=zelle_h, label_breite=label_b,
+        luft_leisten=luft_l, luft_buchten=luft_r, schrift=schrift,
+        hochkant=hochkant, platz_breite=platz_b, platz_hoehe=platz_h,
+    )
 
 
 def verteilerbelegung(
@@ -686,46 +772,17 @@ def verteilerbelegung(
     blatt.text(rand, rand, 170, 8, ueberschrift, vorlage.schrift_mittel, LINKS, True)
 
     oben = rand + 12
-    platz_b = blatt.breite - 2 * rand
-    platz_h = blatt.hoehe - rand - vorlage.schriftfeld_hoehe - 6 - oben
-    faktor = _belegungsfaktor(buchten, platz_b, platz_h, vorlage)
-
-    zelle_h = vorlage.zelle_hoehe * faktor
-    zelle_b = vorlage.zelle_breite * faktor
-    # Die Beschriftung waechst nur begrenzt mit - sonst frisst sie die Zellen.
-    label_b = vorlage.leistenlabel * min(faktor, 1.5)
-    luft_l = vorlage.abstand_leisten * faktor
-    luft_r = vorlage.abstand_buchten * faktor
-    schrift = vorlage.schrift_klein if faktor < 1.4 else vorlage.schrift_normal
-
-    # Bleibt in der Breite etwas uebrig, weil die Hoehe das Mass setzt,
-    # duerfen die Zellen breiter werden - bis zum Doppelten. Eine etwas
-    # breitere Zelle faellt kaum auf, ein leeres Drittel Blatt schon.
-    spalten = sum(max((l.da_anzahl for l in b.leisten), default=0) for b in buchten)
-    if spalten:
-        passend = (
-            platz_b - label_b * len(buchten) - luft_r * (len(buchten) - 1)
-        ) / spalten
-        zelle_b = max(zelle_b, min(passend, zelle_b * BREITE_HOECHSTENS))
-
-    # Was nach dem Vergroessern uebrig bleibt, wird verteilt statt am
-    # rechten und unteren Rand liegen zu lassen.
+    masse = belegungsmasse(buchten, vorlage)
+    platz_b, platz_h = masse.platz_breite, masse.platz_hoehe
+    zelle_h, zelle_b = masse.zelle_hoehe, masse.zelle_breite
+    label_b = masse.label_breite
+    luft_l, luft_r = masse.luft_leisten, masse.luft_buchten
+    schrift = masse.schrift
     breiten = [
         label_b + max((l.da_anzahl for l in b.leisten), default=0) * zelle_b
         for b in buchten
     ]
-    # Der Rest ist, was nach den Buchten und der bisherigen Luft bleibt.
-    luecken_b = len(buchten) - 1
-    luft_r = _luft_verteilen(
-        platz_b - sum(breiten) - luft_r * luecken_b, luecken_b, luft_r, platz_b
-    )
     zeilen = max((len(b.leisten) for b in buchten), default=0)
-    luecken_h = zeilen - 1
-    # In der Hoehe hoechstens eine Zellenhoehe Luft je Leiste: weiter
-    # auseinandergezogen sieht die Bucht aus wie eine Leiter.
-    luft_l = _luft_verteilen(
-        platz_h - zeilen * zelle_h - luft_l * luecken_h, luecken_h, luft_l, zelle_h
-    )
 
     gesamt_b = sum(breiten) + luft_r * (len(buchten) - 1)
     gesamt_h = zeilen * zelle_h + luft_l * max(zeilen - 1, 0)
@@ -999,10 +1056,28 @@ def _zellenfelder(
     ]
 
 
+def zeilenhoehe_leiste(
+    da_anzahl: int, vorlage: Blattvorlage = STANDARD, blatthoehe: float = A4_HOCH[1]
+) -> float:
+    """Wie hoch eine Zeile des Leistenblatts wird.
+
+    Die Tabelle nutzt das Blatt aus - 20 DA sind 40 Zeilen und passen
+    auch. Die Excel-Mappe fragt dieselbe Stelle, sonst stuende dort eine
+    halbleere Seite.
+    """
+    platz = (
+        blatthoehe - vorlage.rand - vorlage.schriftfeld_hoehe - 6
+        - (vorlage.rand + vorlage.kopfzeile_hoehe)
+    )
+    return max(
+        vorlage.zeilenhoehe_min,
+        min(vorlage.zeilenhoehe_max, platz / max(da_anzahl * 2, 1)),
+    )
+
+
 def _zeilenhoehe(
     blatt: Blatt, oben: float, da_anzahl: int, vorlage: Blattvorlage
 ) -> float:
-    """Die Tabelle nutzt das Blatt aus - 20 DA sind 40 Zeilen und passen auch."""
     platz = (
         blatt.hoehe - vorlage.rand - vorlage.schriftfeld_hoehe - 6
         - (oben + vorlage.kopfzeile_hoehe)
