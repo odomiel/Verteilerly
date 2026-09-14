@@ -174,7 +174,9 @@ unberührt.
 Daneben **teilt** ein Knopf die gewählte Zelle in **zwei
 Beschriftungsfelder nebeneinander**; ein Prozentfeld sagt, wie breit das
 rechte ist (10–90 %). Bearbeitet wird in zwei Eingabefeldern, Tabulator
-springt vom linken ins rechte. Auf dem Blatt steht zwischen beiden **kein
+springt vom linken ins rechte, Esc verwirft; ein Wechsel zwischen den Hälften
+verlässt die Zelle nicht, und ein Klick woanders hin nimmt das Getippte nicht
+mit. Auf dem Blatt steht zwischen beiden **kein
 Strich** — dort sieht es aus wie eine Zelle mit zwei Angaben; nur die
 Leistenansicht deutet es mit einem feinen Punktstrich an. Teilbar sind
 Bezeichnung und Bemerkung. Wird die Teilung aufgehoben, bleibt der zweite Text
@@ -187,7 +189,10 @@ einmal; gelöscht wird der Inhalt, nicht die Form.
 In der Leistenansicht schließt **Enter** die Eingabe und geht
 **eine Zeile tiefer**, wie in einer Tabellenkalkulation; wurde die Eingabe
 nicht angenommen — eine unlesbare Rangierung etwa —, bleibt die Marke stehen.
-Ein Doppelklick auf eine freie Doppelader legt ein Kabel
+Aus einer geteilten Zelle geht es ebenso geradewegs nach unten, auch
+aus dem rechten Feld heraus — und ist die Zelle darunter ebenfalls geteilt,
+steht die Eingabemarke dort gleich wieder im rechten Feld, sodass sich eine
+Spalte von Nebenstellen ohne Klicken durchtippen lässt. Ein Doppelklick auf eine freie Doppelader legt ein Kabel
 auf, einer auf ein aufgelegtes Kabel **bearbeitet** es: Beschriftung,
 Kabeltyp, Kabelgröße und Länge lassen sich ändern, und der Dialog trägt auch
 den Knopf zum Entfernen. *Davon auflegen* folgt der Kabelgröße — ganz

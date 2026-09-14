@@ -232,6 +232,137 @@ class TestZelleTeilen(unittest.TestCase):
         self.assertTrue(self.ansicht.delegat.eventFilter(kasten.felder[0], taste))
 
 
+@unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
+class TestEnterInGeteilterZelle(unittest.TestCase):
+    """Enter geht geradewegs nach unten, nicht schräg."""
+
+    def setUp(self):
+        from PySide6.QtCore import QEvent
+        from PySide6.QtGui import QKeyEvent
+        from verteilerly.gui.leistenansicht import LeistenAnsicht
+        from verteilerly.modell import Zellenteilung
+
+        self.QEvent, self.QKeyEvent = QEvent, QKeyEvent
+        self.Zellenteilung = Zellenteilung
+        self.ansicht = LeistenAnsicht()
+        self.addCleanup(self.ansicht.close)
+        self.verteiler = Verteiler.aus_geometrie(1, 2, 10)
+        self.ansicht.verteiler_setzen(self.verteiler)
+        self.ansicht.leiste_zeigen(1)
+        self.ansicht.show()
+        self.addCleanup(self.ansicht.hide)
+        self.modell = self.ansicht.modell
+        self.tabelle = self.ansicht.tabelle
+
+    def _teilen(self, *zeilen, anteil=40):
+        for zeile in zeilen:
+            self.modell.teilung_setzen(
+                self.modell.index(zeile, SPALTE_BEZEICHNUNG),
+                self.Zellenteilung(anteil=anteil),
+            )
+
+    def _felder(self, zeile, spalte=SPALTE_BEZEICHNUNG):
+        index = self.modell.index(zeile, spalte)
+        self.tabelle.setCurrentIndex(index)
+        self.tabelle.edit(index)
+        ANWENDUNG.processEvents()
+        return getattr(self.tabelle.focusWidget(), "behaelter", None)
+
+    def _enter(self, feld, text=""):
+        feld.setFocus()
+        if text:
+            feld.setText(text)
+        ANWENDUNG.sendEvent(
+            feld,
+            self.QKeyEvent(
+                self.QEvent.Type.KeyPress,
+                Qt.Key.Key_Return,
+                Qt.KeyboardModifier.NoModifier,
+            ),
+        )
+        ANWENDUNG.processEvents()
+
+    def _offenes_feld(self):
+        """Das Eingabefeld, in dem die Marke gerade steht - oder None."""
+        gerade = self.tabelle.focusWidget()
+        return gerade if getattr(gerade, "behaelter", None) is not None else None
+
+    def test_aus_dem_rechten_feld_geht_es_gerade_nach_unten(self):
+        """Früher landete die Marke eine Spalte weiter rechts."""
+        self._teilen(0, 1)
+        kasten = self._felder(0)
+        self._enter(kasten.felder[1], "rechts")
+        self.assertEqual(self.tabelle.currentIndex().row(), 1)
+        self.assertEqual(self.tabelle.currentIndex().column(), SPALTE_BEZEICHNUNG)
+
+    def test_und_der_text_steht_im_zweiten_feld(self):
+        self._teilen(0, 1)
+        kasten = self._felder(0)
+        self._enter(kasten.felder[1], "Nst. 42")
+        index = self.modell.index(0, SPALTE_BEZEICHNUNG)
+        self.assertEqual(self.modell.teilung(index).text, "Nst. 42")
+
+    def test_die_naechste_geteilte_zeile_oeffnet_im_rechten_feld(self):
+        self._teilen(0, 1)
+        kasten = self._felder(0)
+        self._enter(kasten.felder[1], "rechts")
+        feld = self._offenes_feld()
+        self.assertIsNotNone(feld, "kein Eingabefeld offen")
+        self.assertIs(feld, feld.behaelter.felder[1])
+
+    def test_aus_dem_linken_feld_bleibt_es_beim_blossen_weiterruecken(self):
+        self._teilen(0, 1)
+        kasten = self._felder(0)
+        self._enter(kasten.felder[0], "links")
+        self.assertEqual(self.tabelle.currentIndex().row(), 1)
+        self.assertEqual(self.tabelle.currentIndex().column(), SPALTE_BEZEICHNUNG)
+        self.assertIsNone(self._offenes_feld())
+
+    def test_ist_die_zeile_darunter_ungeteilt_rueckt_nur_die_marke(self):
+        self._teilen(0)
+        kasten = self._felder(0)
+        self._enter(kasten.felder[1], "rechts")
+        self.assertEqual(self.tabelle.currentIndex().row(), 1)
+        self.assertEqual(self.tabelle.currentIndex().column(), SPALTE_BEZEICHNUNG)
+        self.assertIsNone(self._offenes_feld())
+
+    def test_in_der_letzten_zeile_bleibt_die_marke_stehen(self):
+        letzte = self.modell.rowCount() - 1
+        self._teilen(letzte)
+        kasten = self._felder(letzte)
+        self._enter(kasten.felder[1], "Ende")
+        self.assertEqual(self.tabelle.currentIndex().row(), letzte)
+        self.assertEqual(self.tabelle.currentIndex().column(), SPALTE_BEZEICHNUNG)
+
+    def test_ein_verlassenes_feld_behaelt_seinen_text(self):
+        """Wer woanders hinklickt, statt Enter zu drücken, verliert nichts."""
+        self._teilen(0)
+        kasten = self._felder(0)
+        kasten.felder[1].setFocus()
+        kasten.felder[1].setText("weggeklickt")
+        self.tabelle.setFocus()
+        ANWENDUNG.processEvents()
+        index = self.modell.index(0, SPALTE_BEZEICHNUNG)
+        self.assertEqual(self.modell.teilung(index).text, "weggeklickt")
+
+    def test_esc_verwirft_auch_in_der_geteilten_zelle(self):
+        self._teilen(0)
+        kasten = self._felder(0)
+        kasten.felder[1].setFocus()
+        kasten.felder[1].setText("verworfen")
+        ANWENDUNG.sendEvent(
+            kasten.felder[1],
+            self.QKeyEvent(
+                self.QEvent.Type.KeyPress,
+                Qt.Key.Key_Escape,
+                Qt.KeyboardModifier.NoModifier,
+            ),
+        )
+        ANWENDUNG.processEvents()
+        index = self.modell.index(0, SPALTE_BEZEICHNUNG)
+        self.assertEqual(self.modell.teilung(index).text, "")
+
+
 class TestMehrereZellenAufEinmal(unittest.TestCase):
     """Markierte Zellen werden zusammen gestaltet."""
 

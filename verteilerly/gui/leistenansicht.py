@@ -13,6 +13,7 @@ from PySide6.QtCore import (
     QAbstractTableModel,
     QEvent,
     QModelIndex,
+    QPersistentModelIndex,
     QRect,
     Qt,
     Signal,
@@ -30,6 +31,7 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import (
     QAbstractItemDelegate,
     QAbstractItemView,
+    QApplication,
     QComboBox,
     QHBoxLayout,
     QHeaderView,
@@ -571,7 +573,15 @@ class EingabeDelegat(QStyledItemDelegate):
     zwei Felder sind.
     """
 
-    weiter = Signal()
+    #: Zeile, Spalte und Haelfte der Zelle, in der Enter gedrueckt wurde.
+    #: Die Stelle kommt mit, weil die Marke zu diesem Zeitpunkt schon
+    #: weitergewandert sein kann: schliesst der Editor aus dem rechten
+    #: Feld heraus, reicht Qt den Fokus an die naechste Zelle weiter, und
+    #: der Sprung landete eine Spalte zu weit rechts.
+    weiter = Signal(int, int, int)
+
+    #: Einmaliger Wunsch: in welcher Haelfte der naechste Editor aufgeht.
+    haelfte_beim_oeffnen = 0
 
     # -- Zeichnen ----------------------------------------------------------
 
@@ -647,7 +657,9 @@ class EingabeDelegat(QStyledItemDelegate):
     def createEditor(self, eltern, option, index):
         teilung = self._teilung(index)
         if teilung is None:
-            return super().createEditor(eltern, option, index)
+            feld = super().createEditor(eltern, option, index)
+            feld.stelle = QPersistentModelIndex(index)
+            return feld
 
         kasten = QWidget(eltern)
         kasten.setAutoFillBackground(True)
@@ -661,7 +673,12 @@ class EingabeDelegat(QStyledItemDelegate):
             feld.installEventFilter(self)
             aufbau.addWidget(feld, anteil)
             kasten.felder.append(feld)
-        kasten.setFocusProxy(kasten.felder[0])
+        kasten.stelle = QPersistentModelIndex(index)
+        # Wer aus einem rechten Feld heruntergesprungen ist, tippt dort
+        # weiter: der Fokusstellvertreter entscheidet, welches
+        # Feld die Eingabemarke bekommt.
+        kasten.setFocusProxy(kasten.felder[self.haelfte_beim_oeffnen])
+        self.haelfte_beim_oeffnen = 0
         return kasten
 
     def setEditorData(self, editor, index) -> None:
@@ -686,8 +703,35 @@ class EingabeDelegat(QStyledItemDelegate):
         modell.zweittext_setzen(index, rechts)
 
     def eventFilter(self, editor, ereignis) -> bool:
+        behaelter = getattr(editor, "behaelter", None)
+        felder = getattr(behaelter, "felder", None)
+        if ereignis.type() == QEvent.Type.FocusOut and felder:
+            # Qt kennt nur das eine Feld, das es beobachtet, und wollte
+            # bei jedem Fokuswechsel die Eingabe schliessen - mit einem
+            # Editor, den die Ansicht nicht kennt. Also selber machen:
+            # ein Wechsel zwischen den Haelften ist kein Verlassen der
+            # Zelle, und wer sie verlaesst, schliesst den Behaelter.
+            neu = QApplication.focusWidget()
+            if neu is not None and (neu in felder or behaelter.isAncestorOf(neu)):
+                return True
+            # Ein Editor, den die Ansicht schon weggeraeumt hat, ist
+            # unsichtbar - ihn zu schliessen haette sie nur zu meckern.
+            if not getattr(behaelter, "geschlossen", False) and behaelter.isVisible():
+                behaelter.geschlossen = True
+                self.commitData.emit(behaelter)
+                self.closeEditor.emit(
+                    behaelter, QAbstractItemDelegate.EndEditHint.NoHint
+                )
+            return True
         if ereignis.type() == QEvent.Type.KeyPress:
-            felder = getattr(getattr(editor, "behaelter", None), "felder", None)
+            # Esc verwirft die Eingabe - auch hier mit dem Behaelter,
+            # nicht mit der Haelfte.
+            if felder and ereignis.key() == Qt.Key.Key_Escape:
+                behaelter.geschlossen = True
+                self.closeEditor.emit(
+                    behaelter, QAbstractItemDelegate.EndEditHint.RevertModelCache
+                )
+                return True
             # Innerhalb einer geteilten Zelle springt Tab ins zweite Feld,
             # statt gleich in die naechste Zelle zu gehen.
             if felder and ereignis.key() == Qt.Key.Key_Tab and editor is felder[0]:
@@ -700,12 +744,16 @@ class EingabeDelegat(QStyledItemDelegate):
                 ereignis.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter)
                 and not ereignis.modifiers() & Qt.KeyboardModifier.AltModifier
             ):
-                ziel = getattr(editor, "behaelter", editor)
+                ziel = behaelter if behaelter is not None else editor
+                haelfte = 1 if felder and editor is felder[1] else 0
+                stelle = getattr(ziel, "stelle", None)
+                ziel.geschlossen = True
                 self.commitData.emit(ziel)
                 self.closeEditor.emit(
                     ziel, QAbstractItemDelegate.EndEditHint.SubmitModelCache
                 )
-                self.weiter.emit()
+                if stelle is not None and stelle.isValid():
+                    self.weiter.emit(stelle.row(), stelle.column(), haelfte)
                 return True
         return super().eventFilter(editor, ereignis)
 
@@ -1060,20 +1108,35 @@ class LeistenAnsicht(QWidget):
                     geleert += 1
         return geleert
 
-    def _eine_zeile_tiefer(self) -> None:
+    def _eine_zeile_tiefer(self, zeile: int, spalte: int, haelfte: int = 0) -> None:
         """Nach Enter eine Zeile weiter - wie in einer Tabellenkalkulation.
+
+        Gesprungen wird von der Zelle aus, in der Enter gedrueckt wurde,
+        nicht von der Marke: die steht beim Schliessen eines geteilten
+        Editors schon eine Spalte weiter, und der Sprung ginge dann
+        schraeg nach unten statt geradewegs.
+
+        Wer im rechten Feld einer geteilten Zelle getippt hat, tippt
+        unten im rechten Feld weiter, sofern die Zeile dort ebenfalls
+        geteilt ist. Ist sie es nicht, bleibt es beim blossen
+        Weiterruecken der Marke.
 
         Wurde die Eingabe nicht angenommen - eine unlesbare Rangierung
         etwa -, bleibt die Marke stehen: dort ist etwas zu richten.
         """
         if not self.modell.eingabe_angenommen:
             return
-        jetzt = self.tabelle.currentIndex()
-        if not jetzt.isValid():
+        naechste = self.modell.index(zeile + 1, spalte)
+        if not naechste.isValid():
+            # Ans Ende gekommen: die Marke gehoert zurueck auf die Zelle,
+            # in der getippt wurde - Qt hat sie moeglicherweise verschoben.
+            self.tabelle.setCurrentIndex(self.modell.index(zeile, spalte))
             return
-        naechste = jetzt.sibling(jetzt.row() + 1, jetzt.column())
-        if naechste.isValid():
-            self.tabelle.setCurrentIndex(naechste)
+        self.tabelle.setCurrentIndex(naechste)
+        teilung = self.modell.teilung(naechste)
+        if haelfte and teilung is not None and teilung.geteilt:
+            self.delegat.haelfte_beim_oeffnen = haelfte
+            self.tabelle.edit(naechste)
 
     def farben_setzen(self, farben) -> None:
         self.modell.farben_setzen(farben)
