@@ -2,8 +2,8 @@
 
 Was hier liegt, gehört **nicht** zur Grundausstattung des Programms und
 **nicht ins Repo**: `blattvorlagen/` steht in der `.gitignore`. Der Ordner ist
-Arbeitsmaterial — was darin liegt, ist die Sache des
-Arbeitsplatzes, nicht des Programms.
+Arbeitsmaterial — was darin liegt, ist die Sache des Arbeitsplatzes, nicht des
+Programms.
 
 ## Eine eigene Blattvorlage einspielen
 
@@ -24,7 +24,7 @@ diesen Weg gehen will, erzeugt mit *…sichern…* einmal ein Paket, legt die
 Datei hinein und spielt es wieder ein. Für eine einzelne Datei ist der erste
 Weg der kürzere.
 
-## Das Schriftfeld der Mustertabellen
+## Ein Schriftfeld mit zwei Anschriften
 
 Die **Bauart** bleibt im Programm: jede eigene Blattvorlage kann
 `schriftfeld_art: beispiel` setzen und bekommt dieselbe Aufteilung — links

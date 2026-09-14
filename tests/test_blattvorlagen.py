@@ -129,7 +129,7 @@ class TestMitgelieferte(unittest.TestCase):
         self.assertFalse((mitgeliefert() / "blattvorlagen" / "beispiel.yaml").is_file())
 
     def test_die_bauart_beispiel_steht_jeder_vorlage_offen(self):
-        """Wer das Schriftfeld der Mustertabellen will, setzt es selbst."""
+        """Wer dieses Schriftfeld will, setzt es selbst."""
         vorlage = BEISPIELVORLAGE
         self.assertEqual(vorlage.schriftfeld_art, "beispiel")
         self.assertEqual(

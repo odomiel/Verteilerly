@@ -350,17 +350,17 @@ Steuern lässt sich das je Blattvorlage über `kabel_gedreht`; die Vorlage
 **Firma und Kunde tragen eine Anschrift, keine Zeile.** Im
 Projektdatendialog sind beide Felder mehrzeilig; Name, Straße und Ort stehen auf dem
 Blatt untereinander, die Beschriftung nur an der ersten Zeile. So halten
-es die Mustertabellen — und so kommt es auch nach Excel.
+es die Mustertabellen, nach denen gearbeitet wurde — und so kommt es auch
+nach Excel.
 
 Wie das Blatt aussieht, sagt eine **Blattvorlage**; was darauf steht,
 kommt aus dem Projekt. **Drei liegen bei** — *Standard* mit allen Spalten,
 *Knapp* als reines Rangierblatt ohne Bezeichnung und Bemerkung und
 *Ausführlich* mit großer Schrift, hohen Zeilen und einer Bucht je Blatt.
 
-Das Schriftfeld der Mustertabellen gibt es weiterhin, aber **nicht als
-fertige Vorlage**: die Bauart bleibt im Programm, wer sie will, setzt
-`schriftfeld_art: beispiel` in seiner eigenen Blattvorlage (siehe
-`beispiele/README.md`):
+Das Schriftfeld lässt sich auch **anders bauen**, nur eben nicht mit einer
+mitgelieferten Vorlage: wer es will, setzt `schriftfeld_art: beispiel` in
+seiner eigenen Blattvorlage (siehe `beispiele/README.md`):
 
 ```
 ┌────────┬─────────┬─────────┬──────────────────────────────┐
@@ -390,9 +390,9 @@ gehört oben und unten zu gleichen Teilen. Auf der Verteilerbelegung sind es
 zwei Zeilen statt drei — dort fehlt die Leiste —, und mit genug
 eigenen Feldern füllt der Block die Hälfte aus.
 
-Die Kabelspalte hat sie schmal und quer wie die Standardvorlage; in den
-Mustertabellen gibt es sie nicht, dort stand das Kabel nur in der
-Verteilerbelegung. Wie breit die drei Blöcke sind, sagt dort
+Die Kabelspalte steht dabei schmal und quer wie in der Standardvorlage —
+in den Mustertabellen gab es sie nicht, dort stand das Kabel nur in der
+Verteilerbelegung. Wie breit die drei Blöcke sind, sagt
 `schriftfeld_anteile`.
 Gewählt wird sie beim Anlegen eines Verteilers und später unter
 *Einstellungen ▸ Blattvorlage* (Strg+Umschalt+B); über der Vorschau steht

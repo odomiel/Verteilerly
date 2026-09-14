@@ -293,8 +293,8 @@ class TestSchriftfeldWieAufDemBlatt(unittest.TestCase):
     """Dieselben Felder an denselben Plätzen wie im PDF.
 
     Bis hierher war das Schriftfeld der Mappe eine schlichte Liste aus
-    Beschriftung und Wert - die Blattvorlage „Mit Anschriften"
-    baut es aber aus einer Matrix, dem Verteiler und zwei Anschriften.
+    Beschriftung und Wert - die Bauart "beispiel" baut es aber aus einer
+    Matrix, dem Verteiler und zwei Anschriften.
     """
 
     @classmethod

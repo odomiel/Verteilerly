@@ -796,7 +796,7 @@ def _beispiel_matrix(
 
 
 def _mit_doppelpunkt(text: str) -> str:
-    """Wie es die Mustertabelle haelt: "Verteiler:", aber "Verteiler-Nr."."""
+    """Wie es die Mustertabellen halten: "Verteiler:", aber "Verteiler-Nr."."""
     return text if text.endswith((":", ".")) else text + ":"
 
 
