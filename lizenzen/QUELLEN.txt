@@ -43,15 +43,15 @@ Qt 6 und PySide6 / shiboken6            LGPL-3.0-only
     Reverse Engineering zum Beheben von Fehlern ist ausdruecklich
     gestattet.
 
-Python 3.13                              PSF License 2.0
-    Lizenztext im Abbild unter opt/python3.13/lib/python3.13/LICENSE.txt
+Python 3.14                              PSF License 2.0
+    Lizenztext im Abbild unter opt/python3.14/lib/python3.14/LICENSE.txt
     Quelltext: https://www.python.org/downloads/source/
 
 ReportLab                                BSD-3-Clause
 openpyxl, et_xmlfile, PyYAML             MIT
 Pillow                                   MIT-CMU
     Lizenztexte je Paket unter
-    opt/python3.13/lib/python3.13/site-packages/<paket>-*.dist-info/
+    opt/python3.14/lib/python3.14/site-packages/<paket>-*.dist-info/
 
 GLib (libgthread-2.0)                    LGPL-2.1-or-later
     Quelltext: https://deb.debian.org/debian/pool/main/g/glib2.0/

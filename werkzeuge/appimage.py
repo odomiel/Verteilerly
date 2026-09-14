@@ -39,10 +39,10 @@ from verteilerly.version import VERSION  # noqa: E402
 
 NAME = "verteilerly"
 ANZEIGENAME = "Verteilerly"
-PYTHONFASSUNG = "3.13"
+PYTHONFASSUNG = "3.14"
 BASIS_URL = (
-    "https://github.com/niess/python-appimage/releases/download/python3.13/"
-    "python3.13.15-cp313-cp313-manylinux2014_x86_64.AppImage"
+    "https://github.com/niess/python-appimage/releases/download/python3.14/"
+    "python3.14.7-cp314-cp314-manylinux2014_x86_64.AppImage"
 )
 WERKZEUG_URL = (
     "https://github.com/AppImage/appimagetool/releases/download/continuous/"
