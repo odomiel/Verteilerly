@@ -25,9 +25,8 @@ from ..layout import (
     belegungsgruppen,
     belegungsmasse,
     buchtnamen,
-    POLSTER_KABEL,
     deckblattzeilen,
-    kabelbeschriftung_groesse,
+    kabelfeld,
     kopfgruppen,
     schriftfeldspalten,
     schriftfeldwerte,
@@ -204,7 +203,6 @@ def _belegung(
     blatt = mappe.create_sheet(name)
     v = projekt.verteiler
     masse = belegungsmasse(buchten, vorlage)
-    kabelschrift = kabelbeschriftung_groesse(masse.zelle_hoehe, vorlage)
     # Eine Leerzeile zwischen den Leisten traegt die Luft des Blattes.
     mit_luft = masse.luft_leisten > 0.5
 
@@ -275,12 +273,15 @@ def _belegung(
                     # Zeilen rechnet das Blattmodell - Excel kennt die
                     # Breite des verbundenen Blocks nicht und schriebe
                     # sonst unverkleinert darueber hinaus.
-                    breite = abschnitt.anzahl_da * masse.zelle_breite
-                    groesse, zeilen = umgebrochene_zeilen(
-                        kabel.beschriftung,
-                        max(breite - 2 * POLSTER_KABEL, 1.0),
+                    feld = kabelfeld(
+                        0.0, 0.0,
+                        abschnitt.anzahl_da * masse.zelle_breite,
                         masse.zelle_hoehe,
-                        kabelschrift,
+                        vorlage,
+                    )
+                    groesse, zeilen = umgebrochene_zeilen(
+                        kabel.beschriftung, feld.breite, feld.hoehe,
+                        feld.groesse, feld.einzeilig_ab,
                     )
                     feld = blatt.cell(
                         row=zeile, column=von, value="\n".join(zeilen)

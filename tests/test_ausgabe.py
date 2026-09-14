@@ -226,14 +226,14 @@ class TestSchriftgroessen(unittest.TestCase):
         from verteilerly.layout import Text, textzeilen, verteilerbelegungen
 
         v = Verteiler.aus_geometrie(1, 4, 10, name="Muster")
-        v.kabel_anlegen("Melder 1", 1, 1, 1)
+        v.kabel_anlegen("Melderkreis Erdgeschoss West", 1, 1, 1)
         blatt = verteilerbelegungen(Projekt(verteiler=v))[0]
         feld = next(
             e for e in blatt.elemente
-            if isinstance(e, Text) and e.text == "Melder 1"
+            if isinstance(e, Text) and e.text.startswith("Melderkreis")
         )
         groesse, zeilen = textzeilen(feld)
-        self.assertEqual(zeilen, ["Melder", "1"])
+        self.assertEqual(zeilen, ["Melderkreis", "Erdgeschoss", "West"])
         # Was das gemeinsame Mass sagt, haelt auch Helvetica ein: das PDF
         # muss nicht nachtraeglich verkleinern.
         for zeile in zeilen:
@@ -257,6 +257,32 @@ class TestSchriftgroessen(unittest.TestCase):
         for wort in ("Melderkreis", "Erdgeschoss", "West"):
             with self.subTest(wort=wort):
                 self.assertIn(wort, text)
+
+    def test_eine_zeile_kleiner_geht_vor_zwei_vollen(self):
+        """Ein kleiner Block soll nicht vollgestopft aussehen.
+
+        „Melder 1" passt in den schmalen Block nur umgebrochen, wenn die
+        Schrift ihre volle Groesse behaelt - eine Stufe kleiner steht es
+        auf einer Zeile und laesst Luft.
+        """
+        from verteilerly.layout import Text, textzeilen, verteilerbelegungen
+
+        v = Verteiler.aus_geometrie(1, 4, 10, name="Muster")
+        v.kabel_anlegen("Melder 1", 1, 1, 1)
+        blatt = verteilerbelegungen(Projekt(verteiler=v))[0]
+        feld = next(
+            e for e in blatt.elemente
+            if isinstance(e, Text) and e.text == "Melder 1"
+        )
+        groesse, zeilen = textzeilen(feld)
+        self.assertEqual(zeilen, ["Melder 1"])
+        self.assertLess(groesse, feld.groesse)
+        # Kleiner als die kleine Schrift der Vorlage wird dafuer nicht
+        # gesetzt - dann waere der Umbruch das Bessere.
+        self.assertGreaterEqual(groesse, feld.einzeilig_ab)
+        self.assertLessEqual(
+            stringWidth(zeilen[0], SCHRIFT, groesse), feld.breite * PT_JE_MM
+        )
 
     def test_kein_text_eines_blattes_laeuft_ueber(self):
         """Die Probe aufs Ganze: jedes Feld jedes Blattes nachgemessen."""

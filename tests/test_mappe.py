@@ -199,9 +199,8 @@ class TestBlattbild(unittest.TestCase):
     def test_der_kabelname_steht_mittig_und_bricht_um(self):
         """Wie auf dem Blatt - nicht klein oben links."""
         from verteilerly.layout import (
-            POLSTER_KABEL,
             belegungsmasse,
-            kabelbeschriftung_groesse,
+            kabelfeld,
             umgebrochene_zeilen,
         )
 
@@ -213,11 +212,12 @@ class TestBlattbild(unittest.TestCase):
         self.assertEqual(feld.alignment.vertical, "center")
         self.assertTrue(feld.alignment.wrap_text)
         # Fuenf DA breit: dieselbe Rechnung wie fuer Vorschau und PDF.
+        platz = kabelfeld(
+            0.0, 0.0, 5 * masse.zelle_breite, masse.zelle_hoehe, STANDARD
+        )
         groesse, zeilen = umgebrochene_zeilen(
-            "Linie 1 — Melderkreis",
-            5 * masse.zelle_breite - 2 * POLSTER_KABEL,
-            masse.zelle_hoehe,
-            kabelbeschriftung_groesse(masse.zelle_hoehe, STANDARD),
+            "Linie 1 — Melderkreis", platz.breite, platz.hoehe,
+            platz.groesse, platz.einzeilig_ab,
         )
         self.assertEqual(feld.value, "\n".join(zeilen))
         self.assertEqual(feld.font.size, groesse)
@@ -228,13 +228,13 @@ class TestBlattbild(unittest.TestCase):
         Frueher stand der Name unverkleinert darin und lief darueber
         hinaus - die Mappe rechnet die Groesse darum selbst aus.
         """
-        from verteilerly.layout import belegungsmasse, kabelbeschriftung_groesse
+        from verteilerly.layout import belegungsmasse, kabelfeld
 
         v = self.projekt.verteiler
         v.kabel_anlegen("Melderkreis Erdgeschoss West", 2, 1, 1)
         blatt = self._mappe()["Verteilerbelegung"]
         masse = belegungsmasse(v.buchten, STANDARD)
-        gross = kabelbeschriftung_groesse(masse.zelle_hoehe, STANDARD)
+        gross = kabelfeld(0.0, 0.0, masse.zelle_breite, masse.zelle_hoehe).groesse
 
         feld = None
         for zeile in blatt.iter_rows():

@@ -48,8 +48,13 @@ FUELLUNG_KABEL = "#EFEFEF"
 # gemessen an ihrer Hoehe: breiter gezogen wird sie zum Balken.
 BREITE_HOECHSTENS = 2.0
 # Wie viel Luft im Kabelblock der Verteilerbelegung rings um den Namen
-# bleibt, damit er nicht am Rahmen klebt.
+# mindestens bleibt, damit er nicht am Rahmen klebt.
 POLSTER_KABEL = 0.6
+# Wie viel des Blocks der Name hoechstens einnimmt. Ein kurzer Name in
+# einem schmalen Block fuellte ihn sonst von Rand zu Rand und liesse ihn
+# vollgestopft aussehen; mit etwas Luft ringsum bleibt der Block als
+# Flaeche lesbar.
+FUELLGRAD_KABEL = 0.82
 # Ab wie vielen Leisten je Bucht diese ein eigenes Blatt bekommt.
 # Zwei lange Buchten nebeneinander waeren nur noch Striche.
 LEISTEN_JE_BLATT = 13
@@ -128,6 +133,9 @@ class Text:
     #: so gross nehmen, wie der Kasten sie traegt? Ohne das bleibt es bei
     #: einer Zeile, die notfalls schrumpft.
     umbruch: bool = False
+    #: Bis zu welcher Groesse eine einzelne Zeile dem Umbruch vorgezogen
+    #: wird - kleiner gesetzt sieht luftiger aus als zwei volle Zeilen.
+    einzeilig_ab: float = 0.0
 
     @property
     def zeilenlaenge(self) -> float:
@@ -176,7 +184,11 @@ def geschaetzte_breite(text: str, groesse: float) -> float:
 
 
 def umgebrochene_zeilen(
-    text: str, breite: float, hoehe: float, groesse: float
+    text: str,
+    breite: float,
+    hoehe: float,
+    groesse: float,
+    einzeilig_ab: float = 0.0,
 ) -> tuple[float, list[str]]:
     """Schriftgroesse in Punkt und die Zeilen eines umbrechenden Feldes.
 
@@ -190,6 +202,7 @@ def umgebrochene_zeilen(
         KLEINSTE_SCHRIFT * PUNKT_IN_MM,
         SCHRITT * PUNKT_IN_MM,
         geschaetzte_breite,
+        einzeilig_ab * PUNKT_IN_MM,
     )
     # Krumme Zahlen wie 6.749999 helfen niemandem - auch nicht der Mappe.
     return round(gross / PUNKT_IN_MM, 2), zeilen
@@ -198,7 +211,8 @@ def umgebrochene_zeilen(
 def textzeilen(element: Text) -> tuple[float, list[str]]:
     """Dasselbe fuer ein fertiges Textfeld des Zeichenmodells."""
     return umgebrochene_zeilen(
-        str(element.text), element.breite, element.hoehe, element.groesse
+        str(element.text), element.breite, element.hoehe, element.groesse,
+        element.einzeilig_ab,
     )
 
 
@@ -276,6 +290,7 @@ def umbruch_einpassen(
     kleinste: float,
     schritt: float,
     misst,
+    einzeilig_ab: float = 0.0,
 ) -> tuple[float, list[str]]:
     """Die groesste Schrift, mit der der Text umgebrochen ins Feld passt.
 
@@ -285,10 +300,23 @@ def umbruch_einpassen(
     gewaehlte Groesse und die fertigen Zeilen. Passt es auch bei der
     kleinsten Schrift nicht, bleibt stehen, was in den Kasten geht, und
     die letzte Zeile endet mit Punkten.
+
+    ``einzeilig_ab`` sagt, bis zu welcher Groesse eine einzelne Zeile
+    einem Umbruch vorgezogen wird: eine Stufe kleiner gesetzt sieht
+    luftiger aus als zwei Zeilen, die das Feld ausfuellen. Erst darunter
+    wird umgebrochen - dann ist das Feld wirklich zu klein.
     """
     text = str(text)
     if not text.strip() or breite <= 0 or hoehe <= 0:
         return groesse, [text]
+
+    einzeln = text.strip()
+    einzeilig = max(kleinste, groesse)
+    while einzeilig_ab and einzeilig >= einzeilig_ab:
+        if (misst(einzeln, einzeilig) <= breite
+                and einzeilig * ZEILENABSTAND <= hoehe):
+            return einzeilig, [einzeln]
+        einzeilig -= schritt
 
     stuecke = [st.rstrip() for st in _stuecke(text) if st.strip()]
 
@@ -959,18 +987,55 @@ def belegungsmasse(
 
 
 def kabelbeschriftung_groesse(
-    zelle_hoehe: float, vorlage: Blattvorlage = STANDARD
+    platz_hoehe: float, vorlage: Blattvorlage = STANDARD
 ) -> float:
-    """Wie gross der Kabelname im Block hoechstens werden darf.
+    """Wie gross der Kabelname hoechstens werden darf.
 
-    Der Block ist so hoch wie die Zelle; eine Zeile darin braucht
-    ``ZEILENABSTAND`` mal ihre Schriftgroesse. Mehr als die mittlere
-    Schrift der Vorlage wird es nicht - ein Kabelname ist keine
-    Ueberschrift. Die Mappe fragt dieselbe Stelle.
+    ``platz_hoehe`` ist die Hoehe, die ihm im Block bleibt; eine Zeile
+    darin braucht ``ZEILENABSTAND`` mal ihre Schriftgroesse. Mehr als die
+    mittlere Schrift der Vorlage wird es nicht - ein Kabelname ist keine
+    Ueberschrift.
     """
-    platz = max(zelle_hoehe - 2 * POLSTER_KABEL, 0.5)
-    hoechstens = platz / PUNKT_IN_MM / ZEILENABSTAND
+    hoechstens = max(platz_hoehe, 0.5) / PUNKT_IN_MM / ZEILENABSTAND
     return max(min(vorlage.schrift_mittel, hoechstens), vorlage.schrift_klein)
+
+
+@dataclass(frozen=True)
+class Kabelfeld:
+    """Wo der Kabelname im Block steht und wie gross er dort wird.
+
+    Der Platz ist kleiner als der Block: erst der Fuellgrad, dann das
+    Mindestpolster - was beide zulassen, bleibt uebrig. Blatt und Mappe
+    fragen dieselbe Stelle, damit beide dasselbe zeigen.
+    """
+
+    x: float
+    y: float
+    breite: float
+    hoehe: float
+    groesse: float
+    #: Bis hierher ist eine einzelne Zeile besser als ein Umbruch.
+    einzeilig_ab: float
+
+
+def kabelfeld(
+    x: float,
+    y: float,
+    breite: float,
+    hoehe: float,
+    vorlage: Blattvorlage = STANDARD,
+) -> Kabelfeld:
+    """Das Textfeld des Kabelnamens in einem Block dieser Groesse."""
+    platz_b = max(min(breite * FUELLGRAD_KABEL, breite - 2 * POLSTER_KABEL), 1.0)
+    platz_h = max(min(hoehe * FUELLGRAD_KABEL, hoehe - 2 * POLSTER_KABEL), 1.0)
+    return Kabelfeld(
+        x=x + (breite - platz_b) / 2,
+        y=y + (hoehe - platz_h) / 2,
+        breite=platz_b,
+        hoehe=platz_h,
+        groesse=kabelbeschriftung_groesse(platz_h, vorlage),
+        einzeilig_ab=vorlage.schrift_klein,
+    )
 
 
 def verteilerbelegung(
@@ -1008,7 +1073,6 @@ def verteilerbelegung(
     label_b = masse.label_breite
     luft_l, luft_r = masse.luft_leisten, masse.luft_buchten
     schrift = masse.schrift
-    kabelschrift = kabelbeschriftung_groesse(zelle_h, vorlage)
     breiten = [
         label_b + max((l.da_anzahl for l in b.leisten), default=0) * zelle_b
         for b in buchten
@@ -1055,9 +1119,11 @@ def verteilerbelegung(
             # Mitten in den Block, so gross wie er es traegt, notfalls
             # auf mehrere Zeilen: der Kabelname ist die Auskunft dieses
             # Blattes, nicht eine Fussnote in seiner linken oberen Ecke.
+            feld = kabelfeld(bx, ky, bb, zelle_h, vorlage)
             blatt.text(
-                bx + POLSTER_KABEL, ky, bb - 2 * POLSTER_KABEL, zelle_h,
-                beschriftung, kabelschrift, MITTE, umbruch=True,
+                feld.x, feld.y, feld.breite, feld.hoehe,
+                beschriftung, feld.groesse, MITTE, umbruch=True,
+                einzeilig_ab=feld.einzeilig_ab,
             )
 
     # Die DA-Nummern zuletzt, damit sie auch auf einem Kabelblock stehen.

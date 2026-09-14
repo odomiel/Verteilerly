@@ -279,8 +279,12 @@ dort wird auf die einzelne Doppelader geklickt.
 Der **Kabelname steht mitten im Block**, waagerecht wie senkrecht, und so
 groß, wie dieser ihn trägt (höchstens `schrift_mittel` der Blattvorlage;
 `kabelbeschriftung_groesse()` rechnet es aus, Blatt und Mappe fragen
-dieselbe Stelle). Passt er nicht in eine Zeile, wird **umgebrochen** statt
-geschrumpft: `zeilen_umbrechen()` und `umbruch_einpassen()` in `layout.py`
+dieselbe Stelle). Wie viel Platz er darin bekommt, sagt `kabelfeld()`: nicht den
+ganzen Block, sondern `FUELLGRAD_KABEL` davon — ein Name von Rand zu Rand
+ließe den Block vollgestopft aussehen. Wird es eng, wird zuerst die Schrift
+kleiner: eine einzelne Zeile gilt bis herunter zu `schrift_klein` als
+besser als zwei volle (`einzeilig_ab`). Erst darunter wird **umgebrochen**:
+`zeilen_umbrechen()` und `umbruch_einpassen()` in `layout.py`
 brechen an Leerzeichen und an `/`, `-`, `_`. Lieber eine Stufe kleiner als
 ein Wort mitten durchgeschnitten; erst danach wird hart getrennt und zuletzt
 gekürzt. Ein `Text` mit `umbruch=True` sagt, dass ein Feld diesen Weg geht.

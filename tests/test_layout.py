@@ -96,6 +96,7 @@ class TestBlattfolge(unittest.TestCase):
         from verteilerly.layout import (
             belegungsmasse,
             kabelbeschriftung_groesse,
+            kabelfeld,
         )
 
         v = Verteiler.aus_geometrie(1, 4, 10)
@@ -106,17 +107,24 @@ class TestBlattfolge(unittest.TestCase):
             if isinstance(e, Text) and e.text == "Wohnzimmer Nord"
         )
         masse = belegungsmasse(v.buchten)
+        block_h = masse.zelle_hoehe
+        block_b = 4 * masse.zelle_breite
         self.assertEqual(name.ausrichtung, "mitte")
         self.assertTrue(name.umbruch)
-        # So hoch wie der Block: der Text sitzt damit auch senkrecht mittig.
-        self.assertAlmostEqual(name.hoehe, masse.zelle_hoehe, places=6)
+        # Das Feld sitzt mittig im Block und laesst ringsum Luft: ein
+        # Name von Rand zu Rand sieht vollgestopft aus.
+        self.assertLess(name.breite, block_b)
+        self.assertLess(name.hoehe, block_h)
+        feld = kabelfeld(name.x - (block_b - name.breite) / 2,
+                         name.y - (block_h - name.hoehe) / 2,
+                         block_b, block_h)
+        self.assertAlmostEqual(name.breite, feld.breite, places=6)
+        self.assertAlmostEqual(name.hoehe, feld.hoehe, places=6)
         self.assertGreater(name.groesse, masse.schrift)
-        self.assertEqual(
-            name.groesse, kabelbeschriftung_groesse(masse.zelle_hoehe)
-        )
+        self.assertEqual(name.groesse, kabelbeschriftung_groesse(feld.hoehe))
 
     def test_die_kabelschrift_bleibt_im_block(self):
-        """Eine Zeile darf nicht hoeher werden als der Block selbst."""
+        """Eine Zeile darf nicht hoeher werden als ihr Platz."""
         from verteilerly.layout import (
             PUNKT_IN_MM,
             ZEILENABSTAND,
@@ -131,6 +139,25 @@ class TestBlattfolge(unittest.TestCase):
                     self.assertLessEqual(
                         groesse * ZEILENABSTAND * PUNKT_IN_MM, hoehe
                     )
+
+    def test_der_name_laesst_im_block_luft(self):
+        """Von Rand zu Rand sieht der Block vollgestopft aus."""
+        from verteilerly.layout import FUELLGRAD_KABEL, kabelfeld
+
+        for breite, hoehe in ((6.9, 22.6), (16.5, 22.6), (49.5, 9.0)):
+            with self.subTest(breite=breite):
+                feld = kabelfeld(10.0, 20.0, breite, hoehe)
+                self.assertLessEqual(feld.breite, breite * FUELLGRAD_KABEL)
+                self.assertLessEqual(feld.hoehe, hoehe * FUELLGRAD_KABEL)
+                # Mittig: was oben fehlt, fehlt unten auch.
+                self.assertAlmostEqual(
+                    feld.x - 10.0, 10.0 + breite - (feld.x + feld.breite),
+                    places=6,
+                )
+                self.assertAlmostEqual(
+                    feld.y - 20.0, 20.0 + hoehe - (feld.y + feld.hoehe),
+                    places=6,
+                )
 
     def test_die_buchten_stehen_nicht_uebereinander(self):
         """Verteilt wird in die Breite, nicht gestapelt."""
@@ -1174,6 +1201,27 @@ class TestUmbruch(unittest.TestCase):
         )
         self.assertGreater(len(zeilen), 1)
         self.assertEqual("".join(zeilen), "Unteilbarkeitserklaerung")
+
+    def test_eine_kleinere_zeile_geht_vor_dem_umbruch(self):
+        """Zwei volle Zeilen sehen gedraengt aus, eine kleinere nicht."""
+        groesse, zeilen = self.einpassen(
+            "Wohnzimmer Nord", 12, 20, 3.0, 1.0, 0.25, self.misst
+        )
+        self.assertEqual(len(zeilen), 2)          # ohne Vorgabe wie bisher
+        groesse, zeilen = self.einpassen(
+            "Wohnzimmer Nord", 12, 20, 3.0, 1.0, 0.25, self.misst,
+            einzeilig_ab=1.0,
+        )
+        self.assertEqual(zeilen, ["Wohnzimmer Nord"])
+        self.assertLessEqual(self.misst(zeilen[0], groesse), 12)
+
+    def test_unter_der_grenze_wird_doch_umgebrochen(self):
+        """Eine Zeile, die nur noch winzig passt, hilft niemandem."""
+        groesse, zeilen = self.einpassen(
+            "Wohnzimmer Nord", 12, 20, 3.0, 1.0, 0.25, self.misst,
+            einzeilig_ab=2.5,
+        )
+        self.assertGreater(len(zeilen), 1)
 
     def test_leerer_text_bleibt_leer(self):
         self.assertEqual(self.umbrechen("", 10, self.misst), [])
