@@ -17,13 +17,7 @@ from verteilerly.layout import (
 RAND = STANDARD.rand
 SCHRIFTFELD_H = STANDARD.schriftfeld_hoehe
 from verteilerly.modell import Aderadresse, Projekt, Verteiler
-
-import pathlib as _pathlib
-
-# Die Beispielvorlage liegt nicht mehr bei; sie steht im Repo zum
-# Einspielen bereit.
-BEISPIELE = _pathlib.Path(__file__).resolve().parent.parent / "beispiele" / "blattvorlagen"
-
+from . import BEISPIELVORLAGE
 
 
 def _texte(blatt: Blatt) -> list[str]:
@@ -681,18 +675,14 @@ class TestEigeneBeschriftungen(unittest.TestCase):
 
     def test_auch_in_der_beispielvorlage(self):
         """Dort stand „Verteiler:" fest im Quelltext."""
-        from verteilerly.blattvorlagen import Blattvorlagen
-
-        vorlage = Blattvorlagen.laden(BEISPIELE).holen("beispiel")
+        vorlage = BEISPIELVORLAGE
         self.projekt.beschriftungen["verteiler"] = "Kasten"
         texte = _texte(leistenblatt(self.projekt, 1, vorlage))
         self.assertIn("Kasten:", texte)
         self.assertNotIn("Verteiler:", texte)
 
     def test_der_doppelpunkt_verdoppelt_sich_nicht(self):
-        from verteilerly.blattvorlagen import Blattvorlagen
-
-        vorlage = Blattvorlagen.laden(BEISPIELE).holen("beispiel")
+        vorlage = BEISPIELVORLAGE
         self.projekt.beschriftungen["verteiler"] = "Kasten:"
         self.assertIn("Kasten:", _texte(leistenblatt(self.projekt, 1, vorlage)))
 
@@ -701,9 +691,7 @@ class TestSchriftfeldBeispiel(unittest.TestCase):
     """Das Schriftfeld der Mustertabellen, Feld für Feld."""
 
     def setUp(self):
-        from verteilerly.blattvorlagen import Blattvorlagen
-
-        self.vorlage = Blattvorlagen.laden(BEISPIELE).holen("beispiel")
+        self.vorlage = BEISPIELVORLAGE
         self.projekt = Projekt(
             verteiler=Verteiler.aus_geometrie(1, 2, 10, name="Verteiler Name",
                                               nummer="1.1"),

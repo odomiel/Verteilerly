@@ -17,13 +17,7 @@ from verteilerly.ausgabe.mappe import spaltenbreite, zeilenhoehe
 from verteilerly.blattvorlagen import STANDARD, Blattvorlagen
 from verteilerly.modell import Aderadresse, Projekt, Verteiler
 from verteilerly.pfade import mitgeliefert
-
-import pathlib as _pathlib
-
-# Die Beispielvorlage liegt nicht mehr bei; sie steht im Repo zum
-# Einspielen bereit.
-BEISPIELE = _pathlib.Path(__file__).resolve().parent.parent / "beispiele" / "blattvorlagen"
-
+from . import BEISPIELVORLAGE
 
 
 def _projekt() -> Projekt:
@@ -305,7 +299,7 @@ class TestSchriftfeldWieAufDemBlatt(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.vorlage = Blattvorlagen.laden(BEISPIELE).holen("beispiel")
+        cls.vorlage = BEISPIELVORLAGE
 
     def setUp(self):
         self.ordner = tempfile.TemporaryDirectory()

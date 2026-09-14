@@ -14,11 +14,7 @@ from verteilerly.blattvorlagen import (
 from verteilerly.layout import Rechteck, Text, blaetter, leistenblatt
 from verteilerly.modell import Projekt, Verteiler
 from verteilerly.pfade import blattvorlagenordner, mitgeliefert
-
-# Die Beispielvorlage wird nicht mehr ausgeliefert; sie liegt im Repo
-# und laesst sich von dort einspielen.
-BEISPIELE = pathlib.Path(__file__).resolve().parent.parent / "beispiele" / "blattvorlagen"
-
+from . import BEISPIELVORLAGE
 
 
 def _texte(blatt) -> list[str]:
@@ -106,25 +102,14 @@ class TestMitgelieferte(unittest.TestCase):
             ["ausfuehrlich", "knapp", "standard"],
         )
 
-    def test_die_beispielvorlage_liegt_zum_einspielen_bereit(self):
-        """Sie wird nicht mehr ausgeliefert, bleibt aber im Repo."""
+    def test_die_beispielvorlage_wird_nicht_mitgeliefert(self):
+        """Nur die Bauart blieb im Programm, nicht die Vorlage."""
         self.assertFalse((mitgeliefert() / "blattvorlagen" / "beispiel.yaml").is_file())
-        self.assertTrue((BEISPIELE / "beispiel.yaml").is_file())
 
-    def test_beispielvorlage_folgt_den_ods_dateien(self):
-        """Die Spalten der Vorlage, dazu die Kabelspalte, Anschriften im Feld."""
-        vorlage = Blattvorlagen.laden(BEISPIELE).holen("beispiel")
-        felder = [spalte.feld for spalte in vorlage.spalten]
-        self.assertEqual(
-            felder,
-            ["stift", "ader", "farbe", "bezeichnung", "rangierung", "bemerkung",
-             "kabel"],
-        )
-        # Sie ist schmal und quer - so nimmt sie den breiten nichts weg.
-        self.assertTrue(vorlage.kabel_gedreht)
-        self.assertLess(
-            vorlage.spalte("kabel").anteil, vorlage.spalte("bemerkung").anteil / 3
-        )
+    def test_die_bauart_beispiel_steht_jeder_vorlage_offen(self):
+        """Wer das Schriftfeld der Mustertabellen will, setzt es selbst."""
+        vorlage = BEISPIELVORLAGE
+        self.assertEqual(vorlage.schriftfeld_art, "beispiel")
         self.assertEqual(
             vorlage.schriftfeld,
             (
@@ -133,7 +118,6 @@ class TestMitgelieferte(unittest.TestCase):
                 ("firma", "kunde"),
             ),
         )
-        self.assertEqual(vorlage.schriftfeld_art, "beispiel")
         # Für zwei Anschriften braucht das Schriftfeld mehr Höhe.
         self.assertGreater(vorlage.schriftfeld_hoehe, STANDARD.schriftfeld_hoehe)
 

@@ -8,3 +8,7 @@ dist/
 /bau/
 /auslieferung/
 
+# Die Beispielvorlage ist Arbeitsmaterial: die Bauart
+# schriftfeld_art: beispiel bleibt im Programm, die fertige Datei gehoert
+# nicht ins Repo.
+/beispiele/blattvorlagen/

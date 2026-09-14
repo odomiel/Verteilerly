@@ -34,8 +34,7 @@ verteilerly/        Programmpaket
     passform.py     Dialoge bleiben auf dem Bildschirm
     thema.py        Farbsätze hell und dunkel
     sprache.py      Deutsche Beschriftung der Qt-Dialoge
-beispiele/          Was nicht mitgeliefert wird, aber einspielbar bleibt
-  blattvorlagen/    „Mit Anschriften" (beispiel.yaml)
+beispiele/          Hinweise zum Einspielen eigener Vorlagen
 daten/              Liegt neben dem Programm und ist frei erweiterbar
   sprachen/         Wortlisten der Oberfläche (en.yaml)
   vorlagen/         Eine YAML-Datei je Verteilervorlage
@@ -356,12 +355,10 @@ kommt aus dem Projekt. **Drei liegen bei** — *Standard* mit allen Spalten,
 *Knapp* als reines Rangierblatt ohne Bezeichnung und Bemerkung und
 *Ausführlich* mit großer Schrift, hohen Zeilen und einer Bucht je Blatt.
 
-Eine vierte, *Mit Anschriften*, **wird nicht mehr ausgeliefert**:
-sie liegt als `beispiele/blattvorlagen/beispiel.yaml` im Repo und wird bei
-Bedarf in den Unterordner `blattvorlagen/` des Arbeitsordners gelegt (siehe
-`beispiele/README.md`). Ihr Schriftfeld ist Feld für Feld das der Mustertabellen
-(`schriftfeld_art: beispiel`) — die Bauart bleibt im Programm, nur die Datei
-liegt nicht mehr bei:
+Das Schriftfeld der Mustertabellen gibt es weiterhin, aber **nicht als
+fertige Vorlage**: die Bauart bleibt im Programm, wer sie will, setzt
+`schriftfeld_art: beispiel` in seiner eigenen Blattvorlage (siehe
+`beispiele/README.md`):
 
 ```
 ┌────────┬─────────┬─────────┬──────────────────────────────┐
