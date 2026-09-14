@@ -18,6 +18,13 @@ from verteilerly.blattvorlagen import STANDARD, Blattvorlagen
 from verteilerly.modell import Aderadresse, Projekt, Verteiler
 from verteilerly.pfade import mitgeliefert
 
+import pathlib as _pathlib
+
+# Die Beispielvorlage liegt nicht mehr bei; sie steht im Repo zum
+# Einspielen bereit.
+BEISPIELE = _pathlib.Path(__file__).resolve().parent.parent / "beispiele" / "blattvorlagen"
+
+
 
 def _projekt() -> Projekt:
     v = Verteiler.aus_geometrie(1, 2, 10, name="Hauptverteiler", nummer="V-01")
@@ -249,9 +256,7 @@ class TestSchriftfeldWieAufDemBlatt(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.vorlage = Blattvorlagen.laden(mitgeliefert() / "blattvorlagen").holen(
-            "beispiel"
-        )
+        cls.vorlage = Blattvorlagen.laden(BEISPIELE).holen("beispiel")
 
     def setUp(self):
         self.ordner = tempfile.TemporaryDirectory()

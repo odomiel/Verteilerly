@@ -15,6 +15,11 @@ from verteilerly.layout import Rechteck, Text, blaetter, leistenblatt
 from verteilerly.modell import Projekt, Verteiler
 from verteilerly.pfade import blattvorlagenordner, mitgeliefert
 
+# Die Beispielvorlage wird nicht mehr ausgeliefert; sie liegt im Repo
+# und laesst sich von dort einspielen.
+BEISPIELE = pathlib.Path(__file__).resolve().parent.parent / "beispiele" / "blattvorlagen"
+
+
 
 def _texte(blatt) -> list[str]:
     return [e.text for e in blatt.elemente if isinstance(e, Text)]
@@ -98,12 +103,17 @@ class TestMitgelieferte(unittest.TestCase):
         beiliegend = Blattvorlagen.laden(mitgeliefert() / "blattvorlagen")
         self.assertEqual(
             sorted(v.id for v in beiliegend.alle),
-            ["ausfuehrlich", "beispiel", "knapp", "standard"],
+            ["ausfuehrlich", "knapp", "standard"],
         )
+
+    def test_die_beispielvorlage_liegt_zum_einspielen_bereit(self):
+        """Sie wird nicht mehr ausgeliefert, bleibt aber im Repo."""
+        self.assertFalse((mitgeliefert() / "blattvorlagen" / "beispiel.yaml").is_file())
+        self.assertTrue((BEISPIELE / "beispiel.yaml").is_file())
 
     def test_beispielvorlage_folgt_den_ods_dateien(self):
         """Die Spalten der Vorlage, dazu die Kabelspalte, Anschriften im Feld."""
-        vorlage = Blattvorlagen.laden(mitgeliefert() / "blattvorlagen").holen("beispiel")
+        vorlage = Blattvorlagen.laden(BEISPIELE).holen("beispiel")
         felder = [spalte.feld for spalte in vorlage.spalten]
         self.assertEqual(
             felder,
@@ -126,6 +136,14 @@ class TestMitgelieferte(unittest.TestCase):
         self.assertEqual(vorlage.schriftfeld_art, "beispiel")
         # Für zwei Anschriften braucht das Schriftfeld mehr Höhe.
         self.assertGreater(vorlage.schriftfeld_hoehe, STANDARD.schriftfeld_hoehe)
+
+    def test_eine_verschwundene_vorlage_faellt_auf_den_standard_zurueck(self):
+        """Was in der conf steht, muss es nicht mehr geben."""
+        vorlagen = Blattvorlagen.laden(mitgeliefert() / "blattvorlagen")
+        self.assertEqual(vorlagen.gewaehlt("gibtsnicht").id, vorlagen.standard.id)
+        self.assertEqual(vorlagen.gewaehlt("knapp").id, "knapp")
+        # Auch die ausgebaute Beispielvorlage legt nichts lahm.
+        self.assertEqual(vorlagen.gewaehlt("beispiel").id, vorlagen.standard.id)
 
     def test_standard_steht_vorn(self):
         self.assertEqual(self.vorlagen.standard.id, "standard")

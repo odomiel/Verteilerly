@@ -330,6 +330,18 @@ class Blattvorlagen:
                 u("Blattvorlage {0!r} gibt es nicht (bekannt: {1})").format(kennung, bekannt)
             ) from None
 
+    def gewaehlt(self, kennung: str) -> Blattvorlage:
+        """Die gemerkte Vorlage - oder die Standardvorlage.
+
+        Was in der ``Verteilerly.conf`` steht, muss es nicht mehr geben:
+        eine Vorlage laesst sich loeschen, und eine mitgelieferte kann in
+        einer spaeteren Fassung fehlen. Dann faengt der Standard das auf,
+        statt dass das Fenster gar nicht erst aufgeht.
+        """
+        if kennung in self._vorlagen:
+            return self._vorlagen[kennung]
+        return self.standard
+
     @property
     def standard(self) -> Blattvorlage:
         for vorlage in self.alle:

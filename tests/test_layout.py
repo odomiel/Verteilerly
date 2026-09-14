@@ -18,6 +18,13 @@ RAND = STANDARD.rand
 SCHRIFTFELD_H = STANDARD.schriftfeld_hoehe
 from verteilerly.modell import Aderadresse, Projekt, Verteiler
 
+import pathlib as _pathlib
+
+# Die Beispielvorlage liegt nicht mehr bei; sie steht im Repo zum
+# Einspielen bereit.
+BEISPIELE = _pathlib.Path(__file__).resolve().parent.parent / "beispiele" / "blattvorlagen"
+
+
 
 def _texte(blatt: Blatt) -> list[str]:
     return [e.text for e in blatt.elemente if isinstance(e, Text)]
@@ -607,9 +614,8 @@ class TestEigeneBeschriftungen(unittest.TestCase):
     def test_auch_in_der_beispielvorlage(self):
         """Dort stand „Verteiler:" fest im Quelltext."""
         from verteilerly.blattvorlagen import Blattvorlagen
-        from verteilerly.pfade import mitgeliefert
 
-        vorlage = Blattvorlagen.laden(mitgeliefert() / "blattvorlagen").holen("beispiel")
+        vorlage = Blattvorlagen.laden(BEISPIELE).holen("beispiel")
         self.projekt.beschriftungen["verteiler"] = "Kasten"
         texte = _texte(leistenblatt(self.projekt, 1, vorlage))
         self.assertIn("Kasten:", texte)
@@ -617,9 +623,8 @@ class TestEigeneBeschriftungen(unittest.TestCase):
 
     def test_der_doppelpunkt_verdoppelt_sich_nicht(self):
         from verteilerly.blattvorlagen import Blattvorlagen
-        from verteilerly.pfade import mitgeliefert
 
-        vorlage = Blattvorlagen.laden(mitgeliefert() / "blattvorlagen").holen("beispiel")
+        vorlage = Blattvorlagen.laden(BEISPIELE).holen("beispiel")
         self.projekt.beschriftungen["verteiler"] = "Kasten:"
         self.assertIn("Kasten:", _texte(leistenblatt(self.projekt, 1, vorlage)))
 
@@ -629,11 +634,8 @@ class TestSchriftfeldBeispiel(unittest.TestCase):
 
     def setUp(self):
         from verteilerly.blattvorlagen import Blattvorlagen
-        from verteilerly.pfade import mitgeliefert
 
-        self.vorlage = Blattvorlagen.laden(
-            mitgeliefert() / "blattvorlagen"
-        ).holen("beispiel")
+        self.vorlage = Blattvorlagen.laden(BEISPIELE).holen("beispiel")
         self.projekt = Projekt(
             verteiler=Verteiler.aus_geometrie(1, 2, 10, name="Verteiler Name",
                                               nummer="1.1"),

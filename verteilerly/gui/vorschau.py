@@ -248,7 +248,7 @@ class Vorschau(QWidget):
     def blattvorlagen_setzen(self, vorlagen: Blattvorlagen, gewaehlt: str = "") -> None:
         """Die vorhandenen Blattvorlagen und die, die gerade gilt."""
         self.blattvorlagen = vorlagen
-        self.blattvorlage = vorlagen.holen(gewaehlt or vorlagen.standard.id)
+        self.blattvorlage = vorlagen.gewaehlt(gewaehlt or vorlagen.standard.id)
         self.vorlagenname.setText(self.blattvorlage.name)
 
     def blattvorlage_setzen(self, kennung: str) -> None:

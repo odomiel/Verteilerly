@@ -1634,6 +1634,19 @@ class TestMenuezustaende(unittest.TestCase):
         self.assertEqual(f.projekt.rangierung_schreibweise, "mit_strich")
         f.schreibweise_waehlen("einfach")
 
+    def test_eine_fehlende_blattvorlage_haelt_das_fenster_nicht_auf(self):
+        """Wer „beispiel" gewählt hatte, soll das Programm noch starten können."""
+        from verteilerly.gui.hauptfenster import Hauptfenster
+
+        f = self.fenster
+        f.einstellungen.setValue("blattvorlage", "gibtsnicht")
+        self.addCleanup(f.einstellungen.remove, "blattvorlage")
+        zweites = Hauptfenster()
+        self.addCleanup(zweites.close)
+        self.assertEqual(
+            zweites.vorschau.blattvorlage.id, zweites.blattvorlagen.standard.id
+        )
+
     def test_blattvorlage_ist_unter_einstellungen_zu_aendern(self):
         """Die Wahl steckt im Einstellungsmenü, nicht mehr am Blattrand."""
         from verteilerly.gui.dialoge import BlattvorlagenDialog
