@@ -132,6 +132,11 @@ class Blattvorlage:
     leistenlabel: float = 14.0
     abstand_leisten: float = 3.0
     abstand_buchten: float = 12.0
+    # Wie viel seines Kabelblocks der Name hoechstens einnimmt und wie
+    # viel Luft am Rahmen mindestens bleibt: ein Name von Rand zu Rand
+    # liesse den Block vollgestopft aussehen.
+    fuellgrad_kabel: float = 0.82
+    polster_kabel: float = 0.6
 
     def __str__(self) -> str:
         return self.name
@@ -272,6 +277,10 @@ def blattvorlage_aus_yaml(inhalt: dict, herkunft: str = "") -> Blattvorlage:
         abstand_buchten=_zahl(
             belegung, "abstand_buchten", STANDARD.abstand_buchten, wo
         ),
+        fuellgrad_kabel=_zahl(
+            belegung, "fuellgrad_kabel", STANDARD.fuellgrad_kabel, wo
+        ),
+        polster_kabel=_zahl(belegung, "polster_kabel", STANDARD.polster_kabel, wo),
     )
     if vorlage.schriftfeld_art not in SCHRIFTFELDARTEN:
         bekannt = ", ".join(SCHRIFTFELDARTEN)
@@ -282,6 +291,12 @@ def blattvorlage_aus_yaml(inhalt: dict, herkunft: str = "") -> Blattvorlage:
         raise BlattvorlagenFehler(u("{0}: buchten_je_blatt muss mindestens 1 sein").format(wo))
     if vorlage.rand < 0 or vorlage.zeilenhoehe_min <= 0:
         raise BlattvorlagenFehler(u("{0}: Rand und Zeilenhöhe müssen positiv sein").format(wo))
+    if not 0.1 <= vorlage.fuellgrad_kabel <= 1.0:
+        raise BlattvorlagenFehler(
+            u("{0}: fuellgrad_kabel liegt zwischen 0,1 und 1").format(wo)
+        )
+    if vorlage.polster_kabel < 0:
+        raise BlattvorlagenFehler(u("{0}: polster_kabel darf nicht negativ sein").format(wo))
     return vorlage
 
 

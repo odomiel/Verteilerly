@@ -136,13 +136,13 @@ class TestBlattfolge(unittest.TestCase):
 
     def test_der_name_laesst_im_block_luft(self):
         """Von Rand zu Rand sieht der Block vollgestopft aus."""
-        from verteilerly.layout import FUELLGRAD_KABEL, kabelfeld
+        from verteilerly.layout import kabelfeld
 
         for breite, hoehe in ((6.9, 22.6), (16.5, 22.6), (49.5, 9.0)):
             with self.subTest(breite=breite):
                 feld = kabelfeld(10.0, 20.0, breite, hoehe)
-                self.assertLessEqual(feld.breite, breite * FUELLGRAD_KABEL)
-                self.assertLessEqual(feld.hoehe, hoehe * FUELLGRAD_KABEL)
+                self.assertLessEqual(feld.breite, breite * STANDARD.fuellgrad_kabel)
+                self.assertLessEqual(feld.hoehe, hoehe * STANDARD.fuellgrad_kabel)
                 # Mittig: was oben fehlt, fehlt unten auch.
                 self.assertAlmostEqual(
                     feld.x - 10.0, 10.0 + breite - (feld.x + feld.breite),
@@ -152,6 +152,19 @@ class TestBlattfolge(unittest.TestCase):
                     feld.y - 20.0, 20.0 + hoehe - (feld.y + feld.hoehe),
                     places=6,
                 )
+
+    def test_die_vorlage_bestimmt_die_luft_im_kabelblock(self):
+        """Fuellgrad und Polster gehoeren der Blattvorlage."""
+        from verteilerly.layout import kabelfeld
+
+        eng = STANDARD.mit(fuellgrad_kabel=0.6, polster_kabel=1.5)
+        weit = kabelfeld(0.0, 0.0, 16.5, 22.6)
+        schmal = kabelfeld(0.0, 0.0, 16.5, 22.6, eng)
+        self.assertLess(schmal.breite, weit.breite)
+        self.assertAlmostEqual(schmal.breite, 16.5 * 0.6, places=6)
+        # Das Polster greift, wo der Fuellgrad zu viel liesse.
+        kurz = kabelfeld(0.0, 0.0, 4.0, 22.6, eng)
+        self.assertAlmostEqual(kurz.breite, 4.0 - 2 * 1.5, places=6)
 
     def test_die_buchten_stehen_nicht_uebereinander(self):
         """Verteilt wird in die Breite, nicht gestapelt."""

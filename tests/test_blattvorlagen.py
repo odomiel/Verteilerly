@@ -84,6 +84,28 @@ class TestAusYaml(unittest.TestCase):
         with self.assertRaises(BlattvorlagenFehler):
             blattvorlage_aus_yaml({"id": "x", "name": "X", "rand": "breit"}, "x.yaml")
 
+    def test_luft_im_kabelblock_steht_in_der_vorlage(self):
+        """Was das Blatt aussehen laesst, sagt die Blattvorlage."""
+        vorlage = blattvorlage_aus_yaml({
+            "id": "eng", "name": "Eng",
+            "belegung": {"fuellgrad_kabel": 0.6, "polster_kabel": 1.5},
+        })
+        self.assertEqual(vorlage.fuellgrad_kabel, 0.6)
+        self.assertEqual(vorlage.polster_kabel, 1.5)
+        # Weggelassen bleibt es bei der Vorgabe.
+        schlicht = blattvorlage_aus_yaml({"id": "x", "name": "X"})
+        self.assertEqual(schlicht.fuellgrad_kabel, STANDARD.fuellgrad_kabel)
+        self.assertEqual(schlicht.polster_kabel, STANDARD.polster_kabel)
+
+    def test_ein_unsinniger_fuellgrad_wird_abgewiesen(self):
+        for belegung in ({"fuellgrad_kabel": 2.0}, {"fuellgrad_kabel": 0.0},
+                         {"polster_kabel": -1.0}):
+            with self.subTest(belegung=belegung):
+                with self.assertRaises(BlattvorlagenFehler):
+                    blattvorlage_aus_yaml(
+                        {"id": "x", "name": "X", "belegung": belegung}
+                    )
+
     def test_null_buchten_je_blatt(self):
         with self.assertRaises(BlattvorlagenFehler):
             blattvorlage_aus_yaml(

@@ -47,14 +47,6 @@ FUELLUNG_KABEL = "#EFEFEF"
 # Wie breit eine DA-Zelle der Verteilerbelegung hoechstens werden darf,
 # gemessen an ihrer Hoehe: breiter gezogen wird sie zum Balken.
 BREITE_HOECHSTENS = 2.0
-# Wie viel Luft im Kabelblock der Verteilerbelegung rings um den Namen
-# mindestens bleibt, damit er nicht am Rahmen klebt.
-POLSTER_KABEL = 0.6
-# Wie viel des Blocks der Name hoechstens einnimmt. Ein kurzer Name in
-# einem schmalen Block fuellte ihn sonst von Rand zu Rand und liesse ihn
-# vollgestopft aussehen; mit etwas Luft ringsum bleibt der Block als
-# Flaeche lesbar.
-FUELLGRAD_KABEL = 0.82
 # Ab wie vielen Leisten je Bucht diese ein eigenes Blatt bekommt.
 # Zwei lange Buchten nebeneinander waeren nur noch Striche.
 LEISTEN_JE_BLATT = 13
@@ -1125,8 +1117,9 @@ def kabelfeld(
     vorlage: Blattvorlage = STANDARD,
 ) -> Kabelfeld:
     """Das Textfeld des Kabelnamens in einem Block dieser Groesse."""
-    platz_b = max(min(breite * FUELLGRAD_KABEL, breite - 2 * POLSTER_KABEL), 1.0)
-    platz_h = max(min(hoehe * FUELLGRAD_KABEL, hoehe - 2 * POLSTER_KABEL), 1.0)
+    grad, polster = vorlage.fuellgrad_kabel, vorlage.polster_kabel
+    platz_b = max(min(breite * grad, breite - 2 * polster), 1.0)
+    platz_h = max(min(hoehe * grad, hoehe - 2 * polster), 1.0)
     return Kabelfeld(
         x=x + (breite - platz_b) / 2,
         y=y + (hoehe - platz_h) / 2,
