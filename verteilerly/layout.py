@@ -62,6 +62,11 @@ PUNKT_IN_MM = 25.4 / 72.0
 ZEILENABSTAND = 1.15
 # Womit eine Zeile endet, die auch dann nicht passt.
 KUERZUNG = "…"
+# So weit darf eine Schrift schrumpfen, damit ein Text in sein Feld
+# passt; darunter liest es niemand mehr. Beide Zeichner halten
+# sich daran, darum steht die Zahl hier.
+KLEINSTE_SCHRIFT = 5.0
+SCHRITT = 0.25
 # Wo eine Zeile umbrechen darf: nach einem Leerzeichen und nach den
 # Zeichen, die in Kabelnamen ohnehin gliedern (K12/3-4, Haus_Nord).
 TRENNZEICHEN = " -/\\_·,;"
@@ -128,6 +133,73 @@ class Text:
     def zeilenlaenge(self) -> float:
         """Wie viel Platz die Zeile hat - quer gedreht ist das die Hoehe."""
         return self.hoehe if self.drehung else self.breite
+
+
+# -- Wie breit ein Text wird, ohne ihn zu zeichnen --------------------------
+#
+# Die Zeichenbreiten einer gewoehnlichen Groteske, als Anteil der
+# Schriftgroesse (Helvetica-Massen). Damit rechnet das Layoutmodell
+# selbst aus, wo ein Feld umbricht - sonst braeche die Vorschau an
+# anderen Stellen als das PDF und die Mappe an einer dritten. Wer
+# zeichnet, misst danach mit seiner eigenen Schrift nach und
+# verkleinert notfalls; groesser wird es nie.
+
+
+def _breitentabelle() -> dict[str, float]:
+    tabelle: dict[str, float] = {}
+    for zeichen, breite in (
+        (" !,./:;|", 0.278), ("'", 0.191), ("\"", 0.355), ("()[]{}*`", 0.333),
+        ("-", 0.333), ("+<=>~", 0.584), ("%", 0.889), ("&", 0.667),
+        ("0123456789", 0.556), ("?", 0.556), ("@", 1.015), ("^", 0.469),
+        ("ABDEHKNRSUVXY", 0.7), ("CGOQ", 0.76), ("FLTZ", 0.6), ("I", 0.278),
+        ("J", 0.5), ("MW", 0.89), ("PR", 0.69),
+        ("abcdeghknopqsuvxyzäöü", 0.54), ("fijlt", 0.24), ("mw", 0.78),
+        ("r", 0.333), ("ß", 0.556), ("_", 0.556), ("…—", 1.0), ("·", 0.278),
+    ):
+        for z in zeichen:
+            tabelle[z] = breite
+    return tabelle
+
+
+BREITEN = _breitentabelle()
+BREITE_VORGABE = 0.556
+# Die Schrift der Oberflaeche baut etwas breiter als die des PDF. Mit
+# diesem Zuschlag ist das gemeinsame Mass fuer beide auf der sicheren
+# Seite - lieber eine Stufe kleiner als ein Feld, das ueberlaeuft.
+BREITENZUSCHLAG = 1.08
+
+
+def geschaetzte_breite(text: str, groesse: float) -> float:
+    """Wie breit diese Zeile wird - in der Einheit der Schriftgroesse."""
+    anteil = sum(BREITEN.get(z, BREITE_VORGABE) for z in str(text))
+    return anteil * groesse * BREITENZUSCHLAG
+
+
+def umgebrochene_zeilen(
+    text: str, breite: float, hoehe: float, groesse: float
+) -> tuple[float, list[str]]:
+    """Schriftgroesse in Punkt und die Zeilen eines umbrechenden Feldes.
+
+    Kasten in Millimetern, Schrift in Punkt - so, wie das Zeichenmodell
+    beides fuehrt. Gerechnet wird mit dem gemeinsamen Mass, damit
+    Vorschau, PDF und Mappe dieselben Zeilen zeigen.
+    """
+    gross, zeilen = umbruch_einpassen(
+        text, breite, hoehe,
+        groesse * PUNKT_IN_MM,
+        KLEINSTE_SCHRIFT * PUNKT_IN_MM,
+        SCHRITT * PUNKT_IN_MM,
+        geschaetzte_breite,
+    )
+    # Krumme Zahlen wie 6.749999 helfen niemandem - auch nicht der Mappe.
+    return round(gross / PUNKT_IN_MM, 2), zeilen
+
+
+def textzeilen(element: Text) -> tuple[float, list[str]]:
+    """Dasselbe fuer ein fertiges Textfeld des Zeichenmodells."""
+    return umgebrochene_zeilen(
+        str(element.text), element.breite, element.hoehe, element.groesse
+    )
 
 
 def _stuecke(text: str) -> list[str]:

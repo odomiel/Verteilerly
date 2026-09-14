@@ -25,12 +25,14 @@ from ..layout import (
     belegungsgruppen,
     belegungsmasse,
     buchtnamen,
+    POLSTER_KABEL,
     deckblattzeilen,
     kabelbeschriftung_groesse,
     kopfgruppen,
     schriftfeldspalten,
     schriftfeldwerte,
     schriftfeldzeilen,
+    umgebrochene_zeilen,
     zeilenstile,
     zeilenhoehe_leiste,
     zeilenteilungen,
@@ -268,10 +270,22 @@ def _belegung(
                         start_row=zeile, start_column=von,
                         end_row=zeile, end_column=bis,
                     )
-                    feld = blatt.cell(row=zeile, column=von, value=kabel.beschriftung)
                     # Wie auf dem Blatt: mitten im Block, so gross wie er
-                    # es traegt, und umgebrochen statt abgeschnitten.
-                    feld.font = zeug.schrift(kabelschrift, True)
+                    # es traegt, und umgebrochen statt abgeschnitten. Die
+                    # Zeilen rechnet das Blattmodell - Excel kennt die
+                    # Breite des verbundenen Blocks nicht und schriebe
+                    # sonst unverkleinert darueber hinaus.
+                    breite = abschnitt.anzahl_da * masse.zelle_breite
+                    groesse, zeilen = umgebrochene_zeilen(
+                        kabel.beschriftung,
+                        max(breite - 2 * POLSTER_KABEL, 1.0),
+                        masse.zelle_hoehe,
+                        kabelschrift,
+                    )
+                    feld = blatt.cell(
+                        row=zeile, column=von, value="\n".join(zeilen)
+                    )
+                    feld.font = zeug.schrift(groesse, True)
                     feld.alignment = zeug.lage("mitte", umbruch=True)
                     feld.fill = zeug.Fuellung(
                         "solid", start_color=_hex(FUELLUNG_KABEL)

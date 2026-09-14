@@ -198,7 +198,12 @@ class TestBlattbild(unittest.TestCase):
 
     def test_der_kabelname_steht_mittig_und_bricht_um(self):
         """Wie auf dem Blatt - nicht klein oben links."""
-        from verteilerly.layout import belegungsmasse, kabelbeschriftung_groesse
+        from verteilerly.layout import (
+            POLSTER_KABEL,
+            belegungsmasse,
+            kabelbeschriftung_groesse,
+            umgebrochene_zeilen,
+        )
 
         blatt = self._mappe()["Verteilerbelegung"]
         zeile = self._leistenzeile(blatt)
@@ -207,9 +212,38 @@ class TestBlattbild(unittest.TestCase):
         self.assertEqual(feld.alignment.horizontal, "center")
         self.assertEqual(feld.alignment.vertical, "center")
         self.assertTrue(feld.alignment.wrap_text)
-        self.assertEqual(
-            feld.font.size, kabelbeschriftung_groesse(masse.zelle_hoehe, STANDARD)
+        # Fuenf DA breit: dieselbe Rechnung wie fuer Vorschau und PDF.
+        groesse, zeilen = umgebrochene_zeilen(
+            "Linie 1 — Melderkreis",
+            5 * masse.zelle_breite - 2 * POLSTER_KABEL,
+            masse.zelle_hoehe,
+            kabelbeschriftung_groesse(masse.zelle_hoehe, STANDARD),
         )
+        self.assertEqual(feld.value, "\n".join(zeilen))
+        self.assertEqual(feld.font.size, groesse)
+
+    def test_ein_schmaler_block_verkleinert_die_schrift(self):
+        """Excel kennt die Breite des verbundenen Blocks nicht.
+
+        Frueher stand der Name unverkleinert darin und lief darueber
+        hinaus - die Mappe rechnet die Groesse darum selbst aus.
+        """
+        from verteilerly.layout import belegungsmasse, kabelbeschriftung_groesse
+
+        v = self.projekt.verteiler
+        v.kabel_anlegen("Melderkreis Erdgeschoss West", 2, 1, 1)
+        blatt = self._mappe()["Verteilerbelegung"]
+        masse = belegungsmasse(v.buchten, STANDARD)
+        gross = kabelbeschriftung_groesse(masse.zelle_hoehe, STANDARD)
+
+        feld = None
+        for zeile in blatt.iter_rows():
+            for zelle in zeile:
+                if zelle.value and str(zelle.value).startswith("Melderkreis"):
+                    feld = zelle
+        self.assertIsNotNone(feld, "der Kabelname steht nicht im Blatt")
+        self.assertLess(feld.font.size, gross)
+        self.assertIn("\n", feld.value)
 
     def test_die_leisten_fuellen_das_blatt_wie_im_pdf(self):
         """Die Zellenmaße kommen aus dem Blattmodell."""

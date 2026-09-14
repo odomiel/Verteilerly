@@ -1211,6 +1211,24 @@ class TestKabelnameInDerBelegung(unittest.TestCase):
         self.assertGreater(zeilen, 1)
         self.assertAlmostEqual(mitte, blockmitte, delta=2)
 
+    def test_die_vorschau_zeigt_dieselben_zeilen_wie_der_ausdruck(self):
+        """Ein gemeinsames Maß, nicht jede Schrift für sich."""
+        from verteilerly.layout import Text as Blatttext
+        from verteilerly.layout import textzeilen, verteilerbelegungen
+
+        for name, da in (("Haus Nord", 4), ("Melder 1", 1),
+                         ("Melderkreis Erdgeschoss West", 2)):
+            with self.subTest(name=name):
+                v = Verteiler.aus_geometrie(1, 4, 10, name="Muster")
+                v.kabel_anlegen(name, 1, 1, da)
+                blatt = verteilerbelegungen(Projekt(verteiler=v))[0]
+                feld = next(
+                    e for e in blatt.elemente
+                    if isinstance(e, Blatttext) and e.text == name
+                )
+                gezeichnet, _, _ = self._tinte(name, da)
+                self.assertEqual(gezeichnet, len(textzeilen(feld)[1]))
+
 
 @unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
 class TestMenuezustaende(unittest.TestCase):

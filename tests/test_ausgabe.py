@@ -197,19 +197,49 @@ class TestSchriftgroessen(unittest.TestCase):
 
     def test_der_kabelname_bricht_um_statt_zu_schrumpfen(self):
         """Im schmalen Block steht er auf mehreren Zeilen."""
-        from verteilerly.layout import ZEILENABSTAND, umbruch_einpassen
+        from verteilerly.layout import (
+            PUNKT_IN_MM,
+            ZEILENABSTAND,
+            umgebrochene_zeilen,
+        )
 
         lang = "Melderkreis Erdgeschoss West"
-        breite, hoehe = 18 * PT_JE_MM, 22 * PT_JE_MM
-        groesse, zeilen = umbruch_einpassen(
-            lang, breite, hoehe, 11.0, KLEINSTE_SCHRIFT, 0.25,
-            lambda z, g: stringWidth(z, SCHRIFT, g),
-        )
+        breite, hoehe = 18.0, 22.0        # Millimeter, Schrift in Punkt
+        groesse, zeilen = umgebrochene_zeilen(lang, breite, hoehe, 11.0)
         self.assertGreater(len(zeilen), 1)
         self.assertEqual(" ".join(zeilen), lang)
-        self.assertLessEqual(len(zeilen) * groesse * ZEILENABSTAND, hoehe)
+        self.assertLessEqual(
+            len(zeilen) * groesse * ZEILENABSTAND * PUNKT_IN_MM, hoehe
+        )
         for zeile in zeilen:
-            self.assertLessEqual(stringWidth(zeile, SCHRIFT, groesse), breite)
+            self.assertLessEqual(
+                stringWidth(zeile, SCHRIFT, groesse), breite * PT_JE_MM
+            )
+
+    def test_alle_drei_wege_brechen_an_derselben_stelle(self):
+        """Vorschau, PDF und Mappe fragen dasselbe Mass.
+
+        Frueher rechnete jeder mit seiner eigenen Schrift - und dieselbe
+        Beschriftung stand in der Vorschau zweizeilig, im PDF einzeilig
+        ueber den ganzen Block und in der Mappe unverkleinert.
+        """
+        from verteilerly.layout import Text, textzeilen, verteilerbelegungen
+
+        v = Verteiler.aus_geometrie(1, 4, 10, name="Muster")
+        v.kabel_anlegen("Melder 1", 1, 1, 1)
+        blatt = verteilerbelegungen(Projekt(verteiler=v))[0]
+        feld = next(
+            e for e in blatt.elemente
+            if isinstance(e, Text) and e.text == "Melder 1"
+        )
+        groesse, zeilen = textzeilen(feld)
+        self.assertEqual(zeilen, ["Melder", "1"])
+        # Was das gemeinsame Mass sagt, haelt auch Helvetica ein: das PDF
+        # muss nicht nachtraeglich verkleinern.
+        for zeile in zeilen:
+            self.assertLessEqual(
+                stringWidth(zeile, SCHRIFT, groesse), feld.breite * PT_JE_MM
+            )
 
     def test_der_umgebrochene_kabelname_steht_im_pdf(self):
         ordner = tempfile.TemporaryDirectory()
@@ -239,7 +269,7 @@ class TestSchriftgroessen(unittest.TestCase):
                 ader.bemerkung = "geprüft am 07.09.2026, Schleifenwiderstand i.O."
         projekt = Projekt(verteiler=v, briefkopf={"firma": "Musterfirma GmbH & Co. KG"})
 
-        from verteilerly.layout import ZEILENABSTAND, umbruch_einpassen
+        from verteilerly.layout import ZEILENABSTAND, textzeilen
 
         for blatt in blaetter(projekt):
             for element in blatt.elemente:
@@ -251,11 +281,7 @@ class TestSchriftgroessen(unittest.TestCase):
                     if element.umbruch:
                         # Ein umgebrochener Text muss in Breite und Hoehe
                         # passen - eine Zeile zu viel liefe unten hinaus.
-                        groesse, zeilen = umbruch_einpassen(
-                            element.text, breite, element.hoehe * PT_JE_MM,
-                            element.groesse, KLEINSTE_SCHRIFT, 0.25,
-                            lambda z, g: stringWidth(z, schrift, g),
-                        )
+                        groesse, zeilen = textzeilen(element)
                         for zeile in zeilen:
                             self.assertLessEqual(
                                 stringWidth(zeile, schrift, groesse), breite

@@ -281,12 +281,20 @@ groß, wie dieser ihn trägt (höchstens `schrift_mittel` der Blattvorlage;
 `kabelbeschriftung_groesse()` rechnet es aus, Blatt und Mappe fragen
 dieselbe Stelle). Passt er nicht in eine Zeile, wird **umgebrochen** statt
 geschrumpft: `zeilen_umbrechen()` und `umbruch_einpassen()` in `layout.py`
-brechen an Leerzeichen und an `/`, `-`, `_` — gemessen wird dabei nicht
-dort, sondern von dem, der zeichnet: beide Zeichner reichen ihre eigene
-Schriftmessung als `misst(zeile, groesse)` hinein und brechen so an
-denselben Stellen. Lieber eine Stufe kleiner als ein Wort mitten
-durchgeschnitten; erst danach wird hart getrennt und zuletzt gekürzt. Ein
-`Text` mit `umbruch=True` sagt, dass ein Feld diesen Weg geht.
+brechen an Leerzeichen und an `/`, `-`, `_`. Lieber eine Stufe kleiner als
+ein Wort mitten durchgeschnitten; erst danach wird hart getrennt und zuletzt
+gekürzt. Ein `Text` mit `umbruch=True` sagt, dass ein Feld diesen Weg geht.
+
+**Gemessen wird dabei mit einem gemeinsamen Maß** (`geschaetzte_breite()`,
+Zeichenbreiten einer gewöhnlichen Groteske plus Zuschlag): `textzeilen()`
+und `umgebrochene_zeilen()` sagen allen drei Wegen dieselbe Größe und
+dieselben Zeilen. Wer zeichnet, misst danach mit seiner eigenen Schrift nach
+und setzt notfalls eine Stufe kleiner — größer nie. Die Schrift der
+Oberfläche baut rund 6 % breiter als Helvetica; ohne dieses gemeinsame Maß
+stünde derselbe Name in der Vorschau zweizeilig, im PDF einzeilig quer über
+den Block und in der Mappe unverkleinert darüber hinaus.
+Excel misst überhaupt nicht: die Mappe schreibt Größe und Zeilen so hinein,
+wie sie gerechnet wurden.
 
 Auf dem **Leistenblatt** gilt dasselbe für die Kabelspalte: die
 Zeilenstriche enden davor. Das Kabel steht dort als ein Block über seine

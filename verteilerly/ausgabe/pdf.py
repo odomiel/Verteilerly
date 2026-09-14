@@ -23,7 +23,7 @@ from ..layout import (
     Rechteck,
     Text,
     blaetter,
-    umbruch_einpassen,
+    textzeilen,
 )
 from ..modell import Projekt
 from ..version import VERSION
@@ -164,20 +164,21 @@ def _text_umgebrochen(
 ) -> None:
     """Text auf mehreren Zeilen, mittig im Kasten.
 
-    Wie die Zeilen laufen, rechnet das Layoutmodell; gemessen wird mit
-    den Massen von ReportLab. Gezeichnet werden sie von oben nach unten,
-    zusammen mittig um die Mitte des Kastens.
+    Wo die Zeilen brechen, rechnet das Layoutmodell mit dem gemeinsamen
+    Mass - sonst braeche die Vorschau an anderen Stellen. Nachgemessen
+    wird hier mit Helvetica: baut sie doch breiter, wird die Schrift eine
+    Stufe kleiner, nie groesser. Gezeichnet werden die Zeilen von oben
+    nach unten, zusammen mittig um die Mitte des Kastens.
     """
     breite_pt = element.breite * PT_JE_MM
-    hoehe_kasten = element.hoehe * PT_JE_MM
-    groesse, zeilen = umbruch_einpassen(
-        str(element.text), breite_pt, hoehe_kasten, element.groesse,
-        KLEINSTE_SCHRIFT, SCHRITT,
-        lambda zeile, gr: stringWidth(zeile, schrift, gr),
-    )
+    groesse, zeilen = textzeilen(element)
     zeilen = [z for z in zeilen if z.strip()]
     if not zeilen:
         return
+    while groesse > KLEINSTE_SCHRIFT and any(
+        stringWidth(z, schrift, groesse) > breite_pt for z in zeilen
+    ):
+        groesse = max(KLEINSTE_SCHRIFT, groesse - SCHRITT)
 
     blech.setFont(schrift, groesse)
     blech.setFillColor(HexColor(element.farbe))

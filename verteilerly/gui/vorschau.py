@@ -27,7 +27,7 @@ from ..layout import (
     Rechteck,
     Text,
     blaetter,
-    umbruch_einpassen,
+    textzeilen,
 )
 from ..modell import Projekt
 from .thema import HELL, Farben
@@ -165,29 +165,25 @@ class Blattflaeche(QWidget):
     ) -> None:
         """Text auf mehreren Zeilen, mittig im Kasten.
 
-        Wo umgebrochen wird, rechnet das Layoutmodell - hier werden nur
-        die Masse von Qt beigesteuert. Gemessen wird in Bildpunkten, denn
-        so wird auch gezeichnet.
+        Wo umgebrochen wird, rechnet das Layoutmodell mit dem gemeinsamen
+        Mass - so stehen im Ausdruck dieselben Zeilen wie hier.
+        Nachgemessen wird mit der Schrift der Oberflaeche: baut sie
+        breiter, wird eine Stufe kleiner gesetzt, nie groesser.
         """
-        masse: dict[int, QFontMetricsF] = {}
-
-        def misst(zeile: str, groesse: float) -> float:
-            stufe = max(1, int(groesse))
-            if stufe not in masse:
-                gemessen = QFont(schrift)
-                gemessen.setPixelSize(stufe)
-                masse[stufe] = QFontMetricsF(gemessen)
-            return masse[stufe].horizontalAdvance(zeile)
-
-        gewuenscht = max(1, round(element.groesse * PUNKT_IN_MM * skala))
-        kleinste = max(1, int(KLEINSTE_SCHRIFT * PUNKT_IN_MM * skala))
-        groesse, zeilen = umbruch_einpassen(
-            str(element.text), umriss.width(), umriss.height(),
-            gewuenscht, kleinste, 1, misst,
-        )
+        punkt, zeilen = textzeilen(element)
         zeilen = [z for z in zeilen if z.strip()]
         if not zeilen:
             return
+
+        kleinste = max(1, int(KLEINSTE_SCHRIFT * PUNKT_IN_MM * skala))
+        groesse = max(kleinste, round(punkt * PUNKT_IN_MM * skala))
+        while groesse > kleinste:
+            gemessen = QFont(schrift)
+            gemessen.setPixelSize(int(groesse))
+            masse = QFontMetricsF(gemessen)
+            if all(masse.horizontalAdvance(z) <= umriss.width() for z in zeilen):
+                break
+            groesse -= 1
 
         schrift.setPixelSize(max(1, int(groesse)))
         abstand = groesse * ZEILENABSTAND
