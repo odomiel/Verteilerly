@@ -367,7 +367,11 @@ Verteilerbelegung. Wie breit die drei Blöcke sind, sagt dort
 `schriftfeld_anteile`.
 Gewählt wird sie beim Anlegen eines Verteilers und später unter
 *Einstellungen ▸ Blattvorlage* (Strg+Umschalt+B); über der Vorschau steht
-nur noch, welche gerade gilt. Die Wahl gehört zum Arbeitsplatz, nicht zum
+nur noch, welche gerade gilt. Dort lässt sie sich auch **umbenennen**:
+geändert wird der Name, nicht die Kennung — die ist der Dateiname und steht
+in der `Verteilerly.conf`. `blattvorlage_umbenennen()` schreibt nur die eine
+Zeile in die YAML-Datei und lässt Kommentare und alles andere stehen; war es
+eine mitgelieferte Vorlage, entsteht dabei eine Kopie im Arbeitsordner. Die Wahl gehört zum Arbeitsplatz, nicht zum
 einzelnen Verteiler: sie steht in der `Verteilerly.conf` und gilt für
 Vorschau, PDF und Excel-Mappe. Eine eigene Blattvorlage ist eine YAML-Datei in
 `blattvorlagen/`, die nur angibt, was sie anders will:

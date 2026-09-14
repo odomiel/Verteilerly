@@ -73,6 +73,7 @@ LIZENZVERWEISE = (
 )
 
 VORLAGENORDNER = "vorlagen"
+BLATTVORLAGENORDNER = "blattvorlagen"
 
 # Die drei Ausgabewege: Kennung, Name auf dem Knopf, Methode.
 EXPORTFORMATE = (
@@ -428,12 +429,41 @@ class Hauptfenster(QMainWindow):
         )
 
     def blattvorlage_waehlen(self) -> None:
-        """Auf eine andere Blattvorlage umstellen."""
+        """Auf eine andere Blattvorlage umstellen oder sie umbenennen."""
         dialog = BlattvorlagenDialog(
-            self.blattvorlagen, self.vorschau.blattvorlage.id, self
+            self.blattvorlagen, self.vorschau.blattvorlage.id, self,
+            ordner=self._blattvorlagenordner(),
+            quellen=self._blattvorlagenquellen(),
         )
-        if dialog.exec() == BlattvorlagenDialog.DialogCode.Accepted:
+        genommen = dialog.exec() == BlattvorlagenDialog.DialogCode.Accepted
+        if dialog.umbenannt:
+            # Die Datei liegt jetzt im Arbeitsordner - neu einlesen, damit
+            # Menü, Vorschau und Ausgabe denselben Namen führen.
+            self.blattvorlagen = self._blattvorlagen_laden()
+            self.vorschau.blattvorlagen_setzen(
+                self.blattvorlagen, self.vorschau.blattvorlage.id
+            )
+            self.statusBar().showMessage(
+                mehrzahl(len(dialog.umbenannt), "Blattvorlage", "Blattvorlagen")
+                + u(" umbenannt"),
+                8000,
+            )
+        if genommen:
             self.vorschau.blattvorlage_setzen(dialog.gewaehlt())
+
+    def _blattvorlagenordner(self):
+        """Wohin eine umbenannte Blattvorlage geschrieben wird."""
+        try:
+            return pfade.eigener_datenordner() / BLATTVORLAGENORDNER
+        except OSError:
+            return None
+
+    def _blattvorlagenquellen(self) -> list:
+        """Woher ihre Datei kommen kann, wenn sie im Arbeitsordner fehlt."""
+        try:
+            return list(pfade.blattvorlagenordner_alle())
+        except OSError:
+            return []
 
     def freitext_erlauben(self, an: bool) -> None:
         """Schaltet den Vermerk im Rangierfeld frei.

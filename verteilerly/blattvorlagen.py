@@ -285,6 +285,66 @@ def blattvorlage_aus_yaml(inhalt: dict, herkunft: str = "") -> Blattvorlage:
     return vorlage
 
 
+def _namenszeile(text: str, name: str) -> str:
+    """Setzt ``name:`` in einer YAML-Datei neu - und laesst alles andere.
+
+    Geschrieben wird nicht die ganze Vorlage: eine Datei sagt nur, was
+    sie anders will, und ihre Kommentare gehoeren dem Anwender. Also
+    wird die eine Zeile ersetzt und sonst nichts angefasst.
+    """
+    import re
+
+    fertig = name.replace("\\", "\\\\").replace('"', '\\"')
+    zeile = f'name: "{fertig}"'
+    if re.search(r"^name:.*$", text, re.M):
+        return re.sub(r"^name:.*$", zeile, text, count=1, flags=re.M)
+    if re.search(r"^id:.*$", text, re.M):
+        return re.sub(r"^(id:.*)$", r"\1\n" + zeile, text, count=1, flags=re.M)
+    return zeile + "\n" + text
+
+
+def blattvorlage_umbenennen(
+    vorlage: Blattvorlage,
+    name: str,
+    ordner: pathlib.Path,
+    quellen: list[pathlib.Path] | None = None,
+) -> Blattvorlage:
+    """Gibt einer Blattvorlage einen anderen Namen.
+
+    Umbenannt wird der Name, nicht die Kennung - die ist der Dateiname
+    und steht in der ``Verteilerly.conf``. Liegt die Datei nur unter den
+    mitgelieferten, wird sie in den Arbeitsordner uebernommen: im Abbild
+    laesst sich nichts schreiben, und dort gehoert sie auch nicht hin.
+    """
+    name = (name or "").strip()
+    if not name:
+        raise BlattvorlagenFehler(u("Eine Blattvorlage braucht einen Namen"))
+
+    ordner = pathlib.Path(ordner)
+    ziel = ordner / f"{vorlage.id}.yaml"
+    text = ""
+    if ziel.is_file():
+        text = ziel.read_text(encoding="utf-8")
+    else:
+        for ort in quellen or []:
+            kandidat = pathlib.Path(ort) / f"{vorlage.id}.yaml"
+            if kandidat.is_file():
+                text = kandidat.read_text(encoding="utf-8")
+                break
+    if not text:
+        # Die eingebaute Vorgabe hat keine Datei - dann entsteht eine.
+        text = f"id: {vorlage.id}\n"
+
+    try:
+        ordner.mkdir(parents=True, exist_ok=True)
+        ziel.write_text(_namenszeile(text, name), encoding="utf-8")
+    except OSError as fehler:
+        raise BlattvorlagenFehler(
+            u("Blattvorlage nicht umbenannt: {0}").format(fehler)
+        ) from fehler
+    return replace(vorlage, name=name)
+
+
 class Blattvorlagen:
     """Alle Blattvorlagen; die mitgelieferte Standardvorlage ist immer dabei."""
 
@@ -329,6 +389,10 @@ class Blattvorlagen:
             raise BlattvorlagenFehler(
                 u("Blattvorlage {0!r} gibt es nicht (bekannt: {1})").format(kennung, bekannt)
             ) from None
+
+    def aufnehmen(self, vorlage: Blattvorlage) -> None:
+        """Nimmt eine Vorlage auf oder ersetzt die gleicher Kennung."""
+        self._vorlagen[vorlage.id] = vorlage
 
     def gewaehlt(self, kennung: str) -> Blattvorlage:
         """Die gemerkte Vorlage - oder die Standardvorlage.

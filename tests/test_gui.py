@@ -1647,6 +1647,50 @@ class TestMenuezustaende(unittest.TestCase):
             zweites.vorschau.blattvorlage.id, zweites.blattvorlagen.standard.id
         )
 
+    def test_die_blattvorlage_laesst_sich_umbenennen(self):
+        """Der Name steht im Menü, die Kennung in der conf."""
+        import tempfile
+
+        from verteilerly.gui.dialoge import BlattvorlagenDialog
+
+        f = self.fenster
+        ordner = tempfile.TemporaryDirectory()
+        self.addCleanup(ordner.cleanup)
+        ziel = pathlib.Path(ordner.name)
+        vorher = f.blattvorlagen.holen("knapp").name
+
+        def umbenennen(dialog):
+            stelle = next(
+                i for i in range(dialog.liste.count())
+                if dialog.liste.item(i).data(Qt.ItemDataRole.UserRole) == "knapp"
+            )
+            dialog.liste.setCurrentRow(stelle)
+            with mock.patch.object(
+                dialoge.QInputDialog, "getText", return_value=("Rangierblatt", True)
+            ):
+                dialog.umbenennen()
+            return BlattvorlagenDialog.DialogCode.Rejected
+
+        from verteilerly.gui import dialoge
+
+        with mock.patch.object(f, "_blattvorlagenordner", return_value=ziel), \
+             mock.patch.object(BlattvorlagenDialog, "exec", umbenennen):
+            f.blattvorlage_waehlen()
+        self.assertTrue((ziel / "knapp.yaml").is_file())
+        self.assertIn("umbenannt", f.statusBar().currentMessage())
+        # Der Probelauf schreibt in einen eigenen Ordner - das Fenster
+        # liest danach den echten wieder ein, dort steht der alte Name.
+        self.assertEqual(f.blattvorlagen.holen("knapp").name, vorher)
+
+    def test_ohne_beschreibbaren_ordner_bleibt_der_knopf_aus(self):
+        from verteilerly.gui.dialoge import BlattvorlagenDialog
+
+        dialog = BlattvorlagenDialog(self.fenster.blattvorlagen, "standard")
+        self.addCleanup(dialog.close)
+        self.assertFalse(dialog.umbenennen_knopf.isEnabled())
+        dialog.umbenennen()          # darf nicht scheitern
+        self.assertEqual(dialog.umbenannt, {})
+
     def test_blattvorlage_ist_unter_einstellungen_zu_aendern(self):
         """Die Wahl steckt im Einstellungsmenü, nicht mehr am Blattrand."""
         from verteilerly.gui.dialoge import BlattvorlagenDialog

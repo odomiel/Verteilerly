@@ -145,6 +145,62 @@ class TestMitgelieferte(unittest.TestCase):
         # Auch die ausgebaute Beispielvorlage legt nichts lahm.
         self.assertEqual(vorlagen.gewaehlt("beispiel").id, vorlagen.standard.id)
 
+    def test_umbenennen_aendert_nur_den_namen(self):
+        """Die Kennung bleibt - sie ist der Dateiname."""
+        from verteilerly.blattvorlagen import blattvorlage_umbenennen
+        import shutil
+
+        with tempfile.TemporaryDirectory() as ordner:
+            ziel = pathlib.Path(ordner)
+            shutil.copy2(mitgeliefert() / "blattvorlagen" / "knapp.yaml", ziel)
+            vorlagen = Blattvorlagen.laden(ziel)
+            neu = blattvorlage_umbenennen(
+                vorlagen.holen("knapp"), "Nur Rangierungen", ziel
+            )
+            self.assertEqual(neu.id, "knapp")
+            self.assertEqual(neu.name, "Nur Rangierungen")
+            wieder = Blattvorlagen.laden(ziel).holen("knapp")
+            self.assertEqual(wieder.name, "Nur Rangierungen")
+            # Alles andere steht unverändert da - auch die Kommentare.
+            self.assertEqual(
+                [s.feld for s in wieder.spalten],
+                [s.feld for s in vorlagen.holen("knapp").spalten],
+            )
+            text = (ziel / "knapp.yaml").read_text(encoding="utf-8")
+            self.assertTrue(text.lstrip().startswith("#"), "Kommentar verloren")
+
+    def test_eine_mitgelieferte_wird_dabei_uebernommen(self):
+        """Im Abbild lässt sich nichts schreiben - die Datei entsteht neu."""
+        from verteilerly.blattvorlagen import blattvorlage_umbenennen
+
+        with tempfile.TemporaryDirectory() as ordner:
+            ziel = pathlib.Path(ordner)
+            beiliegend = Blattvorlagen.laden(mitgeliefert() / "blattvorlagen")
+            blattvorlage_umbenennen(
+                beiliegend.holen("knapp"), "Eigene Fassung", ziel,
+                [mitgeliefert() / "blattvorlagen"],
+            )
+            self.assertTrue((ziel / "knapp.yaml").is_file())
+            self.assertEqual(Blattvorlagen.laden(ziel).holen("knapp").name,
+                             "Eigene Fassung")
+
+    def test_ein_leerer_name_wird_abgelehnt(self):
+        from verteilerly.blattvorlagen import blattvorlage_umbenennen
+
+        with tempfile.TemporaryDirectory() as ordner:
+            with self.assertRaises(BlattvorlagenFehler):
+                blattvorlage_umbenennen(STANDARD, "   ", pathlib.Path(ordner))
+
+    def test_ohne_datei_entsteht_eine(self):
+        """Die eingebaute Vorgabe hat keine - dann wird eine geschrieben."""
+        from verteilerly.blattvorlagen import blattvorlage_umbenennen
+
+        with tempfile.TemporaryDirectory() as ordner:
+            ziel = pathlib.Path(ordner)
+            blattvorlage_umbenennen(STANDARD, "Hausnorm", ziel)
+            self.assertEqual(Blattvorlagen.laden(ziel).holen("standard").name,
+                             "Hausnorm")
+
     def test_standard_steht_vorn(self):
         self.assertEqual(self.vorlagen.standard.id, "standard")
         self.assertEqual(self.vorlagen.alle[0].id, "standard")

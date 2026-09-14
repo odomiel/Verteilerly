@@ -69,7 +69,7 @@ Mitgelieferte Vorlagen wiederherstellen?: Restore supplied templates?
 : 'The supplied templates come back exactly as they were delivered — including deleted and changed ones.
 
   Your own templates stay untouched.'
-Blattvorlage: Sheet template
+Blattvorlage: sheet template
 z. B. 4DA Leitung zu Wohnzimmer: e.g. 4-pair line to living room
 — ohne, Farben von Hand —: — none, colors by hand —
 Auch von Hand geänderte Adernfarben ersetzen: Also replace wire colors changed by hand
@@ -471,3 +471,10 @@ Belegung, Kabel und Projektdaten als Textdatei: Assignment, cables and project d
 Export ({0}): Export ({0})
 Gibt den Verteiler als {0} aus; der Pfeil wählt das Format: Exports the frame as {0}; the arrow chooses
   the format
+Gibt der Vorlage einen anderen Namen; ihre Kennung bleibt: Gives the template a different name; its identifier
+  stays
+Blattvorlage umbenennen: Rename sheet template
+'Name der Blattvorlage:': 'Name of the sheet template:'
+Eine Blattvorlage braucht einen Namen: A sheet template needs a name
+'Blattvorlage nicht umbenannt: {0}': 'Sheet template not renamed: {0}'
+Blattvorlagen: sheet templates

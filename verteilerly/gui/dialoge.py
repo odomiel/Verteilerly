@@ -42,7 +42,11 @@ from PySide6.QtWidgets import (
 )
 
 from .. import hilfe, paket, suche
-from ..blattvorlagen import Blattvorlagen
+from ..blattvorlagen import (
+    Blattvorlagen,
+    BlattvorlagenFehler,
+    blattvorlage_umbenennen,
+)
 from ..farbcodes import Kabeltypen
 from ..modell import (
     BLATTART_BESCHRIFTUNG,
@@ -718,6 +722,11 @@ class BlattvorlagenDialog(PassenderDialog):
     Die Wahl gehoert nicht zu einem einzelnen Verteiler, sondern zum
     Arbeitsplatz: sie steht in der Verteilerly.conf und gilt fuer
     Vorschau, PDF und die Excel-Mappe.
+
+    Umbenennen laesst sich eine Vorlage hier ebenfalls: der Name ist,
+    was im Menue steht, und "Knapp" sagt nicht jedem dasselbe. Geaendert
+    wird nur der Name - die Kennung bleibt, denn sie ist der Dateiname
+    und steht in der Verteilerly.conf.
     """
 
     def __init__(
@@ -725,10 +734,16 @@ class BlattvorlagenDialog(PassenderDialog):
         vorlagen: Blattvorlagen,
         gewaehlt: str = "",
         parent: QWidget | None = None,
+        ordner=None,
+        quellen=None,
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle(u("Blattvorlage"))
         self.vorlagen = vorlagen
+        self.ordner = ordner
+        self.quellen = list(quellen or [])
+        #: Kennung -> neuer Name; das Hauptfenster liest es aus.
+        self.umbenannt: dict[str, str] = {}
 
         self.liste = QListWidget()
         for vorlage in vorlagen.alle:
@@ -751,13 +766,48 @@ class BlattvorlagenDialog(PassenderDialog):
         self.beschreibung.setWordWrap(True)
         self.beschreibung.setMinimumHeight(48)
 
+        self.umbenennen_knopf = QPushButton(u("Umbenennen…"))
+        self.umbenennen_knopf.setToolTip(
+            u("Gibt der Vorlage einen anderen Namen; ihre Kennung bleibt")
+        )
+        self.umbenennen_knopf.setEnabled(self.ordner is not None)
+        self.umbenennen_knopf.clicked.connect(self.umbenennen)
+        knoepfe = QHBoxLayout()
+        knoepfe.addWidget(self.umbenennen_knopf)
+        knoepfe.addStretch(1)
+
         aufbau = QVBoxLayout(self)
         aufbau.addWidget(QLabel(u("Wie das Blatt aussieht — Spalten, Schriftgrößen, "
                                 "Ränder:")))
         aufbau.addWidget(self.liste, 1)
+        aufbau.addLayout(knoepfe)
         aufbau.addWidget(self.beschreibung)
         aufbau.addWidget(_knopfleiste(self))
-        self.resize(420, 340)
+        self.resize(420, 360)
+        self._beschreibung_zeigen()
+
+    def umbenennen(self) -> None:
+        """Fragt nach einem Namen und schreibt ihn in die YAML-Datei."""
+        kennung = self.gewaehlt()
+        if not kennung or self.ordner is None:
+            return
+        vorlage = self.vorlagen.holen(kennung)
+        name, gewaehlt = QInputDialog.getText(
+            self, u("Blattvorlage umbenennen"), u("Name der Blattvorlage:"),
+            text=vorlage.name,
+        )
+        if not gewaehlt or not name.strip() or name.strip() == vorlage.name:
+            return
+        try:
+            neu = blattvorlage_umbenennen(vorlage, name, self.ordner, self.quellen)
+        except BlattvorlagenFehler as fehler:
+            QMessageBox.warning(self, u("Nicht umbenannt"), str(fehler))
+            return
+        self.vorlagen.aufnehmen(neu)
+        self.umbenannt[kennung] = neu.name
+        eintrag = self.liste.currentItem()
+        if eintrag is not None:
+            eintrag.setText(neu.name)
         self._beschreibung_zeigen()
 
     def _beschreibung_zeigen(self) -> None:
