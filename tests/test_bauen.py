@@ -6,6 +6,7 @@ Spec wird mit Attrappen ausgeführt und dann nachgesehen, was bei
 PyInstaller angekommen wäre.
 """
 
+import json
 import os
 import pathlib
 import re
@@ -385,6 +386,131 @@ class TestAbhaengigkeitspruefung(unittest.TestCase):
             self._taeglich()
             self._taeglich(immer=True)
         self.assertEqual(gefragt.call_count, 2)
+
+    # -- Der Unterbau des AppImage ------------------------------------
+
+    def test_die_eingebaute_python_fassung_kommt_aus_dem_bauskript(self):
+        """Eine Quelle: was appimage.py holt, ist die geprüfte Fassung."""
+        import appimage
+
+        fassung = self.modul.python_basis()
+        self.assertTrue(fassung.startswith(appimage.PYTHONFASSUNG + "."), fassung)
+        self.assertIn(fassung, appimage.BASIS_URL)
+
+    def test_ohne_bauskript_wird_nichts_behauptet(self):
+        fehlt = pathlib.Path(self.ordner.name) / "gibtsnicht.py"
+        self.assertEqual(self.modul.python_basis(fehlt), "")
+
+    def test_nur_abbilder_derselben_bauart_zaehlen(self):
+        """manylinux2014 und kein Free-threaded-Bau - sonst fehlt Qt."""
+        ausgaben = [{"assets": [
+            {"name": "python3.14.8-cp314-cp314-manylinux2014_x86_64.AppImage"},
+            {"name": "python3.15.0-cp315-cp315-manylinux_2_28_x86_64.AppImage"},
+            {"name": "python3.14.9-cp314-cp314t-manylinux2014_x86_64.AppImage"},
+            {"name": "python3.14.8-cp314-cp314-manylinux2014_aarch64.AppImage"},
+            {"name": "irgendwas.tar.gz"},
+        ]}]
+        with mock.patch.object(self.modul, "urllib") as netz:
+            netz.request.urlopen.return_value.__enter__.return_value.read.return_value = (
+                json.dumps(ausgaben).encode("utf-8")
+            )
+            self.assertEqual(self.modul.python_abbilder(), ["3.14.8"])
+
+    def test_die_neueste_steht_vorn(self):
+        ausgaben = [{"assets": [
+            {"name": f"python{f}-cp314-cp314-manylinux2014_x86_64.AppImage"}
+            for f in ("3.13.15", "3.14.10", "3.14.9")
+        ]}]
+        with mock.patch.object(self.modul, "urllib") as netz:
+            netz.request.urlopen.return_value.__enter__.return_value.read.return_value = (
+                json.dumps(ausgaben).encode("utf-8")
+            )
+            self.assertEqual(
+                self.modul.python_abbilder(), ["3.14.10", "3.14.9", "3.13.15"]
+            )
+
+    def test_github_verlangt_eine_kennung(self):
+        """Ohne User-Agent käme 403 zurück."""
+        with mock.patch.object(self.modul.urllib.request, "urlopen") as ruf:
+            ruf.return_value.__enter__.return_value.read.return_value = b"[]"
+            self.modul.python_abbilder()
+        anfrage = ruf.call_args[0][0]
+        # urllib schreibt die Kopfzeilen als "User-agent" fort.
+        self.assertTrue(anfrage.has_header("User-agent"), anfrage.headers)
+        self.assertIn("Verteilerly", anfrage.get_header("User-agent"))
+
+    def _python_stand(self, hier, alle):
+        with mock.patch.object(self.modul, "python_basis", return_value=hier), \
+             mock.patch.object(self.modul, "python_abbilder", return_value=alle):
+            return self.modul.python_pruefen()
+
+    def test_eine_neue_ausgabe_derselben_reihe_wird_gemeldet(self):
+        stand = self._python_stand("3.14.7", ["3.14.8", "3.14.7", "3.13.15"])
+        self.assertEqual(stand[:2], ("3.14.7", "3.14.8"))
+        self.assertIn("neuer: 3.14.8", self.modul.python_bericht(stand))
+
+    def test_eine_neue_reihe_wird_getrennt_genannt(self):
+        """3.13 → 3.14 ist keine Kleinigkeit: die Räder müssen mit."""
+        stand = self._python_stand("3.13.15", ["3.14.8", "3.13.15"])
+        zeile = self.modul.python_bericht(stand)
+        self.assertIn("aktuell", zeile)
+        self.assertIn("neue Reihe: 3.14.8", zeile)
+
+    def test_die_aktuelle_fassung_meldet_nichts(self):
+        stand = self._python_stand("3.14.8", ["3.14.8", "3.13.15"])
+        self.assertEqual(self.modul.python_bericht(stand).split()[-1], "aktuell")
+
+    def test_ohne_github_wird_gemeldet_statt_abgebrochen(self):
+        import urllib.error
+
+        with mock.patch.object(
+            self.modul.urllib.request, "urlopen",
+            side_effect=urllib.error.URLError("kein Netz"),
+        ):
+            self.assertEqual(self.modul.python_abbilder(), [])
+        stand = self._python_stand("3.14.7", [])
+        self.assertIn("GitHub nicht erreicht", self.modul.python_bericht(stand))
+
+    def test_der_merkzettel_haelt_auch_das_python_fest(self):
+        self.modul.merken(
+            [("PySide6", "6.11.2", "6.11.2")], self.merkzettel,
+            python=("3.14.7", "3.14.8", "3.14.8"),
+        )
+        notiz = json.loads(self.merkzettel.read_text(encoding="utf-8"))
+        self.assertEqual(notiz["python"]["hier"], "3.14.7")
+        self.assertEqual(notiz["python"]["reihe"], "3.14.8")
+
+    def test_die_taegliche_pruefung_nennt_das_abbild_python(self):
+        import contextlib
+        import io
+
+        gedruckt = io.StringIO()
+        with mock.patch.object(self.modul, "MERKZETTEL", self.merkzettel), \
+             mock.patch.object(self.modul, "pruefen",
+                               return_value=[("PySide6", "6.11.2", "6.11.2")]), \
+             mock.patch.object(self.modul, "python_pruefen",
+                               return_value=("3.14.7", "3.14.8", "3.14.8")), \
+             contextlib.redirect_stdout(gedruckt):
+            self.modul.taeglich()
+        text = gedruckt.getvalue()
+        self.assertIn("Python (Abbild)", text)
+        self.assertIn("neuer: 3.14.8", text)
+        self.assertIn("PYTHONFASSUNG und BASIS_URL", text)
+
+    def test_bei_leise_meldet_sich_nur_das_neue_python(self):
+        """Auch wenn die Pakete aktuell sind, soll das Abbild auffallen."""
+        import contextlib
+        import io
+
+        gedruckt = io.StringIO()
+        with mock.patch.object(self.modul, "MERKZETTEL", self.merkzettel), \
+             mock.patch.object(self.modul, "pruefen",
+                               return_value=[("PySide6", "6.11.2", "6.11.2")]), \
+             mock.patch.object(self.modul, "python_pruefen",
+                               return_value=("3.13.15", "3.13.15", "3.14.8")), \
+             contextlib.redirect_stdout(gedruckt):
+            self.modul.taeglich(leise=True)
+        self.assertIn("neue Reihe: 3.14.8", gedruckt.getvalue())
 
     def test_bauen_ruft_die_pruefung_auf(self):
         quelle = (WURZEL / "werkzeuge" / "bauen.py").read_text(encoding="utf-8")

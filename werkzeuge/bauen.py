@@ -10,7 +10,8 @@ Ein Aufruf, zwei Plattformen - der Unterschied liegt nur im Verpacken:
     python3 werkzeuge/bauen.py --ohne-pruefung  ohne Blick auf PyPI
 
 Der erste Bau eines Tages sieht nach, ob es neuere Fassungen der
-Abhaengigkeiten gibt (werkzeuge/abhaengigkeiten.py). Gemeldet wird nur:
+Abhaengigkeiten und der Python-AppImage gibt, auf der das Abbild steht
+(werkzeuge/abhaengigkeiten.py). Gemeldet wird nur:
 ob eine neuere Fassung taugt, entscheidet niemand nebenbei, und ohne
 Netz soll sich trotzdem bauen lassen. Gemerkt wird der Tag in
 bau/.geprueft.json - nach --sauber wird also wieder nachgesehen.

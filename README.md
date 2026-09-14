@@ -593,6 +593,22 @@ neuere Fassung taugt, entscheidet niemand nebenbei, und ohne Netz baut es
 trotzdem weiter. `--ohne-pruefung` lässt den Blick aus, `abhaengigkeiten.py
 --immer` erzwingt ihn.
 
+Mitgeprüft wird der **Unterbau des AppImage**: die Python-AppImage von
+python-appimage. Sie kommt nicht von PyPI und fiele sonst durch jedes Raster —
+dabei ist sie der größte Baustein im Abbild. Welche gerade eingebaut ist, liest
+die Prüfung aus `BASIS_URL` in `werkzeuge/appimage.py`; bei GitHub sucht sie
+nur **dieselbe Bauart** (manylinux2014, x86_64, kein Free-threaded-Bau), damit
+die glibc-Untergrenze bleibt und die Räder passen. Gemeldet wird getrennt, was
+zwei verschiedene Entscheidungen sind:
+
+```
+  Python (Abbild)  3.14.7         neuer: 3.14.8
+  Python (Abbild)  3.13.15        aktuell (neue Reihe: 3.14.7)
+```
+
+Die erste Zeile ist ein Austausch, die zweite will erst geprüft sein. Dabei
+bleibt es: geändert wird von Hand, in `PYTHONFASSUNG` und `BASIS_URL`.
+
 ```
 Abhängigkeiten (einmal täglich geprüft):
   PySide6        6.11.2         aktuell

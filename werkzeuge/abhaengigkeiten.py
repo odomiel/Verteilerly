@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
-"""Die Abhaengigkeiten gegen PyPI pruefen.
+"""Die Abhaengigkeiten gegen PyPI und das Abbild-Python pruefen.
 
 Ein Programm, das seine Bausteine selbst mitbringt, versteinert leicht:
 im Abbild steckt, was am Baurechner zufaellig installiert war. Der erste
 Bau eines Tages sieht darum nach, ob es neuere Fassungen gibt - einmal
 taeglich, nicht bei jedem Bau, denn es fragt uebers Netz.
+
+Geprueft wird auch der Unterbau des AppImage: die Python-AppImage von
+python-appimage, mit der gebaut wird. Sie kommt nicht von PyPI und faellt
+darum sonst durch jedes Raster - dabei ist sie der groesste Baustein,
+den das Abbild mitschleppt.
 
     python3 werkzeuge/abhaengigkeiten.py           einmal taeglich
     python3 werkzeuge/abhaengigkeiten.py --immer   jetzt nachsehen
@@ -35,6 +40,20 @@ ANFORDERUNGEN = (
 MERKZETTEL = WURZEL / "bau" / ".geprueft.json"
 PYPI = "https://pypi.org/pypi/{}/json"
 WARTEZEIT = 8.0          # Sekunden je Paket - ein Bau soll nicht haengen
+
+# Der Unterbau des AppImage. Welche Datei geholt wird, steht im
+# Bauskript; eine zweite Angabe hier gaebe es nur, damit sie eines Tages
+# nicht mehr stimmt.
+BAUSKRIPT = WURZEL / "werkzeuge" / "appimage.py"
+PYTHON_ABBILDER = (
+    "https://api.github.com/repos/niess/python-appimage/releases?per_page=100"
+)
+# Dieselbe Bauart wie die eingebaute: manylinux2014 (glibc 2.17) und kein
+# "t" hinter der cp-Nummer - das waere der Free-threaded-Bau, fuer den es
+# kein Qt-Rad gibt.
+PYTHON_ABBILD_MUSTER = re.compile(
+    r"python(\d+)\.(\d+)\.(\d+)-cp\d+-cp\d+-manylinux2014_x86_64\.AppImage"
+)
 
 
 def gefordert(datei: pathlib.Path | None = None) -> list[str]:
@@ -114,8 +133,88 @@ def bericht(stand: list[tuple[str, str, str]]) -> str:
             hinweis = "hier nicht installiert"
         else:
             hinweis = "aktuell"
-        zeilen.append(f"  {name:14} {hier or '—':14} {hinweis}")
+        zeilen.append(f"  {name:16} {hier or '—':14} {hinweis}")
     return "\n".join(zeilen)
+
+
+def python_basis(datei: pathlib.Path | None = None) -> str:
+    """Mit welcher Python-AppImage gebaut wird - aus dem Bauskript gelesen.
+
+    Dort steht sie als BASIS_URL; sie hier noch einmal hinzuschreiben
+    hiesse, zwei Angaben zu pflegen und eine zu vergessen.
+    """
+    datei = datei or BAUSKRIPT
+    try:
+        text = datei.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+    treffer = PYTHON_ABBILD_MUSTER.search(text)
+    return ".".join(treffer.groups()) if treffer else ""
+
+
+def python_abbilder(wartezeit: float = WARTEZEIT) -> list[str]:
+    """Welche Python-AppImages es gibt - passender Bauart, neueste zuerst.
+
+    GitHub verlangt eine Kennung des Aufrufers; ohne sie kaeme 403
+    zurueck. Geht etwas schief, ist die Liste leer: gemeldet wird dann
+    "nicht erreicht", abgebrochen wird nie.
+    """
+    anfrage = urllib.request.Request(
+        PYTHON_ABBILDER,
+        headers={
+            "User-Agent": "Verteilerly-Abhaengigkeitspruefung",
+            "Accept": "application/vnd.github+json",
+        },
+    )
+    try:
+        with urllib.request.urlopen(anfrage, timeout=wartezeit) as antwort:
+            daten = json.loads(antwort.read().decode("utf-8"))
+    except (urllib.error.URLError, TimeoutError, OSError, ValueError):
+        return []
+    fassungen = set()
+    for ausgabe in daten if isinstance(daten, list) else []:
+        for stueck in ausgabe.get("assets", []):
+            treffer = PYTHON_ABBILD_MUSTER.fullmatch(str(stueck.get("name", "")))
+            if treffer:
+                fassungen.add(".".join(treffer.groups()))
+    return sorted(fassungen, key=_teile, reverse=True)
+
+
+def python_pruefen(wartezeit: float = WARTEZEIT) -> tuple[str, str, str]:
+    """(eingebaut, neueste derselben Reihe, neueste Reihe ueberhaupt).
+
+    Zweierlei, weil es zweierlei Entscheidungen sind: eine neue Ausgabe
+    derselben Reihe (3.14.7 → 3.14.8) ist ein Austausch, eine neue Reihe
+    (3.14 → 3.15) will erst geprueft sein - die Raeder muessen mit.
+    """
+    hier = python_basis()
+    alle = python_abbilder(wartezeit)
+    if not hier or not alle:
+        return hier, "", ""
+    reihe = hier.rsplit(".", 1)[0] + "."
+    gleiche = [f for f in alle if f.startswith(reihe)]
+    neueste_reihe = alle[0]
+    return (
+        hier,
+        gleiche[0] if gleiche else "",
+        neueste_reihe if veraltet(hier, neueste_reihe) else "",
+    )
+
+
+def python_bericht(stand: tuple[str, str, str]) -> str:
+    """Die Zeile zum Abbild-Python - im Format der uebrigen."""
+    hier, dort, reihe = stand
+    if not hier:
+        hinweis = "im Bauskript nicht gefunden"
+    elif not dort:
+        hinweis = "GitHub nicht erreicht"
+    elif veraltet(hier, dort):
+        hinweis = f"neuer: {dort}"
+    else:
+        hinweis = "aktuell"
+    if reihe and reihe.rsplit(".", 1)[0] != hier.rsplit(".", 1)[0]:
+        hinweis += f" (neue Reihe: {reihe})"
+    return f"  {'Python (Abbild)':16} {hier or '—':14} {hinweis}"
 
 
 def _heute() -> str:
@@ -132,22 +231,22 @@ def schon_geprueft(merkzettel: pathlib.Path | None = None) -> bool:
 
 
 def merken(
-    stand: list[tuple[str, str, str]], merkzettel: pathlib.Path | None = None
+    stand: list[tuple[str, str, str]],
+    merkzettel: pathlib.Path | None = None,
+    python: tuple[str, str, str] | None = None,
 ) -> None:
     """Haelt fest, dass heute geprueft wurde - und was dabei herauskam."""
     merkzettel = merkzettel or MERKZETTEL
     merkzettel.parent.mkdir(parents=True, exist_ok=True)
-    merkzettel.write_text(
-        json.dumps(
-            {
-                "tag": _heute(),
-                "stand": {name: {"hier": hier, "pypi": dort}
-                          for name, hier, dort in stand},
-            },
-            indent=2,
-        ),
-        encoding="utf-8",
-    )
+    notiz = {
+        "tag": _heute(),
+        "stand": {name: {"hier": hier, "pypi": dort}
+                  for name, hier, dort in stand},
+    }
+    if python:
+        hier, dort, reihe = python
+        notiz["python"] = {"hier": hier, "reihe": dort, "neueste": reihe or dort}
+    merkzettel.write_text(json.dumps(notiz, indent=2), encoding="utf-8")
 
 
 def taeglich(immer: bool = False, leise: bool = False) -> list[tuple[str, str, str]]:
@@ -157,18 +256,29 @@ def taeglich(immer: bool = False, leise: bool = False) -> list[tuple[str, str, s
     stand = pruefen()
     if not stand:
         return []
-    merken(stand)
+    python = python_pruefen()
+    merken(stand, python=python)
     neues = [zeile for zeile in stand if veraltet(zeile[1], zeile[2])]
+    hier, dort, reihe = python
+    python_neu = veraltet(hier, dort) or bool(reihe)
     # flush: der Bau reicht danach an ein Unterprogramm weiter, dessen
     # Ausgabe sonst vor dieser hier stuende.
-    if neues or not leise:
+    if neues or python_neu or not leise:
         print("Abhängigkeiten (einmal täglich geprüft):")
-        print(bericht(stand), flush=True)
+        print(bericht(stand))
+        print(python_bericht(python), flush=True)
     if neues:
         print(
             "  → neuere Fassungen vorhanden. Aktualisieren mit:\n"
             "      .venv/bin/pip install -U "
             + " ".join(name for name, _, _ in neues),
+            flush=True,
+        )
+    if python_neu:
+        print(
+            "  → neuere Python-AppImage vorhanden. In werkzeuge/appimage.py\n"
+            "      PYTHONFASSUNG und BASIS_URL anpassen, dann die Pfade in\n"
+            "      lizenzen/QUELLEN.txt nachziehen.",
             flush=True,
         )
     return stand
