@@ -425,12 +425,12 @@ class TestAnschriftImSchriftfeld(unittest.TestCase):
         self.assertIn("Kunde Beliebig", _texte(blatt))
 
     def test_anteile_der_bloecke_aus_der_vorlage(self):
-        from verteilerly.layout import _schriftfeldanteile
+        from verteilerly.layout import schriftfeldanteile
 
-        self.assertEqual(_schriftfeldanteile(3), [0.38, 0.26, 0.36])
-        self.assertEqual(_schriftfeldanteile(3, (1.0, 1.0, 2.0)), [0.25, 0.25, 0.5])
+        self.assertEqual(schriftfeldanteile(3), [0.38, 0.26, 0.36])
+        self.assertEqual(schriftfeldanteile(3, (1.0, 1.0, 2.0)), [0.25, 0.25, 0.5])
         # Passt die Angabe nicht zur Zahl der Blöcke, bleibt es beim Augenmaß.
-        self.assertEqual(_schriftfeldanteile(3, (1.0, 1.0)), [0.38, 0.26, 0.36])
+        self.assertEqual(schriftfeldanteile(3, (1.0, 1.0)), [0.38, 0.26, 0.36])
 
 
 class TestTextstilAufDemBlatt(unittest.TestCase):
@@ -698,10 +698,10 @@ class TestSchriftfeldBeispiel(unittest.TestCase):
 
     def _verteilerblock(self, blatt):
         """Oberkante und Unterkante der Zeilen in der linken unteren Haelfte."""
-        from verteilerly.layout import _schriftfeldanteile
+        from verteilerly.layout import schriftfeldanteile
 
         mitte = blatt.hoehe - self.vorlage.rand - self.vorlage.schriftfeld_hoehe / 2
-        linkes = (blatt.breite - 2 * self.vorlage.rand) * _schriftfeldanteile(
+        linkes = (blatt.breite - 2 * self.vorlage.rand) * schriftfeldanteile(
             2, self.vorlage.schriftfeld_anteile
         )[0]
         felder = [

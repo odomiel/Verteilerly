@@ -19,8 +19,12 @@ from ..layout import (
     FUELLUNG_KOPF,
     LINIE,
     LINIE_FEIN,
+    schriftfeldanteile,
+    beispielschriftfeld,
     buchtnamen,
+    deckblattzeilen,
     kopfgruppen,
+    schriftfeldspalten,
     schriftfeldwerte,
     schriftfeldzeilen,
     zeilenstile,
@@ -133,33 +137,19 @@ def _deckblatt(mappe, projekt: Projekt, vorlage: Blattvorlage, zeug) -> object:
     blatt["A3"] = v.name
     blatt["A3"].font = zeug.schrift(vorlage.schrift_mittel, True)
     blatt["B3"] = v.nummer
+    blatt["B3"].font = zeug.schrift(vorlage.schrift_mittel)
 
+    # Dieselbe Liste wie auf dem gezeichneten Deckblatt:
+    # Aufbau, Kennzahlen, Anschriften, Datum und Name.
     zeile = 5
-    for name, wert in schriftfeldzeilen(
-        schriftfeldwerte(projekt, None, vorlage, "Deckblatt", "deckblatt")
-    ):
-        blatt.cell(row=zeile, column=1, value=name).font = zeug.schrift(
-            vorlage.schrift_klein, False, "#555555"
-        )
-        blatt.cell(row=zeile, column=2, value=wert).font = zeug.schrift(
-            vorlage.schrift_normal
-        )
-        zeile += 1
-
-    zeile += 1
-    for beschreibung, zahl in (
-        ("Buchten", len(v.buchten)),
-        ("Leisten", len(v.alle_leisten)),
-        ("Doppeladern", v.da_gesamt),
-        ("Kabel", len(v.kabel)),
-        ("Rangierungen", len(v.rangierungen)),
-    ):
-        blatt.cell(row=zeile, column=1, value=beschreibung).font = zeug.schrift(
-            vorlage.schrift_klein, False, "#555555"
-        )
-        blatt.cell(row=zeile, column=2, value=zahl).font = zeug.schrift(
-            vorlage.schrift_normal
-        )
+    for name, wert in deckblattzeilen(projekt, vorlage):
+        if name:
+            blatt.cell(row=zeile, column=1, value=name).font = zeug.schrift(
+                vorlage.schrift_normal, False, "#555555"
+            )
+        feld = blatt.cell(row=zeile, column=2, value=wert)
+        feld.font = zeug.schrift(vorlage.schrift_mittel)
+        blatt.row_dimensions[zeile].height = zeilenhoehe(7.6)
         zeile += 1
 
     _seiteneinrichtung(blatt)
@@ -193,12 +183,23 @@ def _belegung(mappe, projekt: Projekt, vorlage: Blattvorlage, zeug) -> object:
             zelle.alignment = zeug.lage("rechts")
             blatt.row_dimensions[zeile].height = zeilenhoehe(vorlage.zelle_hoehe)
 
+            # Wie auf dem Blatt: kein Raster, nur der Kasten um die
+            # Leiste - und DA-Nummern nur, wenn die Vorlage sie führt.
             for da in range(1, leiste.da_anzahl + 1):
-                feld = blatt.cell(row=zeile, column=1 + da, value=str(da))
-                feld.font = zeug.schrift(vorlage.schrift_klein - 1, False, "#555555")
-                feld.alignment = zeug.lage("mitte")
+                feld = blatt.cell(
+                    row=zeile, column=1 + da,
+                    value=str(da) if vorlage.da_nummern else None,
+                )
+                if vorlage.da_nummern:
+                    feld.font = zeug.schrift(
+                        vorlage.schrift_klein - 1, False, "#555555"
+                    )
+                    feld.alignment = zeug.lage("mitte")
                 feld.border = zeug.rahmen(
-                    left=zeug.strich(LINIE_FEIN), right=zeug.strich(LINIE_FEIN),
+                    left=zeug.strich(LINIE_FEIN) if vorlage.da_nummern
+                    else (zeug.strich(LINIE) if da == 1 else None),
+                    right=zeug.strich(LINIE_FEIN) if vorlage.da_nummern
+                    else (zeug.strich(LINIE) if da == leiste.da_anzahl else None),
                     top=zeug.strich(LINIE), bottom=zeug.strich(LINIE),
                 )
 
@@ -220,6 +221,13 @@ def _belegung(mappe, projekt: Projekt, vorlage: Blattvorlage, zeug) -> object:
                     )
             zeile += 1
         zeile += 1
+
+    # Auch dieses Blatt traegt das Schriftfeld - im PDF steht es
+    # am Blattfuss, hier unter der Zeichnung.
+    _schriftfeld(
+        blatt, projekt, None, vorlage, zeug, zeile + 1,
+        max(1 + breiteste, 4), "belegung",
+    )
 
     # Wie auf dem gezeichneten Blatt: eine Bucht steht hochkant, ab zwei
     # quer.
@@ -347,24 +355,217 @@ def _kabelbloecke(
                 )
 
 
-def _schriftfeld(
-    blatt, projekt: Projekt, leiste_nr: int, vorlage: Blattvorlage, zeug,
-    zeile: int, spaltenzahl: int,
-) -> None:
-    """Was auf dem Blatt unten steht, steht hier unter der Tabelle."""
-    eintraege = schriftfeldzeilen(
-        schriftfeldwerte(projekt, leiste_nr, vorlage, f"Leiste {leiste_nr}")
-    )
-    if not eintraege:
-        return
-    for name, wert in eintraege:
-        blatt.cell(row=zeile, column=1, value=name).font = zeug.schrift(
-            vorlage.schrift_klein, False, "#555555"
-        )
-        feld = blatt.cell(row=zeile, column=2, value=wert)
-        feld.font = zeug.schrift(vorlage.schrift_normal)
-        if spaltenzahl >= 3:
-            blatt.merge_cells(
-                start_row=zeile, start_column=2, end_row=zeile, end_column=3
+def _spaltenteilung(
+    blatt, zeug, spaltenzahl: int, anteile: list[float], mindestens: int = 1
+) -> list[int]:
+    """Wo die Bloecke des Schriftfeldes enden - in Spaltennummern.
+
+    Gemessen wird an den Breiten der Tabelle darueber, damit der
+    Trennstrich ungefaehr dort steht, wo ihn das gezeichnete Blatt hat.
+    Jeder Block bekommt mindestens so viele Spalten, wie er braucht -
+    eine fuer die Beschriftung, eine fuer den Wert; reicht die Tabelle
+    dafuer nicht, bekommt jeder eine.
+    """
+    anzahl = len(anteile)
+    if spaltenzahl < anzahl * mindestens:
+        mindestens = 1
+    breiten = [
+        blatt.column_dimensions[zeug.spaltenname(i)].width or 8.43
+        for i in range(1, spaltenzahl + 1)
+    ]
+    gesamt = sum(breiten) or 1.0
+
+    grenzen: list[int] = []
+    ziel = 0.0
+    for anteil in anteile[:-1]:
+        ziel += anteil * gesamt
+        gelaufen = 0.0
+        stelle = 1
+        for k, breite in enumerate(breiten, 1):
+            if gelaufen + breite / 2 >= ziel:
+                break
+            gelaufen += breite
+            stelle = k
+        # Kein Block darf leer ausgehen, und fuer die folgenden muss
+        # genug uebrig bleiben.
+        untergrenze = (len(grenzen) + 1) * mindestens
+        obergrenze = spaltenzahl - (anzahl - len(grenzen) - 1) * mindestens
+        grenzen.append(max(untergrenze, min(stelle, obergrenze)))
+    grenzen.append(spaltenzahl)
+    return grenzen
+
+
+def _block_rahmen(blatt, zeug, oben: int, unten: int, von: int, bis: int) -> None:
+    """Zieht einen Rahmen um einen Bereich - Zelle fuer Zelle."""
+    for zeile in range(oben, unten + 1):
+        for spalte in range(von, bis + 1):
+            feld = blatt.cell(row=zeile, column=spalte)
+            vorher = feld.border
+            feld.border = zeug.rahmen(
+                left=zeug.strich(LINIE) if spalte == von else vorher.left,
+                right=zeug.strich(LINIE) if spalte == bis else vorher.right,
+                top=zeug.strich(LINIE) if zeile == oben else vorher.top,
+                bottom=zeug.strich(LINIE) if zeile == unten else vorher.bottom,
             )
-        zeile += 1
+
+
+def _beschriftet(blatt, zeug, zeile: int, spalte: int, text: str,
+                 vorlage: Blattvorlage, ausrichtung: str = "links") -> None:
+    """Eine Beschriftung des Schriftfeldes - klein und leise wie am Blatt."""
+    feld = blatt.cell(row=zeile, column=spalte, value=text)
+    feld.font = zeug.schrift(vorlage.schrift_klein, False, "#555555")
+    feld.alignment = zeug.lage(ausrichtung)
+
+
+def _wertfeld(blatt, zeug, zeile: int, spalte: int, text: str,
+              vorlage: Blattvorlage, ausrichtung: str = "links") -> None:
+    feld = blatt.cell(row=zeile, column=spalte, value=text)
+    feld.font = zeug.schrift(vorlage.schrift_normal)
+    feld.alignment = zeug.lage(ausrichtung)
+
+
+def _schriftfeld(
+    blatt, projekt: Projekt, leiste_nr: int | None, vorlage: Blattvorlage, zeug,
+    zeile: int, spaltenzahl: int, blattart: str = "leisten",
+) -> int:
+    """Das Schriftfeld unter der Tabelle - in der Bauart der Blattvorlage.
+
+    Excel kann keine freie Zeichnung, aber einen gerahmten Block aus
+    Zellen: dieselben Felder an denselben Plaetzen wie auf dem Blatt.
+    Zurueck kommt die Zeile darunter.
+    """
+    if vorlage.schriftfeld_art == "beispiel":
+        return _schriftfeld_beispiel(
+            blatt, projekt, leiste_nr, vorlage, zeug, zeile, spaltenzahl, blattart
+        )
+    return _schriftfeld_spalten(
+        blatt, projekt, leiste_nr, vorlage, zeug, zeile, spaltenzahl, blattart
+    )
+
+
+def _schriftfeld_spalten(
+    blatt, projekt: Projekt, leiste_nr: int | None, vorlage: Blattvorlage, zeug,
+    zeile: int, spaltenzahl: int, blattart: str,
+) -> int:
+    """Die Bloecke nebeneinander, jeder mit Beschriftung und Wert."""
+    bloecke = [
+        block for block in schriftfeldspalten(
+            projekt, leiste_nr, vorlage, blattart, _blatttitel(leiste_nr, blattart)
+        ) if block
+    ]
+    if not bloecke:
+        return zeile
+    grenzen = _spaltenteilung(
+        blatt, zeug, spaltenzahl,
+        schriftfeldanteile(len(bloecke), vorlage.schriftfeld_anteile),
+        mindestens=2,
+    )
+    hoehe = max(len(block) for block in bloecke)
+    von = 1
+    for block, bis in zip(bloecke, grenzen):
+        for i, (name, wert) in enumerate(block):
+            if bis == von:
+                # Nur eine Spalte: Beschriftung und Wert in einer Zelle.
+                _wertfeld(
+                    blatt, zeug, zeile + i, von,
+                    f"{name}: {wert}".strip(" :") if name else str(wert), vorlage,
+                )
+                continue
+            _beschriftet(blatt, zeug, zeile + i, von, name, vorlage)
+            _wertfeld(blatt, zeug, zeile + i, von + 1, str(wert), vorlage)
+            if bis > von + 1:
+                blatt.merge_cells(
+                    start_row=zeile + i, start_column=von + 1,
+                    end_row=zeile + i, end_column=bis,
+                )
+        _block_rahmen(blatt, zeug, zeile, zeile + hoehe - 1, von, bis)
+        von = bis + 1
+    for i in range(hoehe):
+        blatt.row_dimensions[zeile + i].height = zeilenhoehe(
+            vorlage.schriftfeld_hoehe / max(hoehe, 1)
+        )
+    return zeile + hoehe
+
+
+def _schriftfeld_beispiel(
+    blatt, projekt: Projekt, leiste_nr: int | None, vorlage: Blattvorlage, zeug,
+    zeile: int, spaltenzahl: int, blattart: str,
+) -> int:
+    """Das Schriftfeld der Mustertabellen, im Raster nachgebaut.
+
+    Links oben die Matrix aus Datum und Name, links unten der Verteiler,
+    rechts zwei Kaesten mit den Anschriften - dieselbe Aufteilung wie auf
+    dem gezeichneten Blatt.
+    """
+    matrix, verteiler, anschriften = beispielschriftfeld(
+        projekt, leiste_nr, blattart
+    )
+    links = _spaltenteilung(
+        blatt, zeug, spaltenzahl, schriftfeldanteile(2, vorlage.schriftfeld_anteile)
+    )[0]
+    # Die linke Haelfte traegt drei Felder: Beschriftung, Datum, Name.
+    label_bis = 1 if links < 3 else links - 2
+    datum = min(label_bis + 1, links)
+    name = min(datum + 1, links)
+
+    oben = zeile
+    hoehe = max(len(matrix) + 1, len(verteiler), 3)
+    mitte = oben + hoehe          # erste Zeile der unteren Haelfte
+    unten = mitte + hoehe - 1
+
+    # Oben links: die Kopfzeile aus Datum und Name, darunter die Zeilen.
+    for spalte, ueberschrift in ((datum, "Datum"), (name, "Name")):
+        if spalte <= links:
+            _beschriftet(blatt, zeug, oben, spalte, ueberschrift, vorlage, "mitte")
+    for i, (beschriftung, wert_datum, wert_name) in enumerate(matrix, 1):
+        _beschriftet(blatt, zeug, oben + i, 1, beschriftung, vorlage)
+        _wertfeld(blatt, zeug, oben + i, datum, wert_datum, vorlage, "mitte")
+        if name <= links:
+            _wertfeld(blatt, zeug, oben + i, name, wert_name, vorlage, "mitte")
+
+    # Unten links: Verteiler, Nummer, Leiste.
+    for i, (beschriftung, wert) in enumerate(verteiler):
+        _beschriftet(blatt, zeug, mitte + i, 1, beschriftung, vorlage)
+        _wertfeld(blatt, zeug, mitte + i, datum, str(wert), vorlage, "mitte")
+        if links > datum:
+            blatt.merge_cells(
+                start_row=mitte + i, start_column=datum,
+                end_row=mitte + i, end_column=links,
+            )
+
+    # Rechts: zwei Kaesten uebereinander, die Anschrift zeilenweise.
+    if links < spaltenzahl:
+        for i, (beschriftung, zeilen) in enumerate(anschriften):
+            erste = oben if i == 0 else mitte
+            blatt.merge_cells(
+                start_row=erste, start_column=links + 1,
+                end_row=erste + hoehe - 1, end_column=spaltenzahl,
+            )
+            feld = blatt.cell(row=erste, column=links + 1)
+            if zeilen:
+                feld.value = "\n".join(zeilen)
+                feld.font = zeug.schrift(vorlage.schrift_normal)
+                feld.alignment = zeug.Alignment(
+                    horizontal="center", vertical="center", wrap_text=True
+                )
+            else:
+                feld.value = beschriftung
+                feld.font = zeug.schrift(vorlage.schrift_klein, False, "#555555")
+                feld.alignment = zeug.lage("links")
+            _block_rahmen(
+                blatt, zeug, erste, erste + hoehe - 1, links + 1, spaltenzahl
+            )
+
+    _block_rahmen(blatt, zeug, oben, unten, 1, links)
+    _block_rahmen(blatt, zeug, mitte, unten, 1, links)
+    for i in range(oben, unten + 1):
+        blatt.row_dimensions[i].height = zeilenhoehe(
+            vorlage.schriftfeld_hoehe / (2 * hoehe)
+        )
+    return unten + 1
+
+
+def _blatttitel(leiste_nr: int | None, blattart: str) -> str:
+    if blattart == "belegung":
+        return "Verteilerbelegung"
+    return "" if leiste_nr is None else f"Leiste {leiste_nr}"

@@ -392,9 +392,17 @@ gewählten Blattvorlage —, dahinter dieselben Daten als Tabelle (*Daten je
 Ader*, *Kabel je Leiste*, *Projektdaten*), filter- und sortierbar.
 Übernommen werden Spaltenfolge und -breite, Schriftgrößen, Zeilenhöhen,
 der verbundene Kabelblock samt Drehung und die Einrichtung auf A4 —
-gedruckt kommt das Blatt aus Excel dem PDF nahe. Nachbilden lässt sich ein
-PDF damit nicht: Excel ist ein Raster, das Blatt eine Zeichnung; das
-Schriftfeld steht darum unter der Tabelle statt am Blattfuß.
+gedruckt kommt das Blatt aus Excel dem PDF nahe. **Das Schriftfeld trägt
+dieselbe Bauart wie das Blatt**: bei `schriftfeld_art: beispiel` links oben
+die Matrix aus Datum und Name, links unten Verteiler, Nummer und Leiste,
+rechts die beiden Anschriften in eigenen, verbundenen Kästen; sonst die
+Blöcke nebeneinander, jeder gerahmt. Auch die Verteilerbelegung trägt es,
+und das Deckblatt führt dieselben Zeilen wie das gezeichnete. Gefüllt wird
+aus denselben Werten wie die Zeichnung (`layout.deckblattzeilen`,
+`schriftfeldspalten`, `beispielschriftfeld`) — zwei Auslesungen liefen
+sonst auseinander. Nachbilden lässt sich ein PDF damit trotzdem nicht:
+Excel ist ein Raster, das Blatt eine Zeichnung; das Schriftfeld steht darum
+unter der Tabelle statt am Blattfuß.
 Die CSV bleibt reine Daten — eine Zeile je Ader.
 
 **Kein Text läuft über sein Feld hinaus.** Passt eine Bezeichnung, eine

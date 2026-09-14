@@ -254,6 +254,77 @@ def schriftfeldwerte(
     ]
 
 
+def schriftfeldspalten(
+    projekt: Projekt,
+    leiste: int | None = None,
+    vorlage: Blattvorlage = STANDARD,
+    blattart: str = "leisten",
+    blatttitel: str = "",
+) -> list[list[tuple[str, str]]]:
+    """Das Schriftfeld in Bloecken, wie die Blattvorlage es aufteilt.
+
+    Eine Liste je Block, darin die Zeilen aus Beschriftung und Wert.
+    Gezeichnetes Blatt und Excel-Mappe fragen dieselbe Stelle.
+    """
+    traeger = Blatt(0, 0, titel=blatttitel)
+    return [
+        schriftfeldzeilen(
+            [eintrag
+             for marke in marken
+             for eintrag in _eintraege(marke, projekt, traeger, leiste, blattart)]
+        )
+        for marken in vorlage.schriftfeld
+    ]
+
+
+def beispielschriftfeld(
+    projekt: Projekt,
+    leiste: int | None = None,
+    blattart: str = "leisten",
+) -> tuple[
+    list[tuple[str, str, str]], list[tuple[str, str]], list[tuple[str, list[str]]]
+]:
+    """Die drei Teile dieses Schriftfeldes, als reine Werte.
+
+    Erstens die Matrix - je Zeile Beschriftung, Datum und Name -,
+    zweitens der Verteiler mit Nummer, Leiste und den eigenen Feldern,
+    drittens die beiden Anschriften mit ihren Zeilen. Wer daraus ein
+    Blatt zeichnet oder eine Tabelle baut, nimmt dieselben Werte.
+    """
+    matrix = [
+        (
+            projekt.beschriftung(marke),
+            _wert(projekt, marke + "_am"),
+            _wert(projekt, marke + "_von"),
+        )
+        for marke in ("erstellt", "stand", "geprueft")
+        if _marke_sichtbar(marke, projekt)
+    ]
+
+    v = projekt.verteiler
+    verteiler = [
+        (_mit_doppelpunkt(projekt.beschriftung("verteiler")), v.name),
+        (_mit_doppelpunkt(projekt.beschriftung("verteilernummer")), v.nummer),
+    ]
+    if blattart == "belegung":
+        verteiler += list(projekt.eigene_felder_hier("belegung").items())
+    else:
+        verteiler.append((
+            _mit_doppelpunkt(projekt.beschriftung("leiste")),
+            "" if leiste is None else str(leiste),
+        ))
+        verteiler += list(projekt.eigene_felder_hier(blattart).items())
+
+    anschriften: list[tuple[str, list[str]]] = []
+    for marke in ("firma", "kunde"):
+        if not _marke_sichtbar(marke, projekt):
+            anschriften.append((projekt.beschriftung(marke), []))
+            continue
+        zeilen = [teil.strip() for teil in _wert(projekt, marke).split("\n")]
+        anschriften.append((projekt.beschriftung(marke), [t for t in zeilen if t]))
+    return matrix, verteiler, anschriften
+
+
 def schriftfeld(
     blatt: Blatt,
     projekt: Projekt,
@@ -280,17 +351,12 @@ def schriftfeld(
 
     blatt.rechteck(rand, oben, breite, hoehe, fuellung=None, staerke=0.4)
 
-    spalten = [
-        schriftfeldzeilen(
-            [eintrag
-             for marke in marken
-             for eintrag in _eintraege(marke, projekt, blatt, leiste, blattart)]
-        )
-        for marken in vorlage.schriftfeld
-    ]
+    spalten = schriftfeldspalten(
+        projekt, leiste, vorlage, blattart, blatt.titel
+    )
 
     # Namen brauchen mehr Platz als Nummern - daher ungleiche Spalten.
-    anteile = _schriftfeldanteile(len(spalten), vorlage.schriftfeld_anteile)
+    anteile = schriftfeldanteile(len(spalten), vorlage.schriftfeld_anteile)
     x = rand
     for i, spalte in enumerate(spalten):
         spaltenbreite = breite * anteile[i]
@@ -311,7 +377,7 @@ def schriftfeld(
         x += spaltenbreite
 
 
-def _schriftfeldanteile(
+def schriftfeldanteile(
     anzahl: int, vorgabe: tuple[float, ...] = ()
 ) -> list[float]:
     """Wie sich die Bloecke des Schriftfeldes die Breite teilen."""
@@ -344,7 +410,7 @@ def _schriftfeld_beispiel(
 
     # Wie sich die beiden Haelften teilen, sagt die Blattvorlage: links
     # die Matrix und der Verteiler, rechts die beiden Anschriften.
-    linkes = breite * _schriftfeldanteile(2, vorlage.schriftfeld_anteile)[0]
+    linkes = breite * schriftfeldanteile(2, vorlage.schriftfeld_anteile)[0]
     mitte_y = oben + hoehe / 2
 
     blatt.rechteck(rand, oben, breite, hoehe, fuellung=None, staerke=0.4)
@@ -370,8 +436,7 @@ def _beispiel_matrix(
     x: float, y: float, breite: float, hoehe: float,
 ) -> None:
     """Erstellt / Stand / Geprueft, je mit Datum und Name."""
-    marken = [m for m in ("erstellt", "stand", "geprueft")
-              if _marke_sichtbar(m, projekt)]
+    marken = beispielschriftfeld(projekt)[0]
     zeilen = len(marken) + 1                      # die Kopfzeile zaehlt mit
     zeile_h = hoehe / max(zeilen, 4)
     label_b = breite * BESCHRIFTUNGSANTEIL
@@ -383,16 +448,16 @@ def _beispiel_matrix(
             vorlage.schrift_klein, MITTE, False, TINTE_LEISE,
         )
 
-    for j, marke in enumerate(marken, 1):
+    for j, (beschriftung, datum, name) in enumerate(marken, 1):
         zeile_y = y + j * zeile_h
         blatt.text(
-            x + 2, zeile_y, label_b - 3, zeile_h, projekt.beschriftung(marke),
+            x + 2, zeile_y, label_b - 3, zeile_h, beschriftung,
             vorlage.schrift_klein, LINKS, False, TINTE_LEISE,
         )
-        for i, teil in enumerate(("_am", "_von")):
+        for i, wert in enumerate((datum, name)):
             blatt.text(
                 x + label_b + i * spalte_b, zeile_y, spalte_b, zeile_h,
-                _wert(projekt, marke + teil), vorlage.schrift_normal, MITTE,
+                wert, vorlage.schrift_normal, MITTE,
             )
 
 
@@ -410,19 +475,7 @@ def _beispiel_verteiler(
     Auf der Verteilerbelegung gibt es keine einzelne Leiste; dort stehen
     an ihrer Stelle die eigenen Felder.
     """
-    v = projekt.verteiler
-    zeilen = [
-        (_mit_doppelpunkt(projekt.beschriftung("verteiler")), v.name),
-        (_mit_doppelpunkt(projekt.beschriftung("verteilernummer")), v.nummer),
-    ]
-    if blattart == "belegung":
-        zeilen += list(projekt.eigene_felder_hier("belegung").items())
-    else:
-        zeilen.append((
-            _mit_doppelpunkt(projekt.beschriftung("leiste")),
-            "" if leiste is None else str(leiste),
-        ))
-        zeilen += list(projekt.eigene_felder_hier(blattart).items())
+    zeilen = beispielschriftfeld(projekt, leiste, blattart)[1]
     # Die Zeilenhoehe richtet sich nach der Matrix darueber, damit beide
     # Haelften dieselbe Schrift tragen; der Block steht dann aber mittig
     # zwischen den beiden Strichen statt oben angeschlagen.
@@ -449,11 +502,15 @@ def _beispiel_anschrift(
     """Ein Kasten mit einer Anschrift - Zeile fuer Zeile, mittig."""
     if not _marke_sichtbar(marke, projekt):
         return
-    zeilen = [teil.strip() for teil in _wert(projekt, marke).split("\n")]
-    zeilen = [teil for teil in zeilen if teil]
+    beschriftung, zeilen = dict(
+        (m, (b, z))
+        for m, (b, z) in zip(
+            ("firma", "kunde"), beispielschriftfeld(projekt)[2]
+        )
+    )[marke]
     if not zeilen:
         blatt.text(
-            x + 3, y, breite - 6, hoehe, projekt.beschriftung(marke),
+            x + 3, y, breite - 6, hoehe, beschriftung,
             vorlage.schrift_klein, LINKS, False, TINTE_LEISE,
         )
         return
@@ -480,25 +537,20 @@ def _fusszeile(blatt: Blatt, nummer: int, gesamt: int, vorlage: Blattvorlage) ->
 # -- Deckblatt -------------------------------------------------------------
 
 
-def deckblatt(projekt: Projekt, vorlage: Blattvorlage = STANDARD) -> Blatt:
-    blatt = Blatt(*A4_HOCH, titel="Deckblatt")
+def deckblattzeilen(
+    projekt: Projekt, vorlage: Blattvorlage = STANDARD
+) -> list[tuple[str, str]]:
+    """Was auf dem Deckblatt steht - Beschriftung und Wert.
+
+    Leere Zeilen fallen weg, mehrzeilige Anschriften stehen zeilenweise.
+    Gezeichnetes Blatt und Excel-Mappe fragen dieselbe Stelle.
+
+    Das Deckblatt hat Platz und schreibt die Woerter deshalb aus:
+    "Verteilernummer" statt "Verteiler-Nr.". Wer ein Wort selbst gesetzt
+    hat, bekommt seines - auch hier.
+    """
     v = projekt.verteiler
-    rand = vorlage.rand
-    breite = blatt.breite - 2 * rand
-    y = 55.0
 
-    blatt.text(
-        rand, y, breite, 14,
-        _wert(projekt, "dokumenttitel", "Verteilerdokumentation"),
-        vorlage.schrift_gross, LINKS, True,
-    )
-    y += 16
-    blatt.linie(rand, y, rand + breite, y, 0.6, TINTE)
-    y += 10
-
-    # Das Deckblatt hat Platz und schreibt die Woerter deshalb aus:
-    # "Verteilernummer" statt "Verteiler-Nr.". Wer ein Wort selbst
-    # gesetzt hat, bekommt seines - auch hier.
     def wort(marke: str, vorgabe: str) -> str:
         return projekt.beschriftungen.get(marke, "").strip() or vorgabe
 
@@ -520,9 +572,27 @@ def deckblatt(projekt: Projekt, vorlage: Blattvorlage = STANDARD) -> Blatt:
         ("Blattvorlage", vorlage.name if not vorlage.standard else ""),
     ]
     zeilen += list(projekt.eigene_felder_hier("deckblatt").items())
-
     # Eine Anschrift steht auch hier zeilenweise.
-    for name, wert in schriftfeldzeilen([(n, w) for n, w in zeilen if str(w).strip()]):
+    return schriftfeldzeilen([(n, w) for n, w in zeilen if str(w).strip()])
+
+
+def deckblatt(projekt: Projekt, vorlage: Blattvorlage = STANDARD) -> Blatt:
+    blatt = Blatt(*A4_HOCH, titel="Deckblatt")
+    v = projekt.verteiler
+    rand = vorlage.rand
+    breite = blatt.breite - 2 * rand
+    y = 55.0
+
+    blatt.text(
+        rand, y, breite, 14,
+        _wert(projekt, "dokumenttitel", "Verteilerdokumentation"),
+        vorlage.schrift_gross, LINKS, True,
+    )
+    y += 16
+    blatt.linie(rand, y, rand + breite, y, 0.6, TINTE)
+    y += 10
+
+    for name, wert in deckblattzeilen(projekt, vorlage):
         if name:
             blatt.text(
                 rand, y, 46, 7, name, vorlage.schrift_normal, LINKS, False, TINTE_LEISE

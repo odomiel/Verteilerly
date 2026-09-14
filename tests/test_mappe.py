@@ -113,15 +113,36 @@ class TestBlattbild(unittest.TestCase):
         self.assertEqual(blatt["D4"].font.sz, STANDARD.schrift_normal)  # Aderzeile
         self.assertTrue(blatt["A3"].font.b)
 
+    def _schriftfeldpaare(self, blatt, ab: int = 24) -> dict:
+        """Beschriftung und Wert daneben - gleich in welchem Block."""
+        paare = {}
+        for zeile in range(ab, ab + 20):
+            for spalte in range(1, 9):
+                name = blatt.cell(row=zeile, column=spalte).value
+                wert = blatt.cell(row=zeile, column=spalte + 1).value
+                if name:
+                    paare[str(name)] = wert
+        return paare
+
     def test_schriftfeld_steht_unter_der_tabelle(self):
+        """Die Blöcke stehen nebeneinander wie auf dem Blatt."""
         blatt = self._mappe()["Leiste 1"]
-        gefunden = {
-            blatt.cell(row=zeile, column=1).value: blatt.cell(row=zeile, column=2).value
-            for zeile in range(24, 40)
-        }
+        gefunden = self._schriftfeldpaare(blatt)
         self.assertEqual(gefunden.get("Firma"), "Musterfirma")
         self.assertEqual(gefunden.get("Verteiler"), "Hauptverteiler")
         self.assertEqual(gefunden.get("Leiste"), "1")
+
+    def test_das_schriftfeld_traegt_einen_rahmen(self):
+        """Auf dem Blatt ist es ein Kasten — im Raster sind es Ränder."""
+        blatt = self._mappe()["Leiste 1"]
+        ecke = None
+        for zeile in range(24, 44):
+            if blatt.cell(row=zeile, column=1).value:
+                ecke = blatt.cell(row=zeile, column=1)
+                break
+        self.assertIsNotNone(ecke, "kein Schriftfeld gefunden")
+        self.assertTrue(ecke.border.left.style, "kein linker Rand")
+        self.assertTrue(ecke.border.top.style, "kein oberer Rand")
 
     def test_seite_ist_auf_a4_eingerichtet(self):
         mappe = self._mappe()
@@ -173,6 +194,139 @@ class TestBlattbild(unittest.TestCase):
         mappe = self._mappe()
         self.assertEqual(mappe["Daten je Ader"].max_row, 41)   # 20 DA, zwei Adern
         self.assertEqual(mappe["Daten je Ader"].cell(row=2, column=5).value, "1 1a")
+
+
+if __name__ == "__main__":
+    unittest.main()
+
+
+class TestSchriftfeldWieAufDemBlatt(unittest.TestCase):
+    """Dieselben Felder an denselben Plätzen wie im PDF.
+
+    Bis hierher war das Schriftfeld der Mappe eine schlichte Liste aus
+    Beschriftung und Wert - die Blattvorlage „Mit Anschriften"
+    baut es aber aus einer Matrix, dem Verteiler und zwei Anschriften.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.vorlage = Blattvorlagen.laden(mitgeliefert() / "blattvorlagen").holen(
+            "beispiel"
+        )
+
+    def setUp(self):
+        self.ordner = tempfile.TemporaryDirectory()
+        self.addCleanup(self.ordner.cleanup)
+        ziel = pathlib.Path(self.ordner.name) / "probe.xlsx"
+        self.projekt = Projekt(
+            verteiler=Verteiler.aus_geometrie(
+                1, 2, 10, name="Hauptverteiler", nummer="1.1"
+            ),
+            briefkopf={
+                "firma": "Netzbau GmbH\nIndustriestraße 12\n12345 Musterstadt",
+                "kunde": "Firma Meier\nHauptstraße 3",
+                "erstellt_am": "01.02.2026", "erstellt_von": "T. Mirik",
+                "geprueft_am": "03.02.2026", "geprueft_von": "K. Prüfer",
+            },
+        )
+        xlsx_schreiben(self.projekt, ziel, self.vorlage)
+        self.mappe = load_workbook(ziel)
+
+    def _felder(self, blatt) -> dict:
+        """Jede Beschriftung mit dem Wert, der rechts daneben steht."""
+        paare = {}
+        for zeile in blatt.iter_rows():
+            for z in zeile:
+                if not z.value:
+                    continue
+                for weiter in range(z.column + 1, blatt.max_column + 1):
+                    wert = blatt.cell(row=z.row, column=weiter).value
+                    if wert not in (None, ""):
+                        paare.setdefault(str(z.value), wert)
+                        break
+        return paare
+
+    def test_die_matrix_steht_oben_links(self):
+        blatt = self.mappe["Leiste 1"]
+        felder = self._felder(blatt)
+        self.assertEqual(felder.get("Erstellt"), "01.02.2026")
+        self.assertEqual(felder.get("Geprüft"), "03.02.2026")
+        # Die Kopfzeile der Matrix: Datum und Name über den Spalten.
+        texte = {z.value for zeile in blatt.iter_rows() for z in zeile if z.value}
+        self.assertIn("Datum", texte)
+        self.assertIn("Name", texte)
+        self.assertIn("T. Mirik", texte)
+
+    def test_der_verteiler_steht_unten_links(self):
+        felder = self._felder(self.mappe["Leiste 1"])
+        self.assertEqual(felder.get("Verteiler:"), "Hauptverteiler")
+        self.assertEqual(felder.get("Verteiler-Nr."), "1.1")
+        self.assertEqual(felder.get("Leiste:"), "1")
+
+    def test_die_anschriften_stehen_rechts_in_zwei_kaesten(self):
+        blatt = self.mappe["Leiste 1"]
+        kaesten = [
+            z for zeile in blatt.iter_rows() for z in zeile
+            if isinstance(z.value, str) and "\n" in z.value
+        ]
+        self.assertEqual(len(kaesten), 2, "nicht zwei Anschriftenkästen")
+        self.assertTrue(kaesten[0].value.startswith("Netzbau GmbH"))
+        self.assertTrue(kaesten[1].value.startswith("Firma Meier"))
+        for kasten in kaesten:
+            with self.subTest(zelle=kasten.coordinate):
+                # Mehrzeilig heißt in Excel: umbrechen und verbunden.
+                self.assertTrue(kasten.alignment.wrap_text)
+                self.assertTrue(
+                    any(kasten.coordinate == str(m).split(":")[0]
+                        for m in blatt.merged_cells.ranges),
+                    "der Kasten ist nicht verbunden",
+                )
+
+    def test_das_schriftfeld_ist_ein_kasten(self):
+        blatt = self.mappe["Leiste 1"]
+        ecke = next(
+            z for zeile in blatt.iter_rows() for z in zeile
+            if z.value == "Verteiler:"
+        )
+        self.assertTrue(ecke.border.left.style)
+
+    def test_auch_die_verteilerbelegung_traegt_es(self):
+        """Im PDF steht es dort ebenfalls am Blattfuß."""
+        felder = self._felder(self.mappe["Verteilerbelegung"])
+        self.assertEqual(felder.get("Verteiler:"), "Hauptverteiler")
+        self.assertEqual(felder.get("Erstellt"), "01.02.2026")
+        # Dieses Blatt zeigt alle Leisten, also keine einzelne.
+        self.assertNotIn("Leiste:", felder)
+
+    def test_keine_da_nummern_wenn_die_vorlage_keine_fuehrt(self):
+        """Die Vorlage sagt „da_nummern: false" - dann steht dort nichts."""
+        blatt = self.mappe["Verteilerbelegung"]
+        self.assertFalse(self.vorlage.da_nummern)
+        zellen = [blatt.cell(row=2, column=s).value for s in range(2, 12)]
+        self.assertEqual([z for z in zellen if z], [])
+        # Der Kasten um die Leiste bleibt trotzdem.
+        self.assertTrue(blatt.cell(row=2, column=2).border.top.style)
+
+    def test_mit_da_nummern_stehen_sie_darin(self):
+        from dataclasses import replace
+
+        ziel = pathlib.Path(self.ordner.name) / "nummern.xlsx"
+        xlsx_schreiben(self.projekt, ziel, replace(self.vorlage, da_nummern=True))
+        blatt = load_workbook(ziel)["Verteilerbelegung"]
+        self.assertEqual(blatt.cell(row=2, column=2).value, "1")
+
+    def test_das_deckblatt_fuehrt_dieselben_zeilen_wie_im_pdf(self):
+        from verteilerly.layout import deckblattzeilen
+
+        blatt = self.mappe["Deckblatt"]
+        erwartet = [name for name, _ in deckblattzeilen(self.projekt, self.vorlage)
+                    if name]
+        texte = [z.value for zeile in blatt.iter_rows() for z in zeile if z.value]
+        for name in erwartet:
+            with self.subTest(zeile=name):
+                self.assertIn(name, texte)
+        self.assertIn("Aufbau", texte)
+        self.assertNotIn("Buchten", texte, "die alte Kennzahlenliste steht noch da")
 
 
 if __name__ == "__main__":
