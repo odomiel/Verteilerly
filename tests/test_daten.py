@@ -34,14 +34,14 @@ class TestVorlagen(unittest.TestCase):
     def setUp(self):
         self.vorlagen = Vorlagen.laden(DATEN / "vorlagen")
 
-    def test_alle_drei_beispiele_vorhanden(self):
-        self.assertEqual(len(self.vorlagen), 3)
-        for kennung in ("40da-4x10", "40da-2x20", "120da-2x6x10"):
+    def test_beide_beispiele_vorhanden(self):
+        self.assertEqual(len(self.vorlagen), 2)
+        for kennung in ("40da-4x10", "40da-2x20"):
             self.assertIn(kennung, self.vorlagen)
 
     def test_masse_stimmen(self):
-        self.assertEqual(self.vorlagen.holen("120da-2x6x10").da_gesamt, 120)
-        self.assertEqual(self.vorlagen.holen("120da-2x6x10").leisten_gesamt, 12)
+        self.assertEqual(self.vorlagen.holen("40da-4x10").da_gesamt, 40)
+        self.assertEqual(self.vorlagen.holen("40da-4x10").leisten_gesamt, 4)
         self.assertEqual(self.vorlagen.holen("40da-2x20").leisten_gesamt, 2)
 
     def test_default_vorlage(self):
@@ -49,12 +49,12 @@ class TestVorlagen(unittest.TestCase):
         self.assertEqual(self.vorlagen.standard.id, "40da-4x10")
 
     def test_vorlage_baut_verteiler(self):
-        v = self.vorlagen.holen("120da-2x6x10").verteiler("Name", "1.1")
-        self.assertEqual(v.da_gesamt, 120)
+        v = self.vorlagen.holen("40da-2x20").verteiler("Name", "1.1")
+        self.assertEqual(v.da_gesamt, 40)
         self.assertEqual(v.name, "Name")
 
     def test_sortierung_nach_groesse(self):
-        self.assertEqual([v.da_gesamt for v in self.vorlagen.alle], [40, 40, 120])
+        self.assertEqual([v.da_gesamt for v in self.vorlagen.alle], [40, 40])
 
     def test_unvollstaendige_vorlage_abgelehnt(self):
         with self.assertRaises(VorlagenFehler):

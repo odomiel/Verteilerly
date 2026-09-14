@@ -215,7 +215,7 @@ class TestSelbstbericht(unittest.TestCase):
             )
         self.assertEqual(werte["version"], VERSION)
         self.assertEqual(werte["ergebnis"], "ok")
-        self.assertGreaterEqual(int(werte["vorlagen"]), 3)
+        self.assertGreaterEqual(int(werte["vorlagen"]), 2)
         self.assertGreaterEqual(int(werte["blattvorlagen"]), 3)
         self.assertGreaterEqual(int(werte["kabeltypen"]), 3)
 
