@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QScrollArea,
     QSplitter,
     QToolBar,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -72,6 +73,13 @@ LIZENZVERWEISE = (
 )
 
 VORLAGENORDNER = "vorlagen"
+
+# Die drei Ausgabewege: Kennung, Name auf dem Knopf, Methode.
+EXPORTFORMATE = (
+    ("pdf", "PDF", "pdf_ausgeben"),
+    ("xlsx", "XLSX", "xlsx_ausgeben"),
+    ("csv", "CSV", "csv_ausgeben"),
+)
 
 DATEIFILTER = "Verteilerly-Projekt (*.vtly.json);;Alle Dateien (*)"
 PDFFILTER = "PDF (*.pdf)"
@@ -208,20 +216,21 @@ class Hauptfenster(QMainWindow):
         datei.addSeparator()
         # Drei Wege aus dem Programm heraus - sie gehören zusammen und
         # stehen darum in einem eigenen Untermenü.
-        export = datei.addMenu(u("&Exportieren"))
-        export.setToolTipsVisible(True)
+        self.exportmenue = datei.addMenu(u("&Exportieren"))
+        self.exportmenue.setToolTipsVisible(True)
         self.aktion_pdf = aktion(
-            u("Als &PDF…"), self.pdf_ausgeben, "Ctrl+E", True, export,
+            u("Als &PDF…"), self.pdf_ausgeben, "Ctrl+E", menue=self.exportmenue,
             hinweis=u("Deckblatt, Verteilerbelegung und Leistenblätter"),
         )
         self.aktion_xlsx = aktion(
-            u("Als &Excel-Mappe…"), self.xlsx_ausgeben, menue=export,
+            u("Als &Excel-Mappe…"), self.xlsx_ausgeben, menue=self.exportmenue,
             hinweis=u("Die Blätter im Blattbild, dahinter die Daten je Ader"),
         )
         self.aktion_csv = aktion(
-            u("Als &CSV…"), self.csv_ausgeben, menue=export,
+            u("Als &CSV…"), self.csv_ausgeben, menue=self.exportmenue,
             hinweis=u("Belegung, Kabel und Projektdaten als Textdatei"),
         )
+        self._exportknopf_bauen(werkzeuge)
         datei.addSeparator()
         aktion(u("&Beenden"), self.close, "Ctrl+Q")
 
@@ -546,8 +555,11 @@ class Hauptfenster(QMainWindow):
             self.aktion_vorlage,
             self.aktion_suchen,
             self.aktion_projektdaten,
+            self.aktion_export,
         ):
             handlung.setEnabled(offen)
+        self.export_knopf.setEnabled(offen)
+        self.exportmenue.setEnabled(offen)
 
         # Speichern nur, wenn es etwas zu speichern gibt: ungesicherte
         # Änderungen oder eine Datei, die es noch nicht gibt.
@@ -847,8 +859,57 @@ class Hauptfenster(QMainWindow):
         )
         return pathlib.Path(name) if name else None
 
+    # -- Export ------------------------------------------------------------
+
+    def _exportknopf_bauen(self, werkzeuge) -> None:
+        """Ein Knopf mit Pfeil: links das gewählte Format, rechts die Wahl.
+
+        Auf dem Knopf steht, was ein Druck bewirkt - "Export (PDF)". Der
+        Pfeil öffnet dasselbe Menü, das auch unter *Datei ▸ Exportieren*
+        steht; was dort gewählt wird, steht danach auf dem Knopf und
+        bleibt bis zum nächsten Mal.
+        """
+        self.aktion_export = QAction(self)
+        self.aktion_export.triggered.connect(self.exportieren)
+        self.export_knopf = QToolButton(self)
+        self.export_knopf.setDefaultAction(self.aktion_export)
+        self.export_knopf.setMenu(self.exportmenue)
+        self.export_knopf.setPopupMode(
+            QToolButton.ToolButtonPopupMode.MenuButtonPopup
+        )
+        self.export_knopf.setToolButtonStyle(
+            Qt.ToolButtonStyle.ToolButtonTextOnly
+        )
+        werkzeuge.addWidget(self.export_knopf)
+        self.exportformat_setzen(
+            str(self.einstellungen.value("exportformat", "pdf")), ausgeben=False
+        )
+
+    def exportformat_setzen(self, kennung: str, ausgeben: bool = True) -> None:
+        """Merkt das Format, beschriftet den Knopf - und gibt aus."""
+        bekannt = {k: (name, ruf) for k, name, ruf in EXPORTFORMATE}
+        if kennung not in bekannt:
+            kennung = "pdf"
+        self.exportformat = kennung
+        self.einstellungen.setValue("exportformat", kennung)
+        name = bekannt[kennung][0]
+        self.aktion_export.setText(u("Export ({0})").format(name))
+        hinweis = u("Gibt den Verteiler als {0} aus; der Pfeil wählt das Format").format(
+            name
+        )
+        self.aktion_export.setStatusTip(hinweis)
+        self.aktion_export.setToolTip(hinweis)
+        if ausgeben:
+            getattr(self, bekannt[kennung][1])()
+
+    def exportieren(self) -> None:
+        """Der Knopf selbst: ausgeben, was daneben steht."""
+        bekannt = {k: ruf for k, _, ruf in EXPORTFORMATE}
+        getattr(self, bekannt.get(self.exportformat, "pdf_ausgeben"))()
+
     def pdf_ausgeben(self) -> None:
         """PDF ist das Pflichtformat."""
+        self._format_merken("pdf")
         ziel = self._ausgabeziel(".pdf", PDFFILTER)
         if ziel is None:
             return
@@ -857,6 +918,7 @@ class Hauptfenster(QMainWindow):
         )
 
     def xlsx_ausgeben(self) -> None:
+        self._format_merken("xlsx")
         ziel = self._ausgabeziel(".xlsx", XLSXFILTER)
         if ziel is None:
             return
@@ -867,10 +929,16 @@ class Hauptfenster(QMainWindow):
         )
 
     def csv_ausgeben(self) -> None:
+        self._format_merken("csv")
         ziel = self._ausgabeziel(".csv", CSVFILTER)
         if ziel is None:
             return
         self._ausgeben(lambda: csv_schreiben(self.projekt, ziel), ziel)
+
+    def _format_merken(self, kennung: str) -> None:
+        """Was zuletzt gewählt wurde, steht danach auf dem Knopf."""
+        if getattr(self, "exportformat", None) != kennung:
+            self.exportformat_setzen(kennung, ausgeben=False)
 
     def _ausgeben(self, arbeit, ziel: pathlib.Path) -> None:
         try:

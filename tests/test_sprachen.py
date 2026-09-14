@@ -141,7 +141,9 @@ class TestWortliste(unittest.TestCase):
         """Eine Zeile, die deutsch wie englisch gleich lautet, ist vergessen."""
         # Zahlen, Kürzel und Eigennamen dürfen gleich bleiben.
         erlaubt = {"OK", "PDF", "CSV", "{0}\n{1}", "{0} / {1}", "{0} · {1}: {2}",
-                   "{0} ({1})", " ({0})"}
+                   "{0} ({1})", " ({0})",
+                   # "Export" heißt in beiden Sprachen so.
+                   "Export ({0})"}
         gleich = [
             deutsch for deutsch, englisch in self.katalog.items()
             if deutsch == englisch and deutsch not in erlaubt

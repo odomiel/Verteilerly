@@ -1629,11 +1629,60 @@ class TestMenuezustaende(unittest.TestCase):
         ]
         self.assertIn("Exportieren", datei)
         self.assertNotIn("Als PDF…", datei)
-        # Der Werkzeugleiste bleibt der PDF-Knopf erhalten.
+        # In der Werkzeugleiste steht der Exportknopf mit demselben Menü.
         from PySide6.QtWidgets import QToolBar
 
         leiste = self.fenster.findChild(QToolBar)
-        self.assertIn(self.fenster.aktion_pdf, leiste.actions())
+        self.assertIn(self.fenster.export_knopf, leiste.findChildren(type(
+            self.fenster.export_knopf)))
+        self.assertIs(self.fenster.export_knopf.menu(), menues["Exportieren"])
+
+    def test_der_exportknopf_nennt_das_gewaehlte_format(self):
+        """Auf dem Knopf steht, was ein Druck bewirkt."""
+        knopf = self.fenster.export_knopf
+        self.fenster.exportformat_setzen("pdf", ausgeben=False)
+        self.assertEqual(knopf.defaultAction().text(), "Export (PDF)")
+        self.fenster.exportformat_setzen("xlsx", ausgeben=False)
+        self.assertEqual(knopf.defaultAction().text(), "Export (XLSX)")
+        self.fenster.exportformat_setzen("csv", ausgeben=False)
+        self.assertEqual(knopf.defaultAction().text(), "Export (CSV)")
+
+    def test_der_pfeil_oeffnet_die_drei_formate(self):
+        from PySide6.QtWidgets import QToolButton
+
+        knopf = self.fenster.export_knopf
+        self.assertEqual(
+            knopf.popupMode(), QToolButton.ToolButtonPopupMode.MenuButtonPopup
+        )
+        self.assertEqual(
+            [h.text().replace("&", "") for h in knopf.menu().actions()],
+            ["Als PDF…", "Als Excel-Mappe…", "Als CSV…"],
+        )
+
+    def test_der_knopf_gibt_das_gewaehlte_format_aus(self):
+        self._projekt()
+        self.fenster.exportformat_setzen("csv", ausgeben=False)
+        with mock.patch.object(type(self.fenster), "csv_ausgeben") as gerufen:
+            self.fenster.exportieren()
+        self.assertTrue(gerufen.called)
+
+    def test_was_zuletzt_gewaehlt_wurde_steht_auf_dem_knopf(self):
+        """Wer einmal CSV wählt, findet es beim nächsten Druck wieder."""
+        self._projekt()
+        with mock.patch.object(self.fenster, "_ausgabeziel", return_value=None):
+            self.fenster.xlsx_ausgeben()
+        self.assertEqual(self.fenster.exportformat, "xlsx")
+        self.assertEqual(
+            self.fenster.export_knopf.defaultAction().text(), "Export (XLSX)"
+        )
+        self.assertEqual(self.fenster.einstellungen.value("exportformat"), "xlsx")
+        self.fenster.exportformat_setzen("pdf", ausgeben=False)
+
+    def test_ohne_verteiler_ist_der_knopf_aus(self):
+        self.fenster._projekt_setzen(None, None)
+        self.assertFalse(self.fenster.export_knopf.isEnabled())
+        self._projekt()
+        self.assertTrue(self.fenster.export_knopf.isEnabled())
 
     def test_einstellungsmenue_sammelt_die_einstellungen(self):
         """Was in der Verteilerly.conf steht, steht auch unter Einstellungen."""

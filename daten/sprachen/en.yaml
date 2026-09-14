@@ -468,3 +468,6 @@ Verteilernummer: Frame number
 Die Blätter im Blattbild, dahinter die Daten je Ader: The sheets in the sheet layout, behind them the
   data per wire
 Belegung, Kabel und Projektdaten als Textdatei: Assignment, cables and project data as a text file
+Export ({0}): Export ({0})
+Gibt den Verteiler als {0} aus; der Pfeil wählt das Format: Exports the frame as {0}; the arrow chooses
+  the format
