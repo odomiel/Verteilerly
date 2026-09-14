@@ -2180,6 +2180,156 @@ class TestNeuerVerteilerDialog(unittest.TestCase):
 
 
 @unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
+class TestSuchDialog(unittest.TestCase):
+    """Die Fundstellen mit Ort, Feld und Inhalt."""
+
+    def setUp(self):
+        from verteilerly.gui.dialoge import SuchDialog
+        from verteilerly.modell import Zellenteilung
+
+        self.verteiler = Verteiler.aus_geometrie(2, 3, 10, name="Keller")
+        self.projekt = Projekt(
+            verteiler=self.verteiler, briefkopf={"kunde": "Firma Meier"}
+        )
+        ader = self.verteiler.ader(Aderadresse(2, 4, "b"))
+        ader.bezeichnung = "Amt 42"
+        ader.teilung_setzen("bezeichnung", Zellenteilung(35, "Nst. 17"))
+        self.verteiler.ader(Aderadresse(1, 2, "a")).bemerkung = "Amtsleitung"
+        self.dialog = SuchDialog(self.projekt)
+        self.addCleanup(self.dialog.close)
+
+    def _suchen(self, wort):
+        self.dialog.suchfeld.setText(wort)
+        ANWENDUNG.processEvents()
+        return self.dialog.treffer
+
+    def test_die_liste_zeigt_ort_feld_und_inhalt(self):
+        self._suchen("Amt")
+        self.assertEqual(self.dialog.liste.rowCount(), 2)
+        zeile = [self.dialog.liste.item(0, s).text() for s in range(3)]
+        self.assertIn("Leiste 1", zeile[0])
+        self.assertEqual(zeile[1], "Bemerkung")
+        self.assertEqual(zeile[2], "Amtsleitung")
+
+    def test_der_zaehler_nennt_die_zahl(self):
+        self._suchen("Amt")
+        self.assertIn("2 Fundstellen", self.dialog.zaehler.text())
+
+    def test_ohne_treffer_sagt_er_das(self):
+        self._suchen("Zwirbelwutz")
+        self.assertEqual(self.dialog.liste.rowCount(), 0)
+        self.assertIn("kommt im Verteiler nicht vor", self.dialog.zaehler.text())
+        self.assertFalse(self.dialog.springen_knopf.isEnabled())
+
+    def test_ein_zeichen_sucht_noch_nicht(self):
+        self._suchen("A")
+        self.assertEqual(self.dialog.treffer, [])
+        self.assertIn("zwei Zeichen", self.dialog.zaehler.text())
+
+    def test_die_erste_fundstelle_ist_gleich_gewaehlt(self):
+        treffer = self._suchen("Amt")
+        self.assertEqual(self.dialog.auswahl(), treffer[0])
+        self.assertTrue(self.dialog.springen_knopf.isEnabled())
+
+    def test_springen_gibt_die_gewaehlte_zurueck(self):
+        treffer = self._suchen("Amt")
+        self.dialog.liste.selectRow(1)
+        self.dialog.springen()
+        self.assertEqual(self.dialog.gewaehlt, treffer[1])
+        self.assertEqual(self.dialog.result(), self.dialog.DialogCode.Accepted)
+
+    def test_ein_mitgegebenes_wort_steht_schon_da(self):
+        from verteilerly.gui.dialoge import SuchDialog
+
+        dialog = SuchDialog(self.projekt, None, "Amt")
+        self.addCleanup(dialog.close)
+        self.assertEqual(dialog.suchfeld.text(), "Amt")
+        self.assertEqual(len(dialog.treffer), 2)
+
+
+@unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
+class TestSucheImHauptfenster(unittest.TestCase):
+    """Von der Fundstelle zur Zelle."""
+
+    def setUp(self):
+        from verteilerly.gui.hauptfenster import Hauptfenster
+        from verteilerly.modell import Zellenteilung
+
+        self.fenster = Hauptfenster()
+        self.addCleanup(self.fenster.close)
+        verteiler = Verteiler.aus_geometrie(2, 3, 10, name="Keller")
+        self.projekt = Projekt(
+            verteiler=verteiler, briefkopf={"kunde": "Firma Meier"}
+        )
+        ader = verteiler.ader(Aderadresse(2, 4, "b"))
+        ader.bezeichnung = "Amt 42"
+        ader.teilung_setzen("bezeichnung", Zellenteilung(35, "Nst. 17"))
+        verteiler.kabel_anlegen("Amtskabel 1", 3, 1, 4)
+        self.fenster._projekt_setzen(self.projekt, None)
+
+    def _suchen_mit(self, wort, zeile=0):
+        """Ruft Bearbeiten ▸ Suchen und wählt eine Fundstelle."""
+        from verteilerly.gui.dialoge import SuchDialog
+
+        def waehlen(dialog):
+            dialog.suchfeld.setText(wort)
+            dialog.liste.selectRow(zeile)
+            dialog.springen()
+            return SuchDialog.DialogCode.Accepted
+
+        with mock.patch.object(SuchDialog, "exec", waehlen):
+            self.fenster.suchen()
+
+    def test_der_menueeintrag_braucht_einen_verteiler(self):
+        self.assertTrue(self.fenster.aktion_suchen.isEnabled())
+        self.assertEqual(self.fenster.aktion_suchen.shortcut().toString(), "Ctrl+F")
+        self.fenster._projekt_setzen(None, None)
+        self.assertFalse(self.fenster.aktion_suchen.isEnabled())
+
+    def test_die_marke_steht_danach_auf_der_zelle(self):
+        self._suchen_mit("Nst")
+        ansicht = self.fenster.leistenansicht
+        self.assertEqual(ansicht.modell.leiste_nr, 2)
+        marke = ansicht.tabelle.currentIndex()
+        self.assertEqual(marke.row(), (4 - 1) * 2 + 1, "nicht auf Stift 4b")
+        self.assertEqual(marke.column(), SPALTE_BEZEICHNUNG)
+
+    def test_die_statuszeile_sagt_was_gefunden_wurde(self):
+        self._suchen_mit("Nst")
+        self.assertIn("Stift 4b", self.fenster.statusBar().currentMessage())
+
+    def test_ein_kabel_fuehrt_auf_seine_erste_doppelader(self):
+        self._suchen_mit("Amtskabel")
+        ansicht = self.fenster.leistenansicht
+        self.assertEqual(ansicht.modell.leiste_nr, 3)
+        self.assertEqual(ansicht.tabelle.currentIndex().row(), 0)
+
+    def test_eine_fundstelle_in_den_projektdaten_oeffnet_den_dialog(self):
+        from verteilerly.gui.dialoge import ProjektdatenDialog
+
+        with mock.patch.object(
+            ProjektdatenDialog, "exec",
+            return_value=ProjektdatenDialog.DialogCode.Rejected,
+        ) as gezeigt:
+            self._suchen_mit("Meier")
+        self.assertTrue(gezeigt.called, "die Projektdaten blieben zu")
+
+    def test_das_wort_steht_beim_naechsten_mal_wieder_da(self):
+        self._suchen_mit("Amt")
+        self.assertEqual(self.fenster.zuletzt_gesucht, "Amt")
+
+    def test_ein_abgebrochener_dialog_springt_nirgends_hin(self):
+        from verteilerly.gui.dialoge import SuchDialog
+
+        vorher = self.fenster.leistenansicht.modell.leiste_nr
+        with mock.patch.object(
+            SuchDialog, "exec", return_value=SuchDialog.DialogCode.Rejected
+        ):
+            self.fenster.suchen()
+        self.assertEqual(self.fenster.leistenansicht.modell.leiste_nr, vorher)
+
+
+@unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
 class TestPassform(unittest.TestCase):
     """Kein Dialog wird größer als der Bildschirm."""
 

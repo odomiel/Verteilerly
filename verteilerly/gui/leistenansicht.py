@@ -83,6 +83,15 @@ SPALTE_KABEL = 7
 
 RANGIERSPALTEN = (SPALTE_RANGIERUNG, SPALTE_RANGIERUNG_2)
 
+# Welches Feld einer Fundstelle in welcher Spalte steht.
+SUCHSPALTEN = {
+    "farbe": SPALTE_FARBE,
+    "bezeichnung": SPALTE_BEZEICHNUNG,
+    "rangierung": SPALTE_RANGIERUNG,
+    "bemerkung": SPALTE_BEMERKUNG,
+    "kabel": SPALTE_KABEL,
+}
+
 # Welche Spalten sich in zwei Beschriftungsfelder teilen lassen.
 TEILSPALTEN = {
     SPALTE_BEZEICHNUNG: "bezeichnung",
@@ -1173,6 +1182,24 @@ class LeistenAnsicht(QWidget):
         stelle = self.auswahl.findData(nummer)
         if stelle >= 0:
             self.auswahl.setCurrentIndex(stelle)
+
+    def stelle_zeigen(self, adresse: Aderadresse, feld: str = "") -> bool:
+        """Schaltet auf die Leiste und stellt die Marke auf die Zelle.
+
+        Gebraucht wird das von der Suche: eine Fundstelle ist erst dann
+        gefunden, wenn sie auch vor Augen steht.
+        """
+        self.leiste_zeigen(adresse.leiste)
+        if self.modell.leiste_nr != adresse.leiste:
+            return False
+        zeile = (adresse.stift - 1) * 2 + (0 if adresse.seite == "a" else 1)
+        index = self.modell.index(zeile, SUCHSPALTEN.get(feld, SPALTE_BEZEICHNUNG))
+        if not index.isValid():
+            return False
+        self.tabelle.setCurrentIndex(index)
+        self.tabelle.scrollTo(index)
+        self.tabelle.setFocus()
+        return True
 
     def aktualisieren(self) -> None:
         self.modell.setzen(self.verteiler, self.modell.leiste_nr)

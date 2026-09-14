@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
 )
 
 from .. import einstellungen as einstellungsspeicher
-from .. import bestand, paket, pfade, projektdatei, schreibweisen
+from .. import bestand, paket, pfade, projektdatei, schreibweisen, suche
 from ..ausgabe import AusgabeFehler, csv_schreiben, pdf_schreiben, xlsx_schreiben
 from ..blattvorlagen import Blattvorlagen
 from ..farbcodes import (
@@ -45,6 +45,7 @@ from ..version import VERSION
 from ..vorlagen import Vorlagen
 from .dialoge import (
     BlattvorlagenDialog,
+    SuchDialog,
     VerteilervorlagenDialog,
     ProjektdatenDialog,
     KabelDialog,
@@ -103,6 +104,9 @@ class Hauptfenster(QMainWindow):
         )
         # Freitext im Rangierfeld - aus, bis er gebraucht wird.
         self.freitext = self.einstellungen.value("freitext", False, type=bool)
+        # Das zuletzt gesuchte Wort steht beim naechsten Aufruf wieder da;
+        # es gehoert zur Sitzung, nicht in die Einstellungsdatei.
+        self.zuletzt_gesucht = ""
 
         self.setWindowIcon(symbol_icon())
         self._oberflaeche_bauen()
@@ -231,6 +235,11 @@ class Hauptfenster(QMainWindow):
             hinweis="Die Maße dieses Verteilers als Vorlage ablegen",
         )
         bearbeiten.addSeparator()
+        self.aktion_suchen = aktion(
+            "S&uchen…", self.suchen, "Ctrl+F", True, bearbeiten,
+            hinweis="Bezeichnungen, Bemerkungen, Rangierungen, Kabel und "
+                    "Projektdaten durchsuchen",
+        )
         self.aktion_projektdaten = aktion(
             "&Projektdaten…",
             self.projektdaten_bearbeiten,
@@ -479,6 +488,7 @@ class Hauptfenster(QMainWindow):
             self.aktion_csv,
             self.aktion_kabel,
             self.aktion_vorlage,
+            self.aktion_suchen,
             self.aktion_projektdaten,
         ):
             handlung.setEnabled(offen)
@@ -1122,6 +1132,35 @@ class Hauptfenster(QMainWindow):
         # Der Merkzettel gilt danach wieder: die Dateien liegen so da,
         # wie sie ausgeliefert wurden.
         self.ausgelegt = pfade.grundausstattung_auslegen()
+
+    def suchen(self) -> None:
+        """Im Verteiler suchen und zur Fundstelle springen."""
+        if self.projekt is None:
+            return
+        dialog = SuchDialog(
+            self.projekt, self.schreibweise, self.zuletzt_gesucht, self
+        )
+        if dialog.exec() != SuchDialog.DialogCode.Accepted:
+            self.zuletzt_gesucht = dialog.suchfeld.text()
+            return
+        self.zuletzt_gesucht = dialog.suchfeld.text()
+        self._zur_fundstelle(dialog.gewaehlt)
+
+    def _zur_fundstelle(self, fund) -> None:
+        """Zeigt, wo das Gesuchte steht - in der Leiste oder im Dialog."""
+        if fund is None:
+            return
+        if fund.bereich == suche.PROJEKTDATEN:
+            # Dort steht es nicht in einer Zelle, sondern in einem Feld:
+            # der Dialog ist die Fundstelle.
+            self.projektdaten_bearbeiten()
+            return
+        if fund.adresse is None:
+            return
+        if self.leistenansicht.stelle_zeigen(fund.adresse, fund.feld):
+            self.statusBar().showMessage(
+                f"{fund.ort} · {fund.beschriftung}: {fund.text}", 8000
+            )
 
     def projektdaten_bearbeiten(self) -> None:
         if self.projekt is None:

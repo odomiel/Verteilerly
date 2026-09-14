@@ -41,7 +41,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from .. import hilfe, paket
+from .. import hilfe, paket, suche
 from ..blattvorlagen import Blattvorlagen
 from ..farbcodes import Kabeltypen
 from ..modell import (
@@ -1183,6 +1183,119 @@ class DokumentationDialog(PassenderDialog):
             self.suchfeld.clear()
             return
         super().keyPressEvent(ereignis)
+
+
+class SuchDialog(PassenderDialog):
+    """Im Projekt suchen und hinspringen.
+
+    Oben das Wort, darunter die Fundstellen mit Ort, Feld und Inhalt.
+    Ein Doppelklick oder Enter waehlt eine aus; das Hauptfenster springt
+    dann dorthin. Gesucht wird beim Tippen - ein Verteiler passt ohne
+    Weiteres durchsucht zu werden, dafuer braucht es keinen Knopf.
+    """
+
+    def __init__(
+        self,
+        projekt: Projekt,
+        schreibweise=None,
+        wort: str = "",
+        parent: QWidget | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Im Verteiler suchen")
+        self.projekt = projekt
+        self.schreibweise = schreibweise
+        self.gewaehlt: suche.Fundstelle | None = None
+        self.treffer: list[suche.Fundstelle] = []
+
+        self.suchfeld = QLineEdit(wort)
+        self.suchfeld.setPlaceholderText(
+            "Bezeichnung, Bemerkung, Rangierung, Kabel, Projektdaten…"
+        )
+        self.suchfeld.setClearButtonEnabled(True)
+        self.suchfeld.textChanged.connect(self._suchen)
+        self.suchfeld.returnPressed.connect(self._erste_waehlen)
+
+        self.liste = QTableWidget(0, 3)
+        self.liste.setHorizontalHeaderLabels(["Wo", "Feld", "Inhalt"])
+        self.liste.verticalHeader().setVisible(False)
+        self.liste.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.liste.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        self.liste.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.liste.horizontalHeader().setStretchLastSection(True)
+        self.liste.itemDoubleClicked.connect(lambda _: self.springen())
+        self.liste.itemSelectionChanged.connect(self._zustand)
+
+        self.zaehler = QLabel()
+
+        self.springen_knopf = QPushButton("Hinspringen")
+        self.springen_knopf.setDefault(True)
+        self.springen_knopf.clicked.connect(self.springen)
+        schliessen = QPushButton("Schließen")
+        schliessen.clicked.connect(self.reject)
+
+        knoepfe = QHBoxLayout()
+        knoepfe.addWidget(self.zaehler)
+        knoepfe.addStretch(1)
+        knoepfe.addWidget(self.springen_knopf)
+        knoepfe.addWidget(schliessen)
+
+        aufbau = QVBoxLayout(self)
+        aufbau.addWidget(QLabel("Suchen nach:"))
+        aufbau.addWidget(self.suchfeld)
+        aufbau.addWidget(self.liste, 1)
+        aufbau.addLayout(knoepfe)
+        self.resize(720, 460)
+        self._suchen()
+
+    # -- Suchen ------------------------------------------------------------
+
+    def _suchen(self) -> None:
+        self.treffer = suche.suchen(
+            self.projekt, self.suchfeld.text(), self.schreibweise
+        )
+        self.liste.setRowCount(len(self.treffer))
+        for zeile, fund in enumerate(self.treffer):
+            for spalte, text in enumerate((fund.ort, fund.beschriftung, fund.text)):
+                self.liste.setItem(zeile, spalte, QTableWidgetItem(text))
+        self.liste.resizeColumnsToContents()
+        if self.treffer:
+            self.liste.selectRow(0)
+        self._zaehler_zeigen()
+        self._zustand()
+
+    def _zaehler_zeigen(self) -> None:
+        wort = self.suchfeld.text().strip()
+        if len(wort) < 2:
+            self.zaehler.setText("Mindestens zwei Zeichen eingeben.")
+        elif not self.treffer:
+            self.zaehler.setText(f"„{wort}“ kommt im Verteiler nicht vor.")
+        else:
+            self.zaehler.setText(
+                mehrzahl(len(self.treffer), "Fundstelle", "Fundstellen")
+            )
+
+    def _zustand(self) -> None:
+        self.springen_knopf.setEnabled(self.auswahl() is not None)
+
+    def auswahl(self) -> suche.Fundstelle | None:
+        zeile = self.liste.currentRow()
+        if 0 <= zeile < len(self.treffer) and self.liste.selectionModel().hasSelection():
+            return self.treffer[zeile]
+        return None
+
+    def _erste_waehlen(self) -> None:
+        """Enter im Suchfeld nimmt die erste Fundstelle."""
+        if self.treffer:
+            self.liste.selectRow(max(self.liste.currentRow(), 0))
+            self.springen()
+
+    def springen(self) -> None:
+        gewaehlt = self.auswahl()
+        if gewaehlt is None:
+            return
+        self.gewaehlt = gewaehlt
+        self.accept()
 
 
 class ProjektdatenFelder(QGroupBox):

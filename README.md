@@ -22,6 +22,7 @@ verteilerly/        Programmpaket
     pdf.py          Zeichnet das Layoutmodell mit ReportLab
     mappe.py        Excel-Mappe im Blattbild der Blattvorlage
     tabellen.py     Belegungsdaten je Ader als xlsx und csv
+  suche.py          Fundstellen im Projekt - Adern, Kabel, Projektdaten
   pfade.py          Wo die Daten liegen - entpackt wie gepackt
   gui/              Oberfläche
     hauptfenster.py Fenster, Menüs, Datei- und Kabelbefehle
@@ -185,6 +186,16 @@ Raster hat keine halbe Spalte.
 
 **Entf** leert die gewählten Zellen, ohne sie erst zu öffnen — auch mehrere auf
 einmal; gelöscht wird der Inhalt, nicht die Form.
+
+**Im Verteiler suchen** (*Bearbeiten ▸ Suchen…*, Strg+F): vierhundertachtzig
+Adern lassen sich nicht durchblättern. Gesucht wird in allem, was von Hand
+eingetragen wurde — Farbe, Bezeichnung, Rangierfeld (Ziele in der eingestellten
+Schreibweise und Vermerke), Bemerkung, der zweite Text einer geteilten Zelle,
+die Kabelbeschriftungen und die Projektdaten samt eigenen Feldern. Jede
+Fundstelle nennt Ort (Bucht, Leiste, Stift), Feld und Inhalt; Doppelklick oder
+Enter schaltet auf die Leiste und stellt die Marke auf die Zelle, ein Treffer
+in den Projektdaten öffnet deren Dialog. Gesucht wird im Modell, nicht in der
+Anzeige: `suche.py` kennt kein Qt und ist ohne Oberfläche prüfbar.
 
 In der Leistenansicht schließt **Enter** die Eingabe und geht
 **eine Zeile tiefer**, wie in einer Tabellenkalkulation; wurde die Eingabe
