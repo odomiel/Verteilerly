@@ -454,10 +454,17 @@ selbst, damit die vielen Aufrufstellen nichts davon wissen müssen.
 vergleicht ihn mit der Wortliste; umgekehrt darf die Liste nichts Überflüssiges
 tragen, und die Platzhalter müssen auf beiden Seiten dieselben sein.
 
-Übersetzt wird das **Programm**, nicht das **Dokument**: die Blätter, die Namen
-der mitgelieferten Vorlagen und die Dokumentation im Programm bleiben deutsch.
-Was auf dem Blatt steht, ist die Arbeit des Anwenders — die Wörter des
-Schriftfeldes sind ohnehin je Projekt änderbar.
+Die **Dokumentation im Programm wechselt mit**: je Sprache eine Datei
+(`daten/hilfe/dokumentation.html`, `dokumentation_en.html`), und fehlt die
+fremdsprachige, wird die deutsche gezeigt — eine halb übersetzte Hilfe wäre
+schlimmer als eine ganz deutsche. Geprüft wird die englische gegen dieselben
+Menüs wie die deutsche: jeder Eintrag muss vorkommen, und die gedruckte
+Kürzeltabelle muss zu den Tastenkürzeln passen.
+
+Übersetzt wird sonst das **Programm**, nicht das **Dokument**: die Blätter und
+die Namen der mitgelieferten Vorlagen bleiben deutsch. Was auf dem Blatt steht,
+ist die Arbeit des Anwenders — die Wörter des Schriftfeldes sind ohnehin je
+Projekt änderbar.
 
 *Hilfe ▸ Über Verteilerly* führt jeden Baustein mit Fassung, Lizenz und
 Aufgabe auf — Python, PySide6, Qt, ReportLab, openpyxl, PyYAML —, dazu

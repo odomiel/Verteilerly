@@ -9,12 +9,14 @@ from __future__ import annotations
 import os
 import re
 import unittest
+from unittest import mock
 
 from verteilerly import hilfe
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
+    from PySide6.QtGui import QAction
     from PySide6.QtWidgets import QApplication
 except ImportError:                              # pragma: no cover
     QApplication = None
@@ -177,6 +179,99 @@ class TestGegenDieMenues(unittest.TestCase):
                 doppelt.append(f"{kuerzel}: {belegt[kuerzel]} / {handlung.text()}")
             belegt[kuerzel] = handlung.text()
         self.assertEqual(doppelt, [])
+
+
+@unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
+class TestEnglischeDokumentation(unittest.TestCase):
+    """Dieselbe Seite auf Englisch, gegen dieselben Menüs."""
+
+    def setUp(self):
+        from verteilerly import sprachen
+        from verteilerly.gui.hauptfenster import Hauptfenster
+
+        self.sprachen = sprachen
+        self.addCleanup(sprachen.sprache_setzen, sprachen.VORGABE)
+        sprachen.sprache_setzen("en")
+        self.fenster = Hauptfenster()
+        self.addCleanup(self.fenster.close)
+        self.roh = hilfe.dokumentation()
+        self.text = _klartext(self.roh)
+
+    def test_die_englische_datei_wird_gewaehlt(self):
+        datei = hilfe.dokumentationsdatei()
+        self.assertEqual(datei.name, "dokumentation_en.html")
+
+    def test_ohne_englische_datei_bleibt_es_bei_der_deutschen(self):
+        """Eine halb übersetzte Hilfe wäre schlimmer als eine ganz deutsche."""
+        with mock.patch.object(hilfe, "_dateinamen", return_value=["dokumentation.html"]):
+            self.assertEqual(hilfe.dokumentationsdatei().name, "dokumentation.html")
+
+    def test_dieselben_abschnitte_wie_auf_deutsch(self):
+        marken_en = [marke for marke, _ in hilfe.abschnitte(self.roh)]
+        marken_de = [marke for marke, _ in hilfe.abschnitte(hilfe.dokumentation("de"))]
+        self.assertEqual(marken_en, marken_de)
+
+    def test_jeder_englische_menueeintrag_steht_im_text(self):
+        gefunden: list[str] = []
+
+        def sammeln(menue):
+            for handlung in menue.actions():
+                if handlung.isSeparator():
+                    continue
+                gefunden.append(handlung.text())
+                if handlung.menu() is not None:
+                    sammeln(handlung.menu())
+
+        for handlung in self.fenster.menuBar().actions():
+            gefunden.append(handlung.text())
+            if handlung.menu() is not None:
+                sammeln(handlung.menu())
+        eintraege = sorted({_sauber(name) for name in gefunden if _sauber(name)})
+        fehlend = [name for name in eintraege if name not in self.text]
+        self.assertEqual(fehlend, [])
+
+    def test_die_kuerzeltabelle_stimmt_mit_den_menues_ueberein(self):
+        tabelle = re.search(r"<tr><th>Menu</th>.*?</table>", self.roh, re.S)
+        self.assertIsNotNone(tabelle, "Die Tabelle der Menüeinträge fehlt")
+        gedruckt = {}
+        for zeile in re.findall(r"<tr>(.*?)</tr>", tabelle.group(0), re.S):
+            zellen = [
+                _sauber(re.sub(r"<[^>]+>", "", z))
+                for z in re.findall(r"<t[dh][^>]*>(.*?)</t[dh]>", zeile, re.S)
+            ]
+            if len(zellen) >= 2 and zellen[0] != "Menu":
+                gedruckt[zellen[-2]] = zellen[-1]
+
+        abweichung = []
+        for handlung in self.fenster.findChildren(QAction):
+            name = _sauber(handlung.text())
+            if not name or handlung.actionGroup() is not None:
+                continue
+            if name not in gedruckt:
+                continue
+            if gedruckt[name] != handlung.shortcut().toString():
+                abweichung.append(
+                    f"{name}: Programm {handlung.shortcut().toString()!r}, "
+                    f"Doku {gedruckt[name]!r}"
+                )
+        self.assertEqual(abweichung, [])
+        # Und jeder Menüeintrag mit Kürzel steht auch in der Tabelle.
+        mit_kuerzel = {
+            _sauber(h.text())
+            for h in self.fenster.findChildren(QAction)
+            if h.shortcut().toString() and _sauber(h.text())
+        }
+        self.assertEqual(sorted(mit_kuerzel - set(gedruckt)), [])
+
+    def test_der_dialog_zeigt_die_englische_seite(self):
+        from verteilerly.gui.dialoge import DokumentationDialog
+
+        dialog = DokumentationDialog()
+        self.addCleanup(dialog.close)
+        self.assertIn("Overview", dialog.text.toPlainText())
+        self.assertEqual(dialog.verzeichnis.item(0).text(), "1 Overview")
+        self.assertEqual(dialog.suchfeld.placeholderText(),
+                         "Search the documentation (Ctrl+F)")
 
 
 @unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")

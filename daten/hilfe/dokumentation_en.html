@@ -1,0 +1,552 @@
+<h1>Verteilerly — Documentation</h1>
+
+<p class="anriss">Documentation for telecommunications distribution frames in
+LSA+ technology: cover sheet, frame layout and strip sheets from one data model
+instead of copied spreadsheets. This page describes every function of the
+program in the order in which you meet it at work.</p>
+
+<h2><a name="ueberblick"></a>1 &nbsp; Overview</h2>
+
+<p>A <b>distribution frame</b> consists of bays, a bay of strips, a strip of
+pins, a pin of the two wires <b>a</b> and <b>b</b>. Two wires together are one
+<b>pair (DA)</b>. Across them lie the <b>cables</b>: a cable takes up a
+contiguous block of pairs, if need be across several strips. A <b>jumper</b>
+connects two wires inside the frame and is kept at both ends.</p>
+
+<p>Everything is in <b>one project file</b>. Three kinds of sheet come out of
+it:</p>
+
+<table border="1" cellspacing="0" cellpadding="5">
+<tr><th>Sheet</th><th>What is on it</th></tr>
+<tr><td><b>Cover sheet</b></td><td>Title, frame, structure, key figures and
+the project data as a list. It carries no title block — it is one
+itself.</td></tr>
+<tr><td><b>Frame layout</b></td><td>Every strip as a row of pairs, the cables
+as blocks in it. Two bays share one sheet and lie crosswise; a single bay
+stands upright. Each bay gets a sheet of its own as soon as the frame has
+<b>more than two bays</b> or one bay carries <b>more than thirteen
+strips</b>.</td></tr>
+<tr><td><b>Strip sheet</b></td><td>One per strip: pin, wire, color,
+designation, jumper, remark and the cable column.</td></tr>
+</table>
+
+<p>Preview, PDF and Excel workbook draw <i>the same</i> sheet model — what is
+in the preview is in the print as well.</p>
+
+<h2><a name="anlegen"></a>2 &nbsp; Creating and saving a frame</h2>
+
+<p><b>File ▸ New frame…</b> (Ctrl+N). The dialog has two halves: on the left
+the frame, on the right the project data.</p>
+
+<ul>
+<li><b>Frame name</b> and <b>frame number</b> — they stand in the title block
+of every sheet and can be changed later under <i>Edit ▸ Project data</i>.</li>
+<li><b>Sheet template</b> — which sheet layout is to apply; changeable
+later.</li>
+<li><b>From template</b> — the supplied structures and the ones you stored
+yourself are in the drop-down menu.</li>
+<li><b>Custom</b> — <i>bays</i>, <i>strips per bay</i> and <i>pairs per
+strip</i>. There, 8, 10 and 20 pairs are offered; any other number is typed in
+under <i>Custom</i>. Underneath, the result is shown as you go: <i>4 strips,
+40 pairs</i>. A checkbox stores the measurements as a template right away.</li>
+<li><b>Advanced frames: set up each bay separately</b> — the checkbox puts a
+table with <b>one row per bay</b> in place of the two numbers: how many strips
+it carries and how large they are. This is how an unevenly equipped frame is
+built — one bay with two 20-pair strips next to two bays with ten 10-pair
+strips. One strip size per bay. Such a frame can be stored as a
+<b>template</b> as well — the file then carries one row per bay.</li>
+<li><b>Project data</b> — company, customer, author and so on. Whatever is
+kept in the defaults is already filled in.</li>
+</ul>
+
+<p>A structure built like this can be stored as a <b>template</b>: in the
+dialog itself or later through <b>Edit ▸ Save as template…</b>. It becomes a
+YAML file in the working folder and appears in the menu at once.</p>
+
+<p>Saving is done with <b>Ctrl+S</b> as <code>.vtly.json</code> — readable JSON
+with a format version; older versions are still read. When you close with
+unsaved changes the program asks; the buttons are <i>Save</i>, <i>Discard</i>
+and <i>Cancel</i>.</p>
+
+<h2><a name="editor"></a>3 &nbsp; The editor</h2>
+
+<p>On the left the <b>frame overview</b>: every strip a box of pair cells, bays
+side by side, the cables as blocks. A click selects a pair, a double click
+terminates a cable or opens an existing one.</p>
+
+<p>On the right the <b>strip view</b> of the chosen strip with the columns
+<i>pin</i>, <i>color</i>, <i>designation</i>, <i>jumper</i> (two fields),
+<i>remark</i> and <i>cable</i>. Color, designation, jumper, remark and the
+cable label can be changed; pin, wire and cable position are fixed.</p>
+
+<p><b>Text options</b> — next to the strip selector are five buttons: align
+left, center, align right, as well as <b>F</b> for bold and <i>K</i> for
+italic. They act on the <b>selected cell</b> and show what applies there.
+Pressing an alignment again takes it back — then what the sheet template holds
+for that column applies again.</p>
+
+<p><b>Several cells at once:</b> select several cells — drag across the column
+with the mouse button held down, or click single ones with Ctrl — and every
+press of a button applies to all of them. Splitting and the percentage too.
+All of them get the same thing, not each its own opposite; which way it goes
+is decided by the cell the cursor is on. Whatever in the selection cannot be
+styled stays untouched.</p>
+
+<p>Styleable are <i>color</i>, <i>designation</i>, <i>jumper</i> and
+<i>remark</i>; for pin, wire and cable the buttons are off. The two jumper
+fields belong to one cell of the sheet and therefore carry the same style. The
+style belongs to the frame, is kept in the project file and applies on the
+sheet, in the PDF and in the Excel workbook as well.</p>
+
+<p><b>Splitting a cell</b> — the button with the divided box turns a cell into
+<b>two labeling fields side by side</b>; the percentage field next to it says
+how wide the right one is (10 to 90 %). Editing then happens in two input
+fields — <b>Tab</b> jumps from the left one into the right one, <b>Esc</b>
+discards. Switching between the halves does not leave the cell, and a click
+somewhere else takes nothing with it: what was typed stays. On the sheet there
+is <b>no line</b> between the two: there it looks like one cell holding two
+entries. In the strip view a fine dotted line hints that there are two
+fields.</p>
+
+<p>Splittable are <i>designation</i> and <i>remark</i>; for color and jumper
+the button is off. If the split is undone, the text of the right field is kept
+and merely appears nowhere any more. In Excel and CSV both entries stand one
+after the other in one cell — a grid has no half column.</p>
+
+<p><b>Searching.</b> <b>Edit ▸ Search…</b> (<b>Ctrl+F</b>) searches the whole
+frame: color, designation, jumper field — targets in the chosen notation and
+notes —, remark, the labels of the cables as well as the project data
+including own fields and the frame name. The second text of a split cell
+counts as well. The search runs as you type, from the second character on;
+upper and lower case make no difference.</p>
+
+<p>The list names for every match <i>where</i> it lies (bay, strip, pin),
+<i>which field</i> it is and <i>what</i> stands in it. A double click,
+<b>Enter</b> or <i>Go there</i> switches to the strip and puts the cursor on
+the cell; the status bar at the bottom repeats what was found. Matches in the
+project data open the <i>Project data</i> dialog instead — that is where they
+are. The word searched for last is back in the field the next time.</p>
+
+<p><b>Del</b> clears the selected cells without opening them first — several at
+once as well. What is deleted is the content, not the form: a split cell loses
+both texts and stays split, a cable cell loses its label, not the cable. For
+pin and wire the key does nothing, and while editing it deletes characters as
+usual.</p>
+
+<p><b>Enter</b> closes the entry and goes <b>one row down</b> — as in a
+spreadsheet: a column is filled from top to bottom without having to press the
+down arrow every time as well. The next keystroke opens the field there by
+itself. If the entry was not accepted — an unreadable jumper, say — the cursor
+stays put: there is something to put right.</p>
+
+<p>Out of a <b>split cell</b> it goes straight down as well — out of the right
+field too. If the cell below is split as well, the cursor lands in its right
+field again: a column of extensions can be typed from top to bottom without
+clicking in between. If it is not split, only the cursor moves on.</p>
+
+<p>The strip is chosen from the drop-down menu or stepped through with the two
+arrows next to it (<b>Alt+←</b> and <b>Alt+→</b>); at the first and the last
+entry the respective arrow is off.</p>
+
+<p>Under the menu bar lies the <b>toolbar</b> with what is needed most often:
+new frame, open, save, PDF, terminate, edit and remove a cable, and the
+preview.</p>
+
+<p><b>View ▸ Show preview</b> (F9) shows and hides the sheet preview, <b>View ▸
+Dark appearance</b> (Ctrl+D) switches the color set. The sheet stays untouched
+by it: paper is white.</p>
+
+<p>The <b>preview</b> shows the finished sheet as it would come out of the
+printer — the same drawing the PDF is made from. At the top the sheet is
+chosen: drop-down menu, two arrows and a counter (<i>3 of 6</i>). Underneath
+stands which sheet template applies; it is changed under <b>Settings ▸ Sheet
+template</b>. Every entry shows up immediately — what is here is in the print
+as well.</p>
+
+<h2><a name="kabel"></a>4 &nbsp; Cables</h2>
+
+<p><b>Terminating</b> — <b>Edit ▸ Terminate cable…</b> (Ctrl+K) or a double
+click on a free pair. Label, cable type and size are to be given; <i>strip</i>
+and <i>from pin</i> come from the selection. <i>Of that, terminate</i> follows
+the cable size — the normal case is that a cable is terminated completely;
+whoever wants to shorten it sets the number down afterwards, and a note says
+how many pairs stay unterminated.</p>
+
+<p><b>Editing</b> — a double click on a terminated cable or <b>Edit ▸ Edit
+cable…</b> (Ctrl+Shift+E). Label, cable type, size and length can be changed,
+and the dialog carries the button for removing it as well.</p>
+
+<p><b>Larger and smaller</b> — <i>Of that, terminate</i> can be set here just
+as when terminating: the cable grows and shrinks <b>at the end</b>, the start
+stays where it is. What becomes free is free again, including the wire colors
+the program put there. If the strip is not enough, the same overflow dialog
+asks as when terminating; if another cable is in the way, this is reported and
+nothing is changed. <i>Strip</i> and <i>from pin</i> are fixed — for a
+different position take the cable off and terminate it anew.</p>
+
+<p>The label can also be overwritten <b>directly in the cable column</b> of the
+strip view — where it stands. That holds for a cable created without a label as
+well.</p>
+
+<p><b>Removing</b> — <b>Edit ▸ Remove cable</b> (Ctrl+Shift+K), after
+selecting a pair with a cable.</p>
+
+<p><b>Overflow</b> — if a cable does not fit onto the strip completely, a
+dialog asks what is to happen with the rest: continue on another strip (with
+strip and starting point) or let it lapse. A continued cable stays <i>one</i>
+cable with several sections.</p>
+
+<p><b>Shortened</b> — if a cable is terminated with fewer pairs than it has,
+<i>(shortened)</i> stands behind its name; the frame layout adds
+<i>shortened: 4 of 6 pairs</i>. That way the sheet shows that wires are left
+over.</p>
+
+<p><b>Wire colors</b> — the cable type fills the color column by itself:
+J-Y(St)Y and the VDE color code for telecommunications cables layer by layer,
+star quads in pairs, DIN 47100 as a list. The cable types are YAML files in the
+working folder and can be extended.</p>
+
+<p>The color sequence belongs to the cable: <b>if cable type or size changes,
+the colors follow</b>, and if the cable is taken off, they go with it — the
+next line has a sequence of its own. The yardstick is what the program set: as
+long as exactly that still stands in a cell, it changes it again. What you
+entered by hand stays; only the checkbox <i>Also replace wire colors changed by
+hand</i> in the edit dialog overwrites that as well.</p>
+
+<h2><a name="rangierungen"></a>5 &nbsp; Jumpers</h2>
+
+<p>Every wire has <b>two jumper fields</b> side by side — one per jumper, with
+a heading above them. The target is entered as an address of strip, pin and
+wire:</p>
+
+<table border="1" cellspacing="0" cellpadding="5">
+<tr><th>Notation</th><th>Example</th></tr>
+<tr><td>without a prefix</td><td><code>1 1a</code></td></tr>
+<tr><td>with a hyphen</td><td><code>1-1a</code></td></tr>
+<tr><td>with L before the strip</td><td><code>L1 1a</code></td></tr>
+<tr><td>with L and a hyphen</td><td><code>L1-1a</code></td></tr>
+</table>
+
+<p>Which of them is <i>shown</i> is set under <b>Settings ▸ Notation of the
+jumpers</b>. <b>Everything is always read</b>: any form may be typed, no matter
+which one is set, and in the project file the address stands unchanged as
+<code>1 1a</code>. Whoever switches has to touch neither their projects nor
+their habits.</p>
+
+<p>The <b>counterpart enters itself</b>: a jumper is one object that is kept at
+both ends. Whoever types both targets into one field
+(<code>3 2a&nbsp;&nbsp;5 4a</code>) gets them distributed over both fields. On
+the sheet they stand side by side in one cell — there it should not show that
+these are two fields.</p>
+
+<p><b>Checked while being entered:</b> a jumper onto itself, a target that does
+not exist in the frame, the same counterpart twice or a third jumper on the
+same wire are refused — the message stands in the status bar, and what was
+there stays untouched. So what does not go through is not half taken over
+either.</p>
+
+<p><b>A note instead of a target</b> — <b>Settings ▸ Allow free text in the
+jumper field</b> also permits „external", „to the terminal block" or „n/a". To
+begin with this is off: whoever enters targets only wants a typing mistake
+reported as a mistake, not left standing as a note. A note takes up one of the
+two fields, stays in it and is <b>not mirrored</b> — it belongs to the wire.
+What can be read as a target stays a target even then.</p>
+
+<h2><a name="projektdaten"></a>6 &nbsp; Project data</h2>
+
+<p><b>Edit ▸ Project data…</b> (Ctrl+B). What is here appears in the title
+block of every sheet.</p>
+
+<p><b>Frame name and number</b> stand at the top. They cannot be deselected — a
+sheet without a frame name would be none.</p>
+
+<p><b>Every field has a check mark.</b> A deselected field disappears from the
+sheet together with its label — a row „customer" without a customer would be
+worse than none at all — and <b>keeps its content</b>: whoever wants to leave
+out the installation number for this print only does not have to delete it.
+<i>All</i> and <i>None</i> set every check mark at once.</p>
+
+<p>These fields exist:</p>
+
+<table border="1" cellspacing="0" cellpadding="5">
+<tr><th>Field</th><th>On the sheet</th></tr>
+<tr><td>Company, customer</td><td>multi-line address</td></tr>
+<tr><td>Installation number, customer number</td><td><i>Installation</i>,
+<i>Cust. no.</i></td></tr>
+<tr><td>Created on, created by,<br>revised on, revised by,<br>checked on,
+checked by,<br>drawn on, drawn by</td>
+<td>one row of date and name per pair</td></tr>
+<tr><td>Initials</td><td>the initials of the author</td></tr>
+<tr><td>Document title</td><td>the heading of the cover sheet</td></tr>
+</table>
+
+<p><b>Company and customer carry an address</b>, not a line: both fields are
+multi-line, name, street and town stand one below the other on the sheet, the
+label only at the first line.</p>
+
+<p><b>Own fields</b> are freely named pairs such as <i>Location: basement</i>.
+<i>Add field</i> appends a row, <i>Remove field</i> takes the selected one out;
+<i>field name</i> and <i>content</i> are typed in the list itself. The check
+mark row <i>Show on</i> says on which kinds of sheet they appear — cover sheet,
+frame layout, strip sheets. A deselected kind of sheet leaves the content
+untouched, it merely does not show it. On the frame layout they stand where the
+strip would be: this sheet shows every strip, so not a single one.</p>
+
+<p><b>Changing the wording</b> — the switch <i>Advanced: change the wording on
+the sheet</i> in the selection row folds out a list next to the fields: on the
+left the default word, on the right your own. Where <i>customer</i> stands,
+<i>client</i> may stand. Only the word is changed — content, check marks and
+order stay — and it applies on all sheets and in the Excel workbook. <i>Reset
+to default</i> writes the default word back everywhere. Only what differs is
+kept.</p>
+
+<p><b>Defaults for new frames</b> — <b>Settings ▸ Defaults for new frames…</b>
+carries the same fields and writes them into the <code>Verteilerly.conf</code>;
+a button takes them over from the open frame. When a frame is created they are
+already filled in; checked is only what they fill. Edited project data do
+<b>not</b> change the defaults by themselves — otherwise the last customer
+would overwrite them unasked. An open frame stays untouched: there, what is in
+the file applies.</p>
+
+<p><b>On small screens</b> — no dialog grows larger than the screen it opens
+on; if it stands partly beside it, it moves fully onto it. If the fields do not
+fit one below the other, a <b>scroll bar</b> appears: the content scrolls,
+<i>Apply</i> and <i>Cancel</i> stay firmly underneath. If there is room enough,
+nothing of the scroll bar is to be seen.</p>
+
+<h2><a name="blattvorlagen"></a>7 &nbsp; Sheet templates</h2>
+
+<p>How the sheet looks is said by a <b>sheet template</b>; what is on it comes
+from the project. Four are supplied:</p>
+
+<table border="1" cellspacing="0" cellpadding="5">
+<tr><th>Template</th><th>What for</th></tr>
+<tr><td><b>Standard</b></td><td>All columns, narrow cable column with a turned
+name.</td></tr>
+<tr><td><b>Knapp</b> (sparse)</td><td>A pure jumper sheet without designation
+and remark, cable column wide and horizontal.</td></tr>
+<tr><td><b>Ausführlich</b> (detailed)</td><td>Large type, high rows, one bay
+per sheet.</td></tr>
+<tr><td><b>Mit Anschriften</b> (with addresses)</td><td>The
+title block of the sample sheets: top left the matrix of date and name with
+created, revised and checked, bottom left frame, number and strip, on the right
+two boxes with the addresses of company and customer.</td></tr>
+</table>
+
+<p>It is chosen when a frame is created and later under <b>Settings ▸ Sheet
+template…</b> (Ctrl+Shift+B). The choice belongs to the workplace, not to the
+single frame: it is kept in the <code>Verteilerly.conf</code> and applies to
+preview, PDF and Excel workbook.</p>
+
+<p>A <b>sheet template of your own</b> is a YAML file in the subfolder
+<code>blattvorlagen/</code> of the working folder. It states only what it wants
+differently:</p>
+
+<pre>id: eng
+name: "Eng"
+rand: 8
+zeilenhoehe_max: 7
+spalten: [stift, ader, farbe, rangierung]</pre>
+
+<p>Recurring settings are among others <code>rand</code> (margin),
+<code>spalten</code> (columns), <code>schriftfeld</code> (title block),
+<code>schriftfeld_art</code>, <code>schriftfeld_anteile</code>,
+<code>kabel_gedreht</code>, <code>da_nummern</code> and
+<code>buchten_je_blatt</code>.</p>
+
+<h2><a name="blattbild"></a>8 &nbsp; What applies on the sheets</h2>
+
+<ul>
+<li><b>No heading above the table</b> — which strip a sheet shows is said by
+the title block; the table starts at the margin and has the room.</li>
+<li><b>Pin</b> stands above the number <i>and</i> above a and b: a column
+without a heading of its own belongs to the previous one.</li>
+<li><b>No text runs beyond its field.</b> If a designation, a remark or a cable
+name does not fit, the type is made smaller for that field only — down to 5 pt;
+below that it is shortened and an „…" shows that something follows.</li>
+<li>The <b>frame layout</b> fills the sheet: the boxes grow as far as the page
+allows, and what is left over is distributed as air between the bays and the
+strips — no empty strip at the margin. The labels of the strips stand at the
+left edge of the sheet, in line with the heading and the title block below
+it.</li>
+<li>In the <b>frame layout</b> there is no grid: only the cable is drawn, free
+areas stay unbroken. No supplied template carries pair numbers; whoever wants
+them sets <code>da_nummern: true</code>. In the editor every strip stays
+divided — that is where you click.</li>
+<li>On the <b>strip sheet</b> the same holds for the cable column: the row
+lines end before it, the cable stands as a block across its rows.</li>
+</ul>
+
+<h2><a name="ausgabe"></a>9 &nbsp; Output</h2>
+
+<table border="1" cellspacing="0" cellpadding="5">
+<tr><th>Way</th><th>What comes out</th></tr>
+<tr><td><b>File ▸ As PDF…</b> (Ctrl+E)</td><td>Cover sheet, frame layout and
+one sheet per strip — the required format.</td></tr>
+<tr><td><b>File ▸ As Excel workbook…</b></td><td>At the front the same sheets
+in the sheet layout, behind them the data as a table: <i>data per wire</i>,
+<i>cables per strip</i>, <i>project data</i> — filterable and
+sortable.</td></tr>
+<tr><td><b>File ▸ As CSV…</b></td><td>Plain data, one row per wire.</td></tr>
+</table>
+
+<p>The Excel workbook takes over the order and width of the columns, the font
+sizes, the row heights, the merged cable block including its rotation and the
+setup for A4. It cannot imitate a PDF: Excel is a grid, the sheet a drawing —
+which is why the title block stands below the table instead of at the foot of
+the sheet.</p>
+
+<h2><a name="dateien"></a>10 &nbsp; Files, folders and backup</h2>
+
+<table border="1" cellspacing="0" cellpadding="5">
+<tr><th>What</th><th>Where</th></tr>
+<tr><td>Project file</td><td>wherever you save it, <code>.vtly.json</code></td></tr>
+<tr><td>Working folder</td><td>Windows: <code>daten\</code> next to the
+program. Linux: <code>~/.config/Verteilerly</code></td></tr>
+<tr><td>Settings</td><td><code>Verteilerly.conf</code> — one file, never the
+registry</td></tr>
+</table>
+
+<p>In the working folder lie <code>vorlagen/</code> (templates),
+<code>blattvorlagen/</code> (sheet templates) and <code>kabeltypen/</code>
+(cable types) as YAML. What is missing the program puts there at startup. A
+supplied file is only refreshed if it still lies exactly as it was put there —
+<b>your own changes stay untouched</b>.</p>
+
+<p><b>Managing templates</b> — <b>Settings ▸ Frame templates…</b>
+(Ctrl+Shift+V) renames a template or deletes it, a supplied one as well:
+whoever never needs one should not have it in the menu with every new frame.
+What is renamed is the name, not the identifier — that is the file name.
+Deleted supplied templates stay deleted, even after a restart; the button
+<i>Restore supplied templates</i> brings them back exactly as they were
+delivered — changed ones as well. Your own templates stay untouched by
+it.</p>
+
+<p>A <b>frame template</b> is a file in <code>vorlagen/</code>. The even frame
+needs three numbers:</p>
+
+<pre>id: 40da-4x10
+name: "40 DA - 4 Leisten zu 10 DA"
+beschreibung: "Vier Leisten in einer Bucht, je 10 Doppeladern."
+buchten: 1
+leisten_je_bucht: 4
+da_je_leiste: 10</pre>
+
+<p>An unevenly equipped one carries a <b>list under <code>buchten</code> — one
+row per bay</b> — instead of the number:</p>
+
+<pre>id: bunter-keller
+name: "Bunter Keller"
+buchten:
+  - {leisten: 4, da: 10}
+  - {leisten: 2, da: 20}
+  - {leisten: 6, da: 8}</pre>
+
+<p>The program writes both itself when you choose <i>Save as template</i> in
+the dialog; created by hand it is read just the same. A new file in the folder
+is offered at the next start without anything having to be changed in the
+program.</p>
+
+<p><b>Language</b> — <b>Settings ▸ Language</b> switches the interface to
+<b>Deutsch</b> or <b>English</b>: menus, dialogs, buttons, hints and messages.
+The choice applies <b>after a restart</b> — the menus are labeled once when the
+window is built. It belongs to the workplace and is kept in the
+<code>Verteilerly.conf</code>.</p>
+
+<p>The <b>sheets</b> are not switched over with it: what is on them is your
+document and not a program interface — the words of the title block can be
+changed per project anyway (<i>Advanced: change the wording on the sheet</i>).
+The names of the supplied templates stay German as well: they are data in the
+working folder, and you may rename them.</p>
+
+<p>In the <code>Verteilerly.conf</code> are the sheet template, the language,
+the notation of the jumpers, the free-text switch, the appearance and the
+remembered project data. What concerns the single frame is in the project file
+instead.</p>
+
+<p><b>Backup and restore</b> — <b>Settings ▸ Back up templates and
+settings…</b> packs frame templates, sheet templates, cable types and the
+settings into a ZIP file; <b>… restore…</b> brings them back. In both
+directions check marks choose what comes along, and the dialog shows beforehand
+what is in the package. On restoring, only the known subfolders and only YAML
+are taken over — a package from someone else cannot create anything outside the
+working folder.</p>
+
+<h2><a name="menue"></a>11 &nbsp; Menus and keyboard shortcuts</h2>
+
+<table border="1" cellspacing="0" cellpadding="5">
+<tr><th>Menu</th><th>Entry</th><th>Shortcut</th></tr>
+<tr><td rowspan="8"><b>File</b></td><td>New frame…</td><td>Ctrl+N</td></tr>
+<tr><td>Open…</td><td>Ctrl+O</td></tr>
+<tr><td>Save</td><td>Ctrl+S</td></tr>
+<tr><td>Save as…</td><td>Ctrl+Shift+S</td></tr>
+<tr><td>As PDF…</td><td>Ctrl+E</td></tr>
+<tr><td>As Excel workbook…</td><td></td></tr>
+<tr><td>As CSV…</td><td></td></tr>
+<tr><td>Quit</td><td>Ctrl+Q</td></tr>
+<tr><td rowspan="6"><b>Edit</b></td><td>Terminate cable…</td><td>Ctrl+K</td></tr>
+<tr><td>Edit cable…</td><td>Ctrl+Shift+E</td></tr>
+<tr><td>Remove cable</td><td>Ctrl+Shift+K</td></tr>
+<tr><td>Save as template…</td><td></td></tr>
+<tr><td>Search…</td><td>Ctrl+F</td></tr>
+<tr><td>Project data…</td><td>Ctrl+B</td></tr>
+<tr><td rowspan="8"><b>Settings</b></td><td>Sheet template…</td><td>Ctrl+Shift+B</td></tr>
+<tr><td>Frame templates…</td><td>Ctrl+Shift+V</td></tr>
+<tr><td>Defaults for new frames…</td><td></td></tr>
+<tr><td>Back up templates and settings…</td><td></td></tr>
+<tr><td>Restore templates and settings…</td><td></td></tr>
+<tr><td>Language</td><td></td></tr>
+<tr><td>Notation of the jumpers</td><td></td></tr>
+<tr><td>Allow free text in the jumper field</td><td></td></tr>
+<tr><td rowspan="2"><b>View</b></td><td>Dark appearance</td><td>Ctrl+D</td></tr>
+<tr><td>Show preview</td><td>F9</td></tr>
+<tr><td rowspan="2"><b>Help</b></td><td>Documentation</td><td>F1</td></tr>
+<tr><td>About Verteilerly</td><td></td></tr>
+</table>
+
+<p>In the editor <b>Alt+←</b> and <b>Alt+→</b> step from strip to strip.</p>
+
+<p>Menu entries that cannot do anything at the moment are <b>grayed out</b>:
+without a frame the whole output, <i>Remove cable</i> only where a cable really
+lies, <i>Save</i> only if there is something to save. Every entry carries a
+status hint that appears in the grayed-out state as well and says what it is
+for.</p>
+
+<h2><a name="ueber"></a>12 &nbsp; Information about the program</h2>
+
+<p><b>Help ▸ Documentation</b> (F1) opens this page: on the left the table of
+contents, on the right the text.</p>
+
+<p><b>Searching.</b> Above the text is a search field (<b>Ctrl+F</b>). The
+search runs as you type, from the second character on; upper and lower case
+make no difference. Every match is highlighted, the one currently aimed at
+strongly, the others faintly, and on the right stands which of how many it is.
+<b>Enter</b>, <b>F3</b> or the arrow <b>›</b> go to the next one,
+<b>Shift+F3</b> and <b>‹</b> to the previous one — at the end it starts over.
+It begins at the place that is currently visible: whoever is reading the
+section about cables means the next match from there. <b>Esc</b> clears the
+search away; pressed again, it closes the window.</p>
+
+<p><b>Help ▸ About Verteilerly</b> lists every component with version, license
+and task — Python, PySide6, Qt, ReportLab, openpyxl, PyYAML —, together with
+system, working folder, settings file and the folder with the licenses. The
+versions come from the running program, not from a maintained list.</p>
+
+<p><b>License.</b> Verteilerly is free software under the <b>GNU GPL, version
+3</b>, and comes without any warranty. You may pass it on and change it,
+commercially as well; whoever passes it on passes on the source code or offers
+it. The components are under LGPL, BSD, MIT or PSF — Qt is linked dynamically
+and exchangeable in the image, as the LGPL requires.</p>
+
+<p>The complete license texts stand in the about window as <b>links</b> — GNU
+GPL, GNU LGPL and the Qt source code. Besides that they are put into the
+working folder at the first start (<code>lizenzen/</code>, with
+<code>QUELLEN.txt</code>, which says for every component where its source code
+comes from): that way they can be read without a network as well and stay there
+when the program has ended. They are in the AppImage itself too, but there in
+the mount point, which the operating system clears away when the program
+ends.</p>
+
+<p>On the command line <code>--selbsttest</code> answers the same question
+briefly and without a window; <code>--python&nbsp;script.py</code> runs a
+script of your own against the packed program.</p>
