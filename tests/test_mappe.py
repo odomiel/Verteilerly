@@ -196,6 +196,21 @@ class TestBlattbild(unittest.TestCase):
         )
         self.assertEqual(blatt[f"B{zeile}"].value, "Linie 1 — Melderkreis")
 
+    def test_der_kabelname_steht_mittig_und_bricht_um(self):
+        """Wie auf dem Blatt - nicht klein oben links."""
+        from verteilerly.layout import belegungsmasse, kabelbeschriftung_groesse
+
+        blatt = self._mappe()["Verteilerbelegung"]
+        zeile = self._leistenzeile(blatt)
+        feld = blatt[f"B{zeile}"]
+        masse = belegungsmasse(self.projekt.verteiler.buchten, STANDARD)
+        self.assertEqual(feld.alignment.horizontal, "center")
+        self.assertEqual(feld.alignment.vertical, "center")
+        self.assertTrue(feld.alignment.wrap_text)
+        self.assertEqual(
+            feld.font.size, kabelbeschriftung_groesse(masse.zelle_hoehe, STANDARD)
+        )
+
     def test_die_leisten_fuellen_das_blatt_wie_im_pdf(self):
         """Die Zellenmaße kommen aus dem Blattmodell."""
         from verteilerly.ausgabe.mappe import zeilenhoehe

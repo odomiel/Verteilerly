@@ -26,6 +26,7 @@ from ..layout import (
     belegungsmasse,
     buchtnamen,
     deckblattzeilen,
+    kabelbeschriftung_groesse,
     kopfgruppen,
     schriftfeldspalten,
     schriftfeldwerte,
@@ -99,13 +100,13 @@ class _Werkzeug:
             color=_hex(farbe),
         )
 
-    def lage(self, ausrichtung: str = "links", gedreht: int = 0):
+    def lage(self, ausrichtung: str = "links", gedreht: int = 0, umbruch: bool = False):
         waagerecht = {"links": "left", "mitte": "center", "rechts": "right"}
         return self.Alignment(
             horizontal=waagerecht.get(ausrichtung, "left"),
             vertical="center",
             text_rotation=gedreht,
-            wrap_text=False,
+            wrap_text=umbruch,
         )
 
 
@@ -201,6 +202,7 @@ def _belegung(
     blatt = mappe.create_sheet(name)
     v = projekt.verteiler
     masse = belegungsmasse(buchten, vorlage)
+    kabelschrift = kabelbeschriftung_groesse(masse.zelle_hoehe, vorlage)
     # Eine Leerzeile zwischen den Leisten traegt die Luft des Blattes.
     mit_luft = masse.luft_leisten > 0.5
 
@@ -267,8 +269,10 @@ def _belegung(
                         end_row=zeile, end_column=bis,
                     )
                     feld = blatt.cell(row=zeile, column=von, value=kabel.beschriftung)
-                    feld.font = zeug.schrift(masse.schrift, True)
-                    feld.alignment = zeug.lage("links")
+                    # Wie auf dem Blatt: mitten im Block, so gross wie er
+                    # es traegt, und umgebrochen statt abgeschnitten.
+                    feld.font = zeug.schrift(kabelschrift, True)
+                    feld.alignment = zeug.lage("mitte", umbruch=True)
                     feld.fill = zeug.Fuellung(
                         "solid", start_color=_hex(FUELLUNG_KABEL)
                     )

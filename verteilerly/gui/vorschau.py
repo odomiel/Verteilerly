@@ -20,7 +20,15 @@ from PySide6.QtWidgets import (
 )
 
 from ..blattvorlagen import STANDARD, Blattvorlage, Blattvorlagen
-from ..layout import Blatt, Linie, Rechteck, Text, blaetter
+from ..layout import (
+    ZEILENABSTAND,
+    Blatt,
+    Linie,
+    Rechteck,
+    Text,
+    blaetter,
+    umbruch_einpassen,
+)
 from ..modell import Projekt
 from .thema import HELL, Farben
 from ..sprachen import u
@@ -123,6 +131,9 @@ class Blattflaeche(QWidget):
         schrift = QFont(self.font())
         schrift.setBold(element.fett)
         schrift.setItalic(element.kursiv)
+        if element.umbruch and not element.drehung:
+            self._text_umgebrochen(maler, element, umriss, schrift, skala)
+            return
         schrift.setPixelSize(self._passende_pixel(element, laenge, skala))
         masse = QFontMetricsF(schrift)
         # Was auch bei kleinster Schrift nicht hineinpasst, wird gekuerzt -
@@ -147,6 +158,50 @@ class Blattflaeche(QWidget):
             maler.drawText(kasten, self._flagge(element.ausrichtung), text)
         else:
             maler.drawText(umriss, self._flagge(element.ausrichtung), text)
+        maler.restore()
+
+    def _text_umgebrochen(
+        self, maler: QPainter, element: Text, umriss, schrift: QFont, skala: float
+    ) -> None:
+        """Text auf mehreren Zeilen, mittig im Kasten.
+
+        Wo umgebrochen wird, rechnet das Layoutmodell - hier werden nur
+        die Masse von Qt beigesteuert. Gemessen wird in Bildpunkten, denn
+        so wird auch gezeichnet.
+        """
+        masse: dict[int, QFontMetricsF] = {}
+
+        def misst(zeile: str, groesse: float) -> float:
+            stufe = max(1, int(groesse))
+            if stufe not in masse:
+                gemessen = QFont(schrift)
+                gemessen.setPixelSize(stufe)
+                masse[stufe] = QFontMetricsF(gemessen)
+            return masse[stufe].horizontalAdvance(zeile)
+
+        gewuenscht = max(1, round(element.groesse * PUNKT_IN_MM * skala))
+        kleinste = max(1, int(KLEINSTE_SCHRIFT * PUNKT_IN_MM * skala))
+        groesse, zeilen = umbruch_einpassen(
+            str(element.text), umriss.width(), umriss.height(),
+            gewuenscht, kleinste, 1, misst,
+        )
+        zeilen = [z for z in zeilen if z.strip()]
+        if not zeilen:
+            return
+
+        schrift.setPixelSize(max(1, int(groesse)))
+        abstand = groesse * ZEILENABSTAND
+        oben = umriss.center().y() - abstand * len(zeilen) / 2
+
+        maler.save()
+        maler.resetTransform()
+        maler.setFont(schrift)
+        maler.setPen(QColor(element.farbe))
+        for i, zeile in enumerate(zeilen):
+            kasten = QRectF(
+                umriss.left(), oben + abstand * i, umriss.width(), abstand
+            )
+            maler.drawText(kasten, self._flagge(element.ausrichtung), zeile)
         maler.restore()
 
     def _passende_pixel(self, element: Text, laenge_px: float, skala: float) -> int:

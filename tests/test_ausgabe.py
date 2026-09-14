@@ -195,6 +195,39 @@ class TestSchriftgroessen(unittest.TestCase):
         text = "\n".join(s.extract_text() for s in PdfReader(str(ziel)).pages)
         self.assertIn("Melderkreis Erdgeschoss West", text)
 
+    def test_der_kabelname_bricht_um_statt_zu_schrumpfen(self):
+        """Im schmalen Block steht er auf mehreren Zeilen."""
+        from verteilerly.layout import ZEILENABSTAND, umbruch_einpassen
+
+        lang = "Melderkreis Erdgeschoss West"
+        breite, hoehe = 18 * PT_JE_MM, 22 * PT_JE_MM
+        groesse, zeilen = umbruch_einpassen(
+            lang, breite, hoehe, 11.0, KLEINSTE_SCHRIFT, 0.25,
+            lambda z, g: stringWidth(z, SCHRIFT, g),
+        )
+        self.assertGreater(len(zeilen), 1)
+        self.assertEqual(" ".join(zeilen), lang)
+        self.assertLessEqual(len(zeilen) * groesse * ZEILENABSTAND, hoehe)
+        for zeile in zeilen:
+            self.assertLessEqual(stringWidth(zeile, SCHRIFT, groesse), breite)
+
+    def test_der_umgebrochene_kabelname_steht_im_pdf(self):
+        ordner = tempfile.TemporaryDirectory()
+        self.addCleanup(ordner.cleanup)
+        ziel = Path(ordner.name) / "umbruch.pdf"
+
+        v = Verteiler.aus_geometrie(1, 2, 10, name="Probe")
+        v.kabel_anlegen("Melderkreis Erdgeschoss West", 1, 1, 2)
+        pdf_schreiben(Projekt(verteiler=v), ziel)
+
+        from pypdf import PdfReader
+
+        text = "\n".join(s.extract_text() for s in PdfReader(str(ziel)).pages)
+        # Umgebrochen steht jedes Wort noch da - gekuerzt waere es weg.
+        for wort in ("Melderkreis", "Erdgeschoss", "West"):
+            with self.subTest(wort=wort):
+                self.assertIn(wort, text)
+
     def test_kein_text_eines_blattes_laeuft_ueber(self):
         """Die Probe aufs Ganze: jedes Feld jedes Blattes nachgemessen."""
         v = Verteiler.aus_geometrie(2, 4, 10, name="Hauptverteiler Technikzentrale")
@@ -206,17 +239,36 @@ class TestSchriftgroessen(unittest.TestCase):
                 ader.bemerkung = "geprüft am 07.09.2026, Schleifenwiderstand i.O."
         projekt = Projekt(verteiler=v, briefkopf={"firma": "Musterfirma GmbH & Co. KG"})
 
+        from verteilerly.layout import ZEILENABSTAND, umbruch_einpassen
+
         for blatt in blaetter(projekt):
             for element in blatt.elemente:
                 if not isinstance(element, Text) or not element.text.strip():
                     continue
                 schrift = SCHRIFT_FETT if element.fett else SCHRIFT
                 breite = element.zeilenlaenge * PT_JE_MM
-                groesse = _passende_groesse(
-                    element.text, schrift, element.groesse, breite
-                )
-                text = _einpassen(element.text, schrift, groesse, breite)
                 with self.subTest(blatt=blatt.titel, text=element.text):
+                    if element.umbruch:
+                        # Ein umgebrochener Text muss in Breite und Hoehe
+                        # passen - eine Zeile zu viel liefe unten hinaus.
+                        groesse, zeilen = umbruch_einpassen(
+                            element.text, breite, element.hoehe * PT_JE_MM,
+                            element.groesse, KLEINSTE_SCHRIFT, 0.25,
+                            lambda z, g: stringWidth(z, schrift, g),
+                        )
+                        for zeile in zeilen:
+                            self.assertLessEqual(
+                                stringWidth(zeile, schrift, groesse), breite
+                            )
+                        self.assertLessEqual(
+                            len(zeilen) * groesse * ZEILENABSTAND,
+                            element.hoehe * PT_JE_MM,
+                        )
+                        continue
+                    groesse = _passende_groesse(
+                        element.text, schrift, element.groesse, breite
+                    )
+                    text = _einpassen(element.text, schrift, groesse, breite)
                     self.assertLessEqual(stringWidth(text, schrift, groesse), breite)
 
 

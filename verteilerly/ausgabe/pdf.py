@@ -14,7 +14,17 @@ from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.pdfgen import canvas
 
 from ..blattvorlagen import STANDARD, Blattvorlage
-from ..layout import MITTE, RECHTS, Blatt, Linie, Rechteck, Text, blaetter
+from ..layout import (
+    MITTE,
+    RECHTS,
+    ZEILENABSTAND,
+    Blatt,
+    Linie,
+    Rechteck,
+    Text,
+    blaetter,
+    umbruch_einpassen,
+)
 from ..modell import Projekt
 from ..version import VERSION
 from . import AusgabeFehler
@@ -119,6 +129,9 @@ def _schriftschnitt(fett: bool, kursiv: bool) -> str:
 def _text(blech: canvas.Canvas, element: Text, hoehe_pt: float) -> None:
     schrift = _schriftschnitt(element.fett, element.kursiv)
     laenge_pt = element.zeilenlaenge * PT_JE_MM
+    if element.umbruch and not element.drehung:
+        _text_umgebrochen(blech, element, schrift, hoehe_pt)
+        return
     groesse = _passende_groesse(str(element.text), schrift, element.groesse, laenge_pt)
     text = _einpassen(str(element.text), schrift, groesse, laenge_pt)
     if not text:
@@ -144,6 +157,42 @@ def _text(blech: canvas.Canvas, element: Text, hoehe_pt: float) -> None:
         blech.drawCentredString(x + breite_pt / 2, grundlinie, text)
     else:
         blech.drawString(x, grundlinie, text)
+
+
+def _text_umgebrochen(
+    blech: canvas.Canvas, element: Text, schrift: str, hoehe_pt: float
+) -> None:
+    """Text auf mehreren Zeilen, mittig im Kasten.
+
+    Wie die Zeilen laufen, rechnet das Layoutmodell; gemessen wird mit
+    den Massen von ReportLab. Gezeichnet werden sie von oben nach unten,
+    zusammen mittig um die Mitte des Kastens.
+    """
+    breite_pt = element.breite * PT_JE_MM
+    hoehe_kasten = element.hoehe * PT_JE_MM
+    groesse, zeilen = umbruch_einpassen(
+        str(element.text), breite_pt, hoehe_kasten, element.groesse,
+        KLEINSTE_SCHRIFT, SCHRITT,
+        lambda zeile, gr: stringWidth(zeile, schrift, gr),
+    )
+    zeilen = [z for z in zeilen if z.strip()]
+    if not zeilen:
+        return
+
+    blech.setFont(schrift, groesse)
+    blech.setFillColor(HexColor(element.farbe))
+    abstand = groesse * ZEILENABSTAND
+    mitte = _y(element.y + element.hoehe / 2, hoehe_pt)
+    oben = mitte + abstand * len(zeilen) / 2
+    x = element.x * PT_JE_MM
+    for i, zeile in enumerate(zeilen):
+        grundlinie = oben - abstand * (i + 0.5) - groesse * 0.35
+        if element.ausrichtung == RECHTS:
+            blech.drawRightString(x + breite_pt, grundlinie, zeile)
+        elif element.ausrichtung == MITTE:
+            blech.drawCentredString(x + breite_pt / 2, grundlinie, zeile)
+        else:
+            blech.drawString(x, grundlinie, zeile)
 
 
 def _text_gedreht(

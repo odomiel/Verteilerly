@@ -91,6 +91,47 @@ class TestBlattfolge(unittest.TestCase):
                     min(e.x for e in beschriftungen), STANDARD.rand, places=6
                 )
 
+    def test_der_kabelname_steht_mitten_im_block(self):
+        """Die Auskunft des Blattes, nicht eine Fussnote in der Ecke."""
+        from verteilerly.layout import (
+            belegungsmasse,
+            kabelbeschriftung_groesse,
+        )
+
+        v = Verteiler.aus_geometrie(1, 4, 10)
+        v.kabel_anlegen("Wohnzimmer Nord", 1, 1, 4)
+        blatt = verteilerbelegungen(Projekt(verteiler=v))[0]
+        name = next(
+            e for e in blatt.elemente
+            if isinstance(e, Text) and e.text == "Wohnzimmer Nord"
+        )
+        masse = belegungsmasse(v.buchten)
+        self.assertEqual(name.ausrichtung, "mitte")
+        self.assertTrue(name.umbruch)
+        # So hoch wie der Block: der Text sitzt damit auch senkrecht mittig.
+        self.assertAlmostEqual(name.hoehe, masse.zelle_hoehe, places=6)
+        self.assertGreater(name.groesse, masse.schrift)
+        self.assertEqual(
+            name.groesse, kabelbeschriftung_groesse(masse.zelle_hoehe)
+        )
+
+    def test_die_kabelschrift_bleibt_im_block(self):
+        """Eine Zeile darf nicht hoeher werden als der Block selbst."""
+        from verteilerly.layout import (
+            PUNKT_IN_MM,
+            ZEILENABSTAND,
+            kabelbeschriftung_groesse,
+        )
+
+        for hoehe in (3.0, 6.0, 9.0, 22.0):
+            with self.subTest(hoehe=hoehe):
+                groesse = kabelbeschriftung_groesse(hoehe)
+                self.assertLessEqual(groesse, STANDARD.schrift_mittel)
+                if groesse > STANDARD.schrift_klein:
+                    self.assertLessEqual(
+                        groesse * ZEILENABSTAND * PUNKT_IN_MM, hoehe
+                    )
+
     def test_die_buchten_stehen_nicht_uebereinander(self):
         """Verteilt wird in die Breite, nicht gestapelt."""
         from verteilerly.layout import Rechteck
@@ -1055,3 +1096,84 @@ class TestDeckblattOhneSchriftfeld(unittest.TestCase):
         for blatt in blaetter(projekt)[1:]:
             with self.subTest(blatt=blatt.titel):
                 self.assertIn("Musterfirma", _texte(blatt))
+
+
+class TestUmbruch(unittest.TestCase):
+    """Wie ein Text auf mehrere Zeilen kommt.
+
+    Gemessen wird hier mit einer festen Zeichenbreite - das Layoutmodell
+    kennt keine Schriften, es bekommt das Mass gereicht.
+    """
+
+    def setUp(self):
+        from verteilerly.layout import umbruch_einpassen, zeilen_umbrechen
+
+        self.umbrechen = zeilen_umbrechen
+        self.einpassen = umbruch_einpassen
+        self.misst = lambda zeile, groesse=1.0: len(zeile) * groesse * 0.6
+
+    def test_umgebrochen_wird_am_leerzeichen(self):
+        zeilen = self.umbrechen(
+            "Wohnzimmer Nord", 7, lambda z: self.misst(z)
+        )
+        self.assertEqual(zeilen, ["Wohnzimmer", "Nord"])
+
+    def test_auch_der_schraegstrich_taugt_als_stelle(self):
+        """Kabelnamen gliedern sich selbst: K12/3-4."""
+        zeilen = self.umbrechen("K12/3-4", 3, lambda z: self.misst(z))
+        self.assertEqual(zeilen, ["K12/", "3-4"])
+
+    def test_ein_wort_das_nirgends_passt_wird_hart_getrennt(self):
+        zeilen = self.umbrechen(
+            "Unteilbarkeitserklaerung", 6, lambda z: self.misst(z)
+        )
+        self.assertTrue(len(zeilen) > 1)
+        self.assertEqual("".join(zeilen), "Unteilbarkeitserklaerung")
+        for zeile in zeilen:
+            self.assertLessEqual(self.misst(zeile), 6)
+
+    def test_was_passt_bleibt_auf_einer_zeile(self):
+        self.assertEqual(self.umbrechen("Kurz", 60, self.misst), ["Kurz"])
+
+    def test_die_schrift_schrumpft_erst_wenn_die_zeilen_nicht_reichen(self):
+        """Ein hoher Kasten nimmt lieber zwei Zeilen als kleine Schrift."""
+        groesse, zeilen = self.einpassen(
+            "Wohnzimmer Nord", 20, 10, 3.0, 1.0, 0.25, self.misst
+        )
+        self.assertEqual(groesse, 3.0)
+        self.assertEqual(zeilen, ["Wohnzimmer", "Nord"])
+
+    def test_ein_flacher_kasten_zwingt_zur_kleineren_schrift(self):
+        groesse, zeilen = self.einpassen(
+            "Wohnzimmer Nord", 20, 3.5, 3.0, 1.0, 0.25, self.misst
+        )
+        self.assertLess(groesse, 3.0)
+        self.assertLessEqual(len(zeilen) * groesse * 1.15, 3.5)
+
+    def test_was_auch_klein_nicht_passt_endet_mit_punkten(self):
+        groesse, zeilen = self.einpassen(
+            "Ein sehr langer Kabelname", 3, 1.5, 3.0, 1.0, 0.25, self.misst
+        )
+        self.assertEqual(groesse, 1.0)
+        self.assertEqual(len(zeilen), 1)
+        self.assertTrue(zeilen[0].endswith("…"))
+        self.assertLessEqual(self.misst(zeilen[0], 1.0), 3)
+
+    def test_lieber_eine_stufe_kleiner_als_mitten_im_wort_getrennt(self):
+        """„Melderkre-is" liest sich schlechter als eine kleinere Schrift."""
+        groesse, zeilen = self.einpassen(
+            "Melderkreis Erdgeschoss", 8, 20, 3.0, 1.0, 0.25, self.misst
+        )
+        self.assertEqual(zeilen, ["Melderkreis", "Erdgeschoss"])
+        self.assertLess(groesse, 3.0)
+
+    def test_passt_kein_wort_wird_doch_getrennt(self):
+        """Irgendwann hilft nur noch der harte Schnitt."""
+        groesse, zeilen = self.einpassen(
+            "Unteilbarkeitserklaerung", 3, 20, 3.0, 1.0, 0.25, self.misst
+        )
+        self.assertGreater(len(zeilen), 1)
+        self.assertEqual("".join(zeilen), "Unteilbarkeitserklaerung")
+
+    def test_leerer_text_bleibt_leer(self):
+        self.assertEqual(self.umbrechen("", 10, self.misst), [])

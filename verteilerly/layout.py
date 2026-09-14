@@ -47,9 +47,24 @@ FUELLUNG_KABEL = "#EFEFEF"
 # Wie breit eine DA-Zelle der Verteilerbelegung hoechstens werden darf,
 # gemessen an ihrer Hoehe: breiter gezogen wird sie zum Balken.
 BREITE_HOECHSTENS = 2.0
+# Wie viel Luft im Kabelblock der Verteilerbelegung rings um den Namen
+# bleibt, damit er nicht am Rahmen klebt.
+POLSTER_KABEL = 0.6
 # Ab wie vielen Leisten je Bucht diese ein eigenes Blatt bekommt.
 # Zwei lange Buchten nebeneinander waeren nur noch Striche.
 LEISTEN_JE_BLATT = 13
+
+# Ein Punkt ist 1/72 Zoll hoch; Schriftgroessen stehen in Punkt, das
+# Blatt in Millimetern.
+PUNKT_IN_MM = 25.4 / 72.0
+# Wie weit die Grundlinien eines umgebrochenen Textes auseinanderliegen,
+# gemessen an der Schriftgroesse.
+ZEILENABSTAND = 1.15
+# Womit eine Zeile endet, die auch dann nicht passt.
+KUERZUNG = "…"
+# Wo eine Zeile umbrechen darf: nach einem Leerzeichen und nach den
+# Zeichen, die in Kabelnamen ohnehin gliedern (K12/3-4, Haus_Nord).
+TRENNZEICHEN = " -/\\_·,;"
 
 # Wie viel der linken Schriftfeldhaelfte die Beschriftungen bekommen
 # (Bauart "beispiel"). "Erstellt", "Geprueft" und "Verteiler Nr." sind
@@ -104,11 +119,139 @@ class Text:
     drehung: float = 0.0
     # Am Ende, damit die vorhandenen Aufrufe mit festen Stellen bleiben.
     kursiv: bool = False
+    #: Darf der Text auf mehrere Zeilen umbrechen und dabei die Schrift
+    #: so gross nehmen, wie der Kasten sie traegt? Ohne das bleibt es bei
+    #: einer Zeile, die notfalls schrumpft.
+    umbruch: bool = False
 
     @property
     def zeilenlaenge(self) -> float:
         """Wie viel Platz die Zeile hat - quer gedreht ist das die Hoehe."""
         return self.hoehe if self.drehung else self.breite
+
+
+def _stuecke(text: str) -> list[str]:
+    """Zerlegt den Text an den Stellen, an denen eine Zeile enden darf.
+
+    Jedes Stueck traegt sein Trennzeichen am Ende; aneinandergehaengt
+    ergeben sie wieder den Text.
+    """
+    stuecke: list[str] = []
+    laufend = ""
+    for zeichen in text:
+        laufend += zeichen
+        if zeichen in TRENNZEICHEN:
+            stuecke.append(laufend)
+            laufend = ""
+    if laufend:
+        stuecke.append(laufend)
+    return stuecke
+
+
+def _laengster_anfang(text: str, laenge: float, misst) -> str:
+    """Das laengste Stueck vom Anfang, das noch in die Zeile passt."""
+    passend = text[:1]
+    for bis in range(2, len(text) + 1):
+        if misst(text[:bis].rstrip()) > laenge:
+            break
+        passend = text[:bis]
+    return passend
+
+
+def zeilen_umbrechen(text: str, laenge: float, misst) -> list[str]:
+    """Bricht einen Text auf Zeilen von hoechstens ``laenge`` um.
+
+    Gemessen wird nicht hier: ``misst(zeile)`` gibt zurueck, wie breit
+    eine Zeile wird. So bleibt das Layoutmodell ohne Qt und ohne
+    ReportLab, und beide Zeichner brechen dennoch an denselben Stellen
+    um. Ein Wort, das allein nicht passt, wird hart getrennt -
+    lieber mitten im Namen als ueber den Rand.
+    """
+    zeilen: list[str] = []
+    laufend = ""
+    for stueck in _stuecke(str(text)):
+        if laufend and misst((laufend + stueck).rstrip()) > laenge:
+            zeilen.append(laufend.rstrip())
+            laufend = stueck.lstrip()
+        else:
+            laufend += stueck
+        while len(laufend.strip()) > 1 and misst(laufend.rstrip()) > laenge:
+            anfang = _laengster_anfang(laufend, laenge, misst)
+            if len(anfang) >= len(laufend):
+                break
+            zeilen.append(anfang.rstrip())
+            laufend = laufend[len(anfang):].lstrip()
+    if laufend.strip():
+        zeilen.append(laufend.rstrip())
+    return zeilen
+
+
+def _gekuerzt(zeile: str, laenge: float, misst) -> str:
+    """Setzt Punkte ans Ende, wenn der Rest nicht mehr aufs Blatt passt."""
+    if misst(zeile + KUERZUNG) <= laenge:
+        return zeile + KUERZUNG
+    kurz = zeile
+    while kurz and misst(kurz.rstrip() + KUERZUNG) > laenge:
+        kurz = kurz[:-1]
+    return (kurz.rstrip() + KUERZUNG) if kurz.strip() else KUERZUNG
+
+
+def umbruch_einpassen(
+    text: str,
+    breite: float,
+    hoehe: float,
+    groesse: float,
+    kleinste: float,
+    schritt: float,
+    misst,
+) -> tuple[float, list[str]]:
+    """Die groesste Schrift, mit der der Text umgebrochen ins Feld passt.
+
+    ``misst(zeile, groesse)`` gibt die Breite einer Zeile; Kastenmasse,
+    Schriftgroesse und dieses Mass stehen in derselben Einheit - das PDF
+    rechnet in Punkt, die Vorschau in Bildpunkten. Zurueck kommen die
+    gewaehlte Groesse und die fertigen Zeilen. Passt es auch bei der
+    kleinsten Schrift nicht, bleibt stehen, was in den Kasten geht, und
+    die letzte Zeile endet mit Punkten.
+    """
+    text = str(text)
+    if not text.strip() or breite <= 0 or hoehe <= 0:
+        return groesse, [text]
+
+    stuecke = [st.rstrip() for st in _stuecke(text) if st.strip()]
+
+    def versuchen(ganze_woerter: bool) -> tuple[float, list[str]] | None:
+        """Die groesste Schrift, mit der es aufgeht - von oben herab."""
+        gewaehlt = max(kleinste, groesse)
+        while True:
+            if ganze_woerter and any(
+                misst(st, gewaehlt) > breite for st in stuecke
+            ):
+                zeilen = None
+            else:
+                zeilen = zeilen_umbrechen(
+                    text, breite, lambda z: misst(z, gewaehlt)
+                )
+                if len(zeilen) * gewaehlt * ZEILENABSTAND <= hoehe:
+                    return gewaehlt, zeilen
+            if gewaehlt <= kleinste:
+                return None
+            gewaehlt = max(kleinste, gewaehlt - schritt)
+
+    # Erst so, dass kein Wort mitten durchgeschnitten wird: eine Stufe
+    # kleiner zu setzen ist lesbarer als "Melderkre-is".
+    ergebnis = versuchen(True) or versuchen(False)
+    if ergebnis:
+        return ergebnis
+    zeilen = zeilen_umbrechen(text, breite, lambda z: misst(z, kleinste))
+
+    passen = max(1, int(hoehe / (kleinste * ZEILENABSTAND)))
+    if len(zeilen) > passen:
+        zeilen = zeilen[:passen]
+        zeilen[-1] = _gekuerzt(
+            zeilen[-1], breite, lambda z: misst(z, kleinste)
+        )
+    return kleinste, zeilen
 
 
 @dataclass
@@ -743,6 +886,21 @@ def belegungsmasse(
     )
 
 
+def kabelbeschriftung_groesse(
+    zelle_hoehe: float, vorlage: Blattvorlage = STANDARD
+) -> float:
+    """Wie gross der Kabelname im Block hoechstens werden darf.
+
+    Der Block ist so hoch wie die Zelle; eine Zeile darin braucht
+    ``ZEILENABSTAND`` mal ihre Schriftgroesse. Mehr als die mittlere
+    Schrift der Vorlage wird es nicht - ein Kabelname ist keine
+    Ueberschrift. Die Mappe fragt dieselbe Stelle.
+    """
+    platz = max(zelle_hoehe - 2 * POLSTER_KABEL, 0.5)
+    hoechstens = platz / PUNKT_IN_MM / ZEILENABSTAND
+    return max(min(vorlage.schrift_mittel, hoechstens), vorlage.schrift_klein)
+
+
 def verteilerbelegung(
     projekt: Projekt,
     buchten: list[Bucht] | None = None,
@@ -778,6 +936,7 @@ def verteilerbelegung(
     label_b = masse.label_breite
     luft_l, luft_r = masse.luft_leisten, masse.luft_buchten
     schrift = masse.schrift
+    kabelschrift = kabelbeschriftung_groesse(zelle_h, vorlage)
     breiten = [
         label_b + max((l.da_anzahl for l in b.leisten), default=0) * zelle_b
         for b in buchten
@@ -821,7 +980,13 @@ def verteilerbelegung(
             beschriftung = kabel.beschriftung
             if kabel.gekuerzt and abschnitt is kabel.abschnitte[-1]:
                 beschriftung += " (gekürzt)"
-            blatt.text(bx + 1, ky, bb - 2, zelle_h * 0.62, beschriftung, schrift)
+            # Mitten in den Block, so gross wie er es traegt, notfalls
+            # auf mehrere Zeilen: der Kabelname ist die Auskunft dieses
+            # Blattes, nicht eine Fussnote in seiner linken oberen Ecke.
+            blatt.text(
+                bx + POLSTER_KABEL, ky, bb - 2 * POLSTER_KABEL, zelle_h,
+                beschriftung, kabelschrift, MITTE, umbruch=True,
+            )
 
     # Die DA-Nummern zuletzt, damit sie auch auf einem Kabelblock stehen.
     # Keine Vorlage fuehrt sie noch - die Zahlen 1 bis 10 in jeder Zelle

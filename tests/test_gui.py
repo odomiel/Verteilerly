@@ -1144,6 +1144,75 @@ class TestVorschau(unittest.TestCase):
 
 
 @unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
+class TestKabelnameInDerBelegung(unittest.TestCase):
+    """Mittig im Block, umgebrochen statt abgeschnitten.
+
+    Gemessen wird am gezeichneten Bild: nur so ist zu sehen, dass die
+    Vorschau dasselbe tut wie das PDF - nicht nur, dass das Modell es so
+    beschreibt.
+    """
+
+    def _tinte(self, beschriftung, da):
+        """Zeichnet die Belegung und misst die Schrift im Kabelblock.
+
+        Zurueck kommen die Zahl der Zeilen (Baender aus dunklen Zeilen),
+        die Mitte der Schrift und die Mitte des Blocks - alles in
+        Bildpunkten des Fensters.
+        """
+        from verteilerly.gui.vorschau import Blattflaeche
+        from verteilerly.layout import Text as Blatttext
+        from verteilerly.layout import verteilerbelegungen
+
+        v = Verteiler.aus_geometrie(1, 4, 10, name="Muster")
+        v.kabel_anlegen(beschriftung, 1, 1, da)
+        blatt = verteilerbelegungen(Projekt(verteiler=v))[0]
+        flaeche = Blattflaeche()
+        self.addCleanup(flaeche.close)
+        flaeche.resize(800, 1100)
+        flaeche.blatt_setzen(blatt)
+        bild = flaeche.grab().toImage()
+
+        skala = flaeche._skala(blatt)
+        links = (flaeche.width() - blatt.breite * skala) / 2
+        oben = (flaeche.height() - blatt.hoehe * skala) / 2
+        feld = next(
+            e for e in blatt.elemente
+            if isinstance(e, Blatttext) and e.text == beschriftung
+        )
+        # Ein Bildpunkt Abstand: der Rahmen des Blocks ist auch dunkel.
+        x0 = int(links + feld.x * skala) + 1
+        x1 = int(links + (feld.x + feld.breite) * skala) - 1
+        y0 = int(oben + feld.y * skala) + 2
+        y1 = int(oben + (feld.y + feld.hoehe) * skala) - 2
+
+        baender, im_band, tinte = 0, False, []
+        for y in range(y0, y1):
+            dunkel = [
+                x for x in range(x0, x1)
+                if bild.pixelColor(x, y).lightness() < 120
+            ]
+            if dunkel and not im_band:
+                baender += 1
+            im_band = bool(dunkel)
+            tinte.extend(dunkel)
+        self.assertTrue(tinte, "keine Schrift im Kabelblock")
+        return baender, (min(tinte) + max(tinte)) / 2, (x0 + x1) / 2
+
+    def test_ein_kurzer_name_steht_auf_einer_zeile_und_mittig(self):
+        zeilen, mitte, blockmitte = self._tinte("Haus Nord", 4)
+        self.assertEqual(zeilen, 1)
+        self.assertAlmostEqual(mitte, blockmitte, delta=2)
+
+    def test_ein_langer_name_bricht_um(self):
+        """Früher schrumpfte er auf eine unleserliche Zeile."""
+        zeilen, mitte, blockmitte = self._tinte(
+            "Melderkreis Erdgeschoss West", 2
+        )
+        self.assertGreater(zeilen, 1)
+        self.assertAlmostEqual(mitte, blockmitte, delta=2)
+
+
+@unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
 class TestMenuezustaende(unittest.TestCase):
     """Ausgegraut ist, was gerade nicht geht."""
 

@@ -276,6 +276,18 @@ mitgelieferte Vorlage mehr; wer sie will, setzt `da_nummern: true` in
 seiner Blattvorlage. Im Bearbeitungsmodus bleibt jede Leiste unterteilt:
 dort wird auf die einzelne Doppelader geklickt.
 
+Der **Kabelname steht mitten im Block**, waagerecht wie senkrecht, und so
+groß, wie dieser ihn trägt (höchstens `schrift_mittel` der Blattvorlage;
+`kabelbeschriftung_groesse()` rechnet es aus, Blatt und Mappe fragen
+dieselbe Stelle). Passt er nicht in eine Zeile, wird **umgebrochen** statt
+geschrumpft: `zeilen_umbrechen()` und `umbruch_einpassen()` in `layout.py`
+brechen an Leerzeichen und an `/`, `-`, `_` — gemessen wird dabei nicht
+dort, sondern von dem, der zeichnet: beide Zeichner reichen ihre eigene
+Schriftmessung als `misst(zeile, groesse)` hinein und brechen so an
+denselben Stellen. Lieber eine Stufe kleiner als ein Wort mitten
+durchgeschnitten; erst danach wird hart getrennt und zuletzt gekürzt. Ein
+`Text` mit `umbruch=True` sagt, dass ein Feld diesen Weg geht.
+
 Auf dem **Leistenblatt** gilt dasselbe für die Kabelspalte: die
 Zeilenstriche enden davor. Das Kabel steht dort als ein Block über seine
 Zeilen, und was frei bleibt, ist eine durchgehende Fläche.
