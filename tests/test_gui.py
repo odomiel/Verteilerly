@@ -968,6 +968,56 @@ class TestThema(unittest.TestCase):
                 self.assertIn(f"background: {farben.akzent}", blatt)
                 self.assertIn(f"background: {farben.flaeche}", blatt)
 
+    def test_die_pfeile_der_dateidialoge_sind_zu_sehen(self):
+        """Qts eigene Bilder sind dunkel - wir malen sie selbst."""
+        from PySide6.QtGui import QColor
+        from PySide6.QtWidgets import QStyle
+        from verteilerly.gui import thema
+
+        vorher_blatt = ANWENDUNG.styleSheet()
+        vorher_palette = ANWENDUNG.palette()
+        self.addCleanup(ANWENDUNG.setPalette, vorher_palette)
+        self.addCleanup(ANWENDUNG.setStyleSheet, vorher_blatt)
+
+        for satz in ("dunkel", "hell"):
+            with self.subTest(satz=satz):
+                farben = thema.SAETZE[satz]
+                thema.anwenden(ANWENDUNG, farben)
+                for bild in (
+                    QStyle.StandardPixmap.SP_FileDialogBack,
+                    QStyle.StandardPixmap.SP_FileDialogToParent,
+                    QStyle.StandardPixmap.SP_ArrowForward,
+                ):
+                    symbol = ANWENDUNG.style().standardIcon(bild)
+                    self.assertFalse(symbol.isNull())
+                    abbild = symbol.pixmap(16, 16).toImage()
+                    farbig = [
+                        QColor(abbild.pixel(x, y))
+                        for x in range(abbild.width())
+                        for y in range(abbild.height())
+                        if QColor(abbild.pixelColor(x, y)).alpha() > 200
+                    ]
+                    self.assertTrue(farbig, "der Pfeil ist leer")
+                    soll = QColor(farben.schrift)
+                    # Gemalt wird in der Schriftfarbe - hell im dunklen Satz.
+                    self.assertLess(
+                        abs(farbig[0].lightness() - soll.lightness()), 40,
+                        f"{farbig[0].name()} statt {soll.name()}",
+                    )
+
+    def test_andere_standardbilder_bleiben_wie_sie_sind(self):
+        """Nur die Pfeile werden ersetzt, nicht Qts ganzer Bildersatz."""
+        from PySide6.QtWidgets import QStyle
+        from verteilerly.gui import thema
+
+        vorher_palette = ANWENDUNG.palette()
+        self.addCleanup(ANWENDUNG.setPalette, vorher_palette)
+        thema.anwenden(ANWENDUNG, thema.DUNKEL)
+        symbol = ANWENDUNG.style().standardIcon(
+            QStyle.StandardPixmap.SP_DirIcon
+        )
+        self.assertFalse(symbol.isNull())
+
     def test_auswahlknoepfe_auch(self):
         """Die Kugel muss zu sehen sein, sonst rät man, was gewählt ist."""
         from verteilerly.gui.thema import DUNKEL, HELL, stilblatt

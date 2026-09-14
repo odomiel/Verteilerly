@@ -461,6 +461,13 @@ Felder untereinander —, baut der Dialog ihn in ein eigenes Widget und reicht
 es an `inhalt_rollbar()` weiter: der Inhalt rollt, die Knopfleiste bleibt
 außerhalb des Rollbereichs stehen. Gerollt wird nur, wenn es sein muss.
 
+**Was Qt selbst mitbringt, folgt dem Erscheinungsbild** (`gui/thema.py`): Ankreuzfelder und Auswahlknöpfe bekommen eigene Regeln im Stilblatt,
+weil Fusion sie im dunklen Satz dunkel auf dunkel zeichnet. Qts
+**Standardbilder** sind feste Dateien in dunklem Grau — die Pfeile der Datei-
+und Exportdialoge (zurück, vor, eine Ebene höher) wären darauf kaum zu
+erkennen. `PfeilStil`, ein `QProxyStyle` um Fusion, malt sie deshalb selbst,
+in der Schriftfarbe des Satzes.
+
 **Deutsch oder Englisch** (`sprachen.py`). *Einstellungen ▸ Sprache*
 stellt die Oberfläche um — Menüs, Dialoge, Knöpfe, Hinweise, Meldungen und
 Spaltenköpfe. Die Wahl steht in der `Verteilerly.conf` und gilt **nach einem

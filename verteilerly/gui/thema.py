@@ -8,8 +8,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from PySide6.QtGui import QColor, QPalette
-from PySide6.QtWidgets import QApplication
+from PySide6.QtCore import QPointF, Qt
+from PySide6.QtGui import QColor, QIcon, QPainter, QPalette, QPixmap, QPolygonF
+from PySide6.QtWidgets import QApplication, QProxyStyle, QStyle, QStyleFactory
 
 
 @dataclass(frozen=True)
@@ -61,6 +62,78 @@ DUNKEL = Farben(
 )
 
 SAETZE = {"hell": HELL, "dunkel": DUNKEL}
+
+
+# Welche Standardbilder wir selbst malen und in welche Richtung sie
+# zeigen. Qt bringt sie als feste Bilddateien mit - dunkle Pfeile, die
+# im dunklen Satz auf dunklem Grund kaum zu sehen sind.
+PFEILE = {
+    QStyle.StandardPixmap.SP_ArrowBack: "links",
+    QStyle.StandardPixmap.SP_ArrowForward: "rechts",
+    QStyle.StandardPixmap.SP_ArrowLeft: "links",
+    QStyle.StandardPixmap.SP_ArrowRight: "rechts",
+    QStyle.StandardPixmap.SP_ArrowUp: "hoch",
+    QStyle.StandardPixmap.SP_ArrowDown: "runter",
+    QStyle.StandardPixmap.SP_FileDialogBack: "links",
+    QStyle.StandardPixmap.SP_FileDialogToParent: "hoch",
+}
+PFEILGROESSEN = (16, 24, 32, 48)
+
+
+def pfeilbild(farbe: QColor, richtung: str, kante: int) -> QPixmap:
+    """Ein Pfeil als Bild - gezeichnet, nicht geladen.
+
+    Gezeichnet in der Schriftfarbe des Satzes: damit folgt er dem
+    Erscheinungsbild, statt als dunkler Fleck auf dunklem Grund zu
+    liegen.
+    """
+    bild = QPixmap(kante, kante)
+    bild.fill(Qt.GlobalColor.transparent)
+    maler = QPainter(bild)
+    maler.setRenderHint(QPainter.RenderHint.Antialiasing)
+    maler.setPen(Qt.PenStyle.NoPen)
+    maler.setBrush(farbe)
+    # Ein gleichschenkliges Dreieck, mittig, mit Luft ringsum.
+    rand = kante * 0.28
+    mitte = kante / 2
+    spitze = kante - rand
+    punkte = {
+        "links": [(rand, mitte), (spitze, rand), (spitze, kante - rand)],
+        "rechts": [(spitze, mitte), (rand, rand), (rand, kante - rand)],
+        "hoch": [(mitte, rand), (rand, spitze), (kante - rand, spitze)],
+        "runter": [(mitte, spitze), (rand, rand), (kante - rand, rand)],
+    }[richtung]
+    maler.drawPolygon(QPolygonF([QPointF(x, y) for x, y in punkte]))
+    maler.end()
+    return bild
+
+
+def pfeilsymbol(farbe: QColor, richtung: str) -> QIcon:
+    """Derselbe Pfeil in mehreren Groessen - Qt sucht sich die passende."""
+    symbol = QIcon()
+    for kante in PFEILGROESSEN:
+        symbol.addPixmap(pfeilbild(farbe, richtung, kante))
+    return symbol
+
+
+class PfeilStil(QProxyStyle):
+    """Fusion, aber mit eigenen Pfeilen.
+
+    Qts Standardbilder sind feste Dateien in dunklem Grau. Im dunklen
+    Satz sind die Pfeile des Dateidialogs - zurueck, vor, eine Ebene
+    hoeher - darauf kaum zu erkennen. Sie werden deshalb hier gemalt,
+    in der Schriftfarbe des Satzes.
+    """
+
+    def __init__(self, farben: Farben) -> None:
+        super().__init__(QStyleFactory.create("Fusion"))
+        self.farben = farben
+
+    def standardIcon(self, standardIcon, option=None, widget=None):  # noqa: N802
+        richtung = PFEILE.get(standardIcon)
+        if richtung is None:
+            return super().standardIcon(standardIcon, option, widget)
+        return pfeilsymbol(self.farben.q("schrift"), richtung)
 
 
 def palette_bauen(farben: Farben) -> QPalette:
@@ -195,7 +268,11 @@ QPushButton:default {{
 
 
 def anwenden(anwendung: QApplication, farben: Farben) -> None:
-    """Legt Palette und Stilblatt auf die Anwendung."""
-    anwendung.setStyle("Fusion")
+    """Legt Palette, Stilblatt und die eigenen Pfeile auf die Anwendung."""
+    stil = PfeilStil(farben)
+    # Qt uebernimmt den Stil, aber ein Verweis schadet nicht: ohne ihn
+    # haengt er allein am C++-Objekt.
+    anwendung._stil = stil
+    anwendung.setStyle(stil)
     anwendung.setPalette(palette_bauen(farben))
     anwendung.setStyleSheet(stilblatt(farben))
