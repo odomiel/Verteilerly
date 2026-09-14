@@ -386,6 +386,9 @@ Die Blätter entstehen in `layout.py` als Zeichenanweisungen in Millimetern
 — ohne Qt und ohne PDF-Bibliothek. Die Vorschau zeichnet dieses Modell mit
 QPainter, die PDF-Ausgabe mit ReportLab: eine einzige Quelle für das
 Blattbild, Vorschau und Ausdruck können nicht auseinanderlaufen.
+
+Die drei Wege aus dem Programm heraus stehen unter *Datei ▸ Exportieren*
+beieinander — PDF (Strg+E), Excel-Mappe und CSV.
 Die **Excel-Mappe trägt beides**: vorn die Blätter im Blattbild —
 Deckblatt, Verteilerbelegung und je Leiste eines, gesetzt nach der
 gewählten Blattvorlage —, dahinter dieselben Daten als Tabelle (*Daten je

@@ -206,12 +206,22 @@ class Hauptfenster(QMainWindow):
             hinweis=u("Den Verteiler unter einem anderen Namen speichern"),
         )
         datei.addSeparator()
-        self.aktion_pdf = aktion(u("Als &PDF…"), self.pdf_ausgeben, "Ctrl+E", True,
-                                 hinweis=u("Deckblatt, Verteilerbelegung und Leistenblätter"))
-        self.aktion_xlsx = aktion(u("Als &Excel-Mappe…"), self.xlsx_ausgeben,
-                                  hinweis=u("Die Belegungsdaten je Ader als xlsx"))
-        self.aktion_csv = aktion(u("Als &CSV…"), self.csv_ausgeben,
-                                 hinweis=u("Die Belegungsdaten je Ader als CSV"))
+        # Drei Wege aus dem Programm heraus - sie gehören zusammen und
+        # stehen darum in einem eigenen Untermenü.
+        export = datei.addMenu(u("&Exportieren"))
+        export.setToolTipsVisible(True)
+        self.aktion_pdf = aktion(
+            u("Als &PDF…"), self.pdf_ausgeben, "Ctrl+E", True, export,
+            hinweis=u("Deckblatt, Verteilerbelegung und Leistenblätter"),
+        )
+        self.aktion_xlsx = aktion(
+            u("Als &Excel-Mappe…"), self.xlsx_ausgeben, menue=export,
+            hinweis=u("Die Blätter im Blattbild, dahinter die Daten je Ader"),
+        )
+        self.aktion_csv = aktion(
+            u("Als &CSV…"), self.csv_ausgeben, menue=export,
+            hinweis=u("Belegung, Kabel und Projektdaten als Textdatei"),
+        )
         datei.addSeparator()
         aktion(u("&Beenden"), self.close, "Ctrl+Q")
 

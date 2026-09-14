@@ -1608,6 +1608,33 @@ class TestMenuezustaende(unittest.TestCase):
 
         f.vorschau.blattvorlage_setzen(vorher)
 
+    def test_die_ausgabe_steht_in_einem_untermenue(self):
+        """Drei Wege aus dem Programm heraus - sie gehören zusammen."""
+        from PySide6.QtWidgets import QMenu
+
+        menues = {
+            menue.title().replace("&", ""): menue
+            for menue in self.fenster.menuBar().findChildren(QMenu)
+        }
+        self.assertIn("Exportieren", menues)
+        eintraege = [
+            eintrag.text().replace("&", "")
+            for eintrag in menues["Exportieren"].actions()
+        ]
+        self.assertEqual(eintraege, ["Als PDF…", "Als Excel-Mappe…", "Als CSV…"])
+        # Im Dateimenü stehen sie dann nicht noch einmal.
+        datei = [
+            eintrag.text().replace("&", "")
+            for eintrag in menues["Datei"].actions() if eintrag.text()
+        ]
+        self.assertIn("Exportieren", datei)
+        self.assertNotIn("Als PDF…", datei)
+        # Der Werkzeugleiste bleibt der PDF-Knopf erhalten.
+        from PySide6.QtWidgets import QToolBar
+
+        leiste = self.fenster.findChild(QToolBar)
+        self.assertIn(self.fenster.aktion_pdf, leiste.actions())
+
     def test_einstellungsmenue_sammelt_die_einstellungen(self):
         """Was in der Verteilerly.conf steht, steht auch unter Einstellungen."""
         from PySide6.QtWidgets import QMenu

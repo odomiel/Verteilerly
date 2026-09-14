@@ -252,8 +252,6 @@ Eine gespeicherte Verteilerdatei öffnen: Open a saved frame file
 Den Verteiler speichern: Save the frame
 Den Verteiler unter einem anderen Namen speichern: Save the frame under a different name
 Deckblatt, Verteilerbelegung und Leistenblätter: Cover sheet, frame layout and strip sheets
-Die Belegungsdaten je Ader als xlsx: The assignment data per wire as xlsx
-Die Belegungsdaten je Ader als CSV: The assignment data per wire as CSV
 Ein Kabel auf eine Leiste legen: Put a cable on a strip
 Beschriftung, Kabeltyp und Größe eines aufgelegten Kabels ändern: Change label, cable type and size of
   a terminated cable
@@ -466,3 +464,7 @@ ohne Leiste: no strip
 Projektdaten · eigenes Feld: Project data · own field
 Verteilername: Frame name
 Verteilernummer: Frame number
+'&Exportieren': '&Export'
+Die Blätter im Blattbild, dahinter die Daten je Ader: The sheets in the sheet layout, behind them the
+  data per wire
+Belegung, Kabel und Projektdaten als Textdatei: Assignment, cables and project data as a text file
