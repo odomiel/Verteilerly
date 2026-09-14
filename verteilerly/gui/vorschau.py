@@ -23,6 +23,7 @@ from ..blattvorlagen import STANDARD, Blattvorlage, Blattvorlagen
 from ..layout import Blatt, Linie, Rechteck, Text, blaetter
 from ..modell import Projekt
 from .thema import HELL, Farben
+from ..sprachen import u
 
 PUNKT_IN_MM = 25.4 / 72.0
 PAPIERRAND = 10  # Pixel um das Blatt herum
@@ -63,7 +64,7 @@ class Blattflaeche(QWidget):
         if self.blatt is None:
             maler.setPen(self.farben.q("schrift_leise"))
             maler.drawText(
-                self.rect(), Qt.AlignmentFlag.AlignCenter, "Keine Vorschau."
+                self.rect(), Qt.AlignmentFlag.AlignCenter, u("Keine Vorschau.")
             )
             return
 
@@ -204,8 +205,8 @@ class Vorschau(QWidget):
         # welche gerade gilt.
         self.vorlagenname = QLabel("")
         self.vorlagenname.setToolTip(
-            "Wie das Blatt aussieht — Spalten, Schriftgrößen, Ränder. "
-            "Zu ändern unter Einstellungen ▸ Blattvorlage."
+            u("Wie das Blatt aussieht — Spalten, Schriftgrößen, Ränder. "
+            "Zu ändern unter Einstellungen ▸ Blattvorlage.")
         )
 
         self.auswahl = QComboBox()
@@ -223,7 +224,7 @@ class Vorschau(QWidget):
 
         kopf = QHBoxLayout()
         kopf.setContentsMargins(0, 0, 0, 6)
-        kopf.addWidget(QLabel("Blatt:"))
+        kopf.addWidget(QLabel(u("Blatt:")))
         kopf.addWidget(self.auswahl, 1)
         kopf.addWidget(self.zurueck)
         kopf.addWidget(self.vor)
@@ -231,7 +232,7 @@ class Vorschau(QWidget):
 
         zweite = QHBoxLayout()
         zweite.setContentsMargins(0, 0, 0, 6)
-        zweite.addWidget(QLabel("Blattvorlage:"))
+        zweite.addWidget(QLabel(u("Blattvorlage:")))
         zweite.addWidget(self.vorlagenname, 1)
 
         self.flaeche = Blattflaeche()
@@ -298,7 +299,7 @@ class Vorschau(QWidget):
             self.zaehler.setText("")
         else:
             self.flaeche.blatt_setzen(self.blaetter[index])
-            self.zaehler.setText(f"{index + 1} / {gesamt}")
+            self.zaehler.setText(u("{0} / {1}").format(index + 1, gesamt))
         self.zurueck.setEnabled(index > 0)
         self.vor.setEnabled(0 <= index < gesamt - 1)
         # Ohne Blätter gibt es nichts zu wählen.

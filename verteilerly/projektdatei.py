@@ -28,6 +28,7 @@ from .modell import (
     Stift,
     Verteiler,
 )
+from .sprachen import u
 
 DATEIKENNUNG = "verteilerly-projekt"
 FORMATVERSION = 8
@@ -223,12 +224,12 @@ def _verteiler_rein(daten: dict[str, Any]) -> Verteiler:
 
 def aus_dict(daten: dict[str, Any]) -> Projekt:
     if daten.get("dateikennung") != DATEIKENNUNG:
-        raise ProjektdateiFehler("Das ist keine Verteilerly-Projektdatei")
+        raise ProjektdateiFehler(u("Das ist keine Verteilerly-Projektdatei"))
     version = daten.get("formatversion")
     if version not in LESBARE_VERSIONEN:
         lesbar = ", ".join(str(v) for v in LESBARE_VERSIONEN)
         raise ProjektdateiFehler(
-            f"Formatversion {version} wird nicht unterstuetzt (lesbar: {lesbar})"
+            u("Formatversion {0} wird nicht unterstuetzt (lesbar: {1})").format(version, lesbar)
         )
     return Projekt(
         verteiler=_verteiler_rein(daten.get("verteiler", {})),
@@ -250,9 +251,9 @@ def laden(pfad: pathlib.Path) -> Projekt:
     try:
         daten = json.loads(pfad.read_text(encoding="utf-8"))
     except json.JSONDecodeError as fehler:
-        raise ProjektdateiFehler(f"{pfad.name} ist kein gueltiges JSON - {fehler}") from None
+        raise ProjektdateiFehler(u("{0} ist kein gueltiges JSON - {1}").format(pfad.name, fehler)) from None
     except (KeyError, TypeError) as fehler:
-        raise ProjektdateiFehler(f"{pfad.name} ist unvollstaendig - {fehler}") from None
+        raise ProjektdateiFehler(u("{0} ist unvollstaendig - {1}").format(pfad.name, fehler)) from None
     if not isinstance(daten, dict):
-        raise ProjektdateiFehler(f"{pfad.name} enthaelt kein Projekt")
+        raise ProjektdateiFehler(u("{0} enthaelt kein Projekt").format(pfad.name))
     return aus_dict(daten)

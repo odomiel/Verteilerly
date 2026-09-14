@@ -88,6 +88,16 @@ class TestSpec(unittest.TestCase):
             for quelle, _ in self.aufrufe["analysis"]["datas"]
         ]
         self.assertIn("40da-4x10.yaml", dateien)
+
+    def test_die_wortlisten_wandern_mit(self):
+        """Ohne sie stünde die englische Oberfläche deutsch da."""
+        ziele = {ziel for _, ziel in self.aufrufe["analysis"]["datas"]}
+        self.assertIn(os.path.join("daten", "sprachen"), ziele)
+        dateien = [
+            pathlib.Path(quelle).name
+            for quelle, _ in self.aufrufe["analysis"]["datas"]
+        ]
+        self.assertIn("en.yaml", dateien)
         self.assertIn("standard.yaml", dateien)
 
     def test_die_lizenzen_wandern_mit(self):

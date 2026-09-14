@@ -28,6 +28,7 @@ from dataclasses import dataclass, replace
 import yaml
 
 from .modell import ModellFehler, Verteiler
+from .sprachen import u
 
 
 class VorlagenFehler(ModellFehler):
@@ -95,15 +96,14 @@ class Vorlage:
         vorerst hat jede Bucht eine Leistengroesse.
         """
         if not verteiler.buchten:
-            raise VorlagenFehler("Der Verteiler hat keine Buchten")
+            raise VorlagenFehler(u("Der Verteiler hat keine Buchten"))
 
         plan: list[tuple[int, int]] = []
         for bucht in verteiler.buchten:
             groessen = {l.da_anzahl for l in bucht.leisten}
             if len(groessen) > 1:
                 raise VorlagenFehler(
-                    f"Bucht {bucht.nummer} trägt Leisten verschiedener Größe - "
-                    "das lässt sich nicht als Vorlage ablegen"
+                    u("Bucht {0} trägt Leisten verschiedener Größe - das lässt sich nicht als Vorlage ablegen").format(bucht.nummer)
                 )
             plan.append((len(bucht.leisten), groessen.pop()))
 
@@ -178,12 +178,12 @@ def vorlage_speichern(
     ordner = pathlib.Path(ordner)
     ziel = ordner / f"{vorlage.id}.yaml"
     if ziel.exists() and not ueberschreiben:
-        raise VorlagenFehler(f"Es gibt schon eine Vorlage {vorlage.id!r}")
+        raise VorlagenFehler(u("Es gibt schon eine Vorlage {0!r}").format(vorlage.id))
     try:
         ordner.mkdir(parents=True, exist_ok=True)
         ziel.write_text(vorlage_als_yaml(vorlage), encoding="utf-8")
     except OSError as fehler:
-        raise VorlagenFehler(f"Vorlage nicht gespeichert: {fehler}") from fehler
+        raise VorlagenFehler(u("Vorlage nicht gespeichert: {0}").format(fehler)) from fehler
     return ziel
 
 
@@ -192,21 +192,21 @@ def _bauplan_lesen(buchten, wo: str) -> tuple[tuple[int, int], ...]:
     plan: list[tuple[int, int]] = []
     for nr, eintrag in enumerate(buchten, 1):
         if not isinstance(eintrag, dict):
-            raise VorlagenFehler(f"{wo}Bucht {nr}: erwartet wird leisten und da")
+            raise VorlagenFehler(u("{0}Bucht {1}: erwartet wird leisten und da").format(wo, nr))
         try:
             leisten = int(eintrag.get("leisten"))
             da = int(eintrag.get("da"))
         except (TypeError, ValueError):
             raise VorlagenFehler(
-                f"{wo}Bucht {nr}: leisten und da muessen Zahlen sein"
+                u("{0}Bucht {1}: leisten und da muessen Zahlen sein").format(wo, nr)
             ) from None
         if min(leisten, da) < 1:
             raise VorlagenFehler(
-                f"{wo}Bucht {nr}: Leisten und DA muessen mindestens 1 sein"
+                u("{0}Bucht {1}: Leisten und DA muessen mindestens 1 sein").format(wo, nr)
             )
         plan.append((leisten, da))
     if not plan:
-        raise VorlagenFehler(f"{wo}Vorlage ohne Buchten")
+        raise VorlagenFehler(u("{0}Vorlage ohne Buchten").format(wo))
     return tuple(plan)
 
 
@@ -223,7 +223,7 @@ def vorlage_loeschen(kennung: str, ordner: pathlib.Path) -> bool:
     try:
         ziel.unlink()
     except OSError as fehler:
-        raise VorlagenFehler(f"Vorlage nicht gelöscht: {fehler}") from fehler
+        raise VorlagenFehler(u("Vorlage nicht gelöscht: {0}").format(fehler)) from fehler
     return True
 
 
@@ -237,7 +237,7 @@ def vorlage_umbenennen(
     """
     name = name.strip()
     if not name:
-        raise VorlagenFehler("Eine Vorlage braucht einen Namen")
+        raise VorlagenFehler(u("Eine Vorlage braucht einen Namen"))
     neu = replace(vorlage, name=name)
     vorlage_speichern(neu, ordner, ueberschreiben=True)
     return neu
@@ -252,7 +252,7 @@ def vorlage_aus_yaml(inhalt: dict, herkunft: str = "") -> Vorlage:
     pflicht = ("id", "name", "buchten") if plan else PFLICHTFELDER
     fehlend = [feld for feld in pflicht if _feld(inhalt, feld) is None]
     if fehlend:
-        raise VorlagenFehler(f"{wo}Vorlage ohne {', '.join(fehlend)}")
+        raise VorlagenFehler(u("{0}Vorlage ohne {1}").format(wo, ', '.join(fehlend)))
 
     try:
         vorlage = Vorlage(
@@ -268,10 +268,10 @@ def vorlage_aus_yaml(inhalt: dict, herkunft: str = "") -> Vorlage:
             bauplan=plan,
         )
     except (TypeError, ValueError) as fehler:
-        raise VorlagenFehler(f"{wo}Zahlenangabe nicht lesbar - {fehler}") from None
+        raise VorlagenFehler(u("{0}Zahlenangabe nicht lesbar - {1}").format(wo, fehler)) from None
 
     if min(vorlage.buchten, vorlage.leisten_je_bucht, vorlage.da_je_leiste) < 1:
-        raise VorlagenFehler(f"{wo}Buchten, Leisten und DA muessen mindestens 1 sein")
+        raise VorlagenFehler(u("{0}Buchten, Leisten und DA muessen mindestens 1 sein").format(wo))
     return vorlage
 
 
@@ -338,7 +338,7 @@ class Vorlagen:
         except KeyError:
             bekannt = ", ".join(sorted(self._vorlagen)) or "keine"
             raise VorlagenFehler(
-                f"Vorlage {kennung!r} gibt es nicht (bekannt: {bekannt})"
+                u("Vorlage {0!r} gibt es nicht (bekannt: {1})").format(kennung, bekannt)
             ) from None
 
     @property
@@ -351,5 +351,5 @@ class Vorlagen:
             if vorlage.standard:
                 return vorlage
         if not self._vorlagen:
-            raise VorlagenFehler("Es ist keine einzige Vorlage vorhanden")
+            raise VorlagenFehler(u("Es ist keine einzige Vorlage vorhanden"))
         return self.alle[0]

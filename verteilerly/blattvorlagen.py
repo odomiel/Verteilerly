@@ -18,6 +18,7 @@ from dataclasses import dataclass, field, replace
 import yaml
 
 from .modell import LINKS, MITTE, RECHTS, ModellFehler
+from .sprachen import u
 
 __all_ausrichtungen__ = (LINKS, MITTE, RECHTS)
 AUSRICHTUNGEN = (LINKS, MITTE, RECHTS)
@@ -162,7 +163,7 @@ def _zahl(inhalt: dict, name: str, vorgabe: float, herkunft: str) -> float:
     try:
         return float(inhalt[name])
     except (TypeError, ValueError):
-        raise BlattvorlagenFehler(f"{herkunft}: {name} ist keine Zahl") from None
+        raise BlattvorlagenFehler(u("{0}: {1} ist keine Zahl").format(herkunft, name)) from None
 
 
 def _spalten_aus_yaml(eintraege, herkunft: str) -> tuple[Spalte, ...]:
@@ -174,12 +175,12 @@ def _spalten_aus_yaml(eintraege, herkunft: str) -> tuple[Spalte, ...]:
         if feld not in SPALTENFELDER:
             bekannt = ", ".join(SPALTENFELDER)
             raise BlattvorlagenFehler(
-                f"{herkunft}: Spalte {feld!r} gibt es nicht (bekannt: {bekannt})"
+                u("{0}: Spalte {1!r} gibt es nicht (bekannt: {2})").format(herkunft, feld, bekannt)
             )
         ausrichtung = str(eintrag.get("ausrichtung", LINKS))
         if ausrichtung not in AUSRICHTUNGEN:
             raise BlattvorlagenFehler(
-                f"{herkunft}: Ausrichtung {ausrichtung!r} gibt es nicht"
+                u("{0}: Ausrichtung {1!r} gibt es nicht").format(herkunft, ausrichtung)
             )
         vorgabe = STANDARD.spalte(feld)
         spalten.append(
@@ -193,7 +194,7 @@ def _spalten_aus_yaml(eintraege, herkunft: str) -> tuple[Spalte, ...]:
             )
         )
     if not spalten:
-        raise BlattvorlagenFehler(f"{herkunft}: kein einziges Feld im Leistenblatt")
+        raise BlattvorlagenFehler(u("{0}: kein einziges Feld im Leistenblatt").format(herkunft))
     return tuple(spalten)
 
 
@@ -206,13 +207,12 @@ def _schriftfeld_aus_yaml(eintraege, herkunft: str) -> tuple[tuple[str, ...], ..
             if marke not in SCHRIFTFELDMARKEN:
                 bekannt = ", ".join(SCHRIFTFELDMARKEN)
                 raise BlattvorlagenFehler(
-                    f"{herkunft}: {marke!r} gehört nicht ins Schriftfeld "
-                    f"(bekannt: {bekannt})"
+                    u("{0}: {1!r} gehört nicht ins Schriftfeld (bekannt: {2})").format(herkunft, marke, bekannt)
                 )
             marken.append(marke)
         spalten.append(tuple(marken))
     if not spalten:
-        raise BlattvorlagenFehler(f"{herkunft}: leeres Schriftfeld")
+        raise BlattvorlagenFehler(u("{0}: leeres Schriftfeld").format(herkunft))
     return tuple(spalten)
 
 
@@ -221,7 +221,7 @@ def blattvorlage_aus_yaml(inhalt: dict, herkunft: str = "") -> Blattvorlage:
     wo = herkunft or "Blattvorlage"
     for feld in ("id", "name"):
         if not str(inhalt.get(feld, "")).strip():
-            raise BlattvorlagenFehler(f"{wo}: Blattvorlage ohne {feld}")
+            raise BlattvorlagenFehler(u("{0}: Blattvorlage ohne {1}").format(wo, feld))
 
     schrift = inhalt.get("schrift") or {}
     belegung = inhalt.get("belegung") or {}
@@ -276,13 +276,12 @@ def blattvorlage_aus_yaml(inhalt: dict, herkunft: str = "") -> Blattvorlage:
     if vorlage.schriftfeld_art not in SCHRIFTFELDARTEN:
         bekannt = ", ".join(SCHRIFTFELDARTEN)
         raise BlattvorlagenFehler(
-            f"{wo}: schriftfeld_art {vorlage.schriftfeld_art!r} gibt es nicht "
-            f"(bekannt: {bekannt})"
+            u("{0}: schriftfeld_art {1!r} gibt es nicht (bekannt: {2})").format(wo, vorlage.schriftfeld_art, bekannt)
         )
     if vorlage.buchten_je_blatt < 1:
-        raise BlattvorlagenFehler(f"{wo}: buchten_je_blatt muss mindestens 1 sein")
+        raise BlattvorlagenFehler(u("{0}: buchten_je_blatt muss mindestens 1 sein").format(wo))
     if vorlage.rand < 0 or vorlage.zeilenhoehe_min <= 0:
-        raise BlattvorlagenFehler(f"{wo}: Rand und Zeilenhöhe müssen positiv sein")
+        raise BlattvorlagenFehler(u("{0}: Rand und Zeilenhöhe müssen positiv sein").format(wo))
     return vorlage
 
 
@@ -328,7 +327,7 @@ class Blattvorlagen:
         except KeyError:
             bekannt = ", ".join(sorted(self._vorlagen))
             raise BlattvorlagenFehler(
-                f"Blattvorlage {kennung!r} gibt es nicht (bekannt: {bekannt})"
+                u("Blattvorlage {0!r} gibt es nicht (bekannt: {1})").format(kennung, bekannt)
             ) from None
 
     @property

@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 
 from . import schreibweisen
 from .schreibweisen import Schreibweise
+from .sprachen import u
 
 SEITEN = ("a", "b")
 
@@ -68,15 +69,14 @@ class Aderadresse:
 
     def __post_init__(self) -> None:
         if self.seite not in SEITEN:
-            raise ModellFehler(f"Unbekannte Aderseite: {self.seite!r}")
+            raise ModellFehler(u("Unbekannte Aderseite: {0!r}").format(self.seite))
 
     @classmethod
     def parse(cls, text: str) -> Aderadresse:
         treffer = _ADRESSE.match(text)
         if not treffer:
             raise ModellFehler(
-                f"Rangierung {text!r} nicht lesbar - erwartet wird "
-                "z.B. '3 2a', 'L3 2a' oder 'L3-2a'"
+                u("Rangierung {0!r} nicht lesbar - erwartet wird z.B. '3 2a', 'L3 2a' oder 'L3-2a'").format(text)
             )
         leiste, stift, seite = treffer.groups()
         return cls(int(leiste), int(stift), seite.lower())
@@ -123,7 +123,7 @@ class Textstil:
 
     def __post_init__(self) -> None:
         if self.ausrichtung and self.ausrichtung not in AUSRICHTUNGEN:
-            raise ModellFehler(f"Unbekannte Ausrichtung: {self.ausrichtung!r}")
+            raise ModellFehler(u("Unbekannte Ausrichtung: {0!r}").format(self.ausrichtung))
 
     @property
     def leer(self) -> bool:
@@ -182,8 +182,7 @@ class Zellenteilung:
     def __post_init__(self) -> None:
         if not ANTEIL_MIN <= self.anteil <= ANTEIL_MAX:
             raise ModellFehler(
-                f"Der Anteil des zweiten Feldes muss zwischen {ANTEIL_MIN} "
-                f"und {ANTEIL_MAX} Prozent liegen, nicht {self.anteil}"
+                u("Der Anteil des zweiten Feldes muss zwischen {0} und {1} Prozent liegen, nicht {2}").format(ANTEIL_MIN, ANTEIL_MAX, self.anteil)
             )
 
     @property
@@ -248,7 +247,7 @@ class Ader:
     def teilung_setzen(self, feld: str, teilung: Zellenteilung) -> None:
         """Setzt die Teilung einer Zelle; eine leere wird geloescht."""
         if feld not in TEILBARE_FELDER:
-            raise ModellFehler(f"{feld!r} laesst sich nicht teilen")
+            raise ModellFehler(u("{0!r} laesst sich nicht teilen").format(feld))
         if teilung.leer:
             self.teilungen.pop(feld, None)
         else:
@@ -257,7 +256,7 @@ class Ader:
     def stil_setzen(self, feld: str, stil: Textstil) -> None:
         """Setzt den Stil einer Spalte; ein leerer wird geloescht."""
         if feld not in STILFELDER:
-            raise ModellFehler(f"Fuer {feld!r} gibt es keinen Textstil")
+            raise ModellFehler(u("Fuer {0!r} gibt es keinen Textstil").format(feld))
         if stil.leer:
             self.stile.pop(feld, None)
         else:
@@ -277,7 +276,7 @@ class Stift:
             return self.a
         if seite == "b":
             return self.b
-        raise ModellFehler(f"Unbekannte Aderseite: {seite!r}")
+        raise ModellFehler(u("Unbekannte Aderseite: {0!r}").format(seite))
 
 
 @dataclass
@@ -294,8 +293,7 @@ class Leiste:
     def stift(self, nummer: int) -> Stift:
         if not 1 <= nummer <= self.da_anzahl:
             raise ModellFehler(
-                f"Leiste {self.nummer} hat {self.da_anzahl} DA, "
-                f"Stift {nummer} gibt es dort nicht"
+                u("Leiste {0} hat {1} DA, Stift {2} gibt es dort nicht").format(self.nummer, self.da_anzahl, nummer)
             )
         return self.stifte[nummer - 1]
 
@@ -435,7 +433,7 @@ class Verteiler:
         Leisten 1 bis 6 und Bucht 2 die Leisten 7 bis 12.
         """
         if min(buchten, leisten_je_bucht, da_je_leiste) < 1:
-            raise ModellFehler("Buchten, Leisten und DA muessen mindestens 1 sein")
+            raise ModellFehler(u("Buchten, Leisten und DA muessen mindestens 1 sein"))
         return cls.aus_buchten(
             [(leisten_je_bucht, da_je_leiste)] * buchten, name, nummer
         )
@@ -458,14 +456,14 @@ class Verteiler:
         nummeriert.
         """
         if not bauplan:
-            raise ModellFehler("Ein Verteiler braucht mindestens eine Bucht")
+            raise ModellFehler(u("Ein Verteiler braucht mindestens eine Bucht"))
 
         aufbau: list[Bucht] = []
         naechste_leiste = 1
         for buchten_nr, (leisten_anzahl, da_je_leiste) in enumerate(bauplan, 1):
             if min(leisten_anzahl, da_je_leiste) < 1:
                 raise ModellFehler(
-                    f"Bucht {buchten_nr}: Leisten und DA muessen mindestens 1 sein"
+                    u("Bucht {0}: Leisten und DA muessen mindestens 1 sein").format(buchten_nr)
                 )
             leisten = []
             for _ in range(leisten_anzahl):
@@ -488,7 +486,7 @@ class Verteiler:
         for leiste in self.alle_leisten:
             if leiste.nummer == nummer:
                 return leiste
-        raise ModellFehler(f"Leiste {nummer} gibt es in diesem Verteiler nicht")
+        raise ModellFehler(u("Leiste {0} gibt es in diesem Verteiler nicht").format(nummer))
 
     def stift(self, adresse: Aderadresse) -> Stift:
         return self.leiste(adresse.leiste).stift(adresse.stift)
@@ -519,12 +517,11 @@ class Verteiler:
         (passend, rest) zurueck, ohne etwas zu veraendern.
         """
         if anzahl_da < 1:
-            raise ModellFehler("Ein Kabel muss mindestens eine Doppelader haben")
+            raise ModellFehler(u("Ein Kabel muss mindestens eine Doppelader haben"))
         ziel = self.leiste(leiste)
         if not 1 <= start_da <= ziel.da_anzahl:
             raise ModellFehler(
-                f"Start-DA {start_da} liegt ausserhalb von Leiste {leiste} "
-                f"({ziel.da_anzahl} DA)"
+                u("Start-DA {0} liegt ausserhalb von Leiste {1} ({2} DA)").format(start_da, leiste, ziel.da_anzahl)
             )
 
         passend = 0
@@ -534,7 +531,7 @@ class Verteiler:
                 break
             if self.kabel_an(leiste, da) is not None:
                 raise ModellFehler(
-                    f"Leiste {leiste} DA {da} ist bereits von einem Kabel belegt"
+                    u("Leiste {0} DA {1} ist bereits von einem Kabel belegt").format(leiste, da)
                 )
             passend += 1
         return passend, anzahl_da - passend
@@ -580,7 +577,7 @@ class Verteiler:
         Abschnitte.
         """
         if not abschnitte:
-            raise ModellFehler("Ein Kabel braucht mindestens einen Abschnitt")
+            raise ModellFehler(u("Ein Kabel braucht mindestens einen Abschnitt"))
 
         for abschnitt in abschnitte:
             passend, rest = self.platz_pruefen(
@@ -588,14 +585,13 @@ class Verteiler:
             )
             if rest:
                 raise ModellFehler(
-                    f"Abschnitt auf Leiste {abschnitt.leiste} ab DA "
-                    f"{abschnitt.start_da} passt nicht ({rest} DA zu viel)"
+                    u("Abschnitt auf Leiste {0} ab DA {1} passt nicht ({2} DA zu viel)").format(abschnitt.leiste, abschnitt.start_da, rest)
                 )
 
         aufgelegt = sum(a.anzahl_da for a in abschnitte)
         if da_gesamt is not None and da_gesamt < aufgelegt:
             raise ModellFehler(
-                f"Das Kabel hat {da_gesamt} DA, aufgelegt werden sollen {aufgelegt}"
+                u("Das Kabel hat {0} DA, aufgelegt werden sollen {1}").format(da_gesamt, aufgelegt)
             )
 
         kabel = Kabel(
@@ -617,7 +613,7 @@ class Verteiler:
         verfaellt.
         """
         if anzahl_da < 1:
-            raise ModellFehler("Ein Kabel muss mindestens eine Doppelader haben")
+            raise ModellFehler(u("Ein Kabel muss mindestens eine Doppelader haben"))
         jetzt = kabel.da_aufgelegt
         if anzahl_da == jetzt:
             return
@@ -661,8 +657,7 @@ class Verteiler:
         passend, rest = self.platz_pruefen(leiste, start_da, anzahl_da)
         if rest:
             raise ModellFehler(
-                f"Auf Leiste {leiste} ab DA {start_da} passen nur {passend} "
-                f"von {anzahl_da} DA"
+                u("Auf Leiste {0} ab DA {1} passen nur {2} von {3} DA").format(leiste, start_da, passend, anzahl_da)
             )
         kabel.abschnitte.append(Kabelabschnitt(leiste, start_da, anzahl_da))
         if kabel.da_gesamt is not None and kabel.da_gesamt < kabel.da_aufgelegt:
@@ -692,22 +687,21 @@ class Verteiler:
     def rangierung_anlegen(self, von: Aderadresse, nach: Aderadresse) -> Rangierung:
         """Legt eine Rangierung an und prueft sie."""
         if von == nach:
-            raise ModellFehler(f"Eine Rangierung kann nicht auf sich selbst zeigen ({von})")
+            raise ModellFehler(u("Eine Rangierung kann nicht auf sich selbst zeigen ({0})").format(von))
 
         for adresse in (von, nach):
             if not self.kennt(adresse):
-                raise ModellFehler(f"{adresse} gibt es in diesem Verteiler nicht")
+                raise ModellFehler(u("{0} gibt es in diesem Verteiler nicht").format(adresse))
 
         for bestehend in self.rangierungen:
             if bestehend.beruehrt(von) and bestehend.beruehrt(nach):
-                raise ModellFehler(f"Die Rangierung {von} - {nach} besteht bereits")
+                raise ModellFehler(u("Die Rangierung {0} - {1} besteht bereits").format(von, nach))
 
         for adresse in (von, nach):
             belegt = len(self.rangierungen_an(adresse))
             if belegt >= MAX_RANGIERUNGEN_JE_ADER:
                 raise ModellFehler(
-                    f"{adresse} traegt bereits {belegt} Rangierungen - "
-                    f"mehr als {MAX_RANGIERUNGEN_JE_ADER} sind nicht vorgesehen"
+                    u("{0} traegt bereits {1} Rangierungen - mehr als {2} sind nicht vorgesehen").format(adresse, belegt, MAX_RANGIERUNGEN_JE_ADER)
                 )
 
         rangierung = Rangierung(von, nach)
@@ -720,7 +714,7 @@ class Verteiler:
             if rangierung.beruehrt(von) and rangierung.beruehrt(nach):
                 self.rangierungen.remove(rangierung)
                 return
-        raise ModellFehler(f"Die Rangierung {von} - {nach} gibt es nicht")
+        raise ModellFehler(u("Die Rangierung {0} - {1} gibt es nicht").format(von, nach))
 
 
     def rangierungen_setzen(
@@ -741,11 +735,10 @@ class Verteiler:
         """
         if len(ziele) > MAX_RANGIERUNGEN_JE_ADER:
             raise ModellFehler(
-                f"{adresse} kann hoechstens {MAX_RANGIERUNGEN_JE_ADER} "
-                f"Rangierungen tragen, angegeben sind {len(ziele)}"
+                u("{0} kann hoechstens {1} Rangierungen tragen, angegeben sind {2}").format(adresse, MAX_RANGIERUNGEN_JE_ADER, len(ziele))
             )
         if len(set(ziele)) != len(ziele):
-            raise ModellFehler("Dieselbe Gegenstelle ist zweimal angegeben")
+            raise ModellFehler(u("Dieselbe Gegenstelle ist zweimal angegeben"))
 
         bisher = self.ziele_von(adresse)
 
@@ -757,16 +750,15 @@ class Verteiler:
         for ziel in ziele:
             if ziel == adresse:
                 raise ModellFehler(
-                    f"Eine Rangierung kann nicht auf sich selbst zeigen ({ziel})"
+                    u("Eine Rangierung kann nicht auf sich selbst zeigen ({0})").format(ziel)
                 )
             if not self.kennt(ziel):
-                raise ModellFehler(f"{ziel} gibt es in diesem Verteiler nicht")
+                raise ModellFehler(u("{0} gibt es in diesem Verteiler nicht").format(ziel))
             # Die eigenen sind oben herausgenommen und zaehlen nicht mit.
             belegt = sum(1 for r in probe if r.beruehrt(ziel))
             if belegt >= MAX_RANGIERUNGEN_JE_ADER:
                 raise ModellFehler(
-                    f"{ziel} traegt bereits {belegt} Rangierungen - "
-                    f"mehr als {MAX_RANGIERUNGEN_JE_ADER} sind nicht vorgesehen"
+                    u("{0} traegt bereits {1} Rangierungen - mehr als {2} sind nicht vorgesehen").format(ziel, belegt, MAX_RANGIERUNGEN_JE_ADER)
                 )
             probe.append(Rangierung(adresse, ziel))
 
@@ -787,8 +779,7 @@ class Verteiler:
         text = text.strip()
         if text and len(self.ziele_von(adresse)) >= MAX_RANGIERUNGEN_JE_ADER:
             raise ModellFehler(
-                f"{adresse} traegt bereits {MAX_RANGIERUNGEN_JE_ADER} "
-                "Rangierungen - fuer einen Vermerk ist kein Feld frei"
+                u("{0} traegt bereits {1} Rangierungen - fuer einen Vermerk ist kein Feld frei").format(adresse, MAX_RANGIERUNGEN_JE_ADER)
             )
         ader = self.ader(adresse)
         ader.vermerk = text
@@ -831,13 +822,12 @@ def adressen_lesen(text: str) -> list[Aderadresse]:
     treffer = _ADRESSE_IM_TEXT.findall(text)
     if not treffer:
         raise ModellFehler(
-            f"Rangierung {text.strip()!r} nicht lesbar - erwartet wird "
-            "z.B. '3 2a', 'L3 2a' oder 'L3-2a'"
+            u("Rangierung {0!r} nicht lesbar - erwartet wird z.B. '3 2a', 'L3 2a' oder 'L3-2a'").format(text.strip())
         )
     # Alles, was nicht zu einer Adresse gehoert, waere ein Tippfehler.
     rest = _ADRESSE_IM_TEXT.sub("", text).strip()
     if rest:
-        raise ModellFehler(f"In der Rangierung steht ueberzaehliger Text: {rest!r}")
+        raise ModellFehler(u("In der Rangierung steht ueberzaehliger Text: {0!r}").format(rest))
     return [
         Aderadresse(int(leiste), int(stift), seite.lower())
         for leiste, stift, seite in treffer
@@ -849,8 +839,13 @@ def mehrzahl(zahl: int, eins: str, viele: str) -> str:
 
     Ein Verteiler mit einer einzigen Bucht las sich sonst als "1 Buchten"
     - richtig gerechnet, falsch geschrieben.
+
+    Beide Woerter gehen durch die Uebersetzung: so muss keine der
+    vielen Aufrufstellen etwas davon wissen, und im Katalog stehen die
+    Woerter einzeln - "Leiste" und "Leisten", nicht jeder Satz, in dem
+    sie vorkommen.
     """
-    return f"{zahl} {eins if zahl == 1 else viele}"
+    return f"{zahl} {u(eins) if zahl == 1 else u(viele)}"
 
 
 def adressen_schreiben(

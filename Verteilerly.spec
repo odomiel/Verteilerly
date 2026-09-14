@@ -44,6 +44,16 @@ if os.path.isdir(_hilfe):
         if name.endswith(".html"):
             datas.append((os.path.join(_hilfe, name), os.path.join("daten", "hilfe")))
 
+# Die Wortlisten der Oberflaeche - denselben Weg wie die
+# Dokumentation: sie gehoeren zum Programm, nicht zum Bestand des Anwenders.
+_sprachen = os.path.join(_wurzel, "daten", "sprachen")
+if os.path.isdir(_sprachen):
+    for name in sorted(os.listdir(_sprachen)):
+        if name.endswith(".yaml"):
+            datas.append(
+                (os.path.join(_sprachen, name), os.path.join("daten", "sprachen"))
+            )
+
 # README und Lizenzen mit hinein - eine weitergegebene .exe soll sagen koennen,
 # was sie ist und unter welchen Bedingungen sie weitergegeben werden darf.
 for beigabe in ("README.md", "LICENSE"):

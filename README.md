@@ -23,6 +23,7 @@ verteilerly/        Programmpaket
     mappe.py        Excel-Mappe im Blattbild der Blattvorlage
     tabellen.py     Belegungsdaten je Ader als xlsx und csv
   suche.py          Fundstellen im Projekt - Adern, Kabel, Projektdaten
+  sprachen.py       Deutsch oder Englisch - u("…") schlägt nach
   pfade.py          Wo die Daten liegen - entpackt wie gepackt
   gui/              Oberfläche
     hauptfenster.py Fenster, Menüs, Datei- und Kabelbefehle
@@ -34,6 +35,7 @@ verteilerly/        Programmpaket
     thema.py        Farbsätze hell und dunkel
     sprache.py      Deutsche Beschriftung der Qt-Dialoge
 daten/              Liegt neben dem Programm und ist frei erweiterbar
+  sprachen/         Wortlisten der Oberfläche (en.yaml)
   vorlagen/         Eine YAML-Datei je Verteilervorlage
   kabeltypen/       Farbfolgen der Kabeltypen
   blattvorlagen/    Wie die Ausgabe aussieht
@@ -429,6 +431,33 @@ schrumpfen kann — *Projektdaten* und *Vorgaben für neue Verteiler* sind laute
 Felder untereinander —, baut der Dialog ihn in ein eigenes Widget und reicht
 es an `inhalt_rollbar()` weiter: der Inhalt rollt, die Knopfleiste bleibt
 außerhalb des Rollbereichs stehen. Gerollt wird nur, wenn es sein muss.
+
+**Deutsch oder Englisch** (`sprachen.py`). *Einstellungen ▸ Sprache*
+stellt die Oberfläche um — Menüs, Dialoge, Knöpfe, Hinweise, Meldungen und
+Spaltenköpfe. Die Wahl steht in der `Verteilerly.conf` und gilt **nach einem
+Neustart**: die Menüs werden beim Aufbau des Fensters einmal beschriftet.
+
+Die **Quellsprache bleibt Deutsch**. Im Quelltext steht der deutsche Satz und
+ist zugleich der Schlüssel:
+
+```python
+self.setWindowTitle(u("Neuer Verteiler"))
+u("Neuer Verteiler: {0} DA auf {1}").format(da, leisten)
+```
+
+Jede Stelle ist damit auch ohne Katalog zu lesen, und fehlt eine Übersetzung,
+erscheint der deutsche Satz. Der Katalog liegt als YAML in `daten/sprachen/`
+und wandert nicht in den Arbeitsordner — wer eine weitere Sprache beisteuern
+will, legt eine Datei daneben. `mehrzahl()` übersetzt seine beiden Wörter
+selbst, damit die vielen Aufrufstellen nichts davon wissen müssen.
+`tests/test_sprachen.py` liest **jeden** übersetzten Satz aus dem Quelltext und
+vergleicht ihn mit der Wortliste; umgekehrt darf die Liste nichts Überflüssiges
+tragen, und die Platzhalter müssen auf beiden Seiten dieselben sein.
+
+Übersetzt wird das **Programm**, nicht das **Dokument**: die Blätter, die Namen
+der mitgelieferten Vorlagen und die Dokumentation im Programm bleiben deutsch.
+Was auf dem Blatt steht, ist die Arbeit des Anwenders — die Wörter des
+Schriftfeldes sind ohnehin je Projekt änderbar.
 
 *Hilfe ▸ Über Verteilerly* führt jeden Baustein mit Fassung, Lizenz und
 Aufgabe auf — Python, PySide6, Qt, ReportLab, openpyxl, PyYAML —, dazu

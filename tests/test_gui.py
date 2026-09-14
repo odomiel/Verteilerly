@@ -1628,7 +1628,8 @@ class TestMenuezustaende(unittest.TestCase):
              "Vorgaben für neue Verteiler…",
              "Vorlagen und Einstellungen sichern…",
              "Vorlagen und Einstellungen einspielen…",
-             "Schreibweise der Rangierungen", "Freitext im Rangierfeld zulassen"],
+             "Sprache", "Schreibweise der Rangierungen",
+            "Freitext im Rangierfeld zulassen"],
         )
 
     def test_jede_schreibweise_steht_im_menue(self):
@@ -2177,6 +2178,85 @@ class TestNeuerVerteilerDialog(unittest.TestCase):
     def test_ohne_ordner_kein_speichern(self):
         dialog = NeuerVerteilerDialog(self.vorlagen, None, None)
         self.assertFalse(dialog.als_vorlage.isEnabled())
+
+
+@unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
+class TestSprachwahlImMenue(unittest.TestCase):
+    """Die Sprache steht im Einstellungsmenü und gilt nach dem Neustart."""
+
+    def setUp(self):
+        from verteilerly import sprachen
+        from verteilerly.gui.hauptfenster import Hauptfenster
+
+        self.sprachen = sprachen
+        self.addCleanup(sprachen.sprache_setzen, sprachen.VORGABE)
+        self.fenster = Hauptfenster()
+        self.addCleanup(self.fenster.close)
+        self.addCleanup(self.fenster.einstellungen.remove, "sprache")
+
+    def test_jede_sprache_steht_im_menue(self):
+        eintraege = [h.text() for h in self.fenster.sprachen_gruppe.actions()]
+        self.assertEqual(eintraege, ["Deutsch", "English"])
+        angehakt = [h for h in self.fenster.sprachen_gruppe.actions() if h.isChecked()]
+        self.assertEqual([h.data() for h in angehakt], [self.sprachen.sprache()])
+
+    def test_die_wahl_landet_in_der_conf(self):
+        from PySide6.QtWidgets import QMessageBox
+
+        with mock.patch.object(QMessageBox, "information") as gesagt:
+            self.fenster.sprache_waehlen("en")
+        self.assertEqual(self.fenster.einstellungen.value("sprache"), "en")
+        self.assertTrue(gesagt.called, "kein Hinweis auf den Neustart")
+        self.assertIn("Neustart", self.fenster.statusBar().currentMessage())
+
+    def test_die_laufende_oberflaeche_bleibt_wie_sie_ist(self):
+        """Umgehängt wird nicht: die Menüs werden einmal beschriftet."""
+        from PySide6.QtWidgets import QMessageBox
+
+        vorher = self.fenster.aktion_suchen.text()
+        with mock.patch.object(QMessageBox, "information"):
+            self.fenster.sprache_waehlen("en")
+        self.assertEqual(self.fenster.aktion_suchen.text(), vorher)
+
+    def test_dieselbe_sprache_noch_einmal_gewaehlt_tut_nichts(self):
+        from PySide6.QtWidgets import QMessageBox
+
+        with mock.patch.object(QMessageBox, "information") as gesagt:
+            self.fenster.sprache_waehlen(self.sprachen.sprache())
+        self.assertFalse(gesagt.called)
+
+    def test_auf_englisch_sind_die_menues_englisch(self):
+        """Gebaut wird mit der Sprache, die beim Start eingestellt war."""
+        from verteilerly.gui.hauptfenster import Hauptfenster
+
+        self.sprachen.sprache_setzen("en")
+        fenster = Hauptfenster()
+        self.addCleanup(fenster.close)
+        self.assertEqual(fenster.aktion_suchen.text(), "&Search…")
+        self.assertEqual(fenster.aktion_projektdaten.text(), "&Project data…")
+        self.assertEqual(fenster.statusBar().currentMessage(), "Ready")
+
+    def test_auf_englisch_sind_auch_die_spaltenkoepfe_englisch(self):
+        from verteilerly.gui.leistenansicht import LeistenAnsicht, SPALTE_BEZEICHNUNG
+
+        self.sprachen.sprache_setzen("en")
+        ansicht = LeistenAnsicht()
+        self.addCleanup(ansicht.close)
+        ansicht.verteiler_setzen(Verteiler.aus_geometrie(1, 2, 10))
+        self.assertEqual(
+            ansicht.modell.headerData(
+                SPALTE_BEZEICHNUNG, Qt.Orientation.Horizontal,
+                Qt.ItemDataRole.DisplayRole,
+            ),
+            "Designation",
+        )
+
+    def test_qt_bleibt_bei_seiner_eigenen_sprache(self):
+        """Deutsche Knöpfe mitten in einem englischen Programm wären falsch."""
+        from verteilerly.gui import sprache as qtsprache
+
+        self.sprachen.sprache_setzen("en")
+        self.assertFalse(qtsprache.deutsch_einrichten(ANWENDUNG))
 
 
 @unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")

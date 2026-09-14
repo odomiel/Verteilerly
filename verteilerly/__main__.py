@@ -53,11 +53,22 @@ def main() -> int:
         ziel = sys.argv[stelle + 1] if len(sys.argv) > stelle + 1 else None
         return selbsttest(pathlib.Path(ziel) if ziel else None)
 
+    from PySide6.QtCore import QSettings
     from PySide6.QtWidgets import QApplication
 
+    from verteilerly import pfade, sprachen
     from verteilerly.gui.hauptfenster import Hauptfenster
     from verteilerly.gui.sprache import deutsch_einrichten
     from verteilerly.version import VERSION
+
+    # Die Sprache steht fest, bevor das erste Fenster gebaut wird: die
+    # Menues werden einmal beschriftet und nicht wieder.
+    sprachen.sprache_setzen(
+        str(
+            QSettings(str(pfade.einstellungsdatei()), QSettings.Format.IniFormat)
+            .value("sprache", sprachen.VORGABE)
+        )
+    )
 
     anwendung = QApplication(sys.argv)
     anwendung.setApplicationName("Verteilerly")

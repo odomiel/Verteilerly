@@ -20,6 +20,7 @@ import pathlib
 import zipfile
 
 from .version import VERSION
+from .sprachen import u
 
 KENNUNG = "verteilerly-paket"
 MERKZETTEL = "paket.json"
@@ -139,16 +140,16 @@ def inhalt(quelle: pathlib.Path) -> dict:
                 merkzettel = json.loads(paket.read(MERKZETTEL))
             except KeyError:
                 raise PaketFehler(
-                    "Das ist kein Verteilerly-Paket: der Merkzettel fehlt"
+                    u("Das ist kein Verteilerly-Paket: der Merkzettel fehlt")
                 ) from None
             namen = [n for n in paket.namelist() if _brauchbar(n)]
     except zipfile.BadZipFile as fehler:
-        raise PaketFehler(f"Die Datei ist kein Paket: {fehler}") from fehler
+        raise PaketFehler(u("Die Datei ist kein Paket: {0}").format(fehler)) from fehler
     except OSError as fehler:
         raise PaketFehler(str(fehler)) from fehler
 
     if merkzettel.get("kennung") != KENNUNG:
-        raise PaketFehler("Das ist kein Verteilerly-Paket")
+        raise PaketFehler(u("Das ist kein Verteilerly-Paket"))
 
     bericht = {name: 0 for name in UNTERORDNER}
     for name in namen:

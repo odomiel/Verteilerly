@@ -69,6 +69,7 @@ from ..modell import (
 )
 from ..schreibweisen import Schreibweise
 from .thema import HELL, Farben
+from ..sprachen import u
 
 SPALTE_STIFT = 0
 SPALTE_ADER = 1
@@ -116,6 +117,8 @@ WAAGERECHT = {
 # „Stift“ steht über der Nummer und über a und b, wie auf dem Blatt.
 STIFTSPALTEN = (SPALTE_STIFT, SPALTE_ADER)
 
+# Uebersetzt wird beim Anzeigen (headerData), nicht hier: das Modul wird
+# geladen, bevor die Sprache feststeht.
 UEBERSCHRIFTEN = [
     "Stift",
     "",
@@ -280,7 +283,7 @@ class LeistenModell(QAbstractTableModel):
     def headerData(self, abschnitt, ausrichtung, rolle=Qt.ItemDataRole.DisplayRole):
         if ausrichtung == Qt.Orientation.Horizontal:
             if rolle == Qt.ItemDataRole.DisplayRole:
-                return UEBERSCHRIFTEN[abschnitt]
+                return u(UEBERSCHRIFTEN[abschnitt])
         return None
 
     def flags(self, index: QModelIndex):
@@ -421,7 +424,7 @@ class LeistenModell(QAbstractTableModel):
         if kabel is None:
             return ""
         text = kabel.beschriftung
-        return f"{text} (gekürzt)" if kabel.gekuerzt else text
+        return u("{0} (gekürzt)").format(text) if kabel.gekuerzt else text
 
     def setData(self, index: QModelIndex, wert, rolle=Qt.ItemDataRole.EditRole) -> bool:
         # Ob die Eingabe angenommen wurde, merkt sich das Modell: die
@@ -494,7 +497,7 @@ class LeistenModell(QAbstractTableModel):
         vermerke = [wert for art, wert in belegung if art == "vermerk"]
         if len(vermerke) > 1:
             self.fehler_gemeldet.emit(
-                "Je Ader ist ein Vermerk vorgesehen, nicht zwei"
+                u("Je Ader ist ein Vermerk vorgesehen, nicht zwei")
             )
             return False
 
@@ -813,10 +816,10 @@ class LeistenAnsicht(QWidget):
         # Leiste, da will niemand jedes Mal auswählen.
         self.zurueck = QPushButton("‹")
         self.zurueck.setShortcut(QKeySequence("Alt+Left"))
-        self.zurueck.setToolTip("Eine Leiste zurück (Alt+←)")
+        self.zurueck.setToolTip(u("Eine Leiste zurück (Alt+←)"))
         self.vor = QPushButton("›")
         self.vor.setShortcut(QKeySequence("Alt+Right"))
-        self.vor.setToolTip("Eine Leiste weiter (Alt+→)")
+        self.vor.setToolTip(u("Eine Leiste weiter (Alt+→)"))
         for knopf in (self.zurueck, self.vor):
             knopf.setFixedWidth(30)
             # Das Stilblatt polstert Knöpfe breit; hier bliebe sonst
@@ -833,7 +836,7 @@ class LeistenAnsicht(QWidget):
 
         kopf = QHBoxLayout()
         kopf.setContentsMargins(0, 0, 0, 6)
-        kopf.addWidget(QLabel("Leiste:"))
+        kopf.addWidget(QLabel(u("Leiste:")))
         kopf.addWidget(self.auswahl)
         kopf.addWidget(self.zurueck)
         kopf.addWidget(self.vor)
@@ -913,7 +916,7 @@ class LeistenAnsicht(QWidget):
             knopf = QToolButton()
             knopf.setCheckable(True)
             knopf.setAutoRaise(True)
-            knopf.setToolTip(f"{hinweis} — nochmals drücken: wie die Blattvorlage")
+            knopf.setToolTip(u("{0} — nochmals drücken: wie die Blattvorlage").format(hinweis))
             knopf.clicked.connect(
                 lambda _an=False, gewaehlt=art: self._ausrichten(gewaehlt)
             )
@@ -921,10 +924,10 @@ class LeistenAnsicht(QWidget):
 
         self.fett = QToolButton()
         self.fett.setText("F")
-        self.fett.setToolTip("Fett")
+        self.fett.setToolTip(u("Fett"))
         self.kursiv = QToolButton()
         self.kursiv.setText("K")
-        self.kursiv.setToolTip("Kursiv")
+        self.kursiv.setToolTip(u("Kursiv"))
         for knopf, schnitt in ((self.fett, "fett"), (self.kursiv, "kursiv")):
             knopf.setCheckable(True)
             knopf.setAutoRaise(True)
@@ -941,8 +944,8 @@ class LeistenAnsicht(QWidget):
         self.teilen.setCheckable(True)
         self.teilen.setAutoRaise(True)
         self.teilen.setToolTip(
-            "Zelle in zwei Beschriftungsfelder teilen — auf dem Blatt ohne "
-            "Trennstrich"
+            u("Zelle in zwei Beschriftungsfelder teilen — auf dem Blatt ohne "
+            "Trennstrich")
         )
         self.teilen.clicked.connect(self._teilen_umschalten)
 
@@ -951,7 +954,7 @@ class LeistenAnsicht(QWidget):
         self.anteil.setValue(ANTEIL_VORGABE)
         self.anteil.setSuffix(" %")
         self.anteil.setFixedWidth(66)
-        self.anteil.setToolTip("Wie breit das rechte Feld ist")
+        self.anteil.setToolTip(u("Wie breit das rechte Feld ist"))
         self.anteil.valueChanged.connect(self._anteil_gesetzt)
 
         self.textknoepfe = [
@@ -1164,7 +1167,10 @@ class LeistenAnsicht(QWidget):
         if verteiler is not None:
             for leiste in verteiler.alle_leisten:
                 self.auswahl.addItem(
-                    f"Leiste {leiste.nummer}  ({leiste.da_anzahl} DA)", leiste.nummer
+                    u("Leiste {0}  ({1} DA)").format(
+                        leiste.nummer, leiste.da_anzahl
+                    ),
+                    leiste.nummer
                 )
         self.auswahl.blockSignals(False)
         self.auswahl.setCurrentIndex(0 if self.auswahl.count() else -1)
@@ -1230,7 +1236,7 @@ class LeistenAnsicht(QWidget):
             if any(a.leiste == nummer for a in k.abschnitte)
         ]
         if not kabel:
-            self.hinweis.setText("kein Kabel aufgelegt")
+            self.hinweis.setText(u("kein Kabel aufgelegt"))
         else:
             self.hinweis.setText(
                 "Kabel: " + ", ".join(k.beschriftung or "ohne Beschriftung" for k in kabel)

@@ -1,0 +1,462 @@
+# Verteilerly - English wording of the interface
+#
+# Der deutsche Satz ist der Schluessel, die englische Zeile die Anzeige.
+# Platzhalter ({0}, {1}, …) muessen erhalten bleiben; ihre Reihenfolge
+# darf sich aendern. Fehlt eine Zeile, erscheint der deutsche Satz.
+#
+# Die Blaetter selbst werden nicht uebersetzt: was dort steht, ist das
+# Dokument des Anwenders - die Woerter des Schriftfeldes sind je Projekt
+# aenderbar.
+'{0}: kein einziges Feld im Leistenblatt': '{0}: not a single column on the strip sheet'
+'{0}: leeres Schriftfeld': '{0}: empty title block'
+'{0}: schriftfeld_art {1!r} gibt es nicht (bekannt: {2})': '{0}: there is no schriftfeld_art {1!r} (known:
+  {2})'
+'{0}: buchten_je_blatt muss mindestens 1 sein': '{0}: buchten_je_blatt must be at least 1'
+'{0}: Rand und Zeilenhöhe müssen positiv sein': '{0}: margin and row height must be positive'
+'{0}: {1} ist keine Zahl': '{0}: {1} is not a number'
+'{0}: Spalte {1!r} gibt es nicht (bekannt: {2})': '{0}: there is no column {1!r} (known: {2})'
+'{0}: Ausrichtung {1!r} gibt es nicht': '{0}: there is no alignment {1!r}'
+'{0}: Blattvorlage ohne {1}': '{0}: sheet template without {1}'
+'{0}: {1!r} gehört nicht ins Schriftfeld (bekannt: {2})': '{0}: {1!r} does not belong in the title block
+  (known: {2})'
+'Blattvorlage {0!r} gibt es nicht (bekannt: {1})': 'There is no sheet template {0!r} (known: {1})'
+Die Doppelader wird ab 1 gezaehlt: Pairs are counted from 1
+Unbekannte Farbregel {0!r} bei {1!r}: Unknown color rule {0!r} at {1!r}
+'Kabeltyp {0!r} ist nicht hinterlegt (bekannt: {1})': 'Cable type {0!r} is not on file (known: {1})'
+'{0}: Kabeltyp ohne {1}': '{0}: cable type without {1}'
+Abbrechen: Cancel
+Als Vorlage speichern: Save as template
+'Name der Vorlage:': 'Name of the template:'
+Vorlage gespeichert: Template saved
+Übernehmen: Apply
+Vorlage überschreiben?: Replace template?
+Neuer Verteiler: New distribution frame
+z. B. Verteiler Keller: e.g. Basement frame
+z. B. 1.1: e.g. 1.1
+Spalten, Schriftgrößen und Ränder der Blätter. Später unter Einstellungen ▸ Blattvorlage zu ändern.: Columns,
+  font sizes and margins of the sheets. Can be changed later under Settings ▸ Sheet template.
+'Verteilername:': 'Frame name:'
+'Verteilernummer:': 'Frame number:'
+'Blattvorlage:': 'Sheet template:'
+Aus Vorlage: From template
+Benutzerdefiniert: Custom
+' DA': ' pairs'
+'Erweiterte Verteiler: Buchten einzeln festlegen': 'Advanced frames: set up each bay separately'
+Jede Bucht bekommt ihre eigene Zahl an Leisten und ihre eigene Leistengröße. Eine Leistengröße je Bucht.: Every
+  bay gets its own number of strips and its own strip size. One strip size per bay.
+Als Vorlage speichern…: Save as template…
+Legt diese Geometrie als Vorlage ab, damit sie beim nächsten Verteiler oben zur Wahl steht.: Stores this
+  geometry as a template, so that it is offered first for the next frame.
+'Buchten:': 'Bays:'
+'Leisten je Bucht:': 'Strips per bay:'
+'DA je Leiste:': 'Pairs per strip:'
+Projektdaten — stehen auf jedem Blatt, später änderbar: Project data — appears on every sheet, can be
+  changed later
+Teile: Split
+Verteilervorlagen: Frame templates
+Umbenennen…: Rename…
+Löschen: Delete
+Mitgelieferte wiederherstellen: Restore supplied templates
+Holt die mitgelieferten Vorlagen zurück, so wie sie ausgeliefert wurden. Eigene Vorlagen bleiben unberührt.: Brings
+  back the supplied templates exactly as they were delivered. Your own templates stay untouched.
+Schließen: Close
+Vorlage umbenennen: Rename template
+Vorlage löschen?: Delete template?
+Mitgelieferte Vorlagen wiederherstellen?: Restore supplied templates?
+? 'Die mitgelieferten Vorlagen kommen zurück, so wie sie ausgeliefert wurden — auch gelöschte und geänderte.
+
+  Eigene Vorlagen bleiben unberührt.'
+: 'The supplied templates come back exactly as they were delivered — including deleted and changed ones.
+
+  Your own templates stay untouched.'
+Blattvorlage: Sheet template
+z. B. 4DA Leitung zu Wohnzimmer: e.g. 4-pair line to living room
+— ohne, Farben von Hand —: — none, colors by hand —
+Auch von Hand geänderte Adernfarben ersetzen: Also replace wire colors changed by hand
+? Die Farben folgen Kabeltyp und Größe ohnehin — solange sie noch so dastehen, wie die Automatik sie gesetzt
+  hat. Mit diesem Haken werden auch von Hand geänderte überschrieben.
+: The colors follow cable type and size anyway — as long as they still read the way the program set them.
+  This checkbox overwrites colors changed by hand as well.
+'Beschriftung:': 'Label:'
+'Leiste:': 'Strip:'
+'Ab Stift:': 'From pin:'
+'Kabelgröße:': 'Cable size:'
+'Davon auflegen:': 'Of that, terminate:'
+'Kabeltyp:': 'Cable type:'
+Wächst und schrumpft am Ende des Kabels; der Anfang bleibt, wo er ist: Grows and shrinks at the end of
+  the cable; the start stays where it is
+Kabel passt nicht vollständig: Cable does not fit completely
+Auf einer anderen Leiste fortsetzen: Continue on another strip
+'Weiter auf:': 'Continue on:'
+Dokumentation: Documentation
+In der Dokumentation suchen (Strg+F): Search the documentation (Ctrl+F)
+Vorheriger Treffer (Umschalt+F3): Previous match (Shift+F3)
+Nächster Treffer (F3 oder Enter): Next match (F3 or Enter)
+Im Verteiler suchen: Search the frame
+Bezeichnung, Bemerkung, Rangierung, Kabel, Projektdaten…: Designation, remark, jumper, cable, project
+  data…
+Hinspringen: Go there
+Alle: All
+Keine: None
+'Mehrzeilig: Firma, Straße, Ort — so steht die Anschrift auch auf dem Blatt untereinander.': 'Multi-line:
+  company, street, town — the address stands like this on the sheet as well.'
+? 'Firma Beliebig
+
+  Beliebige Straße 7
+
+  77777 Ort'
+: 'Any Company Ltd
+
+  Any Street 7
+
+  77777 Town'
+'Erweitert: Beschriftungen auf dem Blatt ändern': 'Advanced: change the wording on the sheet'
+? Zeigt die Wörter, mit denen das Schriftfeld seine Zeilen überschreibt. Der Schalter blendet sie nur
+  ein und aus; geändert wird nichts, solange nichts eingetippt ist.
+: Shows the words the title block uses for its rows. The switch only shows and hides them; nothing is
+  changed as long as nothing is typed.
+Auf Vorgabe zurücksetzen: Reset to default
+Schreibt in jedes Feld wieder das Wort der Vorgabe.: Writes the default word back into every field.
+Verteiler — steht im Schriftfeld jedes Blattes: Frame — appears in the title block of every sheet
+Das Häkchen am Feldnamen entscheidet, ob das Feld auf den Blättern erscheint.: The check mark at the field
+  name decides whether the field appears on the sheets.
+Feld hinzufügen: Add field
+Feld entfernen: Remove field
+Eigene Felder: Own fields
+Nicht als Vorlage geeignet: Not suitable as a template
+Vorlage nicht gespeichert: Template not saved
+? '{0}
+
+  {1}'
+: '{0}
+
+  {1}'
+Leisten: strips
+DA je Leiste: Pairs per strip
+'Grundstrukturen für neue Verteiler — Buchten, Leisten und Doppeladern:': 'Basic structures for new frames
+  — bays, strips and pairs:'
+Keine Vorlage vorhanden.: No template available.
+'Wie das Blatt aussieht — Spalten, Schriftgrößen, Ränder:': 'How the sheet looks — columns, font sizes,
+  margins:'
+Kabel bearbeiten: Edit cable
+Kabel auflegen: Terminate cable
+Steht fest — für eine andere Lage das Kabel abnehmen und neu auflegen: Fixed — to change the position,
+  remove the cable and terminate it again
+Kabel entfernen: Remove cable
+'Suchen:': 'Search:'
+Wo: Where
+Feld: Field
+Inhalt: Content
+'Suchen nach:': 'Search for:'
+Mindestens zwei Zeichen eingeben.: Enter at least two characters.
+Ohne Haken bleibt der Inhalt erhalten, erscheint aber auf keinem Blatt.: Without the check mark the content
+  is kept but appears on no sheet.
+'Auswahl:': 'Selection:'
+Vorgaben für neue Verteiler: Defaults for new frames
+Projektdaten: Project data
+Feldname: Field name
+'Anzeigen auf:': 'Show on:'
+Ohne Haken erscheinen die eigenen Felder auf dieser Blattart nicht; ihr Inhalt bleibt erhalten.: Without
+  the check mark the own fields do not appear on this kind of sheet; their content is kept.
+Diese Angaben stehen beim Anlegen eines neuen Verteilers schon in den Feldern. Was hier leer bleibt, ist dort abgewählt.: These
+  entries are already filled in when a new frame is created. What is left empty here is deselected there.
+Es gibt schon eine Vorlage „{0}“. Soll sie ersetzt werden?: There already is a template „{0}“. Should
+  it be replaced?
+ergibt {0}, {1} DA: gives {0}, {1} pairs
+'{0} DA — {1} zu {2} DA': '{0} pairs — {1} of {2} pairs'
+'{0} zu je {1} mit {2}.': '{0} of {1} each with {2}.'
+'{0} DA — {1}': '{0} pairs — {1}'
+Ist nicht vorhanden: Is not available
+'{0}, {1}, {2} DA': '{0}, {1}, {2} pairs'
+Nicht umbenannt: Not renamed
+? 'Die Vorlage „{0}“ löschen?
+
+  Mitgelieferte Vorlagen holt der Knopf „Mitgelieferte wiederherstellen“ zurück.'
+: 'Delete the template „{0}“?
+
+  Supplied templates are brought back by the button „Restore supplied templates“.'
+Nicht gelöscht: Not deleted
+Von diesem Kabel passen {0} DA auf die gewählte Leiste, {1} DA bleiben übrig.: Of this cable {0} pairs
+  fit on the chosen strip, {1} pairs are left over.
+Rest verfällt — nur {0} DA auflegen: Drop the rest — terminate only {0} pairs
+weiter tippen…: keep typing…
+Aus dem offenen Verteiler übernehmen: Take over from the open frame
+'{0} DA': '{0} pairs'
+? '{0}
+
+  {1} Leisten, {2} DA'
+: '{0}
+
+  {1} strips, {2} pairs'
+Bucht {0}: Bay {0}
+' ({0})': ' ({0})'
+Leiste {0}  ({1} DA): Strip {0}  ({1} pairs)
+Das Kabel läuft über {0} Abschnitte: The cable runs across {0} sections
+'Das Kabel wird gekürzt: {0} DA bleiben unaufgelegt.': 'The cable is shortened: {0} pairs stay unterminated.'
+nicht gefunden: not found
+'Bucht {0}: {1} zu {2} DA': 'Bay {0}: {1} of {2} pairs'
+„{0}“ kommt im Verteiler nicht vor.: „{0}“ does not appear in the frame.
+'{0} von {1}': '{0} of {1}'
+Bereit: Ready
+'&Datei': '&File'
+Werkzeuge: Tools
+'&Neuer Verteiler…': '&New frame…'
+Ö&ffnen…: '&Open…'
+'&Speichern': '&Save'
+Speichern &unter…: Save &as…
+Als &PDF…: As &PDF…
+Als &Excel-Mappe…: As &Excel workbook…
+Als &CSV…: As &CSV…
+'&Beenden': '&Quit'
+'&Bearbeiten': '&Edit'
+'&Kabel auflegen…': '&Terminate cable…'
+Kabel &bearbeiten…: '&Edit cable…'
+Kabel &entfernen: R&emove cable
+Als &Vorlage speichern…: Save as &template…
+S&uchen…: '&Search…'
+'&Projektdaten…': '&Project data…'
+'&Freitext im Rangierfeld zulassen': '&Allow free text in the jumper field'
+Erlaubt im Rangierfeld auch einen Vermerk statt eines Ziels — etwa „extern“ oder „zur Klemmleiste“: Allows
+  a note instead of a target in the jumper field — such as „external“ or „to the terminal block“
+'&Einstellungen': '&Settings'
+'&Blattvorlage…': '&Sheet template…'
+'&Verteilervorlagen…': '&Frame templates…'
+'&Vorgaben für neue Verteiler…': '&Defaults for new frames…'
+Vorlagen und Einstellungen &sichern…: '&Back up templates and settings…'
+Vorlagen und Einstellungen &einspielen…: '&Restore templates and settings…'
+'&Ansicht': '&View'
+'&Dunkles Erscheinungsbild': '&Dark appearance'
+'&Sprache': '&Language'
+Schreibweise der &Rangierungen: Notation of the &jumpers
+'&Vorschau anzeigen': Show &preview
+'&Hilfe': '&Help'
+'&Dokumentation': '&Documentation'
+Ü&ber Verteilerly: '&About Verteilerly'
+Sprache: Language
+Änderungen verwerfen?: Discard changes?
+Der Verteiler wurde geändert und noch nicht gespeichert.: The frame has been changed and not yet saved.
+Was soll in das Paket?: What should go into the package?
+Sichern…: Back up…
+Vorlagen und Einstellungen sichern: Back up templates and settings
+Vorlagen und Einstellungen einspielen: Restore templates and settings
+Paket einspielen: Restore package
+Einspielen: Restore
+Verteiler öffnen: Open frame
+Verteiler speichern: Save frame
+Ausgeben nach: Write to
+Kabel entfernen?: Remove cable?
+Über Verteilerly: About Verteilerly
+Einen Verteiler aus einer Vorlage oder eigenen Maßen anlegen: Create a frame from a template or from your
+  own measurements
+Eine gespeicherte Verteilerdatei öffnen: Open a saved frame file
+Den Verteiler speichern: Save the frame
+Den Verteiler unter einem anderen Namen speichern: Save the frame under a different name
+Deckblatt, Verteilerbelegung und Leistenblätter: Cover sheet, frame layout and strip sheets
+Die Belegungsdaten je Ader als xlsx: The assignment data per wire as xlsx
+Die Belegungsdaten je Ader als CSV: The assignment data per wire as CSV
+Ein Kabel auf eine Leiste legen: Put a cable on a strip
+Beschriftung, Kabeltyp und Größe eines aufgelegten Kabels ändern: Change label, cable type and size of
+  a terminated cable
+Erst eine Doppelader mit Kabel auswählen: First select a pair with a cable
+Die Maße dieses Verteilers als Vorlage ablegen: Store the measurements of this frame as a template
+Bezeichnungen, Bemerkungen, Rangierungen, Kabel und Projektdaten durchsuchen: Search designations, remarks,
+  jumpers, cables and project data
+Name und Nummer des Verteilers, Stammdaten und eigene Felder — was im Schriftfeld jedes Blattes steht: Name
+  and number of the frame, master data and own fields — what stands in the title block of every sheet
+Wie die Blätter aussehen — Spalten, Schriftgrößen, Ränder: How the sheets look — columns, font sizes,
+  margins
+Vorlagen umbenennen, löschen und die mitgelieferten zurückholen: Rename and delete templates, and bring
+  the supplied ones back
+Firma, Kürzel und was sonst bei jedem Verteiler gleich ist: Company, initials and whatever else is the
+  same for every frame
+Vorlagen, Kabeltypen und Einstellungen in eine Datei packen: Pack templates, cable types and settings
+  into one file
+Ein gesichertes Paket in den Arbeitsordner zurückholen: Bring a saved package back into the working folder
+Die Sprache der Oberfläche — sie gilt nach einem Neustart: The language of the interface — it takes effect
+  after a restart
+Was das Programm kann und wie es bedient wird: What the program can do and how it is used
+Freitext im Rangierfeld ist zugelassen: Free text is allowed in the jumper field
+Im Rangierfeld sind nur Ziele zugelassen: Only targets are allowed in the jumper field
+ohne Namen: unnamed
+die Einstellungen: the settings
+'Kabel aufgelegt: {0} DA': 'Cable terminated: {0} pairs'
+'Kabel geändert: {0}': 'Cable changed: {0}'
+ohne Beschriftung: without label
+'Kabel entfernt: {0}': 'Cable removed: {0}'
+Projektdaten übernommen: Project data applied
+Die Oberfläche steht beim nächsten Start auf {0}.: The interface will be in {0} after the next start.
+'Sprache: {0} — gilt nach einem Neustart': 'Language: {0} — takes effect after a restart'
+Rangierungen werden als {0} geschrieben: Jumpers are written as {0}
+'Blattvorlage: {0}': 'Sheet template: {0}'
+Nicht gesichert: Not backed up
+'Gesichert nach {0}: {1}': 'Backed up to {0}: {1}'
+Kein Paket: Not a package
+? Erstellt am {0} mit Verteilerly {1}. Was soll eingespielt werden? Gleichnamige Dateien im Arbeitsordner
+  werden ersetzt; alles andere bleibt stehen.
+: Created on {0} with Verteilerly {1}. What should be restored? Files of the same name in the working
+  folder are replaced; everything else stays.
+unbekannt: unknown
+'Eingespielt: {0}': 'Restored: {0}'
+'Vorgaben gemerkt: {0} Felder stehen im nächsten neuen Verteiler schon da': 'Defaults stored: {0} fields
+  will already be filled in for the next new frame'
+Öffnen fehlgeschlagen: Opening failed
+'Geöffnet: {0}': 'Opened: {0}'
+Speichern fehlgeschlagen: Saving failed
+'Gespeichert: {0}': 'Saved: {0}'
+Ausgabe fehlgeschlagen: Output failed
+'Geschrieben: {0}': 'Written: {0}'
+Kabel nicht aufgelegt: Cable not terminated
+', {0} Adernfarben eingetragen': ', {0} wire colors entered'
+', {0} Adernfarben nachgezogen': ', {0} wire colors updated'
+', {0} Adernfarben freigeräumt': ', {0} wire colors cleared'
+Kabel nicht geändert: Cable not changed
+? 'Das Kabel „{0}“ von der Leiste nehmen?
+
+  Seine Adernfarben werden mit entfernt; von Hand eingetragene bleiben stehen.'
+: 'Take the cable „{0}“ off the strip?
+
+  Its wire colors are removed with it; colors entered by hand stay.'
+', {0} Adernfarben mit entfernt': ', {0} wire colors removed with it'
+mitgelieferte Vorlagen wiederhergestellt: supplied templates restored
+'Im Arbeitsordner:': 'In the working folder:'
+'{0} Dateien nach {1} gelegt — dort sind sie änderbar': '{0} files put into {1} — they can be changed
+  there'
+Leiste {0}, DA {1} — {2}: Strip {0}, pair {1} — {2}
+Leiste {0}, DA {1} — frei: Strip {0}, pair {1} — free
+'Neuer Verteiler: {0} DA auf {1}': 'New frame: {0} pairs on {1}'
+Nicht eingespielt: Not restored
+' umbenannt': ' renamed'
+' gelöscht': ' deleted'
+Nicht wiederhergestellt: Not brought back
+'{0} · {1}: {2}': '{0} · {1}: {2}'
+Umgebung: Environment
+', {0} Felder Projektdaten übernommen': ', {0} project data fields taken over'
+Nach dem Verteiler {0}.: After the frame {0}.
+'<p><i>Mit KI-Unterstützung entwickelt: Teile des Quelltextes sind mit Claude Code (Anthropic) erarbeitet.</i></p>': '<p><i>Developed
+  with AI support: parts of the source code were written with Claude Code (Anthropic).</i></p>'
+Lizenztexte: License texts
+Bausteine: Components
+Dokumentation für LSA+-Verteiler in der Fernmeldetechnik.: Documentation for LSA+ distribution frames
+  in telecommunications.
+<p>© 2026 {0} — freie Software unter der <b>GNU GPL, Version 3</b>. Ohne jede Gewährleistung.</p>: <p>©
+  2026 {0} — free software under the <b>GNU GPL, version 3</b>. Without any warranty.</p>
+Eine Leiste zurück (Alt+←): One strip back (Alt+←)
+Eine Leiste weiter (Alt+→): One strip forward (Alt+→)
+Fett: Bold
+Kursiv: Italic
+Zelle in zwei Beschriftungsfelder teilen — auf dem Blatt ohne Trennstrich: Split the cell into two labeling
+  fields — without a dividing line on the sheet
+Wie breit das rechte Feld ist: How wide the right field is
+Je Ader ist ein Vermerk vorgesehen, nicht zwei: One note per wire is provided for, not two
+kein Kabel aufgelegt: no cable terminated
+'{0} (gekürzt)': '{0} (shortened)'
+'{0} — nochmals drücken: wie die Blattvorlage': '{0} — press again: as in the sheet template'
+? 'Kein Verteiler geöffnet.
+
+  Datei ▸ Neuer Verteiler'
+: 'No frame open.
+
+  File ▸ New frame'
+Leiste {0}, DA {1}: Strip {0}, pair {1}
+'gekürzt: {0} von {1} DA': 'shortened: {0} of {1} pairs'
+Wie das Blatt aussieht — Spalten, Schriftgrößen, Ränder. Zu ändern unter Einstellungen ▸ Blattvorlage.: How
+  the sheet looks — columns, font sizes, margins. To be changed under Settings ▸ Sheet template.
+Keine Vorschau.: No preview.
+'Blatt:': 'Sheet:'
+'{0} / {1}': '{0} / {1}'
+Buchten, Leisten und DA muessen mindestens 1 sein: Bays, strips and pairs must be at least 1
+Ein Verteiler braucht mindestens eine Bucht: A frame needs at least one bay
+Ein Kabel muss mindestens eine Doppelader haben: A cable must have at least one pair
+Ein Kabel braucht mindestens einen Abschnitt: A cable needs at least one section
+Dieselbe Gegenstelle ist zweimal angegeben: The same counterpart is given twice
+'Unbekannte Aderseite: {0!r}': 'Unknown wire side: {0!r}'
+Leiste {0} gibt es in diesem Verteiler nicht: Strip {0} does not exist in this frame
+Die Rangierung {0} - {1} gibt es nicht: The jumper {0} - {1} does not exist
+Rangierung {0!r} nicht lesbar - erwartet wird z.B. '3 2a', 'L3 2a' oder 'L3-2a': Jumper {0!r} cannot be
+  read - expected is e.g. '3 2a', 'L3 2a' or 'L3-2a'
+'In der Rangierung steht ueberzaehliger Text: {0!r}': 'The jumper contains superfluous text: {0!r}'
+'Unbekannte Ausrichtung: {0!r}': 'Unknown alignment: {0!r}'
+Der Anteil des zweiten Feldes muss zwischen {0} und {1} Prozent liegen, nicht {2}: The share of the second
+  field must lie between {0} and {1} percent, not {2}
+'{0!r} laesst sich nicht teilen': '{0!r} cannot be split'
+Fuer {0!r} gibt es keinen Textstil: There is no text style for {0!r}
+Leiste {0} hat {1} DA, Stift {2} gibt es dort nicht: Strip {0} has {1} pairs, pin {2} does not exist there
+Start-DA {0} liegt ausserhalb von Leiste {1} ({2} DA): Start pair {0} lies outside strip {1} ({2} pairs)
+Das Kabel hat {0} DA, aufgelegt werden sollen {1}: The cable has {0} pairs, {1} are to be terminated
+Auf Leiste {0} ab DA {1} passen nur {2} von {3} DA: On strip {0} from pair {1} only {2} of {3} pairs fit
+Eine Rangierung kann nicht auf sich selbst zeigen ({0}): A jumper cannot point at itself ({0})
+'{0} kann hoechstens {1} Rangierungen tragen, angegeben sind {2}': '{0} can carry at most {1} jumpers,
+  given are {2}'
+'{0} traegt bereits {1} Rangierungen - fuer einen Vermerk ist kein Feld frei': '{0} already carries {1}
+  jumpers - there is no field free for a note'
+'Bucht {0}: Leisten und DA muessen mindestens 1 sein': 'Bay {0}: strips and pairs must be at least 1'
+Leiste {0} DA {1} ist bereits von einem Kabel belegt: Strip {0} pair {1} is already taken by a cable
+Abschnitt auf Leiste {0} ab DA {1} passt nicht ({2} DA zu viel): Section on strip {0} from pair {1} does
+  not fit ({2} pairs too many)
+'{0} gibt es in diesem Verteiler nicht': '{0} does not exist in this frame'
+Die Rangierung {0} - {1} besteht bereits: The jumper {0} - {1} already exists
+'{0} traegt bereits {1} Rangierungen - mehr als {2} sind nicht vorgesehen': '{0} already carries {1} jumpers
+  - more than {2} are not provided for'
+Das ist kein Verteilerly-Paket: This is not a Verteilerly package
+'Das ist kein Verteilerly-Paket: der Merkzettel fehlt': 'This is not a Verteilerly package: the note file
+  is missing'
+'Die Datei ist kein Paket: {0}': 'The file is not a package: {0}'
+Das ist keine Verteilerly-Projektdatei: This is not a Verteilerly project file
+'Formatversion {0} wird nicht unterstuetzt (lesbar: {1})': 'Format version {0} is not supported (readable:
+  {1})'
+'{0} enthaelt kein Projekt': '{0} contains no project'
+'{0} ist kein gueltiges JSON - {1}': '{0} is not valid JSON - {1}'
+'{0} ist unvollstaendig - {1}': '{0} is incomplete - {1}'
+Eine Vorlage braucht einen Namen: A template needs a name
+Der Verteiler hat keine Buchten: The frame has no bays
+Es ist keine einzige Vorlage vorhanden: There is not a single template
+Es gibt schon eine Vorlage {0!r}: There already is a template {0!r}
+'{0}Vorlage ohne Buchten': '{0}template without bays'
+'{0}Vorlage ohne {1}': '{0}template without {1}'
+'{0}Buchten, Leisten und DA muessen mindestens 1 sein': '{0}bays, strips and pairs must be at least 1'
+'Vorlage nicht gespeichert: {0}': 'Template not saved: {0}'
+'{0}Bucht {1}: erwartet wird leisten und da': '{0}bay {1}: expected are leisten and da'
+'{0}Bucht {1}: Leisten und DA muessen mindestens 1 sein': '{0}bay {1}: strips and pairs must be at least
+  1'
+'Vorlage nicht gelöscht: {0}': 'Template not deleted: {0}'
+'{0}Zahlenangabe nicht lesbar - {1}': '{0}number cannot be read - {1}'
+Bucht {0} trägt Leisten verschiedener Größe - das lässt sich nicht als Vorlage ablegen: Bay {0} carries
+  strips of different sizes - that cannot be stored as a template
+'{0}Bucht {1}: leisten und da muessen Zahlen sein': '{0}bay {1}: leisten and da must be numbers'
+'Vorlage {0!r} gibt es nicht (bekannt: {1})': 'There is no template {0!r} (known: {1})'
+Leiste: strip
+Bucht: bay
+Buchten: bays
+Doppelader: pair
+Doppeladern: pairs
+Fundstelle: match
+Fundstellen: matches
+Treffer: match
+Treffern: matches
+Vorlage: template
+Vorlagen: templates
+DA: pairs
+Stift: Pin
+Farbe: Color
+Bezeichnung: Designation
+Rangierung: Jumper
+Bemerkung: Remark
+Kabel: Cable
+Dokumenttitel: Document title
+Firma: Company
+Kunde: Customer
+Anlagennummer: Installation number
+Kundennummer: Customer number
+Gezeichnet am: Drawn on
+Gezeichnet von: Drawn by
+Kürzel: Initials
+Erstellt am: Created on
+Erstellt von: Created by
+Stand am: Revised on
+Stand von: Revised by
+Geprüft am: Checked on
+Geprüft von: Checked by
+Deckblatt: cover sheet
+Verteilerbelegung: frame layout
+Leistenblättern: strip sheets
+Leisten je Bucht: Strips per bay

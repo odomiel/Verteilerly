@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
 )
 
 from .. import einstellungen as einstellungsspeicher
-from .. import bestand, paket, pfade, projektdatei, schreibweisen, suche
+from .. import bestand, paket, pfade, projektdatei, schreibweisen, sprachen, suche
 from ..ausgabe import AusgabeFehler, csv_schreiben, pdf_schreiben, xlsx_schreiben
 from ..blattvorlagen import Blattvorlagen
 from ..farbcodes import (
@@ -60,6 +60,7 @@ from .symbol import symbol_icon
 from .thema import SAETZE, anwenden
 from .uebersicht import Uebersicht
 from .vorschau import Vorschau
+from ..sprachen import u
 
 # Wohin das Über-Fenster für die Lizenztexte verweist. Das Programm
 # braucht das Netz nicht - die Texte liegen auch im Arbeitsordner;
@@ -115,8 +116,7 @@ class Hauptfenster(QMainWindow):
         self._projekt_setzen(None, None)
         if self.ausgelegt:
             self.statusBar().showMessage(
-                f"{len(self.ausgelegt)} Dateien nach {pfade.eigener_datenordner()} "
-                "gelegt — dort sind sie änderbar",
+                u("{0} Dateien nach {1} gelegt — dort sind sie änderbar").format(len(self.ausgelegt), pfade.eigener_datenordner()),
                 12000,
             )
 
@@ -169,12 +169,12 @@ class Hauptfenster(QMainWindow):
         self.hauptteiler.setSizes([760, 520])
 
         self.setCentralWidget(self.hauptteiler)
-        self.statusBar().showMessage("Bereit")
+        self.statusBar().showMessage(u("Bereit"))
         self.resize(1320, 820)
 
     def _aktionen_bauen(self) -> None:
-        datei = self.menuBar().addMenu("&Datei")
-        werkzeuge = QToolBar("Werkzeuge")
+        datei = self.menuBar().addMenu(u("&Datei"))
+        werkzeuge = QToolBar(u("Werkzeuge"))
         werkzeuge.setMovable(False)
         self.addToolBar(werkzeuge)
 
@@ -193,104 +193,104 @@ class Hauptfenster(QMainWindow):
                 werkzeuge.addAction(handlung)
             return handlung
 
-        aktion("&Neuer Verteiler…", self.neuer_verteiler, "Ctrl+N", True,
-               hinweis="Einen Verteiler aus einer Vorlage oder eigenen Maßen anlegen")
-        aktion("Ö&ffnen…", self.oeffnen, "Ctrl+O", True,
-               hinweis="Eine gespeicherte Verteilerdatei öffnen")
+        aktion(u("&Neuer Verteiler…"), self.neuer_verteiler, "Ctrl+N", True,
+               hinweis=u("Einen Verteiler aus einer Vorlage oder eigenen Maßen anlegen"))
+        aktion(u("Ö&ffnen…"), self.oeffnen, "Ctrl+O", True,
+               hinweis=u("Eine gespeicherte Verteilerdatei öffnen"))
         self.aktion_speichern = aktion(
-            "&Speichern", self.speichern, "Ctrl+S", True,
-            hinweis="Den Verteiler speichern",
+            u("&Speichern"), self.speichern, "Ctrl+S", True,
+            hinweis=u("Den Verteiler speichern"),
         )
         self.aktion_speichern_unter = aktion(
-            "Speichern &unter…", self.speichern_unter, "Ctrl+Shift+S",
-            hinweis="Den Verteiler unter einem anderen Namen speichern",
+            u("Speichern &unter…"), self.speichern_unter, "Ctrl+Shift+S",
+            hinweis=u("Den Verteiler unter einem anderen Namen speichern"),
         )
         datei.addSeparator()
-        self.aktion_pdf = aktion("Als &PDF…", self.pdf_ausgeben, "Ctrl+E", True,
-                                 hinweis="Deckblatt, Verteilerbelegung und Leistenblätter")
-        self.aktion_xlsx = aktion("Als &Excel-Mappe…", self.xlsx_ausgeben,
-                                  hinweis="Die Belegungsdaten je Ader als xlsx")
-        self.aktion_csv = aktion("Als &CSV…", self.csv_ausgeben,
-                                 hinweis="Die Belegungsdaten je Ader als CSV")
+        self.aktion_pdf = aktion(u("Als &PDF…"), self.pdf_ausgeben, "Ctrl+E", True,
+                                 hinweis=u("Deckblatt, Verteilerbelegung und Leistenblätter"))
+        self.aktion_xlsx = aktion(u("Als &Excel-Mappe…"), self.xlsx_ausgeben,
+                                  hinweis=u("Die Belegungsdaten je Ader als xlsx"))
+        self.aktion_csv = aktion(u("Als &CSV…"), self.csv_ausgeben,
+                                 hinweis=u("Die Belegungsdaten je Ader als CSV"))
         datei.addSeparator()
-        aktion("&Beenden", self.close, "Ctrl+Q")
+        aktion(u("&Beenden"), self.close, "Ctrl+Q")
 
-        bearbeiten = self.menuBar().addMenu("&Bearbeiten")
+        bearbeiten = self.menuBar().addMenu(u("&Bearbeiten"))
         werkzeuge.addSeparator()
         self.aktion_kabel = aktion(
-            "&Kabel auflegen…", self.kabel_auflegen, "Ctrl+K", True, bearbeiten,
-            hinweis="Ein Kabel auf eine Leiste legen",
+            u("&Kabel auflegen…"), self.kabel_auflegen, "Ctrl+K", True, bearbeiten,
+            hinweis=u("Ein Kabel auf eine Leiste legen"),
         )
         self.aktion_kabel_aendern = aktion(
-            "Kabel &bearbeiten…", self.kabel_bearbeiten, "Ctrl+Shift+E", True,
+            u("Kabel &bearbeiten…"), self.kabel_bearbeiten, "Ctrl+Shift+E", True,
             bearbeiten,
-            hinweis="Beschriftung, Kabeltyp und Größe eines aufgelegten Kabels ändern",
+            hinweis=u("Beschriftung, Kabeltyp und Größe eines aufgelegten Kabels ändern"),
         )
         self.aktion_kabel_weg = aktion(
-            "Kabel &entfernen", self.kabel_entfernen, "Ctrl+Shift+K", True, bearbeiten,
-            hinweis="Erst eine Doppelader mit Kabel auswählen",
+            u("Kabel &entfernen"), self.kabel_entfernen, "Ctrl+Shift+K", True, bearbeiten,
+            hinweis=u("Erst eine Doppelader mit Kabel auswählen"),
         )
         self.aktion_vorlage = aktion(
-            "Als &Vorlage speichern…", self.vorlage_ablegen, menue=bearbeiten,
-            hinweis="Die Maße dieses Verteilers als Vorlage ablegen",
+            u("Als &Vorlage speichern…"), self.vorlage_ablegen, menue=bearbeiten,
+            hinweis=u("Die Maße dieses Verteilers als Vorlage ablegen"),
         )
         bearbeiten.addSeparator()
         self.aktion_suchen = aktion(
-            "S&uchen…", self.suchen, "Ctrl+F", True, bearbeiten,
-            hinweis="Bezeichnungen, Bemerkungen, Rangierungen, Kabel und "
-                    "Projektdaten durchsuchen",
+            u("S&uchen…"), self.suchen, "Ctrl+F", True, bearbeiten,
+            hinweis=u("Bezeichnungen, Bemerkungen, Rangierungen, Kabel und "
+                    "Projektdaten durchsuchen"),
         )
         self.aktion_projektdaten = aktion(
-            "&Projektdaten…",
+            u("&Projektdaten…"),
             self.projektdaten_bearbeiten,
             "Ctrl+B",
             True,
             bearbeiten,
-            hinweis="Name und Nummer des Verteilers, Stammdaten und eigene Felder — "
-                    "was im Schriftfeld jedes Blattes steht",
+            hinweis=u("Name und Nummer des Verteilers, Stammdaten und eigene Felder — "
+                    "was im Schriftfeld jedes Blattes steht"),
         )
 
-        self.aktion_freitext = QAction("&Freitext im Rangierfeld zulassen", self)
+        self.aktion_freitext = QAction(u("&Freitext im Rangierfeld zulassen"), self)
         self.aktion_freitext.setCheckable(True)
         self.aktion_freitext.setChecked(self.freitext)
         self.aktion_freitext.setStatusTip(
-            "Erlaubt im Rangierfeld auch einen Vermerk statt eines Ziels — "
-            "etwa „extern“ oder „zur Klemmleiste“"
+            u("Erlaubt im Rangierfeld auch einen Vermerk statt eines Ziels — "
+            "etwa „extern“ oder „zur Klemmleiste“")
         )
         self.aktion_freitext.triggered.connect(self.freitext_erlauben)
 
-        einstellungen = self.menuBar().addMenu("&Einstellungen")
+        einstellungen = self.menuBar().addMenu(u("&Einstellungen"))
         aktion(
-            "&Blattvorlage…", self.blattvorlage_waehlen, "Ctrl+Shift+B",
+            u("&Blattvorlage…"), self.blattvorlage_waehlen, "Ctrl+Shift+B",
             menue=einstellungen,
-            hinweis="Wie die Blätter aussehen — Spalten, Schriftgrößen, Ränder",
+            hinweis=u("Wie die Blätter aussehen — Spalten, Schriftgrößen, Ränder"),
         )
         aktion(
-            "&Verteilervorlagen…", self.vorlagen_verwalten, "Ctrl+Shift+V",
+            u("&Verteilervorlagen…"), self.vorlagen_verwalten, "Ctrl+Shift+V",
             menue=einstellungen,
-            hinweis="Vorlagen umbenennen, löschen und die mitgelieferten "
-                    "zurückholen",
+            hinweis=u("Vorlagen umbenennen, löschen und die mitgelieferten "
+                    "zurückholen"),
         )
         aktion(
-            "&Vorgaben für neue Verteiler…", self.vorgaben_bearbeiten,
+            u("&Vorgaben für neue Verteiler…"), self.vorgaben_bearbeiten,
             menue=einstellungen,
-            hinweis="Firma, Kürzel und was sonst bei jedem Verteiler gleich ist",
+            hinweis=u("Firma, Kürzel und was sonst bei jedem Verteiler gleich ist"),
         )
         einstellungen.addSeparator()
         aktion(
-            "Vorlagen und Einstellungen &sichern…", self.paket_sichern,
+            u("Vorlagen und Einstellungen &sichern…"), self.paket_sichern,
             menue=einstellungen,
-            hinweis="Vorlagen, Kabeltypen und Einstellungen in eine Datei packen",
+            hinweis=u("Vorlagen, Kabeltypen und Einstellungen in eine Datei packen"),
         )
         aktion(
-            "Vorlagen und Einstellungen &einspielen…", self.paket_einspielen,
+            u("Vorlagen und Einstellungen &einspielen…"), self.paket_einspielen,
             menue=einstellungen,
-            hinweis="Ein gesichertes Paket in den Arbeitsordner zurückholen",
+            hinweis=u("Ein gesichertes Paket in den Arbeitsordner zurückholen"),
         )
         einstellungen.addSeparator()
 
-        ansicht = self.menuBar().addMenu("&Ansicht")
-        self.aktion_thema = QAction("&Dunkles Erscheinungsbild", self)
+        ansicht = self.menuBar().addMenu(u("&Ansicht"))
+        self.aktion_thema = QAction(u("&Dunkles Erscheinungsbild"), self)
         self.aktion_thema.setCheckable(True)
         self.aktion_thema.setChecked(self.thema_name == "dunkel")
         self.aktion_thema.setShortcut(QKeySequence("Ctrl+D"))
@@ -299,7 +299,25 @@ class Hauptfenster(QMainWindow):
         )
         ansicht.addAction(self.aktion_thema)
 
-        rangierungen = einstellungen.addMenu("Schreibweise der &Rangierungen")
+        sprachmenue = einstellungen.addMenu(u("&Sprache"))
+        sprachmenue.setToolTipsVisible(True)
+        self.sprachen_gruppe = QActionGroup(self)
+        self.sprachen_gruppe.setExclusive(True)
+        for kennung, wie in sprachen.SPRACHEN:
+            handlung = QAction(wie, self)
+            handlung.setCheckable(True)
+            handlung.setChecked(kennung == sprachen.sprache())
+            handlung.setData(kennung)
+            handlung.setStatusTip(
+                u("Die Sprache der Oberfläche — sie gilt nach einem Neustart")
+            )
+            handlung.triggered.connect(
+                lambda _an=False, kennung=kennung: self.sprache_waehlen(kennung)
+            )
+            self.sprachen_gruppe.addAction(handlung)
+            sprachmenue.addAction(handlung)
+
+        rangierungen = einstellungen.addMenu(u("Schreibweise der &Rangierungen"))
         rangierungen.setToolTipsVisible(True)
         self.schreibweisen_gruppe = QActionGroup(self)
         self.schreibweisen_gruppe.setExclusive(True)
@@ -317,7 +335,7 @@ class Hauptfenster(QMainWindow):
             rangierungen.addAction(handlung)
         einstellungen.addAction(self.aktion_freitext)
 
-        self.aktion_vorschau = QAction("&Vorschau anzeigen", self)
+        self.aktion_vorschau = QAction(u("&Vorschau anzeigen"), self)
         self.aktion_vorschau.setCheckable(True)
         self.aktion_vorschau.setShortcut(QKeySequence("F9"))
         self.aktion_vorschau.setChecked(
@@ -329,11 +347,11 @@ class Hauptfenster(QMainWindow):
         werkzeuge.addAction(self.aktion_vorschau)
         self.vorschau_zeigen(self.aktion_vorschau.isChecked())
 
-        hilfe = self.menuBar().addMenu("&Hilfe")
-        aktion("&Dokumentation", self.dokumentation, "F1", menue=hilfe,
-               hinweis="Was das Programm kann und wie es bedient wird")
+        hilfe = self.menuBar().addMenu(u("&Hilfe"))
+        aktion(u("&Dokumentation"), self.dokumentation, "F1", menue=hilfe,
+               hinweis=u("Was das Programm kann und wie es bedient wird"))
         hilfe.addSeparator()
-        aktion("Ü&ber Verteilerly", self.ueber, menue=hilfe)
+        aktion(u("Ü&ber Verteilerly"), self.ueber, menue=hilfe)
 
     # -- Darstellung -------------------------------------------------------
 
@@ -349,6 +367,34 @@ class Hauptfenster(QMainWindow):
         self.vorschau.farben_setzen(farben)
         self.einstellungen.setValue("thema", self.thema_name)
 
+    def sprache_waehlen(self, kennung: str) -> None:
+        """Die Sprache der Oberfläche merken.
+
+        Gewechselt wird beim nächsten Start: die Menüs, Dialoge und
+        Beschriftungen werden einmal beschriftet, wenn das Fenster
+        entsteht. Sie hinterher umzuhängen hieße, jedes Widget zweimal zu
+        bauen - für eine Einstellung, die selten geändert wird.
+        """
+        if kennung == sprachen.sprache():
+            return
+        self.einstellungen.setValue("sprache", kennung)
+        self.einstellungen.sync()
+        for handlung in self.sprachen_gruppe.actions():
+            handlung.setChecked(handlung.data() == kennung)
+        QMessageBox.information(
+            self,
+            u("Sprache"),
+            u("Die Oberfläche steht beim nächsten Start auf {0}.").format(
+                sprachen.name(kennung)
+            ),
+        )
+        self.statusBar().showMessage(
+            u("Sprache: {0} — gilt nach einem Neustart").format(
+                sprachen.name(kennung)
+            ),
+            8000,
+        )
+
     def schreibweise_waehlen(self, kennung: str) -> None:
         """Stellt um, wie Rangierungen geschrieben werden.
 
@@ -359,7 +405,7 @@ class Hauptfenster(QMainWindow):
         self.einstellungen.setValue("schreibweise", self.schreibweise.id)
         self._schreibweise_anwenden()
         self.statusBar().showMessage(
-            f"Rangierungen werden als {self.schreibweise.beispiel} geschrieben", 6000
+            u("Rangierungen werden als {0} geschrieben").format(self.schreibweise.beispiel), 6000
         )
 
     def blattvorlage_waehlen(self) -> None:
@@ -381,9 +427,9 @@ class Hauptfenster(QMainWindow):
         self.leistenansicht.freitext_erlauben(self.freitext)
         self.aktion_freitext.setChecked(self.freitext)
         self.statusBar().showMessage(
-            "Freitext im Rangierfeld ist zugelassen"
+            u("Freitext im Rangierfeld ist zugelassen")
             if self.freitext
-            else "Im Rangierfeld sind nur Ziele zugelassen",
+            else u("Im Rangierfeld sind nur Ziele zugelassen"),
             6000,
         )
 
@@ -400,7 +446,7 @@ class Hauptfenster(QMainWindow):
     def _titel_setzen(self) -> None:
         teile = ["Verteilerly"]
         if self.projekt is not None:
-            name = self.projekt.verteiler.name or "ohne Namen"
+            name = self.projekt.verteiler.name or u("ohne Namen")
             teile.append(name if not self.pfad else f"{name} — {self.pfad.name}")
         if self.veraendert:
             teile.append("•")
@@ -418,9 +464,9 @@ class Hauptfenster(QMainWindow):
         self.leistenansicht.leiste_zeigen(leiste)
         kabel = self.projekt.verteiler.kabel_an(leiste, da)
         if kabel is not None:
-            self.statusBar().showMessage(f"Leiste {leiste}, DA {da} — {kabel.beschriftung}")
+            self.statusBar().showMessage(u("Leiste {0}, DA {1} — {2}").format(leiste, da, kabel.beschriftung))
         else:
-            self.statusBar().showMessage(f"Leiste {leiste}, DA {da} — frei")
+            self.statusBar().showMessage(u("Leiste {0}, DA {1} — frei").format(leiste, da))
 
     def _belegung_geaendert(self) -> None:
         self.veraendert = True
@@ -432,7 +478,7 @@ class Hauptfenster(QMainWindow):
     def _blattvorlage_gemerkt(self, kennung: str) -> None:
         self.einstellungen.setValue("blattvorlage", kennung)
         self.statusBar().showMessage(
-            f"Blattvorlage: {self.blattvorlagen.holen(kennung).name}", 6000
+            u("Blattvorlage: {0}").format(self.blattvorlagen.holen(kennung).name), 6000
         )
 
     def _leiste_gewechselt(self, nummer: int) -> None:
@@ -514,8 +560,8 @@ class Hauptfenster(QMainWindow):
             return True
         antwort = frage(
             self,
-            "Änderungen verwerfen?",
-            "Der Verteiler wurde geändert und noch nicht gespeichert.",
+            u("Änderungen verwerfen?"),
+            u("Der Verteiler wurde geändert und noch nicht gespeichert."),
             QMessageBox.StandardButton.Save
             | QMessageBox.StandardButton.Discard
             | QMessageBox.StandardButton.Cancel,
@@ -550,9 +596,15 @@ class Hauptfenster(QMainWindow):
         self._projekt_setzen(projekt, None)
         uebernommen = len(projekt.briefkopf) + len(projekt.eigene_felder)
         self.statusBar().showMessage(
-            f"Neuer Verteiler: {self.projekt.verteiler.da_gesamt} DA auf "
-            + mehrzahl(len(self.projekt.verteiler.alle_leisten), "Leiste", "Leisten")
-            + (f", {uebernommen} Felder Projektdaten übernommen" if uebernommen else "")
+            u("Neuer Verteiler: {0} DA auf {1}").format(
+                self.projekt.verteiler.da_gesamt,
+                mehrzahl(len(self.projekt.verteiler.alle_leisten), "Leiste", "Leisten"),
+            )
+            + (
+                u(", {0} Felder Projektdaten übernommen").format(uebernommen)
+                if uebernommen
+                else ""
+            )
         )
 
     def neues_projekt(self, angaben) -> Projekt:
@@ -578,8 +630,8 @@ class Hauptfenster(QMainWindow):
             "Vorlagen und Einstellungen sichern",
             vorhanden,
             self,
-            "Was soll in das Paket?",
-            "Sichern…",
+            u("Was soll in das Paket?"),
+            u("Sichern…"),
         )
         if wahl.exec() != PaketDialog.DialogCode.Accepted:
             return
@@ -587,7 +639,7 @@ class Hauptfenster(QMainWindow):
 
         vorschlag = pathlib.Path.home() / f"Verteilerly-{VERSION}.zip"
         name, _ = QFileDialog.getSaveFileName(
-            self, "Vorlagen und Einstellungen sichern", str(vorschlag), PAKETFILTER
+            self, u("Vorlagen und Einstellungen sichern"), str(vorschlag), PAKETFILTER
         )
         if not name:
             return
@@ -601,34 +653,38 @@ class Hauptfenster(QMainWindow):
                 teile,
             )
         except paket.PaketFehler as fehler:
-            QMessageBox.critical(self, "Nicht gesichert", str(fehler))
+            QMessageBox.critical(self, u("Nicht gesichert"), str(fehler))
             return
         self.statusBar().showMessage(
-            f"Gesichert nach {name}: {self._paketbericht(bericht)}", 12000
+            u("Gesichert nach {0}: {1}").format(name, self._paketbericht(bericht)), 12000
         )
 
     def paket_einspielen(self) -> None:
         """Ein gesichertes Paket zurueckholen."""
         name, _ = QFileDialog.getOpenFileName(
-            self, "Vorlagen und Einstellungen einspielen", "", PAKETFILTER
+            self, u("Vorlagen und Einstellungen einspielen"), "", PAKETFILTER
         )
         if not name:
             return
         try:
             vorschau = paket.inhalt(pathlib.Path(name))
         except paket.PaketFehler as fehler:
-            QMessageBox.critical(self, "Kein Paket", str(fehler))
+            QMessageBox.critical(self, u("Kein Paket"), str(fehler))
             return
 
         wahl = PaketDialog(
-            "Paket einspielen",
+            u("Paket einspielen"),
             vorschau,
             self,
-            f"Erstellt am {vorschau.get('erstellt', 'unbekannt')} mit "
-            f"Verteilerly {vorschau.get('version', '?')}. Was soll "
-            "eingespielt werden? Gleichnamige Dateien im Arbeitsordner "
-            "werden ersetzt; alles andere bleibt stehen.",
-            "Einspielen",
+            u(
+                "Erstellt am {0} mit Verteilerly {1}. Was soll eingespielt "
+                "werden? Gleichnamige Dateien im Arbeitsordner werden "
+                "ersetzt; alles andere bleibt stehen."
+            ).format(
+                vorschau.get("erstellt", u("unbekannt")),
+                vorschau.get("version", "?"),
+            ),
+            u("Einspielen"),
         )
         if wahl.exec() != PaketDialog.DialogCode.Accepted:
             return
@@ -647,19 +703,19 @@ class Hauptfenster(QMainWindow):
                     teile,
                 )
             except paket.PaketFehler as fehler:
-                QMessageBox.critical(self, "Nicht eingespielt", str(fehler))
+                QMessageBox.critical(self, u("Nicht eingespielt"), str(fehler))
                 return
             if bericht.get("einstellungen"):
                 self._einstellungen_uebernehmen(zwischen)
 
         self._nach_dem_einspielen()
         self.statusBar().showMessage(
-            f"Eingespielt: {self._paketbericht(bericht)}", 12000
+            u("Eingespielt: {0}").format(self._paketbericht(bericht)), 12000
         )
 
     def _paketbericht(self, bericht: dict) -> str:
         teile = [
-            f"{bericht.get(name, 0)} {beschriftung}"
+            f"{bericht.get(name, 0)} {u(beschriftung)}"
             for name, beschriftung in (
                 ("vorlagen", "Verteilervorlagen"),
                 ("blattvorlagen", "Blattvorlagen"),
@@ -667,7 +723,7 @@ class Hauptfenster(QMainWindow):
             )
         ]
         if bericht.get("einstellungen"):
-            teile.append("die Einstellungen")
+            teile.append(u("die Einstellungen"))
         return ", ".join(teile)
 
     def _einstellungen_uebernehmen(self, datei: pathlib.Path) -> None:
@@ -721,24 +777,23 @@ class Hauptfenster(QMainWindow):
         dialog.uebernehmen()
         einstellungsspeicher.briefkopf_sichern(self.einstellungen, muster)
         self.statusBar().showMessage(
-            f"Vorgaben gemerkt: {len(muster.briefkopf) + len(muster.eigene_felder)} "
-            "Felder stehen im nächsten neuen Verteiler schon da",
+            u("Vorgaben gemerkt: {0} Felder stehen im nächsten neuen Verteiler schon da").format(len(muster.briefkopf) + len(muster.eigene_felder)),
             8000,
         )
 
     def oeffnen(self) -> None:
         if not self._darf_verwerfen():
             return
-        name, _ = QFileDialog.getOpenFileName(self, "Verteiler öffnen", "", DATEIFILTER)
+        name, _ = QFileDialog.getOpenFileName(self, u("Verteiler öffnen"), "", DATEIFILTER)
         if not name:
             return
         try:
             projekt = projektdatei.laden(pathlib.Path(name))
         except (ModellFehler, OSError) as fehler:
-            QMessageBox.critical(self, "Öffnen fehlgeschlagen", str(fehler))
+            QMessageBox.critical(self, u("Öffnen fehlgeschlagen"), str(fehler))
             return
         self._projekt_setzen(projekt, pathlib.Path(name))
-        self.statusBar().showMessage(f"Geöffnet: {name}")
+        self.statusBar().showMessage(u("Geöffnet: {0}").format(name))
 
     def speichern(self) -> bool:
         if self.projekt is None:
@@ -748,12 +803,12 @@ class Hauptfenster(QMainWindow):
         try:
             projektdatei.speichern(self.projekt, self.pfad)
         except OSError as fehler:
-            QMessageBox.critical(self, "Speichern fehlgeschlagen", str(fehler))
+            QMessageBox.critical(self, u("Speichern fehlgeschlagen"), str(fehler))
             return False
         self.veraendert = False
         self._titel_setzen()
         self.aktionen_auffrischen()
-        self.statusBar().showMessage(f"Gespeichert: {self.pfad}")
+        self.statusBar().showMessage(u("Gespeichert: {0}").format(self.pfad))
         return True
 
     def speichern_unter(self) -> bool:
@@ -761,7 +816,7 @@ class Hauptfenster(QMainWindow):
             return False
         vorschlag = self.projekt.verteiler.name or "verteiler"
         name, _ = QFileDialog.getSaveFileName(
-            self, "Verteiler speichern", f"{vorschlag}.vtly.json", DATEIFILTER
+            self, u("Verteiler speichern"), f"{vorschlag}.vtly.json", DATEIFILTER
         )
         if not name:
             return False
@@ -778,7 +833,7 @@ class Hauptfenster(QMainWindow):
         stamm = stamm or self.projekt.verteiler.name or "verteiler"
         ordner = self.pfad.parent if self.pfad else pathlib.Path.home()
         name, _ = QFileDialog.getSaveFileName(
-            self, "Ausgeben nach", str(ordner / f"{stamm}{endung}"), filter_
+            self, u("Ausgeben nach"), str(ordner / f"{stamm}{endung}"), filter_
         )
         return pathlib.Path(name) if name else None
 
@@ -811,9 +866,9 @@ class Hauptfenster(QMainWindow):
         try:
             arbeit()
         except (AusgabeFehler, OSError) as fehler:
-            QMessageBox.critical(self, "Ausgabe fehlgeschlagen", str(fehler))
+            QMessageBox.critical(self, u("Ausgabe fehlgeschlagen"), str(fehler))
             return
-        self.statusBar().showMessage(f"Geschrieben: {ziel}")
+        self.statusBar().showMessage(u("Geschrieben: {0}").format(ziel))
 
     # -- Kabel -------------------------------------------------------------
 
@@ -844,16 +899,16 @@ class Hauptfenster(QMainWindow):
             if kabel is None:
                 return
         except ModellFehler as fehler:
-            QMessageBox.warning(self, "Kabel nicht aufgelegt", str(fehler))
+            QMessageBox.warning(self, u("Kabel nicht aufgelegt"), str(fehler))
             return
 
         gefuellt = farben_eintragen(verteiler, kabel, self.kabeltypen)
         self._belegung_geaendert()
         self.leistenansicht.aktualisieren()
 
-        meldung = f"Kabel aufgelegt: {kabel.da_aufgelegt} DA"
+        meldung = u("Kabel aufgelegt: {0} DA").format(kabel.da_aufgelegt)
         if gefuellt:
-            meldung += f", {gefuellt} Adernfarben eingetragen"
+            meldung += u(", {0} Adernfarben eingetragen").format(gefuellt)
         meldung += self._lagenhinweis(kabel)
         self.statusBar().showMessage(meldung, 12000)
 
@@ -898,7 +953,7 @@ class Hauptfenster(QMainWindow):
                 da_gesamt=angaben["da_gesamt"],
             )
         except ModellFehler as fehler:
-            QMessageBox.warning(self, "Kabel nicht aufgelegt", str(fehler))
+            QMessageBox.warning(self, u("Kabel nicht aufgelegt"), str(fehler))
             return None
 
     def _kabel_angeklickt(self, kabel) -> None:
@@ -954,12 +1009,12 @@ class Hauptfenster(QMainWindow):
         self._belegung_geaendert()
         self.leistenansicht.aktualisieren()
 
-        meldung = f"Kabel geändert: {kabel.beschriftung or 'ohne Beschriftung'}"
+        meldung = u("Kabel geändert: {0}").format(kabel.beschriftung or u("ohne Beschriftung"))
         if gefuellt:
-            meldung += f", {gefuellt} Adernfarben nachgezogen"
+            meldung += u(", {0} Adernfarben nachgezogen").format(gefuellt)
             meldung += self._lagenhinweis(kabel)
         if geleert:
-            meldung += f", {geleert} Adernfarben freigeräumt"
+            meldung += u(", {0} Adernfarben freigeräumt").format(geleert)
         self.statusBar().showMessage(meldung, 8000)
 
     def _auflegen_aendern(self, kabel, anzahl_da: int) -> bool:
@@ -975,7 +1030,7 @@ class Hauptfenster(QMainWindow):
         except UeberlaufFehler as ueberlauf:
             return self._ueberlauf_beim_wachsen(kabel, ueberlauf)
         except ModellFehler as fehler:
-            QMessageBox.warning(self, "Kabel nicht geändert", str(fehler))
+            QMessageBox.warning(self, u("Kabel nicht geändert"), str(fehler))
             return False
 
     def _ueberlauf_beim_wachsen(self, kabel, ueberlauf: UeberlaufFehler) -> bool:
@@ -992,7 +1047,7 @@ class Hauptfenster(QMainWindow):
             if wahl == UeberlaufDialog.FORTSETZEN:
                 verteiler.kabel_verlaengern(kabel, leiste, start, ueberlauf.rest)
         except ModellFehler as fehler:
-            QMessageBox.warning(self, "Kabel nicht geändert", str(fehler))
+            QMessageBox.warning(self, u("Kabel nicht geändert"), str(fehler))
             return False
         return True
 
@@ -1003,10 +1058,8 @@ class Hauptfenster(QMainWindow):
             return
         antwort = frage(
             self,
-            "Kabel entfernen?",
-            f"Das Kabel „{kabel.beschriftung}“ von der Leiste nehmen?\n"
-            "Seine Adernfarben werden mit entfernt; von Hand eingetragene "
-            "bleiben stehen.",
+            u("Kabel entfernen?"),
+            u("Das Kabel „{0}“ von der Leiste nehmen?\nSeine Adernfarben werden mit entfernt; von Hand eingetragene bleiben stehen.").format(kabel.beschriftung),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
@@ -1022,9 +1075,9 @@ class Hauptfenster(QMainWindow):
         self._belegung_geaendert()
         self.leistenansicht.aktualisieren()
         self.aktionen_auffrischen()
-        meldung = f"Kabel entfernt: {kabel.beschriftung or 'ohne Beschriftung'}"
+        meldung = u("Kabel entfernt: {0}").format(kabel.beschriftung or u("ohne Beschriftung"))
         if geleert:
-            meldung += f", {geleert} Adernfarben mit entfernt"
+            meldung += u(", {0} Adernfarben mit entfernt").format(geleert)
         self.statusBar().showMessage(meldung, 8000)
 
     # -- Sonstiges ---------------------------------------------------------
@@ -1079,7 +1132,7 @@ class Hauptfenster(QMainWindow):
             self.vorlagen,
             self._vorlagenordner(),
             vorschlag=verteiler.name or f"{verteiler.da_gesamt} DA",
-            beschreibung=f"Nach dem Verteiler {verteiler.name}." if verteiler.name else "",
+            beschreibung=u("Nach dem Verteiler {0}.").format(verteiler.name) if verteiler.name else "",
         )
 
     def vorlagen_verwalten(self) -> None:
@@ -1101,12 +1154,12 @@ class Hauptfenster(QMainWindow):
             gesagt = []
             if dialog.umbenannt:
                 gesagt.append(mehrzahl(len(dialog.umbenannt), "Vorlage", "Vorlagen")
-                              + " umbenannt")
+                              + u(" umbenannt"))
             if dialog.geloescht:
                 gesagt.append(mehrzahl(len(dialog.geloescht), "Vorlage", "Vorlagen")
-                              + " gelöscht")
+                              + u(" gelöscht"))
             if dialog.wiederhergestellt:
-                gesagt.append("mitgelieferte Vorlagen wiederhergestellt")
+                gesagt.append(u("mitgelieferte Vorlagen wiederhergestellt"))
             satz = ", ".join(gesagt)
             self.statusBar().showMessage(satz[:1].upper() + satz[1:], 8000)
 
@@ -1126,7 +1179,7 @@ class Hauptfenster(QMainWindow):
                 zurueck += 1
             except OSError as fehler:
                 QMessageBox.warning(
-                    self, "Nicht wiederhergestellt", str(fehler)
+                    self, u("Nicht wiederhergestellt"), str(fehler)
                 )
                 return
         # Der Merkzettel gilt danach wieder: die Dateien liegen so da,
@@ -1159,7 +1212,7 @@ class Hauptfenster(QMainWindow):
             return
         if self.leistenansicht.stelle_zeigen(fund.adresse, fund.feld):
             self.statusBar().showMessage(
-                f"{fund.ort} · {fund.beschriftung}: {fund.text}", 8000
+                u("{0} · {1}: {2}").format(fund.ort, fund.beschriftung, fund.text), 8000
             )
 
     def projektdaten_bearbeiten(self) -> None:
@@ -1174,7 +1227,7 @@ class Hauptfenster(QMainWindow):
             self._titel_setzen()
             self.leistenansicht.aktualisieren()
             self.statusBar().showMessage(
-                "Projektdaten übernommen", 8000
+                u("Projektdaten übernommen"), 8000
             )
 
     def ueber(self) -> None:
@@ -1208,15 +1261,16 @@ class Hauptfenster(QMainWindow):
             f'<a href="{ziel}">{name}</a>' for name, ziel in LIZENZVERWEISE
         )
         vor_ort = (
-            f'<br>Im Arbeitsordner: <a href="{pathlib.Path(ordner).as_uri()}">'
-            f"{ordner}</a>"
+            "<br>"
+            + u("Im Arbeitsordner:")
+            + f' <a href="{pathlib.Path(ordner).as_uri()}">{ordner}</a>'
             if ordner
             else ""
         )
 
         kasten = QMessageBox(self)
         kasten.setIconPixmap(self.windowIcon().pixmap(64, 64))
-        kasten.setWindowTitle("Über Verteilerly")
+        kasten.setWindowTitle(u("Über Verteilerly"))
         kasten.setTextFormat(Qt.TextFormat.RichText)
         # Ohne diese beiden Zeilen sind die Verweise nur blauer Text.
         kasten.setTextInteractionFlags(
@@ -1224,14 +1278,18 @@ class Hauptfenster(QMainWindow):
         )
         kasten.setText(
             f"<b>Verteilerly {VERSION}</b><br>"
-            "Dokumentation für LSA+-Verteiler in der Fernmeldetechnik."
-            f"<p>© 2026 {URHEBER} — freie Software unter der "
-            "<b>GNU GPL, Version 3</b>. Ohne jede Gewährleistung.</p>"
-            "<p><i>Mit KI-Unterstützung entwickelt: Teile des Quelltextes "
-            "sind mit Claude Code (Anthropic) erarbeitet.</i></p>"
-            f"<p><b>Bausteine</b></p>{bausteine}"
-            f"<p><b>Lizenztexte</b><br>{verweise}{vor_ort}</p>"
-            f"<p><b>Umgebung</b></p>{umgebung}"
+            + u("Dokumentation für LSA+-Verteiler in der Fernmeldetechnik.")
+            + u(
+                "<p>© 2026 {0} — freie Software unter der "
+                "<b>GNU GPL, Version 3</b>. Ohne jede Gewährleistung.</p>"
+            ).format(URHEBER)
+            + u(
+                "<p><i>Mit KI-Unterstützung entwickelt: Teile des Quelltextes "
+                "sind mit Claude Code (Anthropic) erarbeitet.</i></p>"
+            )
+            + f"<p><b>{u('Bausteine')}</b></p>{bausteine}"
+            + f"<p><b>{u('Lizenztexte')}</b><br>{verweise}{vor_ort}</p>"
+            + f"<p><b>{u('Umgebung')}</b></p>{umgebung}"
         )
         for kind in kasten.findChildren(QLabel):
             kind.setOpenExternalLinks(True)

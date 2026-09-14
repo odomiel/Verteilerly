@@ -13,6 +13,7 @@ from PySide6.QtWidgets import QWidget
 
 from ..modell import Kabel, Verteiler
 from .thema import HELL, Farben
+from ..sprachen import u
 
 ZELLE_B = 27
 ZELLE_H = 32
@@ -127,12 +128,16 @@ class Uebersicht(QWidget):
         leiste, da = stelle
         kabel = self.verteiler.kabel_an(leiste, da)
         if kabel is None:
-            return f"Leiste {leiste}, DA {da} - frei"
-        zeilen = [kabel.beschriftung, f"Leiste {leiste}, DA {da}"]
+            return u("Leiste {0}, DA {1} — frei").format(leiste, da)
+        zeilen = [kabel.beschriftung, u("Leiste {0}, DA {1}").format(leiste, da)]
         if kabel.kabeltyp:
             zeilen.append(kabel.kabeltyp)
         if kabel.gekuerzt:
-            zeilen.append(f"gekürzt: {kabel.da_aufgelegt} von {kabel.da_gesamt} DA")
+            zeilen.append(
+                u("gekürzt: {0} von {1} DA").format(
+                    kabel.da_aufgelegt, kabel.da_gesamt
+                )
+            )
         return "\n".join(zeilen)
 
     # -- Zeichnen ----------------------------------------------------------
@@ -156,7 +161,7 @@ class Uebersicht(QWidget):
         maler.drawText(
             self.rect(),
             Qt.AlignmentFlag.AlignCenter,
-            "Kein Verteiler geöffnet.\nDatei ▸ Neuer Verteiler",
+            u("Kein Verteiler geöffnet.\nDatei ▸ Neuer Verteiler"),
         )
 
     def _raster_zeichnen(self, maler: QPainter) -> None:
@@ -197,7 +202,7 @@ class Uebersicht(QWidget):
 
             beschriftung = kabel.beschriftung
             if kabel.gekuerzt and abschnitt is kabel.abschnitte[-1]:
-                beschriftung = f"{beschriftung} (gekürzt)"
+                beschriftung = u("{0} (gekürzt)").format(beschriftung)
             masse = QFontMetrics(self.font())
             platz = block.adjusted(6, 0, -4, 0)
             maler.setPen(self.farben.q("akzent"))

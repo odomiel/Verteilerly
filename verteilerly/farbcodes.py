@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 import yaml
 
 from .modell import Kabel, ModellFehler, Verteiler
+from .sprachen import u
 
 
 class KabeltypFehler(ModellFehler):
@@ -36,14 +37,14 @@ class Kabeltyp:
         Fortsetzung auf einer anderen Leiste hinweg.
         """
         if kabel_da < 1:
-            raise KabeltypFehler("Die Doppelader wird ab 1 gezaehlt")
+            raise KabeltypFehler(u("Die Doppelader wird ab 1 gezaehlt"))
         if self.regel == "lagen":
             return self._lagen(kabel_da, da_gesamt)
         if self.regel == "sternvierer":
             return self._sternvierer(kabel_da)
         if self.regel == "liste":
             return self._liste(kabel_da)
-        raise KabeltypFehler(f"Unbekannte Farbregel {self.regel!r} bei {self.id!r}")
+        raise KabeltypFehler(u("Unbekannte Farbregel {0!r} bei {1!r}").format(self.regel, self.id))
 
     # -- Regeln ------------------------------------------------------------
 
@@ -136,7 +137,7 @@ class Kabeltypen:
                     regel = eintrag.pop("regel")
                 except KeyError as fehlt:
                     raise KabeltypFehler(
-                        f"{datei.name}: Kabeltyp ohne {fehlt.args[0]}"
+                        u("{0}: Kabeltyp ohne {1}").format(datei.name, fehlt.args[0])
                     ) from None
                 typen[kennung] = Kabeltyp(
                     id=kennung,
@@ -163,7 +164,7 @@ class Kabeltypen:
         except KeyError:
             bekannt = ", ".join(sorted(self._typen)) or "keine"
             raise KabeltypFehler(
-                f"Kabeltyp {kennung!r} ist nicht hinterlegt (bekannt: {bekannt})"
+                u("Kabeltyp {0!r} ist nicht hinterlegt (bekannt: {1})").format(kennung, bekannt)
             ) from None
 
 

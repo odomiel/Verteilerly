@@ -28,6 +28,7 @@ from .modell import (
     mehrzahl,
 )
 from .schreibweisen import Schreibweise
+from .sprachen import u
 
 # Die Felder einer Ader, in der Reihenfolge der Leistenansicht, mit der
 # Beschriftung, unter der sie dort steht.
@@ -196,7 +197,7 @@ def _in_den_projektdaten(projekt: Projekt, gesucht: str) -> list[Fundstelle]:
                 Fundstelle(
                     bereich=PROJEKTDATEN,
                     feld=name,
-                    beschriftung=BRIEFKOPF_BESCHRIFTUNG.get(name, name),
+                    beschriftung=u(BRIEFKOPF_BESCHRIFTUNG.get(name, name)),
                     text=wert,
                     ort="Projektdaten",
                 )

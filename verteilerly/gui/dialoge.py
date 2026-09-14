@@ -65,6 +65,7 @@ from ..vorlagen import (
 )
 from .passform import PassenderDialog
 from .sprache import frage
+from ..sprachen import u
 
 
 # Die gebraeuchlichen Leistengroessen; alles andere wird eingetippt.
@@ -81,8 +82,8 @@ def _knopfleiste(dialog: QDialog) -> QDialogButtonBox:
     knoepfe = QDialogButtonBox(
         QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
     )
-    knoepfe.button(QDialogButtonBox.StandardButton.Ok).setText("Übernehmen")
-    knoepfe.button(QDialogButtonBox.StandardButton.Cancel).setText("Abbrechen")
+    knoepfe.button(QDialogButtonBox.StandardButton.Ok).setText(u(u("Übernehmen")))
+    knoepfe.button(QDialogButtonBox.StandardButton.Cancel).setText(u("Abbrechen"))
     knoepfe.accepted.connect(dialog.accept)
     knoepfe.rejected.connect(dialog.reject)
     return knoepfe
@@ -106,11 +107,11 @@ def als_vorlage_speichern(
     try:
         Vorlage.aus_verteiler(verteiler, "Probe")
     except VorlagenFehler as fehler:
-        QMessageBox.warning(parent, "Nicht als Vorlage geeignet", str(fehler))
+        QMessageBox.warning(parent, u("Nicht als Vorlage geeignet"), str(fehler))
         return None
 
     name, gewaehlt = QInputDialog.getText(
-        parent, "Als Vorlage speichern", "Name der Vorlage:", text=vorschlag
+        parent, u("Als Vorlage speichern"), u("Name der Vorlage:"), text=vorschlag
     )
     if not gewaehlt or not name.strip():
         return None
@@ -120,9 +121,8 @@ def als_vorlage_speichern(
     if vorlage.id in vorlagen:
         antwort = frage(
             parent,
-            "Vorlage überschreiben?",
-            f"Es gibt schon eine Vorlage „{vorlagen.holen(vorlage.id).name}“. "
-            "Soll sie ersetzt werden?",
+            u("Vorlage überschreiben?"),
+            u("Es gibt schon eine Vorlage „{0}“. Soll sie ersetzt werden?").format(vorlagen.holen(vorlage.id).name),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
@@ -133,11 +133,11 @@ def als_vorlage_speichern(
     try:
         ziel = vorlage_speichern(vorlage, ordner, ueberschreiben)
     except VorlagenFehler as fehler:
-        QMessageBox.warning(parent, "Vorlage nicht gespeichert", str(fehler))
+        QMessageBox.warning(parent, u("Vorlage nicht gespeichert"), str(fehler))
         return None
 
     vorlagen.aufnehmen(vorlage)
-    QMessageBox.information(parent, "Vorlage gespeichert", f"{vorlage.name}\n{ziel}")
+    QMessageBox.information(parent, u("Vorlage gespeichert"), u("{0}\n{1}").format(vorlage.name, ziel))
     return vorlage
 
 
@@ -155,22 +155,22 @@ class NeuerVerteilerDialog(PassenderDialog):
         blattvorlage: str = "",
     ) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Neuer Verteiler")
+        self.setWindowTitle(u("Neuer Verteiler"))
         self.vorlagen = vorlagen
         self.vorlagenordner = vorlagenordner
 
         self.name = QLineEdit()
-        self.name.setPlaceholderText("z. B. Verteiler Keller")
+        self.name.setPlaceholderText(u("z. B. Verteiler Keller"))
         self.nummer = QLineEdit()
-        self.nummer.setPlaceholderText("z. B. 1.1")
+        self.nummer.setPlaceholderText(u("z. B. 1.1"))
 
         # Wie das Blatt aussieht, wird gleich hier gewaehlt - und bleibt
         # unter Einstellungen aenderbar.
         self.blattvorlagen = blattvorlagen or Blattvorlagen()
         self.blattvorlagenwahl = QComboBox()
         self.blattvorlagenwahl.setToolTip(
-            "Spalten, Schriftgrößen und Ränder der Blätter. "
-            "Später unter Einstellungen ▸ Blattvorlage zu ändern."
+            u("Spalten, Schriftgrößen und Ränder der Blätter. "
+            "Später unter Einstellungen ▸ Blattvorlage zu ändern.")
         )
         for vorlage in self.blattvorlagen.alle:
             self.blattvorlagenwahl.addItem(vorlage.name, vorlage.id)
@@ -186,12 +186,12 @@ class NeuerVerteilerDialog(PassenderDialog):
         self.blattvorlagenwahl.setCurrentIndex(max(stelle, 0))
 
         stammdaten = QFormLayout()
-        stammdaten.addRow("Verteilername:", self.name)
-        stammdaten.addRow("Verteilernummer:", self.nummer)
-        stammdaten.addRow("Blattvorlage:", self.blattvorlagenwahl)
+        stammdaten.addRow(u("Verteilername:"), self.name)
+        stammdaten.addRow(u("Verteilernummer:"), self.nummer)
+        stammdaten.addRow(u("Blattvorlage:"), self.blattvorlagenwahl)
 
         # Vorlage
-        self.aus_vorlage = QRadioButton("Aus Vorlage")
+        self.aus_vorlage = QRadioButton(u("Aus Vorlage"))
         self.aus_vorlage.setChecked(True)
         self.vorlagenwahl = QComboBox()
         for vorlage in vorlagen.alle:
@@ -210,7 +210,7 @@ class NeuerVerteilerDialog(PassenderDialog):
         vorlagenkasten.setLayout(vorlagenblock)
 
         # Eigene Geometrie
-        self.eigen = QRadioButton("Benutzerdefiniert")
+        self.eigen = QRadioButton(u("Benutzerdefiniert"))
         self.buchten = QSpinBox()
         self.buchten.setRange(1, 20)
         self.leisten = QSpinBox()
@@ -218,7 +218,7 @@ class NeuerVerteilerDialog(PassenderDialog):
         self.leisten.setValue(4)
         self.dawahl = QComboBox()
         for anzahl in DA_VORGABEN:
-            self.dawahl.addItem(f"{anzahl} DA", anzahl)
+            self.dawahl.addItem(u("{0} DA").format(anzahl), anzahl)
         self.dawahl.addItem("Benutzerdefiniert", 0)
         self.dawahl.setCurrentIndex(DA_VORGABEN.index(10))
         self.dawahl.currentIndexChanged.connect(self._da_wahl_gewechselt)
@@ -226,7 +226,7 @@ class NeuerVerteilerDialog(PassenderDialog):
         self.da = QSpinBox()
         self.da.setRange(1, 100)
         self.da.setValue(10)
-        self.da.setSuffix(" DA")
+        self.da.setSuffix(u(" DA"))
         self.da.setVisible(False)
 
         dazeile = QHBoxLayout()
@@ -239,15 +239,17 @@ class NeuerVerteilerDialog(PassenderDialog):
         # Erweitert: jede Bucht einzeln. Nicht jeder Verteiler ist
         # gleichmaessig gewachsen - eine Bucht mit 20-DA-Leisten neben
         # zweien mit 10 DA ist im Bestand nichts Seltenes.
-        self.erweitert = QCheckBox("Erweiterte Verteiler: Buchten einzeln festlegen")
+        self.erweitert = QCheckBox(u("Erweiterte Verteiler: Buchten einzeln festlegen"))
         self.erweitert.setToolTip(
-            "Jede Bucht bekommt ihre eigene Zahl an Leisten und ihre eigene "
-            "Leistengröße. Eine Leistengröße je Bucht."
+            u("Jede Bucht bekommt ihre eigene Zahl an Leisten und ihre eigene "
+            "Leistengröße. Eine Leistengröße je Bucht.")
         )
         self.erweitert.toggled.connect(self._erweitert_umgeschaltet)
 
         self.buchtentabelle = QTableWidget(0, 2)
-        self.buchtentabelle.setHorizontalHeaderLabels(["Leisten", "DA je Leiste"])
+        self.buchtentabelle.setHorizontalHeaderLabels(
+            [u("Leisten je Bucht"), u("DA je Leiste")]
+        )
         self.buchtentabelle.verticalHeader().setDefaultSectionSize(26)
         self.buchtentabelle.horizontalHeader().setSectionResizeMode(
             QHeaderView.ResizeMode.Stretch
@@ -259,19 +261,19 @@ class NeuerVerteilerDialog(PassenderDialog):
         self.buchten.valueChanged.connect(self._buchtenzeilen_anpassen)
         self.summe = QLabel()
 
-        self.als_vorlage = QPushButton("Als Vorlage speichern…")
+        self.als_vorlage = QPushButton(u("Als Vorlage speichern…"))
         self.als_vorlage.setToolTip(
-            "Legt diese Geometrie als Vorlage ab, damit sie beim nächsten "
-            "Verteiler oben zur Wahl steht."
+            u("Legt diese Geometrie als Vorlage ab, damit sie beim nächsten "
+            "Verteiler oben zur Wahl steht.")
         )
         self.als_vorlage.clicked.connect(self.vorlage_ablegen)
         self.als_vorlage.setEnabled(vorlagenordner is not None)
 
         eigenform = QFormLayout()
-        eigenform.addRow("Buchten:", self.buchten)
+        eigenform.addRow(u("Buchten:"), self.buchten)
         self.leistenzeile = eigenform.rowCount()
-        eigenform.addRow("Leisten je Bucht:", self.leisten)
-        eigenform.addRow("DA je Leiste:", dablock)
+        eigenform.addRow(u("Leisten je Bucht:"), self.leisten)
+        eigenform.addRow(u("DA je Leiste:"), dablock)
         eigenform.addRow("", self.erweitert)
         eigenform.addRow("", self.buchtentabelle)
         eigenform.addRow("", self.summe)
@@ -290,7 +292,7 @@ class NeuerVerteilerDialog(PassenderDialog):
         # Dialog höher als mancher Bildschirm.
         self.projektdaten = ProjektdatenFelder(
             briefkopf, ausgeblendet,
-            "Projektdaten — stehen auf jedem Blatt, später änderbar",
+            u("Projektdaten — stehen auf jedem Blatt, später änderbar"),
         )
         rollbereich = QScrollArea()
         rollbereich.setWidget(self.projektdaten)
@@ -332,8 +334,7 @@ class NeuerVerteilerDialog(PassenderDialog):
         if kennung:
             vorlage = self.vorlagen.holen(kennung)
             self.beschreibung.setText(
-                f"{vorlage.beschreibung}\n"
-                f"{vorlage.leisten_gesamt} Leisten, {vorlage.da_gesamt} DA"
+                u("{0}\n{1} Leisten, {2} DA").format(vorlage.beschreibung, vorlage.leisten_gesamt, vorlage.da_gesamt)
             )
 
     def _da_wahl_gewechselt(self) -> None:
@@ -352,7 +353,7 @@ class NeuerVerteilerDialog(PassenderDialog):
         leisten = sum(anzahl for anzahl, _ in bauplan)
         gesamt = sum(anzahl * da for anzahl, da in bauplan)
         self.summe.setText(
-            f"ergibt {mehrzahl(leisten, 'Leiste', 'Leisten')}, {gesamt} DA"
+            u("ergibt {0}, {1} DA").format(mehrzahl(leisten, 'Leiste', 'Leisten'), gesamt)
         )
 
     def vorlage_ablegen(self) -> None:
@@ -363,18 +364,18 @@ class NeuerVerteilerDialog(PassenderDialog):
         if len(set(bauplan)) == 1:
             da = bauplan[0][1]
             vorschlag = (
-                f"{gesamt} DA - {mehrzahl(leisten, 'Leiste', 'Leisten')} zu {da} DA"
+                u("{0} DA — {1} zu {2} DA").format(gesamt, mehrzahl(leisten, "Leiste", "Leisten"), da)
             )
-            beschreibung = (
-                f"{mehrzahl(len(bauplan), 'Bucht', 'Buchten')} zu je "
-                f"{mehrzahl(bauplan[0][0], 'Leiste', 'Leisten')} mit "
-                f"{mehrzahl(da, 'Doppelader', 'Doppeladern')}."
+            beschreibung = u("{0} zu je {1} mit {2}.").format(
+                mehrzahl(len(bauplan), "Bucht", "Buchten"),
+                mehrzahl(bauplan[0][0], "Leiste", "Leisten"),
+                mehrzahl(da, "Doppelader", "Doppeladern"),
             )
         else:
             # Ungleich besetzt: die Beschreibung zaehlt die Buchten auf.
-            vorschlag = f"{gesamt} DA - {mehrzahl(leisten, 'Leiste', 'Leisten')}"
+            vorschlag = u("{0} DA — {1}").format(gesamt, mehrzahl(leisten, "Leiste", "Leisten"))
             beschreibung = "; ".join(
-                f"Bucht {nr}: {mehrzahl(anzahl, 'Leiste', 'Leisten')} zu {da} DA"
+                u("Bucht {0}: {1} zu {2} DA").format(nr, mehrzahl(anzahl, "Leiste", "Leisten"), da)
                 for nr, (anzahl, da) in enumerate(bauplan, 1)
             )
         vorlage = als_vorlage_speichern(
@@ -427,14 +428,14 @@ class NeuerVerteilerDialog(PassenderDialog):
             leisten.setValue(self.leisten.value())
             da = QSpinBox()
             da.setRange(1, 100)
-            da.setSuffix(" DA")
+            da.setSuffix(u(" DA"))
             da.setValue(self.da_je_leiste())
             for feld in (leisten, da):
                 feld.valueChanged.connect(self._summe_zeigen)
             self.buchtentabelle.setCellWidget(zeile, 0, leisten)
             self.buchtentabelle.setCellWidget(zeile, 1, da)
         self.buchtentabelle.setVerticalHeaderLabels(
-            [f"Bucht {nr}" for nr in range(1, gewuenscht + 1)]
+            [u("Bucht {0}").format(nr) for nr in range(1, gewuenscht + 1)]
         )
         # Die Tabelle ist so hoch wie ihre Zeilen; leerer Platz darunter
         # sieht nach einem Fehler aus, den es nicht gibt.
@@ -497,7 +498,7 @@ class PaketDialog(PassenderDialog):
         bestand: dict,
         parent: QWidget | None = None,
         hinweis: str = "",
-        knopf: str = "Übernehmen",
+        knopf: str = u("Übernehmen"),
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle(titel)
@@ -508,16 +509,16 @@ class PaketDialog(PassenderDialog):
             anzahl = int(bestand.get(teil, 0))
             beschriftung = paket.BESCHRIFTUNG[teil]
             if teil != paket.EINSTELLUNGEN:
-                beschriftung += f" ({anzahl})"
+                beschriftung += u(" ({0})").format(anzahl)
             haken = QCheckBox(beschriftung)
             haken.setChecked(bool(anzahl))
             haken.setEnabled(bool(anzahl))
             if not anzahl:
-                haken.setToolTip("Ist nicht vorhanden")
+                haken.setToolTip(u("Ist nicht vorhanden"))
             self.haken[teil] = haken
             felder.addWidget(haken)
 
-        kasten = QGroupBox("Teile")
+        kasten = QGroupBox(u("Teile"))
         kasten.setLayout(felder)
 
         aufbau = QVBoxLayout(self)
@@ -560,7 +561,7 @@ class VerteilervorlagenDialog(PassenderDialog):
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Verteilervorlagen")
+        self.setWindowTitle(u("Verteilervorlagen"))
         self.vorlagen = vorlagen
         self.ordner = ordner
         # Was der Dialog getan hat - das Hauptfenster liest es aus.
@@ -571,14 +572,14 @@ class VerteilervorlagenDialog(PassenderDialog):
         self.liste = QListWidget()
         self.liste.itemDoubleClicked.connect(lambda _: self.umbenennen())
 
-        self.umbenennen_knopf = QPushButton("Umbenennen…")
+        self.umbenennen_knopf = QPushButton(u("Umbenennen…"))
         self.umbenennen_knopf.clicked.connect(self.umbenennen)
-        self.loeschen_knopf = QPushButton("Löschen")
+        self.loeschen_knopf = QPushButton(u("Löschen"))
         self.loeschen_knopf.clicked.connect(self.loeschen)
-        self.zurueck_knopf = QPushButton("Mitgelieferte wiederherstellen")
+        self.zurueck_knopf = QPushButton(u("Mitgelieferte wiederherstellen"))
         self.zurueck_knopf.setToolTip(
-            "Holt die mitgelieferten Vorlagen zurück, so wie sie ausgeliefert "
-            "wurden. Eigene Vorlagen bleiben unberührt."
+            u("Holt die mitgelieferten Vorlagen zurück, so wie sie ausgeliefert "
+            "wurden. Eigene Vorlagen bleiben unberührt.")
         )
         self.zurueck_knopf.clicked.connect(self.wiederherstellen)
 
@@ -595,12 +596,12 @@ class VerteilervorlagenDialog(PassenderDialog):
 
         schliessen = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         schliessen.rejected.connect(self.accept)
-        schliessen.button(QDialogButtonBox.StandardButton.Close).setText("Schließen")
+        schliessen.button(QDialogButtonBox.StandardButton.Close).setText(u("Schließen"))
 
         aufbau = QVBoxLayout(self)
         aufbau.addWidget(QLabel(
-            "Grundstrukturen für neue Verteiler — Buchten, Leisten und "
-            "Doppeladern:"
+            u("Grundstrukturen für neue Verteiler — Buchten, Leisten und "
+            "Doppeladern:")
         ))
         aufbau.addWidget(self.liste, 1)
         aufbau.addLayout(knoepfe)
@@ -630,16 +631,18 @@ class VerteilervorlagenDialog(PassenderDialog):
     def _hinweis_zeigen(self) -> None:
         kennung = self.gewaehlt()
         if not kennung:
-            self.hinweis.setText("Keine Vorlage vorhanden.")
+            self.hinweis.setText(u("Keine Vorlage vorhanden."))
             for knopf in (self.umbenennen_knopf, self.loeschen_knopf):
                 knopf.setEnabled(False)
             return
         vorlage = self.vorlagen.holen(kennung)
         zeilen = [vorlage.beschreibung] if vorlage.beschreibung else []
         zeilen.append(
-            f"{mehrzahl(len(vorlage.buchtenplan), 'Bucht', 'Buchten')}, "
-            f"{mehrzahl(vorlage.leisten_gesamt, 'Leiste', 'Leisten')}, "
-            f"{vorlage.da_gesamt} DA"
+            u("{0}, {1}, {2} DA").format(
+                mehrzahl(len(vorlage.buchtenplan), "Bucht", "Buchten"),
+                mehrzahl(vorlage.leisten_gesamt, "Leiste", "Leisten"),
+                vorlage.da_gesamt,
+            )
         )
         self.hinweis.setText("\n".join(zeilen))
         for knopf in (self.umbenennen_knopf, self.loeschen_knopf):
@@ -657,14 +660,14 @@ class VerteilervorlagenDialog(PassenderDialog):
             return
         vorlage = self.vorlagen.holen(kennung)
         name, gewaehlt = QInputDialog.getText(
-            self, "Vorlage umbenennen", "Name der Vorlage:", text=vorlage.name
+            self, u("Vorlage umbenennen"), u("Name der Vorlage:"), text=vorlage.name
         )
         if not gewaehlt or not name.strip() or name.strip() == vorlage.name:
             return
         try:
             neu = vorlage_umbenennen(vorlage, name, self.ordner)
         except VorlagenFehler as fehler:
-            QMessageBox.warning(self, "Nicht umbenannt", str(fehler))
+            QMessageBox.warning(self, u("Nicht umbenannt"), str(fehler))
             return
         self.vorlagen.aufnehmen(neu)
         self.umbenannt[kennung] = neu.name
@@ -677,10 +680,8 @@ class VerteilervorlagenDialog(PassenderDialog):
         vorlage = self.vorlagen.holen(kennung)
         antwort = frage(
             self,
-            "Vorlage löschen?",
-            f"Die Vorlage „{vorlage.name}“ löschen?\n"
-            "Mitgelieferte Vorlagen holt der Knopf „Mitgelieferte "
-            "wiederherstellen“ zurück.",
+            u("Vorlage löschen?"),
+            u("Die Vorlage „{0}“ löschen?\nMitgelieferte Vorlagen holt der Knopf „Mitgelieferte wiederherstellen“ zurück.").format(vorlage.name),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
@@ -689,7 +690,7 @@ class VerteilervorlagenDialog(PassenderDialog):
         try:
             vorlage_loeschen(kennung, self.ordner)
         except VorlagenFehler as fehler:
-            QMessageBox.warning(self, "Nicht gelöscht", str(fehler))
+            QMessageBox.warning(self, u("Nicht gelöscht"), str(fehler))
             return
         self.geloescht.append(kennung)
         self.vorlagen.entfernen(kennung)
@@ -698,10 +699,10 @@ class VerteilervorlagenDialog(PassenderDialog):
     def wiederherstellen(self) -> None:
         antwort = frage(
             self,
-            "Mitgelieferte Vorlagen wiederherstellen?",
-            "Die mitgelieferten Vorlagen kommen zurück, so wie sie "
+            u("Mitgelieferte Vorlagen wiederherstellen?"),
+            u("Die mitgelieferten Vorlagen kommen zurück, so wie sie "
             "ausgeliefert wurden — auch gelöschte und geänderte.\n"
-            "Eigene Vorlagen bleiben unberührt.",
+            "Eigene Vorlagen bleiben unberührt."),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.Yes,
         )
@@ -726,7 +727,7 @@ class BlattvorlagenDialog(PassenderDialog):
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Blattvorlage")
+        self.setWindowTitle(u("Blattvorlage"))
         self.vorlagen = vorlagen
 
         self.liste = QListWidget()
@@ -751,8 +752,8 @@ class BlattvorlagenDialog(PassenderDialog):
         self.beschreibung.setMinimumHeight(48)
 
         aufbau = QVBoxLayout(self)
-        aufbau.addWidget(QLabel("Wie das Blatt aussieht — Spalten, Schriftgrößen, "
-                                "Ränder:"))
+        aufbau.addWidget(QLabel(u("Wie das Blatt aussieht — Spalten, Schriftgrößen, "
+                                "Ränder:")))
         aufbau.addWidget(self.liste, 1)
         aufbau.addWidget(self.beschreibung)
         aufbau.addWidget(_knopfleiste(self))
@@ -794,15 +795,15 @@ class KabelDialog(PassenderDialog):
         super().__init__(parent)
         self.bearbeitet = kabel
         self.entfernen = False
-        self.setWindowTitle("Kabel bearbeiten" if kabel else "Kabel auflegen")
+        self.setWindowTitle(u("Kabel bearbeiten") if kabel else u("Kabel auflegen"))
         self.verteiler = verteiler
 
         self.beschriftung = QLineEdit()
-        self.beschriftung.setPlaceholderText("z. B. 4DA Leitung zu Wohnzimmer")
+        self.beschriftung.setPlaceholderText(u("z. B. 4DA Leitung zu Wohnzimmer"))
 
         self.leiste = QComboBox()
         for l in verteiler.alle_leisten:
-            self.leiste.addItem(f"Leiste {l.nummer}  ({l.da_anzahl} DA)", l.nummer)
+            self.leiste.addItem(u("Leiste {0}  ({1} DA)").format(l.nummer, l.da_anzahl), l.nummer)
         stelle = self.leiste.findData(leiste)
         if stelle >= 0:
             self.leiste.setCurrentIndex(stelle)
@@ -814,16 +815,16 @@ class KabelDialog(PassenderDialog):
         self.kabel_da = QSpinBox()
         self.kabel_da.setRange(1, 200)
         self.kabel_da.setValue(4)
-        self.kabel_da.setSuffix(" DA")
+        self.kabel_da.setSuffix(u(" DA"))
 
         self.auflegen_da = QSpinBox()
         self.auflegen_da.setRange(1, 200)
         self.auflegen_da.setValue(4)
-        self.auflegen_da.setSuffix(" DA")
+        self.auflegen_da.setSuffix(u(" DA"))
         self.kabel_da.valueChanged.connect(self._kabelgroesse_geaendert)
 
         self.kabeltyp = QComboBox()
-        self.kabeltyp.addItem("— ohne, Farben von Hand —", None)
+        self.kabeltyp.addItem(u("— ohne, Farben von Hand —"), None)
         for typ in kabeltypen.alle:
             self.kabeltyp.addItem(typ.name, typ.id)
 
@@ -831,20 +832,20 @@ class KabelDialog(PassenderDialog):
         self.kuerzungshinweis.setWordWrap(True)
         self.auflegen_da.valueChanged.connect(self._kuerzung_zeigen)
 
-        self.farben_neu = QCheckBox("Auch von Hand geänderte Adernfarben ersetzen")
+        self.farben_neu = QCheckBox(u("Auch von Hand geänderte Adernfarben ersetzen"))
         self.farben_neu.setToolTip(
-            "Die Farben folgen Kabeltyp und Größe ohnehin — solange sie "
+            u("Die Farben folgen Kabeltyp und Größe ohnehin — solange sie "
             "noch so dastehen, wie die Automatik sie gesetzt hat. Mit "
-            "diesem Haken werden auch von Hand geänderte überschrieben."
+            "diesem Haken werden auch von Hand geänderte überschrieben.")
         )
 
         form = QFormLayout()
-        form.addRow("Beschriftung:", self.beschriftung)
-        form.addRow("Leiste:", self.leiste)
-        form.addRow("Ab Stift:", self.start)
-        form.addRow("Kabelgröße:", self.kabel_da)
-        form.addRow("Davon auflegen:", self.auflegen_da)
-        form.addRow("Kabeltyp:", self.kabeltyp)
+        form.addRow(u("Beschriftung:"), self.beschriftung)
+        form.addRow(u("Leiste:"), self.leiste)
+        form.addRow(u("Ab Stift:"), self.start)
+        form.addRow(u("Kabelgröße:"), self.kabel_da)
+        form.addRow(u("Davon auflegen:"), self.auflegen_da)
+        form.addRow(u("Kabeltyp:"), self.kabeltyp)
         form.addRow("", self.farben_neu)
         form.addRow("", self.kuerzungshinweis)
 
@@ -877,23 +878,23 @@ class KabelDialog(PassenderDialog):
         for feld in (self.leiste, self.start):
             feld.setEnabled(False)
             feld.setToolTip(
-                "Steht fest — für eine andere Lage das Kabel abnehmen "
-                "und neu auflegen"
+                u("Steht fest — für eine andere Lage das Kabel abnehmen "
+                "und neu auflegen")
             )
         self.auflegen_da.setToolTip(
-            "Wächst und schrumpft am Ende des Kabels; der Anfang bleibt, "
-            "wo er ist"
+            u("Wächst und schrumpft am Ende des Kabels; der Anfang bleibt, "
+            "wo er ist")
         )
         if len(kabel.abschnitte) > 1:
             self.leiste.setToolTip(
-                f"Das Kabel läuft über {len(kabel.abschnitte)} Abschnitte"
+                u("Das Kabel läuft über {0} Abschnitte").format(len(kabel.abschnitte))
             )
 
     def _knoepfe(self) -> QDialogButtonBox:
         knoepfe = _knopfleiste(self)
         if self.bearbeitet is not None:
             weg = knoepfe.addButton(
-                "Kabel entfernen", QDialogButtonBox.ButtonRole.DestructiveRole
+                u("Kabel entfernen"), QDialogButtonBox.ButtonRole.DestructiveRole
             )
             weg.clicked.connect(self._entfernen)
         return knoepfe
@@ -917,7 +918,7 @@ class KabelDialog(PassenderDialog):
         rest = self.kabel_da.value() - self.auflegen_da.value()
         if rest > 0:
             self.kuerzungshinweis.setText(
-                f"Das Kabel wird gekürzt: {rest} DA bleiben unaufgelegt."
+                u("Das Kabel wird gekürzt: {0} DA bleiben unaufgelegt.").format(rest)
             )
         else:
             self.kuerzungshinweis.setText("")
@@ -949,28 +950,27 @@ class UeberlaufDialog(PassenderDialog):
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Kabel passt nicht vollständig")
+        self.setWindowTitle(u("Kabel passt nicht vollständig"))
 
         erklaerung = QLabel(
-            f"Von diesem Kabel passen {passend} DA auf die gewählte Leiste, "
-            f"{rest} DA bleiben übrig."
+            u("Von diesem Kabel passen {0} DA auf die gewählte Leiste, {1} DA bleiben übrig.").format(passend, rest)
         )
         erklaerung.setWordWrap(True)
 
-        self.fortsetzen = QRadioButton("Auf einer anderen Leiste fortsetzen")
+        self.fortsetzen = QRadioButton(u("Auf einer anderen Leiste fortsetzen"))
         self.fortsetzen.setChecked(True)
-        self.verfaellt = QRadioButton(f"Rest verfällt — nur {passend} DA auflegen")
+        self.verfaellt = QRadioButton(u("Rest verfällt — nur {0} DA auflegen").format(passend))
 
         self.leiste = QComboBox()
         for l in verteiler.alle_leisten:
-            self.leiste.addItem(f"Leiste {l.nummer}  ({l.da_anzahl} DA)", l.nummer)
+            self.leiste.addItem(u("Leiste {0}  ({1} DA)").format(l.nummer, l.da_anzahl), l.nummer)
         self.start = QSpinBox()
         self.start.setRange(1, 100)
         self.start.setValue(1)
 
         fortsetzung = QFormLayout()
-        fortsetzung.addRow("Weiter auf:", self.leiste)
-        fortsetzung.addRow("Ab Stift:", self.start)
+        fortsetzung.addRow(u("Weiter auf:"), self.leiste)
+        fortsetzung.addRow(u("Ab Stift:"), self.start)
         kasten = QGroupBox()
         kasten.setLayout(fortsetzung)
         self.fortsetzen.toggled.connect(kasten.setEnabled)
@@ -1010,7 +1010,7 @@ class DokumentationDialog(PassenderDialog):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Dokumentation")
+        self.setWindowTitle(u("Dokumentation"))
 
         text = hilfe.dokumentation()
         self.text = QTextBrowser()
@@ -1030,16 +1030,16 @@ class DokumentationDialog(PassenderDialog):
         self.stelle = -1
 
         self.suchfeld = QLineEdit()
-        self.suchfeld.setPlaceholderText("In der Dokumentation suchen (Strg+F)")
+        self.suchfeld.setPlaceholderText(u("In der Dokumentation suchen (Strg+F)"))
         self.suchfeld.setClearButtonEnabled(True)
         self.suchfeld.textChanged.connect(self._suche_beginnen)
         self.suchfeld.returnPressed.connect(lambda: self.weiterspringen(1))
 
         self.zurueck = QPushButton("‹")
-        self.zurueck.setToolTip("Vorheriger Treffer (Umschalt+F3)")
+        self.zurueck.setToolTip(u("Vorheriger Treffer (Umschalt+F3)"))
         self.zurueck.clicked.connect(lambda: self.weiterspringen(-1))
         self.vor = QPushButton("›")
-        self.vor.setToolTip("Nächster Treffer (F3 oder Enter)")
+        self.vor.setToolTip(u("Nächster Treffer (F3 oder Enter)"))
         self.vor.clicked.connect(lambda: self.weiterspringen(1))
         for knopf in (self.zurueck, self.vor):
             knopf.setFixedWidth(32)
@@ -1049,7 +1049,7 @@ class DokumentationDialog(PassenderDialog):
         self.zaehler.setMinimumWidth(110)
 
         suchzeile = QHBoxLayout()
-        suchzeile.addWidget(QLabel("Suchen:"))
+        suchzeile.addWidget(QLabel(u("Suchen:")))
         suchzeile.addWidget(self.suchfeld, 1)
         suchzeile.addWidget(self.zurueck)
         suchzeile.addWidget(self.vor)
@@ -1079,7 +1079,7 @@ class DokumentationDialog(PassenderDialog):
 
         schliessen = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         schliessen.rejected.connect(self.reject)
-        schliessen.button(QDialogButtonBox.StandardButton.Close).setText("Schließen")
+        schliessen.button(QDialogButtonBox.StandardButton.Close).setText(u("Schließen"))
 
         aufbau = QVBoxLayout(self)
         # Die Suchzeile bleibt so hoch, wie sie ist; der Platz gehoert
@@ -1166,12 +1166,12 @@ class DokumentationDialog(PassenderDialog):
         if not wort:
             self.zaehler.setText("")
         elif len(wort) < 2:
-            self.zaehler.setText("weiter tippen…")
+            self.zaehler.setText(u("weiter tippen…"))
         elif not self.treffer:
-            self.zaehler.setText("nicht gefunden")
+            self.zaehler.setText(u("nicht gefunden"))
         else:
             self.zaehler.setText(
-                f"{self.stelle + 1} von {mehrzahl(len(self.treffer), 'Treffer', 'Treffern')}"
+                u("{0} von {1}").format(self.stelle + 1, mehrzahl(len(self.treffer), 'Treffer', 'Treffern'))
             )
 
     def keyPressEvent(self, ereignis) -> None:  # noqa: N802 - Qt-Name
@@ -1202,7 +1202,7 @@ class SuchDialog(PassenderDialog):
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Im Verteiler suchen")
+        self.setWindowTitle(u("Im Verteiler suchen"))
         self.projekt = projekt
         self.schreibweise = schreibweise
         self.gewaehlt: suche.Fundstelle | None = None
@@ -1210,14 +1210,14 @@ class SuchDialog(PassenderDialog):
 
         self.suchfeld = QLineEdit(wort)
         self.suchfeld.setPlaceholderText(
-            "Bezeichnung, Bemerkung, Rangierung, Kabel, Projektdaten…"
+            u("Bezeichnung, Bemerkung, Rangierung, Kabel, Projektdaten…")
         )
         self.suchfeld.setClearButtonEnabled(True)
         self.suchfeld.textChanged.connect(self._suchen)
         self.suchfeld.returnPressed.connect(self._erste_waehlen)
 
         self.liste = QTableWidget(0, 3)
-        self.liste.setHorizontalHeaderLabels(["Wo", "Feld", "Inhalt"])
+        self.liste.setHorizontalHeaderLabels([u("Wo"), u("Feld"), u("Inhalt")])
         self.liste.verticalHeader().setVisible(False)
         self.liste.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.liste.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
@@ -1228,10 +1228,10 @@ class SuchDialog(PassenderDialog):
 
         self.zaehler = QLabel()
 
-        self.springen_knopf = QPushButton("Hinspringen")
+        self.springen_knopf = QPushButton(u("Hinspringen"))
         self.springen_knopf.setDefault(True)
         self.springen_knopf.clicked.connect(self.springen)
-        schliessen = QPushButton("Schließen")
+        schliessen = QPushButton(u("Schließen"))
         schliessen.clicked.connect(self.reject)
 
         knoepfe = QHBoxLayout()
@@ -1241,7 +1241,7 @@ class SuchDialog(PassenderDialog):
         knoepfe.addWidget(schliessen)
 
         aufbau = QVBoxLayout(self)
-        aufbau.addWidget(QLabel("Suchen nach:"))
+        aufbau.addWidget(QLabel(u("Suchen nach:")))
         aufbau.addWidget(self.suchfeld)
         aufbau.addWidget(self.liste, 1)
         aufbau.addLayout(knoepfe)
@@ -1267,9 +1267,9 @@ class SuchDialog(PassenderDialog):
     def _zaehler_zeigen(self) -> None:
         wort = self.suchfeld.text().strip()
         if len(wort) < 2:
-            self.zaehler.setText("Mindestens zwei Zeichen eingeben.")
+            self.zaehler.setText(u("Mindestens zwei Zeichen eingeben."))
         elif not self.treffer:
-            self.zaehler.setText(f"„{wort}“ kommt im Verteiler nicht vor.")
+            self.zaehler.setText(u("„{0}“ kommt im Verteiler nicht vor.").format(wort))
         else:
             self.zaehler.setText(
                 mehrzahl(len(self.treffer), "Fundstelle", "Fundstellen")
@@ -1314,7 +1314,7 @@ class ProjektdatenFelder(QGroupBox):
         parent: QWidget | None = None,
         inhalt_hakt_an: bool = True,
     ) -> None:
-        super().__init__(titel, parent)
+        super().__init__(u(titel), parent)
         briefkopf = briefkopf or {}
         ausgeblendet = ausgeblendet or set()
         # Was ausgefuellt wird, erscheint auch: wer in ein Feld schreibt,
@@ -1327,11 +1327,11 @@ class ProjektdatenFelder(QGroupBox):
         form = QFormLayout()
         for name in BRIEFKOPF_FELDER:
             feld = self._feld_bauen(name, briefkopf.get(name, ""))
-            haken = QCheckBox(BRIEFKOPF_BESCHRIFTUNG.get(name, name) + ":")
+            haken = QCheckBox(u(BRIEFKOPF_BESCHRIFTUNG.get(name, name)) + ":")
             haken.setChecked(name not in ausgeblendet)
             haken.setToolTip(
-                "Ohne Haken bleibt der Inhalt erhalten, erscheint aber auf "
-                "keinem Blatt."
+                u("Ohne Haken bleibt der Inhalt erhalten, erscheint aber auf "
+                "keinem Blatt.")
             )
             # Der Haken ist zugleich die Beschriftung der Zeile. Er sperrt
             # das Feld nicht: seit leere Felder abgewaehlt sind, liesse
@@ -1342,12 +1342,12 @@ class ProjektdatenFelder(QGroupBox):
             self.haken[name] = haken
             form.addRow(haken, feld)
 
-        alle_an = QPushButton("Alle")
+        alle_an = QPushButton(u("Alle"))
         alle_an.clicked.connect(lambda: self.alle_haken(True))
-        alle_aus = QPushButton("Keine")
+        alle_aus = QPushButton(u("Keine"))
         alle_aus.clicked.connect(lambda: self.alle_haken(False))
         self.schnell = QHBoxLayout()
-        self.schnell.addWidget(QLabel("Auswahl:"))
+        self.schnell.addWidget(QLabel(u("Auswahl:")))
         self.schnell.addWidget(alle_an)
         self.schnell.addWidget(alle_aus)
         self.schnell.addStretch(1)
@@ -1382,10 +1382,10 @@ class ProjektdatenFelder(QGroupBox):
             return QLineEdit(wert)
         feld = QPlainTextEdit(wert)
         feld.setToolTip(
-            "Mehrzeilig: Firma, Straße, Ort — so steht die Anschrift auch "
-            "auf dem Blatt untereinander."
+            u("Mehrzeilig: Firma, Straße, Ort — so steht die Anschrift auch "
+            "auf dem Blatt untereinander.")
         )
-        feld.setPlaceholderText("Firma Beliebig\nBeliebige Straße 7\n77777 Ort")
+        feld.setPlaceholderText(u("Firma Beliebig\nBeliebige Straße 7\n77777 Ort"))
         # Drei Zeilen sind die uebliche Anschrift - und sie sollen ganz zu
         # sehen sein, ohne Rollbalken. Rahmen und Innenabstand zaehlen mit,
         # sonst wird die dritte Zeile angeschnitten. Erst poliert stehen
@@ -1439,12 +1439,12 @@ class BeschriftungsFelder(QWidget):
         # Der Schalter gehoert in die Auswahlzeile der Projektdaten; er
         # wird dort eingehaengt (ProjektdatenFelder.zusatz).
         self.schalter = QCheckBox(
-            "Erweitert: Beschriftungen auf dem Blatt ändern"
+            u("Erweitert: Beschriftungen auf dem Blatt ändern")
         )
         self.schalter.setToolTip(
-            "Zeigt die Wörter, mit denen das Schriftfeld seine Zeilen "
+            u("Zeigt die Wörter, mit denen das Schriftfeld seine Zeilen "
             "überschreibt. Der Schalter blendet sie nur ein und aus; "
-            "geändert wird nichts, solange nichts eingetippt ist."
+            "geändert wird nichts, solange nichts eingetippt ist.")
         )
 
         self.felder: dict[str, QLineEdit] = {}
@@ -1473,8 +1473,8 @@ class BeschriftungsFelder(QWidget):
         # er koennte ja rollen. Die Breite muss er trotzdem bekommen.
         rollen.setMinimumWidth(inhalt.sizeHint().width() + rahmen)
 
-        zurueck = QPushButton("Auf Vorgabe zurücksetzen")
-        zurueck.setToolTip("Schreibt in jedes Feld wieder das Wort der Vorgabe.")
+        zurueck = QPushButton(u("Auf Vorgabe zurücksetzen"))
+        zurueck.setToolTip(u("Schreibt in jedes Feld wieder das Wort der Vorgabe."))
         zurueck.clicked.connect(self.zuruecksetzen)
         knoepfe = QHBoxLayout()
         knoepfe.addWidget(zurueck)
@@ -1540,19 +1540,19 @@ class ProjektdatenDialog(PassenderDialog):
         self.vorgaben = vorgaben
         self.quelle = quelle
         self.setWindowTitle(
-            "Vorgaben für neue Verteiler" if vorgaben else "Projektdaten"
+            u("Vorgaben für neue Verteiler") if vorgaben else u("Projektdaten")
         )
         self.resize(620, 760)
         self.projekt = projekt
 
         self.verteilername = QLineEdit(projekt.verteiler.name)
-        self.verteilername.setPlaceholderText("z. B. Verteiler Keller")
+        self.verteilername.setPlaceholderText(u("z. B. Verteiler Keller"))
         self.verteilernummer = QLineEdit(projekt.verteiler.nummer)
-        self.verteilernummer.setPlaceholderText("z. B. 1.1")
+        self.verteilernummer.setPlaceholderText(u("z. B. 1.1"))
         verteilerform = QFormLayout()
-        verteilerform.addRow("Verteilername:", self.verteilername)
-        verteilerform.addRow("Verteilernummer:", self.verteilernummer)
-        verteilerblock = QGroupBox("Verteiler — steht im Schriftfeld jedes Blattes")
+        verteilerform.addRow(u("Verteilername:"), self.verteilername)
+        verteilerform.addRow(u("Verteilernummer:"), self.verteilernummer)
+        verteilerblock = QGroupBox(u("Verteiler — steht im Schriftfeld jedes Blattes"))
         verteilerblock.setLayout(verteilerform)
 
         projektdaten = ProjektdatenFelder(
@@ -1565,11 +1565,11 @@ class ProjektdatenDialog(PassenderDialog):
         self.haken = projektdaten.haken
 
         self.eigene = QTableWidget(0, 2)
-        self.eigene.setHorizontalHeaderLabels(["Feldname", "Inhalt"])
+        self.eigene.setHorizontalHeaderLabels([u("Feldname"), u("Inhalt")])
         self.eigene.horizontalHeader().setStretchLastSection(True)
         self.eigene.setToolTip(
-            "Das Häkchen am Feldnamen entscheidet, ob das Feld auf den "
-            "Blättern erscheint."
+            u("Das Häkchen am Feldnamen entscheidet, ob das Feld auf den "
+            "Blättern erscheint.")
         )
         self.eigene.verticalHeader().setVisible(False)
         self.eigene.setMinimumHeight(150)
@@ -1579,13 +1579,13 @@ class ProjektdatenDialog(PassenderDialog):
         # Auf welchen Blaettern die eigenen Felder erscheinen.
         self.blattarten: dict[str, QCheckBox] = {}
         blattzeile = QHBoxLayout()
-        blattzeile.addWidget(QLabel("Anzeigen auf:"))
+        blattzeile.addWidget(QLabel(u("Anzeigen auf:")))
         for art in BLATTARTEN:
-            haken = QCheckBox(BLATTART_BESCHRIFTUNG[art])
+            haken = QCheckBox(u(BLATTART_BESCHRIFTUNG[art]))
             haken.setChecked(art in projekt.eigene_felder_auf)
             haken.setToolTip(
-                "Ohne Haken erscheinen die eigenen Felder auf dieser Blattart "
-                "nicht; ihr Inhalt bleibt erhalten."
+                u("Ohne Haken erscheinen die eigenen Felder auf dieser Blattart "
+                "nicht; ihr Inhalt bleibt erhalten.")
             )
             self.blattarten[art] = haken
             blattzeile.addWidget(haken)
@@ -1599,9 +1599,9 @@ class ProjektdatenDialog(PassenderDialog):
         self.beschriftungen = BeschriftungsFelder(projekt.beschriftungen, self)
         projektdaten.zusatz(self.beschriftungen.schalter)
 
-        hinzu = QPushButton("Feld hinzufügen")
+        hinzu = QPushButton(u("Feld hinzufügen"))
         hinzu.clicked.connect(lambda: self._zeile_anhaengen("", "", True))
-        weg = QPushButton("Feld entfernen")
+        weg = QPushButton(u("Feld entfernen"))
         weg.clicked.connect(self._zeile_entfernen)
         knoepfe = QHBoxLayout()
         knoepfe.addWidget(hinzu)
@@ -1612,7 +1612,7 @@ class ProjektdatenDialog(PassenderDialog):
         eigenblock.addWidget(self.eigene)
         eigenblock.addWidget(self.blattkasten)
         eigenblock.addLayout(knoepfe)
-        eigene = QGroupBox("Eigene Felder")
+        eigene = QGroupBox(u("Eigene Felder"))
         eigene.setLayout(eigenblock)
 
         # Links die Felder, rechts die Beschriftungen: untereinander
@@ -1626,13 +1626,13 @@ class ProjektdatenDialog(PassenderDialog):
             # Nummer sind bei jedem ein anderer.
             verteilerblock.setVisible(False)
             hinweis = QLabel(
-                "Diese Angaben stehen beim Anlegen eines neuen Verteilers schon "
-                "in den Feldern. Was hier leer bleibt, ist dort abgewählt."
+                u("Diese Angaben stehen beim Anlegen eines neuen Verteilers schon "
+                "in den Feldern. Was hier leer bleibt, ist dort abgewählt.")
             )
             hinweis.setWordWrap(True)
             links.addWidget(hinweis)
             if quelle is not None:
-                uebernehmen = QPushButton("Aus dem offenen Verteiler übernehmen")
+                uebernehmen = QPushButton(u("Aus dem offenen Verteiler übernehmen"))
                 uebernehmen.clicked.connect(self._aus_dem_verteiler)
                 links.addWidget(uebernehmen)
         else:
