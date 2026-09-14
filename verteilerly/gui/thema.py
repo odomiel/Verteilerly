@@ -89,10 +89,13 @@ def palette_bauen(farben: Farben) -> QPalette:
 def stilblatt(farben: Farben) -> str:
     """Das Stilblatt zum Farbsatz.
 
-    Ankreuzfelder bekommen eine eigene Regel: im dunklen Satz zeichnet
-    Fusion sie sonst dunkel auf dunkel, und man sieht nicht einmal, dass
-    dort etwas anzukreuzen ist. Angekreuzt ist das Feld gefuellt, offen
-    traegt es die Farbe eines Eingabefeldes.
+    Ankreuzfelder und Auswahlknoepfe bekommen eine eigene Regel: im
+    dunklen Satz zeichnet Fusion sie sonst dunkel auf dunkel, und man
+    sieht nicht einmal, dass dort etwas anzukreuzen ist. Offen tragen
+    beide die Farbe eines Eingabefeldes; angekreuzt ist das Kaestchen
+    gefuellt, und der Auswahlknopf bekommt Ring und Kugel in der
+    Akzentfarbe - eine ganz gefuellte Scheibe saehe aus wie ein
+    Ankreuzfeld mit runden Ecken.
     """
     return f"""
 QToolBar {{
@@ -160,6 +163,22 @@ QCheckBox::indicator:checked {{
     background: {farben.akzent};
     border-color: {farben.akzent};
 }}
+QRadioButton {{ spacing: 7px; }}
+QRadioButton::indicator {{
+    width: 14px;
+    height: 14px;
+    border: 1px solid {farben.linie_kraeftig};
+    border-radius: 8px;
+    background: {farben.flaeche};
+}}
+QRadioButton::indicator:hover {{ border-color: {farben.akzent}; }}
+QRadioButton::indicator:checked {{
+    border-color: {farben.akzent};
+    background: qradialgradient(cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0.5,
+        stop:0 {farben.akzent}, stop:0.45 {farben.akzent},
+        stop:0.5 {farben.flaeche}, stop:1 {farben.flaeche});
+}}
+QRadioButton::indicator:disabled {{ border-color: {farben.linie}; }}
 QPushButton {{
     background: {farben.flaeche_2};
     border: 1px solid {farben.linie_kraeftig};

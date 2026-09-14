@@ -968,6 +968,53 @@ class TestThema(unittest.TestCase):
                 self.assertIn(f"background: {farben.akzent}", blatt)
                 self.assertIn(f"background: {farben.flaeche}", blatt)
 
+    def test_auswahlknoepfe_auch(self):
+        """Die Kugel muss zu sehen sein, sonst rät man, was gewählt ist."""
+        from verteilerly.gui.thema import DUNKEL, HELL, stilblatt
+
+        for farben in (HELL, DUNKEL):
+            with self.subTest(satz=farben.name):
+                blatt = stilblatt(farben)
+                self.assertIn("QRadioButton::indicator", blatt)
+                gewaehlt = blatt.split("QRadioButton::indicator:checked")[1]
+                gewaehlt = gewaehlt.split("}")[0]
+                # Ring und Kugel tragen die Akzentfarbe, nicht die Linie.
+                self.assertIn(farben.akzent, gewaehlt)
+                self.assertIn("qradialgradient", gewaehlt)
+
+    def test_die_kugel_hebt_sich_vom_feld_ab(self):
+        """Gezeichnet, nicht behauptet: die Bildpunkte werden verglichen."""
+        from PySide6.QtGui import QColor
+        from PySide6.QtWidgets import QRadioButton
+        from verteilerly.gui import thema
+
+        # Das Erscheinungsbild gilt der ganzen Anwendung - hinterher
+        # gehört es zurückgelegt, sonst färbt es die übrigen Prüfungen.
+        vorher_blatt = ANWENDUNG.styleSheet()
+        vorher_palette = ANWENDUNG.palette()
+        self.addCleanup(ANWENDUNG.setPalette, vorher_palette)
+        self.addCleanup(ANWENDUNG.setStyleSheet, vorher_blatt)
+
+        for satz in ("hell", "dunkel"):
+            with self.subTest(satz=satz):
+                farben = thema.SAETZE[satz]
+                thema.anwenden(ANWENDUNG, farben)
+                knopf = QRadioButton("Aus Vorlage")
+                knopf.setChecked(True)
+                knopf.resize(160, 24)
+                knopf.show()
+                ANWENDUNG.processEvents()
+                bild = knopf.grab().toImage()
+                mitte = QColor(bild.pixel(8, bild.height() // 2))
+                grund = QColor(farben.flaeche)
+                abstand = (
+                    abs(mitte.red() - grund.red())
+                    + abs(mitte.green() - grund.green())
+                    + abs(mitte.blue() - grund.blue())
+                )
+                knopf.close()
+                self.assertGreater(abstand, 60, f"{mitte.name()} auf {grund.name()}")
+
 
 @unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
 class TestUebersicht(unittest.TestCase):
