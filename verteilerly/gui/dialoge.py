@@ -3,8 +3,15 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QFontMetrics
+from PySide6.QtCore import QPoint, Qt
+from PySide6.QtGui import (
+    QColor,
+    QFontMetrics,
+    QKeySequence,
+    QPalette,
+    QShortcut,
+    QTextCursor,
+)
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -29,6 +36,7 @@ from PySide6.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QTextBrowser,
+    QTextEdit,
     QVBoxLayout,
     QWidget,
 )
@@ -988,7 +996,17 @@ class DokumentationDialog(PassenderDialog):
     eigenen Farben mit: sie soll im hellen wie im dunklen
     Erscheinungsbild lesbar sein, und das entscheidet die Farbpalette
     des Fensters.
+
+    Darueber die Suche: wer wissen will, was "Rangierung" bedeutet,
+    soll nicht erst raten, in welchem der zwoelf Abschnitte es steht.
+    Gesucht wird waehrend des Tippens, jeder Treffer wird angestrichen,
+    und Enter geht zum naechsten.
     """
+
+    #: Wie die Treffer angestrichen werden - kraeftig der laufende,
+    #: leise die uebrigen. Die Farbe kommt aus der Palette, damit es in
+    #: beiden Erscheinungsbildern stimmt.
+    TRUEBUNG = 70            # Deckkraft der uebrigen Treffer (0-255)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -1005,6 +1023,45 @@ class DokumentationDialog(PassenderDialog):
             "th { text-align: left; }"
             "pre { margin-left: 12px; }"
             ".anriss { font-size: 11pt; }"
+        )
+
+        # Suche: Feld, zwei Pfeile, Zaehler.
+        self.treffer: list[QTextCursor] = []
+        self.stelle = -1
+
+        self.suchfeld = QLineEdit()
+        self.suchfeld.setPlaceholderText("In der Dokumentation suchen (Strg+F)")
+        self.suchfeld.setClearButtonEnabled(True)
+        self.suchfeld.textChanged.connect(self._suche_beginnen)
+        self.suchfeld.returnPressed.connect(lambda: self.weiterspringen(1))
+
+        self.zurueck = QPushButton("‹")
+        self.zurueck.setToolTip("Vorheriger Treffer (Umschalt+F3)")
+        self.zurueck.clicked.connect(lambda: self.weiterspringen(-1))
+        self.vor = QPushButton("›")
+        self.vor.setToolTip("Nächster Treffer (F3 oder Enter)")
+        self.vor.clicked.connect(lambda: self.weiterspringen(1))
+        for knopf in (self.zurueck, self.vor):
+            knopf.setFixedWidth(32)
+            knopf.setEnabled(False)
+
+        self.zaehler = QLabel()
+        self.zaehler.setMinimumWidth(110)
+
+        suchzeile = QHBoxLayout()
+        suchzeile.addWidget(QLabel("Suchen:"))
+        suchzeile.addWidget(self.suchfeld, 1)
+        suchzeile.addWidget(self.zurueck)
+        suchzeile.addWidget(self.vor)
+        suchzeile.addWidget(self.zaehler)
+
+        for tasten, richtung in (
+            (QKeySequence.StandardKey.FindNext, 1),
+            (QKeySequence.StandardKey.FindPrevious, -1),
+        ):
+            QShortcut(tasten, self, lambda r=richtung: self.weiterspringen(r))
+        QShortcut(
+            QKeySequence.StandardKey.Find, self, self.suche_aufrufen
         )
 
         self.verzeichnis = QListWidget()
@@ -1025,14 +1082,107 @@ class DokumentationDialog(PassenderDialog):
         schliessen.button(QDialogButtonBox.StandardButton.Close).setText("Schließen")
 
         aufbau = QVBoxLayout(self)
-        aufbau.addWidget(teiler)
-        aufbau.addWidget(schliessen)
+        # Die Suchzeile bleibt so hoch, wie sie ist; der Platz gehoert
+        # dem Text darunter.
+        aufbau.addLayout(suchzeile, 0)
+        aufbau.addWidget(teiler, 1)
+        aufbau.addWidget(schliessen, 0)
         self.resize(940, 700)
 
     def _springen(self, eintrag: QListWidgetItem | None) -> None:
         if eintrag is None:
             return
         self.text.scrollToAnchor(eintrag.data(Qt.ItemDataRole.UserRole))
+
+    # -- Suche -------------------------------------------------------------
+
+    def suche_aufrufen(self) -> None:
+        """Strg+F: ins Suchfeld, und was darin steht, ist gleich ersetzbar."""
+        self.suchfeld.setFocus()
+        self.suchfeld.selectAll()
+
+    def _suche_beginnen(self) -> None:
+        """Bei jedem getippten Zeichen: Treffer sammeln und hinspringen.
+
+        Angefangen wird oben am sichtbaren Rand, nicht am Anfang des
+        Textes: wer im Abschnitt ueber Kabel liest und dort sucht, meint
+        den naechsten Treffer von dort - nicht den auf Seite eins.
+        """
+        wort = self.suchfeld.text()
+        self.treffer = []
+        if len(wort) >= 2:
+            blatt = self.text.document()
+            stelle = QTextCursor(blatt)
+            while True:
+                stelle = blatt.find(wort, stelle)
+                if stelle.isNull():
+                    break
+                self.treffer.append(QTextCursor(stelle))
+        oben = self.text.cursorForPosition(QPoint(0, 0)).position()
+        naechster = next(
+            (i for i, c in enumerate(self.treffer) if c.selectionStart() >= oben),
+            0,
+        )
+        self._treffer_zeigen(naechster)
+
+    def weiterspringen(self, richtung: int) -> None:
+        """Einen Treffer vor oder zurueck, im Kreis."""
+        if not self.treffer:
+            return
+        self._treffer_zeigen((self.stelle + richtung) % len(self.treffer))
+
+    def _treffer_zeigen(self, nummer: int) -> None:
+        """Streicht alle Treffer an und rueckt den gewaehlten ins Bild."""
+        self.stelle = nummer if self.treffer else -1
+        for knopf in (self.zurueck, self.vor):
+            knopf.setEnabled(len(self.treffer) > 1)
+
+        kraeftig = self.palette().color(QPalette.ColorRole.Highlight)
+        leise = QColor(kraeftig)
+        leise.setAlpha(self.TRUEBUNG)
+        angestrichen = []
+        for i, treffer in enumerate(self.treffer):
+            anstrich = QTextEdit.ExtraSelection()
+            anstrich.cursor = treffer
+            anstrich.format.setBackground(kraeftig if i == nummer else leise)
+            if i == nummer:
+                anstrich.format.setForeground(
+                    self.palette().color(QPalette.ColorRole.HighlightedText)
+                )
+            angestrichen.append(anstrich)
+        self.text.setExtraSelections(angestrichen)
+
+        if self.treffer:
+            # Ohne Auswahl, sonst laege der Anstrich unter der Markierung
+            # des Textfeldes; gebraucht wird der Zeiger nur zum Blaettern.
+            zeiger = QTextCursor(self.treffer[nummer])
+            zeiger.clearSelection()
+            self.text.setTextCursor(zeiger)
+            self.text.ensureCursorVisible()
+        self._zaehler_zeigen()
+
+    def _zaehler_zeigen(self) -> None:
+        wort = self.suchfeld.text()
+        if not wort:
+            self.zaehler.setText("")
+        elif len(wort) < 2:
+            self.zaehler.setText("weiter tippen…")
+        elif not self.treffer:
+            self.zaehler.setText("nicht gefunden")
+        else:
+            self.zaehler.setText(
+                f"{self.stelle + 1} von {mehrzahl(len(self.treffer), 'Treffer', 'Treffern')}"
+            )
+
+    def keyPressEvent(self, ereignis) -> None:  # noqa: N802 - Qt-Name
+        """Esc raeumt erst die Suche weg, dann schliesst es den Dialog."""
+        if (
+            ereignis.key() == Qt.Key.Key_Escape
+            and self.suchfeld.text()
+        ):
+            self.suchfeld.clear()
+            return
+        super().keyPressEvent(ereignis)
 
 
 class ProjektdatenFelder(QGroupBox):

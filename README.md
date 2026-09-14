@@ -395,7 +395,12 @@ Schrift-Engine — was in der Vorschau passt, passt auch im Ausdruck.
 *Hilfe ▸ Dokumentation* (F1) zeigt die **Dokumentation im Programm**: links
 ein Verzeichnis der Abschnitte, rechts der Text — Überblick, Anlegen, Editor,
 Kabel, Rangierungen, Projektdaten, Blattvorlagen, Blattregeln, Ausgabe,
-Dateien, Menüs mit Tastenkürzeln. Sie liegt als HTML in
+Dateien, Menüs mit Tastenkürzeln. Darüber eine **Suche** (Strg+F): sie greift
+beim Tippen, ab dem zweiten Zeichen, streicht jeden Treffer an — den
+angesteuerten kräftig, die übrigen leise —, zählt sie und geht mit Enter, F3
+oder den Pfeilen weiter, am Ende von vorn. Angefangen wird an der sichtbaren
+Stelle, nicht am Textanfang; Esc räumt die Suche weg, erst das zweite schließt
+das Fenster. Sie liegt als HTML in
 `daten/hilfe/dokumentation.html`, wird über dieselbe Suchreihenfolge gefunden
 wie die übrigen mitgelieferten Dateien und **nicht** in den Arbeitsordner
 ausgelegt — sie gehört zum Programm. Eigene Farben bringt sie nicht mit, damit

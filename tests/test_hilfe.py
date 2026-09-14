@@ -209,5 +209,103 @@ class TestDokumentationDialog(unittest.TestCase):
         self.assertNotIn("bgcolor", hilfe.dokumentation())
 
 
+@unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
+class TestSucheInDerDokumentation(unittest.TestCase):
+    """Wer ein Wort sucht, soll nicht zwölf Abschnitte durchsehen."""
+
+    def setUp(self):
+        from verteilerly.gui.dialoge import DokumentationDialog
+
+        self.dialog = DokumentationDialog()
+        self.addCleanup(self.dialog.close)
+        self.dialog.show()
+        self.addCleanup(self.dialog.hide)
+        ANWENDUNG.processEvents()
+
+    def _suchen(self, wort):
+        self.dialog.suchfeld.setText(wort)
+        ANWENDUNG.processEvents()
+        return self.dialog.treffer
+
+    def test_das_feld_sagt_wofuer_es_da_ist(self):
+        self.assertIn("Strg+F", self.dialog.suchfeld.placeholderText())
+
+    def test_ein_wort_wird_gefunden_und_gezaehlt(self):
+        treffer = self._suchen("Rangierung")
+        self.assertGreater(len(treffer), 1)
+        self.assertIn(f"von {len(treffer)}", self.dialog.zaehler.text())
+        self.assertEqual(self.dialog.stelle, 0)
+
+    def test_gross_und_klein_ist_einerlei(self):
+        gross = len(self._suchen("Kabel"))
+        klein = len(self._suchen("kabel"))
+        self.assertEqual(gross, klein)
+        self.assertGreater(gross, 1)
+
+    def test_jeder_treffer_wird_angestrichen(self):
+        treffer = self._suchen("Leiste")
+        self.assertEqual(len(self.dialog.text.extraSelections()), len(treffer))
+
+    def test_weiter_und_zurueck_gehen_im_kreis(self):
+        treffer = self._suchen("Bucht")
+        self.assertGreater(len(treffer), 2)
+        self.dialog.weiterspringen(1)
+        self.assertEqual(self.dialog.stelle, 1)
+        self.dialog.weiterspringen(-1)
+        self.assertEqual(self.dialog.stelle, 0)
+        self.dialog.weiterspringen(-1)
+        self.assertEqual(self.dialog.stelle, len(treffer) - 1, "nicht im Kreis")
+
+    def test_ein_einzelnes_zeichen_sucht_noch_nicht(self):
+        """Sonst stünde bei jedem Anfangsbuchstaben der halbe Text an."""
+        self.assertEqual(self._suchen("K"), [])
+        self.assertIn("weiter tippen", self.dialog.zaehler.text())
+
+    def test_was_es_nicht_gibt_wird_gesagt(self):
+        self.assertEqual(self._suchen("Zwirbelwutz"), [])
+        self.assertEqual(self.dialog.zaehler.text(), "nicht gefunden")
+        self.assertFalse(self.dialog.vor.isEnabled())
+        self.assertFalse(self.dialog.zurueck.isEnabled())
+
+    def test_ohne_treffer_springt_nichts(self):
+        self._suchen("Zwirbelwutz")
+        self.dialog.weiterspringen(1)          # darf nicht scheitern
+        self.assertEqual(self.dialog.stelle, -1)
+
+    def test_ein_geleertes_feld_raeumt_die_anstriche_weg(self):
+        self._suchen("Kabel")
+        self._suchen("")
+        self.assertEqual(self.dialog.text.extraSelections(), [])
+        self.assertEqual(self.dialog.zaehler.text(), "")
+
+    def test_esc_raeumt_erst_die_suche_weg(self):
+        from PySide6.QtCore import QEvent, Qt
+        from PySide6.QtGui import QKeyEvent
+
+        self._suchen("Kabel")
+        taste = QKeyEvent(
+            QEvent.Type.KeyPress, Qt.Key.Key_Escape, Qt.KeyboardModifier.NoModifier
+        )
+        ANWENDUNG.sendEvent(self.dialog, taste)
+        ANWENDUNG.processEvents()
+        self.assertEqual(self.dialog.suchfeld.text(), "")
+        self.assertTrue(self.dialog.isVisible(), "der Dialog ist mit zugegangen")
+
+    def test_strg_f_fuehrt_ins_suchfeld(self):
+        self.dialog.text.setFocus()
+        self.dialog.suche_aufrufen()
+        self.assertTrue(self.dialog.suchfeld.hasFocus())
+
+    def test_gesucht_wird_ab_der_sichtbaren_stelle(self):
+        """Wer im Abschnitt über Kabel liest, meint den Treffer von dort."""
+        marke = self.dialog.verzeichnis.item(
+            self.dialog.verzeichnis.count() - 1
+        )
+        self.dialog.verzeichnis.setCurrentItem(marke)
+        ANWENDUNG.processEvents()
+        self._suchen("Verteilerly")
+        self.assertGreater(self.dialog.stelle, 0)
+
+
 if __name__ == "__main__":
     unittest.main()
