@@ -75,6 +75,23 @@ SCHRITT = 0.25
 # Wo eine Zeile umbrechen darf: nach einem Leerzeichen und nach den
 # Zeichen, die in Kabelnamen ohnehin gliedern (K12/3-4, Haus_Nord).
 TRENNZEICHEN = " -/\\_·,;"
+# Womit ein getrenntes Wort am Zeilenende endet.
+TRENNSTRICH = "-"
+# So viele Buchstaben bleiben beim Trennen mindestens stehen und werden
+# mindestens mitgenommen - ein einzelner Buchstabe sieht nach Versehen aus.
+MINDESTENS_VOR = 2
+MINDESTENS_NACH = 2
+SELBSTLAUTE = "aeiouyäöüáàâéèêíìîóòôúùû"
+# Womit eine Silbe beginnen kann. Aus einer Gruppe von Mitlauten wandert
+# der laengste dieser Anlaute in die naechste Zeile - der Rest bleibt
+# stehen (Wohn-zim-mer, Licht-schacht, Zu-cker).
+ANLAUTE = (
+    "schl", "schm", "schn", "schr", "schw", "sch",
+    "spl", "spr", "str", "pfl", "pfr",
+    "bl", "br", "ch", "ck", "dr", "fl", "fr", "gl", "gn", "gr", "kl", "kn",
+    "kr", "kw", "ph", "pf", "pl", "pr", "qu", "sk", "sl", "sm", "sn", "sp",
+    "st", "sw", "th", "tr", "tw", "zw",
+)
 
 # Wie viel der linken Schriftfeldhaelfte die Beschriftungen bekommen
 # (Bauart "beispiel"). "Erstellt", "Geprueft" und "Verteiler Nr." sind
@@ -234,14 +251,96 @@ def _stuecke(text: str) -> list[str]:
     return stuecke
 
 
-def _laengster_anfang(text: str, laenge: float, misst) -> str:
-    """Das laengste Stueck vom Anfang, das noch in die Zeile passt."""
-    passend = text[:1]
-    for bis in range(2, len(text) + 1):
-        if misst(text[:bis].rstrip()) > laenge:
+def _laengster_anfang(text: str, laenge: float, misst, anhang: str = "") -> int:
+    """Wie viele Zeichen vom Anfang noch in die Zeile passen.
+
+    ``anhang`` ist, was am Zeilenende dazukommt - der Trennstrich zaehlt
+    mit, sonst laeuft die getrennte Zeile doch ueber den Rand.
+    """
+    passend = 0
+    for bis in range(1, len(text) + 1):
+        if misst(text[:bis].rstrip() + anhang) > laenge:
             break
-        passend = text[:bis]
+        passend = bis
     return passend
+
+
+def _hat_selbstlaut(teil: str) -> bool:
+    return any(z in SELBSTLAUTE for z in teil.lower())
+
+
+def _trennstellen(wort: str) -> list[int]:
+    """Alle Stellen, an denen dieses Wort getrennt werden darf.
+
+    Kein Woerterbuch, sondern die Regel, die ohne eines auskommt: zwischen
+    zwei Selbstlauten steht eine Gruppe Mitlaute, und von ihr wandert
+    genau so viel in die naechste Zeile, wie eine Silbe beginnen kann -
+    ein einzelner Mitlaut ganz (Ka-bel), aus einer Gruppe der Anlaut, den
+    es im Deutschen gibt (Wohn-zim-mer, Licht-schacht, Melder-kreis).
+    In Zahlen wird gar nicht getrennt: "12-\n3" laese sich als etwas
+    anderes.
+    """
+    klein = wort.lower()
+    stellen: list[int] = []
+    i = 0
+    while i < len(wort):
+        if klein[i] not in SELBSTLAUTE:
+            i += 1
+            continue
+        # Hinter dem Selbstlaut die Gruppe der Mitlaute abschreiten.
+        anfang = i + 1
+        while anfang < len(wort) and klein[anfang] in SELBSTLAUTE:
+            anfang += 1
+        ende = anfang
+        while ende < len(wort) and klein[ende].isalpha() and klein[ende] not in SELBSTLAUTE:
+            ende += 1
+        if ende >= len(wort) or not klein[ende] in SELBSTLAUTE or ende == anfang:
+            i = anfang if anfang > i else i + 1
+            continue
+        gruppe = klein[anfang:ende]
+        # Der laengste Anlaut, mit dem die naechste Silbe beginnen darf.
+        mitnehmen = 1
+        for anlaut in ANLAUTE:
+            if len(anlaut) > mitnehmen and gruppe.endswith(anlaut):
+                mitnehmen = len(anlaut)
+        stelle = ende - min(mitnehmen, len(gruppe))
+        if MINDESTENS_VOR <= stelle <= len(wort) - MINDESTENS_NACH:
+            stellen.append(stelle)
+        i = ende
+    return stellen
+
+
+def _trennstelle(wort: str, hoechstens: int) -> int:
+    """Die spaeteste erlaubte Trennstelle bis ``hoechstens`` Zeichen."""
+    wort = wort.rstrip()
+    for stelle in sorted(_trennstellen(wort), reverse=True):
+        if stelle > hoechstens:
+            continue
+        vorher, nachher = wort[:stelle], wort[stelle:]
+        if wort[stelle - 1].isdigit() or wort[stelle].isdigit():
+            continue
+        if not (_hat_selbstlaut(vorher) and _hat_selbstlaut(nachher)):
+            continue
+        if not vorher[-1].isalpha() or not nachher[0].isalpha():
+            continue
+        return stelle
+    return 0
+
+
+def _worttrennung(wort: str, laenge: float, misst) -> tuple[str, int]:
+    """Was von diesem Wort auf die Zeile kommt - und wie viel davon weg ist.
+
+    Zurueck kommen die Zeile samt Trennstrich und die Zahl der Zeichen,
+    die damit verbraucht sind. Gibt es keine ordentliche Stelle, wird
+    ohne Strich abgeschnitten: ein Trennstrich mitten in einer
+    Kabelnummer waere schlimmer als keiner.
+    """
+    mit_strich = _laengster_anfang(wort, laenge, misst, TRENNSTRICH)
+    stelle = _trennstelle(wort, mit_strich)
+    if stelle:
+        return wort[:stelle] + TRENNSTRICH, stelle
+    glatt = _laengster_anfang(wort, laenge, misst) or 1
+    return wort[:glatt].rstrip(), glatt
 
 
 def zeilen_umbrechen(text: str, laenge: float, misst) -> list[str]:
@@ -250,8 +349,8 @@ def zeilen_umbrechen(text: str, laenge: float, misst) -> list[str]:
     Gemessen wird nicht hier: ``misst(zeile)`` gibt zurueck, wie breit
     eine Zeile wird. So bleibt das Layoutmodell ohne Qt und ohne
     ReportLab, und beide Zeichner brechen dennoch an denselben Stellen
-    um. Ein Wort, das allein nicht passt, wird hart getrennt -
-    lieber mitten im Namen als ueber den Rand.
+    um. Ein Wort, das allein nicht passt, wird getrennt - mit
+    Trennstrich und an einer Stelle, an der man trennen darf.
     """
     zeilen: list[str] = []
     laufend = ""
@@ -262,11 +361,11 @@ def zeilen_umbrechen(text: str, laenge: float, misst) -> list[str]:
         else:
             laufend += stueck
         while len(laufend.strip()) > 1 and misst(laufend.rstrip()) > laenge:
-            anfang = _laengster_anfang(laufend, laenge, misst)
-            if len(anfang) >= len(laufend):
+            zeile, verbraucht = _worttrennung(laufend, laenge, misst)
+            if verbraucht >= len(laufend.rstrip()):
                 break
-            zeilen.append(anfang.rstrip())
-            laufend = laufend[len(anfang):].lstrip()
+            zeilen.append(zeile)
+            laufend = laufend[verbraucht:]
     if laufend.strip():
         zeilen.append(laufend.rstrip())
     return zeilen

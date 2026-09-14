@@ -285,7 +285,13 @@ ließe den Block vollgestopft aussehen. Wird es eng, wird zuerst die Schrift
 kleiner: eine einzelne Zeile gilt bis herunter zu `schrift_klein` als
 besser als zwei volle (`einzeilig_ab`). Erst darunter wird **umgebrochen**:
 `zeilen_umbrechen()` und `umbruch_einpassen()` in `layout.py`
-brechen an Leerzeichen und an `/`, `-`, `_`. Lieber eine Stufe kleiner als
+brechen an Leerzeichen und an `/`, `-`, `_`. Muss ein Wort selbst
+umbrechen, wird es **mit Trennstrich zwischen den Silben** getrennt:
+`_trennstellen()` braucht dafür kein Wörterbuch, sondern die Regel, dass
+von der Mitlautgruppe zwischen zwei Selbstlauten der längste deutsche
+Anlaut mitwandert (`ANLAUTE`) — *Wohn-zim-mer*, *Licht-schacht*, *Zu-cker*.
+Zwei Buchstaben bleiben stehen, zwei gehen mit, der Trennstrich zählt zur
+Zeilenbreite, und in Zahlen wird gar nicht getrennt. Lieber eine Stufe kleiner als
 ein Wort mitten durchgeschnitten; erst danach wird hart getrennt und zuletzt
 gekürzt. Ein `Text` mit `umbruch=True` sagt, dass ein Feld diesen Weg geht.
 

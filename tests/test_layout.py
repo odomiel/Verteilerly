@@ -1150,13 +1150,18 @@ class TestUmbruch(unittest.TestCase):
         zeilen = self.umbrechen("K12/3-4", 3, lambda z: self.misst(z))
         self.assertEqual(zeilen, ["K12/", "3-4"])
 
-    def test_ein_wort_das_nirgends_passt_wird_hart_getrennt(self):
+    def test_ein_wort_das_nirgends_passt_wird_getrennt(self):
         zeilen = self.umbrechen(
             "Unteilbarkeitserklaerung", 6, lambda z: self.misst(z)
         )
         self.assertTrue(len(zeilen) > 1)
-        self.assertEqual("".join(zeilen), "Unteilbarkeitserklaerung")
+        for zeile in zeilen[:-1]:
+            self.assertTrue(zeile.endswith("-"), zeile)
+        self.assertEqual(
+            "".join(z.rstrip("-") for z in zeilen), "Unteilbarkeitserklaerung"
+        )
         for zeile in zeilen:
+            # Der Trennstrich zaehlt mit - sonst laeuft die Zeile ueber.
             self.assertLessEqual(self.misst(zeile), 6)
 
     def test_was_passt_bleibt_auf_einer_zeile(self):
@@ -1200,7 +1205,51 @@ class TestUmbruch(unittest.TestCase):
             "Unteilbarkeitserklaerung", 3, 20, 3.0, 1.0, 0.25, self.misst
         )
         self.assertGreater(len(zeilen), 1)
-        self.assertEqual("".join(zeilen), "Unteilbarkeitserklaerung")
+        self.assertEqual(
+            "".join(z.rstrip("-") for z in zeilen), "Unteilbarkeitserklaerung"
+        )
+
+    def test_getrennt_wird_zwischen_den_silben(self):
+        """Nicht irgendwo: der Anlaut wandert mit in die neue Zeile."""
+        from verteilerly.layout import _trennstellen
+
+        for wort, erwartet in (
+            ("Kabelname", ["Ka-belname", "Kabel-name", "Kabelna-me"]),
+            ("Wohnzimmer", ["Wohn-zimmer", "Wohnzim-mer"]),
+            ("Lichtschacht", ["Licht-schacht"]),
+            ("Melderkreis", ["Mel-derkreis", "Melder-kreis"]),
+            ("Zucker", ["Zu-cker"]),
+        ):
+            with self.subTest(wort=wort):
+                getrennt = [
+                    f"{wort[:i]}-{wort[i:]}" for i in _trennstellen(wort)
+                ]
+                self.assertEqual(getrennt, erwartet)
+
+    def test_in_zahlen_wird_nicht_getrennt(self):
+        """„K12-\n345" läse sich als eine andere Nummer."""
+        from verteilerly.layout import _trennstellen
+
+        self.assertEqual(_trennstellen("K12345678"), [])
+        zeilen = self.umbrechen("K12345678", 3, self.misst)
+        self.assertTrue(len(zeilen) > 1)
+        for zeile in zeilen:
+            self.assertFalse(zeile.endswith("-"), zeile)
+
+    def test_ein_einzelner_buchstabe_bleibt_nicht_stehen(self):
+        from verteilerly.layout import _trennstellen
+
+        for wort in ("Ebene", "Ofen"):
+            with self.subTest(wort=wort):
+                for stelle in _trennstellen(wort):
+                    self.assertGreaterEqual(stelle, 2)
+                    self.assertGreaterEqual(len(wort) - stelle, 2)
+
+    def test_der_trennstrich_zaehlt_zur_zeile(self):
+        """Sonst passte die Zeile nur ohne ihn."""
+        zeilen = self.umbrechen("Kabelname", 4, self.misst)
+        self.assertEqual(zeilen, ["Kabel-", "name"])
+        self.assertLessEqual(self.misst("Kabel-"), 4)
 
     def test_eine_kleinere_zeile_geht_vor_dem_umbruch(self):
         """Zwei volle Zeilen sehen gedraengt aus, eine kleinere nicht."""
