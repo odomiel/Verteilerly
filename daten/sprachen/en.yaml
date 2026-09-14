@@ -460,3 +460,9 @@ Deckblatt: cover sheet
 Verteilerbelegung: frame layout
 Leistenblättern: strip sheets
 Leisten je Bucht: Strips per bay
+Bucht {0} · Leiste {1} · Stift {2}{3}: Bay {0} · strip {1} · pin {2}{3}
+Leiste {0}: Strip {0}
+ohne Leiste: no strip
+Projektdaten · eigenes Feld: Project data · own field
+Verteilername: Frame name
+Verteilernummer: Frame number

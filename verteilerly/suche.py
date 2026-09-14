@@ -73,9 +73,8 @@ def _passt(text: str, wort: str) -> bool:
 
 
 def _ort(bucht: int, adresse: Aderadresse) -> str:
-    return (
-        f"Bucht {bucht} · Leiste {adresse.leiste} · "
-        f"Stift {adresse.stift}{adresse.seite}"
+    return u("Bucht {0} · Leiste {1} · Stift {2}{3}").format(
+        bucht, adresse.leiste, adresse.stift, adresse.seite
     )
 
 
@@ -113,15 +112,15 @@ def suchen(
         anfang = kabel.abschnitte[0] if kabel.abschnitte else None
         leisten = sorted({teil.leiste for teil in kabel.abschnitte})
         ort = (
-            "Leiste " + ", ".join(str(nummer) for nummer in leisten)
+            u("Leiste {0}").format(", ".join(str(nummer) for nummer in leisten))
             if leisten
-            else "ohne Leiste"
+            else u("ohne Leiste")
         )
         gefunden.append(
             Fundstelle(
                 bereich=KABEL,
                 feld="kabel",
-                beschriftung="Kabel",
+                beschriftung=u("Kabel"),
                 text=kabel.beschriftung,
                 ort=f"{ort} · {mehrzahl(kabel.da_aufgelegt, 'DA', 'DA')}",
                 adresse=(
@@ -164,7 +163,7 @@ def _in_der_ader(
                 Fundstelle(
                     bereich=ADER,
                     feld=feld,
-                    beschriftung=beschriftung,
+                    beschriftung=u(beschriftung),
                     text=text,
                     ort=_ort(bucht, adresse),
                     adresse=adresse,
@@ -178,8 +177,8 @@ def _in_den_projektdaten(projekt: Projekt, gesucht: str) -> list[Fundstelle]:
     """Briefkopf und eigene Felder - dort steht der Kunde, nicht in der Leiste."""
     gefunden = []
     for feld, beschriftung, wert in (
-        ("verteilername", "Verteilername", projekt.verteiler.name),
-        ("verteilernummer", "Verteilernummer", projekt.verteiler.nummer),
+        ("verteilername", u("Verteilername"), projekt.verteiler.name),
+        ("verteilernummer", u("Verteilernummer"), projekt.verteiler.nummer),
     ):
         if _passt(wert, gesucht):
             gefunden.append(
@@ -188,7 +187,7 @@ def _in_den_projektdaten(projekt: Projekt, gesucht: str) -> list[Fundstelle]:
                     feld=feld,
                     beschriftung=beschriftung,
                     text=wert,
-                    ort="Projektdaten",
+                    ort=u("Projektdaten"),
                 )
             )
     for name, wert in projekt.briefkopf.items():
@@ -199,7 +198,7 @@ def _in_den_projektdaten(projekt: Projekt, gesucht: str) -> list[Fundstelle]:
                     feld=name,
                     beschriftung=u(BRIEFKOPF_BESCHRIFTUNG.get(name, name)),
                     text=wert,
-                    ort="Projektdaten",
+                    ort=u("Projektdaten"),
                 )
             )
     for name, wert in projekt.eigene_felder.items():
@@ -210,7 +209,7 @@ def _in_den_projektdaten(projekt: Projekt, gesucht: str) -> list[Fundstelle]:
                     feld=name,
                     beschriftung=name,
                     text=wert,
-                    ort="Projektdaten · eigenes Feld",
+                    ort=u("Projektdaten · eigenes Feld"),
                 )
             )
     return gefunden
