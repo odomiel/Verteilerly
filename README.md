@@ -371,7 +371,13 @@ nur noch, welche gerade gilt. Dort lässt sie sich auch **umbenennen**:
 geändert wird der Name, nicht die Kennung — die ist der Dateiname und steht
 in der `Verteilerly.conf`. `blattvorlage_umbenennen()` schreibt nur die eine
 Zeile in die YAML-Datei und lässt Kommentare und alles andere stehen; war es
-eine mitgelieferte Vorlage, entsteht dabei eine Kopie im Arbeitsordner. Die Wahl gehört zum Arbeitsplatz, nicht zum
+eine mitgelieferte Vorlage, entsteht dabei eine Kopie im Arbeitsordner.
+**Löschen** geht ebenso — auch eine mitgelieferte: die Datei kommt weg, und
+`pfade.loeschen_merken()` hält fest, dass sie nicht wieder ausgelegt wird.
+*Mitgelieferte wiederherstellen* hebt die Vermerke auf und legt sie zurück,
+wie sie ausgeliefert wurden; derselbe Weg wie bei den Verteilervorlagen.
+Die eingebaute Standardvorlage bleibt in jedem Fall wählbar.
+Die Wahl gehört zum Arbeitsplatz, nicht zum
 einzelnen Verteiler: sie steht in der `Verteilerly.conf` und gilt für
 Vorschau, PDF und Excel-Mappe. Eine eigene Blattvorlage ist eine YAML-Datei in
 `blattvorlagen/`, die nur angibt, was sie anders will:

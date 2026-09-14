@@ -345,6 +345,25 @@ def blattvorlage_umbenennen(
     return replace(vorlage, name=name)
 
 
+def blattvorlage_loeschen(kennung: str, ordner: pathlib.Path) -> bool:
+    """Loescht die Datei einer Blattvorlage.
+
+    Gibt zurueck, ob eine Datei wegkam. Eine mitgelieferte liegt im
+    Abbild weiter - dass sie nicht wieder ausgelegt wird, merkt sich
+    ``pfade.loeschen_merken``.
+    """
+    ziel = pathlib.Path(ordner) / f"{kennung}.yaml"
+    if not ziel.is_file():
+        return False
+    try:
+        ziel.unlink()
+    except OSError as fehler:
+        raise BlattvorlagenFehler(
+            u("Blattvorlage nicht gelöscht: {0}").format(fehler)
+        ) from fehler
+    return True
+
+
 class Blattvorlagen:
     """Alle Blattvorlagen; die mitgelieferte Standardvorlage ist immer dabei."""
 
@@ -362,14 +381,36 @@ class Blattvorlagen:
         return cls(gefunden)
 
     @classmethod
-    def aus_ordnern(cls, ordner) -> Blattvorlagen:
-        """Aus mehreren Ordnern; bei gleicher Kennung gilt der letzte."""
+    def aus_ordnern(cls, ordner, ausgelassen=()) -> Blattvorlagen:
+        """Aus mehreren Ordnern; bei gleicher Kennung gilt der letzte.
+
+        ``ausgelassen`` nennt Marken wie ``blattvorlagen/knapp.yaml``,
+        die weggeworfen wurden: eine geloeschte mitgelieferte Vorlage
+        liegt im Abbild weiter und kaeme sonst durch die Hintertuer
+        zurueck.
+        """
+        weg = set(ausgelassen)
         gefunden: list[Blattvorlage] = []
         for ort in ordner:
             ort = pathlib.Path(ort)
-            if ort.is_dir():
-                gefunden += cls.laden(ort).alle
+            if not ort.is_dir():
+                continue
+            for vorlage in cls.laden(ort).alle:
+                if f"{ort.name}/{vorlage.id}.yaml" in weg:
+                    continue
+                gefunden.append(vorlage)
         return cls(gefunden)
+
+    def entfernen(self, kennung: str) -> None:
+        """Nimmt eine Vorlage aus der Liste - die Datei ist schon weg.
+
+        Die Kennung ``standard`` faellt dabei auf die eingebaute Vorgabe
+        zurueck statt zu verschwinden: ohne sie gaebe es kein Blatt.
+        """
+        if kennung == STANDARD.id:
+            self._vorlagen[STANDARD.id] = STANDARD
+            return
+        self._vorlagen.pop(kennung, None)
 
     def __len__(self) -> int:
         return len(self._vorlagen)

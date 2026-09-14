@@ -478,3 +478,22 @@ Blattvorlage umbenennen: Rename sheet template
 Eine Blattvorlage braucht einen Namen: A sheet template needs a name
 'Blattvorlage nicht umbenannt: {0}': 'Sheet template not renamed: {0}'
 Blattvorlagen: sheet templates
+Blattvorlage löschen?: Delete sheet template?
+? 'Die Blattvorlage „{0}“ löschen?
+
+  Mitgelieferte holt der Knopf „Mitgelieferte wiederherstellen“ zurück.'
+: 'Delete the sheet template „{0}“?
+
+  Supplied ones are brought back by the button „Restore supplied templates“.'
+'Blattvorlage nicht gelöscht: {0}': 'Sheet template not deleted: {0}'
+Mitgelieferte Blattvorlagen wiederherstellen?: Restore supplied sheet templates?
+? 'Die mitgelieferten Blattvorlagen kommen zurück, so wie sie ausgeliefert wurden — auch gelöschte und geänderte.
+
+  Eigene bleiben unberührt.'
+: 'The supplied sheet templates come back exactly as they were delivered — including deleted and changed
+  ones.
+
+  Your own stay untouched.'
+Holt die mitgelieferten Blattvorlagen zurück, so wie sie ausgeliefert wurden. Eigene bleiben unberührt.: Brings
+  back the supplied sheet templates exactly as they were delivered. Your own stay untouched.
+mitgelieferte Blattvorlagen wiederhergestellt: supplied sheet templates restored

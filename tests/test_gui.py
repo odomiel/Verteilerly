@@ -1688,8 +1688,94 @@ class TestMenuezustaende(unittest.TestCase):
         dialog = BlattvorlagenDialog(self.fenster.blattvorlagen, "standard")
         self.addCleanup(dialog.close)
         self.assertFalse(dialog.umbenennen_knopf.isEnabled())
+        self.assertFalse(dialog.loeschen_knopf.isEnabled())
+        self.assertFalse(dialog.zurueck_knopf.isEnabled())
         dialog.umbenennen()          # darf nicht scheitern
+        dialog.loeschen()
         self.assertEqual(dialog.umbenannt, {})
+        self.assertEqual(dialog.geloescht, [])
+
+    def test_die_blattvorlage_laesst_sich_loeschen(self):
+        """Die gelöschte bleibt weg - auch nach dem Neustart."""
+        import shutil
+        import tempfile
+
+        from verteilerly import pfade
+        from verteilerly.gui.dialoge import BlattvorlagenDialog
+
+        f = self.fenster
+        ordner = tempfile.TemporaryDirectory()
+        self.addCleanup(ordner.cleanup)
+        ziel = pathlib.Path(ordner.name)
+        shutil.copy2(
+            pfade.mitgeliefert() / "blattvorlagen" / "knapp.yaml", ziel / "knapp.yaml"
+        )
+
+        def loeschen(dialog):
+            stelle = next(
+                i for i in range(dialog.liste.count())
+                if dialog.liste.item(i).data(Qt.ItemDataRole.UserRole) == "knapp"
+            )
+            dialog.liste.setCurrentRow(stelle)
+            with mock.patch.object(
+                dialoge, "frage", return_value=QMessageBox.StandardButton.Yes
+            ):
+                dialog.loeschen()
+            return BlattvorlagenDialog.DialogCode.Rejected
+
+        from verteilerly.gui import dialoge, hauptfenster
+
+        gemerkt = []
+        with mock.patch.object(f, "_blattvorlagenordner", return_value=ziel), \
+             mock.patch.object(hauptfenster.pfade, "loeschen_merken",
+                               gemerkt.append), \
+             mock.patch.object(BlattvorlagenDialog, "exec", loeschen):
+            f.blattvorlage_waehlen()
+        self.assertFalse((ziel / "knapp.yaml").exists())
+        self.assertEqual(gemerkt, ["blattvorlagen/knapp.yaml"])
+        self.assertIn("gelöscht", f.statusBar().currentMessage())
+
+    def test_mitgelieferte_blattvorlagen_kommen_zurueck(self):
+        """Derselbe Weg wie bei den Verteilervorlagen."""
+        from verteilerly.gui.dialoge import BlattvorlagenDialog
+
+        f = self.fenster
+
+        def zurueck(dialog):
+            dialog.wiederhergestellt = True
+            return BlattvorlagenDialog.DialogCode.Rejected
+
+        with mock.patch.object(f, "_mitgeliefertes_wiederherstellen") as geholt, \
+             mock.patch.object(BlattvorlagenDialog, "exec", zurueck):
+            f.blattvorlage_waehlen()
+        geholt.assert_called_once_with("blattvorlagen")
+        self.assertIn("wiederhergestellt", f.statusBar().currentMessage())
+
+    def test_ein_nein_laesst_die_blattvorlage_stehen(self):
+        from verteilerly.gui import dialoge
+        from verteilerly.gui.dialoge import BlattvorlagenDialog
+
+        dialog = BlattvorlagenDialog(
+            self.fenster.blattvorlagen, "standard", ordner=pathlib.Path(".")
+        )
+        self.addCleanup(dialog.close)
+        with mock.patch.object(
+            dialoge, "frage", return_value=QMessageBox.StandardButton.No
+        ):
+            dialog.loeschen()
+            dialog.wiederherstellen()
+        self.assertEqual(dialog.geloescht, [])
+        self.assertFalse(dialog.wiederhergestellt)
+
+    def test_geloeschte_blattvorlagen_bleiben_beim_laden_weg(self):
+        """Ohne den Vermerk holte das Abbild sie zurück."""
+        from verteilerly.gui import hauptfenster
+
+        f = self.fenster
+        with mock.patch.object(hauptfenster.pfade, "geloeschte",
+                               return_value={"blattvorlagen/knapp.yaml"}):
+            vorlagen = f._blattvorlagen_laden()
+        self.assertNotIn("knapp", [v.id for v in vorlagen.alle])
 
     def test_blattvorlage_ist_unter_einstellungen_zu_aendern(self):
         """Die Wahl steckt im Einstellungsmenü, nicht mehr am Blattrand."""

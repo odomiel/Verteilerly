@@ -436,18 +436,37 @@ class Hauptfenster(QMainWindow):
             quellen=self._blattvorlagenquellen(),
         )
         genommen = dialog.exec() == BlattvorlagenDialog.DialogCode.Accepted
-        if dialog.umbenannt:
-            # Die Datei liegt jetzt im Arbeitsordner - neu einlesen, damit
-            # Menü, Vorschau und Ausgabe denselben Namen führen.
+
+        for kennung in dialog.geloescht:
+            # Eine mitgelieferte Vorlage liegt im Abbild weiter; ohne
+            # Vermerk legte der nächste Start sie wieder aus.
+            pfade.loeschen_merken(f"{BLATTVORLAGENORDNER}/{kennung}.yaml")
+        if dialog.wiederhergestellt:
+            self._mitgeliefertes_wiederherstellen(BLATTVORLAGENORDNER)
+
+        if dialog.umbenannt or dialog.geloescht or dialog.wiederhergestellt:
+            # Die Dateien liegen jetzt anders - neu einlesen, damit Dialog,
+            # Vorschau und Ausgabe dasselbe führen.
             self.blattvorlagen = self._blattvorlagen_laden()
             self.vorschau.blattvorlagen_setzen(
                 self.blattvorlagen, self.vorschau.blattvorlage.id
             )
-            self.statusBar().showMessage(
-                mehrzahl(len(dialog.umbenannt), "Blattvorlage", "Blattvorlagen")
-                + u(" umbenannt"),
-                8000,
-            )
+            gesagt = []
+            if dialog.umbenannt:
+                gesagt.append(
+                    mehrzahl(len(dialog.umbenannt), "Blattvorlage", "Blattvorlagen")
+                    + u(" umbenannt")
+                )
+            if dialog.geloescht:
+                gesagt.append(
+                    mehrzahl(len(dialog.geloescht), "Blattvorlage", "Blattvorlagen")
+                    + u(" gelöscht")
+                )
+            if dialog.wiederhergestellt:
+                gesagt.append(u("mitgelieferte Blattvorlagen wiederhergestellt"))
+            satz = ", ".join(gesagt)
+            self.statusBar().showMessage(satz[:1].upper() + satz[1:], 8000)
+
         if genommen:
             self.vorschau.blattvorlage_setzen(dialog.gewaehlt())
 
@@ -1205,9 +1224,10 @@ class Hauptfenster(QMainWindow):
         """Alle Blattvorlagen; eigene gehen vor mitgelieferten."""
         try:
             orte = list(reversed(pfade.blattvorlagenordner_alle()))
+            weg = pfade.geloeschte()
         except OSError:
-            orte = []
-        return Blattvorlagen.aus_ordnern(orte)
+            orte, weg = [], set()
+        return Blattvorlagen.aus_ordnern(orte, weg)
 
     def _vorlagen_laden(self) -> Vorlagen:
         """Alle Vorlagenordner zusammen; eigene gehen vor mitgelieferten.
@@ -1272,26 +1292,33 @@ class Hauptfenster(QMainWindow):
             self.statusBar().showMessage(satz[:1].upper() + satz[1:], 8000)
 
     def _vorlagen_wiederherstellen(self) -> None:
-        """Holt die mitgelieferten Vorlagen zurück, wie ausgeliefert."""
-        ordner = self._vorlagenordner()
-        if ordner is None:
+        """Holt die mitgelieferten Verteilervorlagen zurück."""
+        self._mitgeliefertes_wiederherstellen(VORLAGENORDNER)
+
+    def _mitgeliefertes_wiederherstellen(self, unterordner: str) -> None:
+        """Legt einen Unterordner wieder so hin, wie er ausgeliefert wurde.
+
+        Derselbe Weg für Verteiler- und Blattvorlagen: erst
+        die Löschvermerke aufheben, dann die mitgelieferten Dateien
+        zurückkopieren. Eigene bleiben liegen - sie heißen anders.
+        """
+        try:
+            ordner = pfade.eigener_datenordner() / unterordner
+        except OSError:
             return
-        pfade.loeschvermerke_aufheben(VORLAGENORDNER)
+        pfade.loeschvermerke_aufheben(unterordner)
         quelle = pfade.mitgeliefert()
-        if quelle is None or not (quelle / VORLAGENORDNER).is_dir():
+        if quelle is None or not (quelle / unterordner).is_dir():
             return
-        zurueck = 0
-        for datei in sorted((quelle / VORLAGENORDNER).glob("*.yaml")):
-            try:
+        try:
+            ordner.mkdir(parents=True, exist_ok=True)
+            for datei in sorted((quelle / unterordner).glob("*.yaml")):
                 shutil.copy2(datei, ordner / datei.name)
-                zurueck += 1
-            except OSError as fehler:
-                QMessageBox.warning(
-                    self, u("Nicht wiederhergestellt"), str(fehler)
-                )
-                return
+        except OSError as fehler:
+            QMessageBox.warning(self, u("Nicht wiederhergestellt"), str(fehler))
+            return
         # Der Merkzettel gilt danach wieder: die Dateien liegen so da,
-        # wie sie ausgeliefert wurden.
+        # wie sie ausgelegt wurden.
         self.ausgelegt = pfade.grundausstattung_auslegen()
 
     def suchen(self) -> None:

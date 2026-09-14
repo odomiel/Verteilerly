@@ -45,6 +45,7 @@ from .. import hilfe, paket, suche
 from ..blattvorlagen import (
     Blattvorlagen,
     BlattvorlagenFehler,
+    blattvorlage_loeschen,
     blattvorlage_umbenennen,
 )
 from ..farbcodes import Kabeltypen
@@ -742,8 +743,10 @@ class BlattvorlagenDialog(PassenderDialog):
         self.vorlagen = vorlagen
         self.ordner = ordner
         self.quellen = list(quellen or [])
-        #: Kennung -> neuer Name; das Hauptfenster liest es aus.
+        #: Was der Dialog getan hat - das Hauptfenster liest es aus.
         self.umbenannt: dict[str, str] = {}
+        self.geloescht: list[str] = []
+        self.wiederhergestellt = False
 
         self.liste = QListWidget()
         for vorlage in vorlagen.alle:
@@ -770,11 +773,23 @@ class BlattvorlagenDialog(PassenderDialog):
         self.umbenennen_knopf.setToolTip(
             u("Gibt der Vorlage einen anderen Namen; ihre Kennung bleibt")
         )
-        self.umbenennen_knopf.setEnabled(self.ordner is not None)
         self.umbenennen_knopf.clicked.connect(self.umbenennen)
+        self.loeschen_knopf = QPushButton(u("Löschen"))
+        self.loeschen_knopf.clicked.connect(self.loeschen)
+        self.zurueck_knopf = QPushButton(u("Mitgelieferte wiederherstellen"))
+        self.zurueck_knopf.setToolTip(
+            u("Holt die mitgelieferten Blattvorlagen zurück, so wie sie "
+              "ausgeliefert wurden. Eigene bleiben unberührt.")
+        )
+        self.zurueck_knopf.clicked.connect(self.wiederherstellen)
+        for knopf in (self.umbenennen_knopf, self.loeschen_knopf,
+                      self.zurueck_knopf):
+            knopf.setEnabled(self.ordner is not None)
         knoepfe = QHBoxLayout()
         knoepfe.addWidget(self.umbenennen_knopf)
+        knoepfe.addWidget(self.loeschen_knopf)
         knoepfe.addStretch(1)
+        knoepfe.addWidget(self.zurueck_knopf)
 
         aufbau = QVBoxLayout(self)
         aufbau.addWidget(QLabel(u("Wie das Blatt aussieht — Spalten, Schriftgrößen, "
@@ -808,6 +823,66 @@ class BlattvorlagenDialog(PassenderDialog):
         eintrag = self.liste.currentItem()
         if eintrag is not None:
             eintrag.setText(neu.name)
+        self._beschreibung_zeigen()
+
+    def loeschen(self) -> None:
+        """Nimmt eine Blattvorlage weg - auch eine mitgelieferte."""
+        kennung = self.gewaehlt()
+        if not kennung or self.ordner is None:
+            return
+        vorlage = self.vorlagen.holen(kennung)
+        antwort = frage(
+            self,
+            u("Blattvorlage löschen?"),
+            u("Die Blattvorlage „{0}“ löschen?\nMitgelieferte holt der Knopf "
+              "„Mitgelieferte wiederherstellen“ zurück.").format(vorlage.name),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if antwort != QMessageBox.StandardButton.Yes:
+            return
+        try:
+            blattvorlage_loeschen(kennung, self.ordner)
+        except BlattvorlagenFehler as fehler:
+            QMessageBox.warning(self, u("Nicht gelöscht"), str(fehler))
+            return
+        self.geloescht.append(kennung)
+        self.vorlagen.entfernen(kennung)
+        self._liste_fuellen()
+
+    def wiederherstellen(self) -> None:
+        """Die mitgelieferten Blattvorlagen zurückholen."""
+        antwort = frage(
+            self,
+            u("Mitgelieferte Blattvorlagen wiederherstellen?"),
+            u("Die mitgelieferten Blattvorlagen kommen zurück, so wie sie "
+              "ausgeliefert wurden — auch gelöschte und geänderte.\nEigene "
+              "bleiben unberührt."),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.Yes,
+        )
+        if antwort != QMessageBox.StandardButton.Yes:
+            return
+        self.wiederhergestellt = True
+        self.accept()
+
+    def _liste_fuellen(self, auswahl: str = "") -> None:
+        """Baut die Liste neu auf - nach dem Löschen."""
+        self.liste.blockSignals(True)
+        self.liste.clear()
+        for vorlage in self.vorlagen.alle:
+            eintrag = QListWidgetItem(vorlage.name)
+            eintrag.setData(Qt.ItemDataRole.UserRole, vorlage.id)
+            if vorlage.beschreibung:
+                eintrag.setToolTip(vorlage.beschreibung)
+            self.liste.addItem(eintrag)
+        stelle = max(
+            (i for i in range(self.liste.count())
+             if self.liste.item(i).data(Qt.ItemDataRole.UserRole) == auswahl),
+            default=0,
+        )
+        self.liste.setCurrentRow(stelle)
+        self.liste.blockSignals(False)
         self._beschreibung_zeigen()
 
     def _beschreibung_zeigen(self) -> None:

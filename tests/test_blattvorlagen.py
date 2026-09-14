@@ -201,6 +201,37 @@ class TestMitgelieferte(unittest.TestCase):
             self.assertEqual(Blattvorlagen.laden(ziel).holen("standard").name,
                              "Hausnorm")
 
+    def test_loeschen_nimmt_die_datei_weg(self):
+        """Wie bei den Verteilervorlagen - die Datei ist die Vorlage."""
+        from verteilerly.blattvorlagen import blattvorlage_loeschen
+        import shutil
+
+        with tempfile.TemporaryDirectory() as ordner:
+            ziel = pathlib.Path(ordner)
+            shutil.copy2(mitgeliefert() / "blattvorlagen" / "knapp.yaml", ziel)
+            self.assertTrue(blattvorlage_loeschen("knapp", ziel))
+            self.assertFalse((ziel / "knapp.yaml").exists())
+            # Eine, die dort nie lag, ist auch kein Fehler: die
+            # mitgelieferte bleibt im Abbild liegen, der Vermerk regelt es.
+            self.assertFalse(blattvorlage_loeschen("knapp", ziel))
+
+    def test_gestrichene_marken_bleiben_beim_laden_weg(self):
+        """Der Löschvermerk wirkt auch gegen das Abbild."""
+        vorlagen = Blattvorlagen.aus_ordnern(
+            [mitgeliefert() / "blattvorlagen"], {"blattvorlagen/knapp.yaml"}
+        )
+        self.assertNotIn("knapp", [v.id for v in vorlagen.alle])
+        self.assertIn("ausfuehrlich", [v.id for v in vorlagen.alle])
+
+    def test_entfernen_nimmt_sie_aus_der_sammlung(self):
+        vorlagen = Blattvorlagen.laden(mitgeliefert() / "blattvorlagen")
+        vorlagen.entfernen("knapp")
+        self.assertNotIn("knapp", [v.id for v in vorlagen.alle])
+        # Die eingebaute Vorgabe bleibt - ohne sie gäbe es kein Blatt.
+        vorlagen.entfernen("standard")
+        self.assertEqual([v.id for v in vorlagen.alle if v.id == "standard"],
+                         ["standard"])
+
     def test_standard_steht_vorn(self):
         self.assertEqual(self.vorlagen.standard.id, "standard")
         self.assertEqual(self.vorlagen.alle[0].id, "standard")
