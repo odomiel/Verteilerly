@@ -58,6 +58,14 @@ def zeilenhoehe(mm: float) -> float:
     return round(mm * PT_JE_MM, 2)
 
 
+# Wie hoch eine Zeile ist, die niemand gesetzt hat - Excels Vorgabe.
+VORGABEHOEHE_PT = 15.0
+# Der Seitenrand aus _seiteneinrichtung, in Millimetern.
+SEITENRAND_MM = 0.5 * 25.4
+# Excel nimmt keine Zeile hoeher als 409,5 Punkt.
+HOECHSTE_ZEILE_PT = 409.0
+
+
 def _hex(farbe: str) -> str:
     return "FF" + farbe.lstrip("#").upper()
 
@@ -279,8 +287,11 @@ def _belegung(
 
     # Auch dieses Blatt traegt das Schriftfeld - im PDF steht es
     # am Blattfuss, hier unter der Zeichnung.
+    fuss = _bis_zum_blattfuss(
+        blatt, vorlage, letzte_zeile + 1, quer=not masse.hochkant
+    )
     _schriftfeld(
-        blatt, projekt, None, vorlage, zeug, letzte_zeile + 1,
+        blatt, projekt, None, vorlage, zeug, fuss,
         max(letzte_spalte, 4), "belegung",
     )
 
@@ -361,7 +372,8 @@ def _leistenblatt(
             zeile += 1
 
     _kabelbloecke(blatt, projekt, leiste_nr, vorlage, zeug, erste_zeile)
-    _schriftfeld(blatt, projekt, leiste_nr, vorlage, zeug, zeile + 1, len(spalten))
+    fuss = _bis_zum_blattfuss(blatt, vorlage, zeile + 1)
+    _schriftfeld(blatt, projekt, leiste_nr, vorlage, zeug, fuss, len(spalten))
     blatt.freeze_panes = blatt.cell(row=erste_zeile, column=1)
     _seiteneinrichtung(blatt)
     return blatt
@@ -634,6 +646,33 @@ def _schriftfeld_beispiel(
             vorlage.schriftfeld_hoehe / (2 * hoehe)
         )
     return unten + 1
+
+
+def _bis_zum_blattfuss(
+    blatt, vorlage: Blattvorlage, zeile: int, quer: bool = False
+) -> int:
+    """Schiebt das Schriftfeld an den Fuss der Seite.
+
+    Auf dem gezeichneten Blatt steht es unten am Rand, und der freie
+    Platz liegt darueber. Excel kennt keine feste Lage - also wird der
+    Rest als Luft eingelegt: eine Zeile, so hoch wie noch fehlt, und wenn
+    das mehr ist, als eine Zeile tragen darf, mehrere.
+
+    Zurueck kommt die Zeile, in der das Schriftfeld beginnt.
+    """
+    hoch = 297.0 if not quer else 210.0
+    nutzbar = hoch - 2 * SEITENRAND_MM
+    genutzt = sum(
+        (blatt.row_dimensions[z].height or VORGABEHOEHE_PT)
+        for z in range(1, zeile)
+    ) / PT_JE_MM
+    rest = nutzbar - genutzt - vorlage.schriftfeld_hoehe
+    if rest <= 1.0:
+        return zeile
+    zeilen = max(1, int(rest * PT_JE_MM / HOECHSTE_ZEILE_PT) + 1)
+    for i in range(zeilen):
+        blatt.row_dimensions[zeile + i].height = zeilenhoehe(rest / zeilen)
+    return zeile + zeilen
 
 
 def _blatttitel(leiste_nr: int | None, blattart: str) -> str:

@@ -405,8 +405,10 @@ die Luft dazwischen kommen aus dem Blattmodell (`zeilenhoehe_leiste`,
 `belegungsmasse`), die Buchten der Verteilerbelegung stehen nebeneinander,
 und die Aufteilung auf mehrere Blätter ist dieselbe (`belegungsgruppen`) —
 ab drei Buchten eines je Bucht, benannt wie dort. Gedruckt wird auf eine
-Seite in Breite *und* Höhe. Nachbilden lässt sich ein PDF damit trotzdem
-nicht:
+Seite in Breite *und* Höhe, und **das Schriftfeld sitzt am Blattfuß**: was
+zwischen Tabelle und Fuß fehlt, legt `_bis_zum_blattfuss()` als Zeilenhöhe
+ein, damit die freie Fläche darüber liegt und nicht darunter. Nachbilden
+lässt sich ein PDF damit trotzdem nicht:
 Excel ist ein Raster, das Blatt eine Zeichnung; das Schriftfeld steht darum
 unter der Tabelle statt am Blattfuß.
 Die CSV bleibt reine Daten — eine Zeile je Ader.

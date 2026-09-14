@@ -413,6 +413,43 @@ class TestSchriftfeldWieAufDemBlatt(unittest.TestCase):
                 self.assertIn(name, namen)
         self.assertNotIn("Verteilerbelegung", namen)
 
+    def test_das_schriftfeld_steht_am_blattfuss(self):
+        """Wie auf dem Blatt: die freie Fläche liegt darüber, nicht darunter."""
+        from verteilerly.ausgabe.mappe import (
+            SEITENRAND_MM, VORGABEHOEHE_PT,
+        )
+
+        PT = 72 / 25.4
+        for name in ("Leiste 1", "Verteilerbelegung"):
+            with self.subTest(blatt=name):
+                blatt = self.mappe[name]
+                quer = blatt.page_setup.orientation == "landscape"
+                nutzbar = (210.0 if quer else 297.0) - 2 * SEITENRAND_MM
+                gesamt = sum(
+                    (blatt.row_dimensions[z].height or VORGABEHOEHE_PT)
+                    for z in range(1, blatt.max_row + 1)
+                ) / PT
+                # Die Seite ist voll: das Schriftfeld endet an ihrem Fuß.
+                self.assertGreater(gesamt, nutzbar - 4)
+                anfang = next(
+                    z.row for zeile in blatt.iter_rows(max_col=1) for z in zeile
+                    if z.value == "Verteiler:"
+                )
+                oben = sum(
+                    (blatt.row_dimensions[z].height or VORGABEHOEHE_PT)
+                    for z in range(1, anfang)
+                ) / PT
+                # Es beginnt nicht gleich hinter der Tabelle, sondern unten.
+                self.assertGreater(oben, nutzbar - self.vorlage.schriftfeld_hoehe - 6)
+
+    def test_ohne_platz_bleibt_es_hinter_der_tabelle(self):
+        """Ein volles Blatt bekommt keine Luft eingelegt."""
+        from verteilerly.ausgabe.mappe import _bis_zum_blattfuss
+
+        blatt = self.mappe["Leiste 1"]
+        letzte = blatt.max_row
+        self.assertEqual(_bis_zum_blattfuss(blatt, self.vorlage, letzte), letzte)
+
     def test_eine_seite_ist_eine_seite(self):
         """Breite und Höhe werden auf ein Blatt gebracht, nicht nur die Breite."""
         blatt = self.mappe["Leiste 1"]
