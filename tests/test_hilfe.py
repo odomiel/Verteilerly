@@ -64,6 +64,13 @@ class TestDokumentation(unittest.TestCase):
             with self.subTest(wort=wort):
                 self.assertIn(wort, text)
 
+    def test_die_lizenz_steht_ohne_oder_spaeter_da(self):
+        """Im Programm steht die Fassung, nicht die Wahlmöglichkeit."""
+        text = _klartext(self.html)
+        self.assertIn("GNU GPL, Version 3", text)
+        stelle = text.index("GNU GPL")
+        self.assertNotIn("oder später", text[stelle:stelle + 120])
+
     def test_ohne_datei_kommt_ein_hinweis_statt_eines_absturzes(self):
         from unittest.mock import patch
 
