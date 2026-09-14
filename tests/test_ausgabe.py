@@ -243,12 +243,46 @@ class TestTabellen(unittest.TestCase):
         self.assertEqual(zeile[2:5], [6, 4, "ja"])
         self.assertIn("Leiste 1 DA 1", zeile[5])
 
-    def test_csv_hat_kopfzeile_und_alle_adern(self):
+    def _csv_zeilen(self) -> list[list[str]]:
         ziel = csv_schreiben(self.projekt, Path(self.ordner.name) / "probe.csv")
         with ziel.open(encoding="utf-8-sig", newline="") as datei:
-            zeilen = list(csv.reader(datei, delimiter=";"))
+            return list(csv.reader(datei, delimiter=";"))
+
+    def test_csv_hat_kopfzeile_und_alle_adern(self):
+        """Oben bleibt die Belegung - die erste Zeile ist ihre Kopfzeile."""
+        zeilen = self._csv_zeilen()
         self.assertEqual(zeilen[0], list(SPALTEN))
-        self.assertEqual(len(zeilen), 81)
+        # 80 Adern, danach eine Leerzeile: dort endet der erste Block.
+        self.assertEqual(len(zeilen[:81]), 81)
+        self.assertEqual(zeilen[81], [])
+
+    def test_csv_traegt_auch_kabel_und_projektdaten(self):
+        """Dieselben Angaben wie die Mappe, als Blöcke darunter."""
+        zeilen = self._csv_zeilen()
+        flach = [";".join(z) for z in zeilen]
+        self.assertIn("Kabel je Leiste", flach)
+        self.assertIn("Projektdaten", flach)
+        # Der Briefkopf steht unten, so wie das Schriftfeld am Blattfuß.
+        self.assertGreater(flach.index("Projektdaten"), flach.index("Kabel je Leiste"))
+        werte = {z[0]: z[1] for z in zeilen if len(z) == 2}
+        self.assertEqual(werte.get("Verteiler"), self.projekt.verteiler.name)
+        self.assertEqual(werte.get("Firma"), "Musterfirma")
+
+    def test_eine_anschrift_bleibt_in_einer_zeile(self):
+        """Sonst zerfiele die Tabelle an dieser Stelle in drei Zeilen."""
+        self.projekt.briefkopf["kunde"] = "Firma Beliebig\nBeliebige Straße 7"
+        zeilen = self._csv_zeilen()
+        werte = {z[0]: z[1] for z in zeilen if len(z) == 2}
+        self.assertEqual(werte.get("Kunde"), "Firma Beliebig · Beliebige Straße 7")
+
+    def test_ohne_kabel_kein_leerer_block(self):
+        from verteilerly.modell import Projekt, Verteiler
+
+        leer = Projekt(verteiler=Verteiler.aus_geometrie(1, 1, 2, name="Leer"))
+        ziel = csv_schreiben(leer, Path(self.ordner.name) / "leer.csv")
+        text = ziel.read_text(encoding="utf-8-sig")
+        self.assertNotIn("Kabel je Leiste", text)
+        self.assertIn("Projektdaten", text)
 
     def test_csv_beginnt_mit_bom(self):
         """Ohne BOM zerlegt Excel die Umlaute."""

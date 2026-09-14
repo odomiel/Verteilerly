@@ -95,15 +95,75 @@ def kabelzeilen(projekt: Projekt) -> list[list]:
     return zeilen
 
 
+def projektdatenzeilen(projekt: Projekt) -> list[list]:
+    """Der Briefkopf als Liste - Beschriftung und Wert.
+
+    Dieselben Zeilen fuellen das Blatt der Mappe und den Fussblock der
+    CSV: zwei Auslesungen liefen auseinander.
+    """
+    zeilen = [
+        ["Verteiler", projekt.verteiler.name],
+        ["Verteilernummer", projekt.verteiler.nummer],
+    ]
+    zeilen += [
+        [BRIEFKOPF_BESCHRIFTUNG.get(name, name), wert]
+        for name, wert in projekt.briefkopf.items()
+        if wert
+    ]
+    zeilen += [[name, wert] for name, wert in projekt.eigene_felder.items()]
+    return [zeile for zeile in zeilen if str(zeile[1]).strip()]
+
+
+def csv_bloecke(projekt: Projekt) -> list[tuple[str, tuple, list]]:
+    """Was in der CSV steht: je Block Titel, Ueberschriften und Zeilen.
+
+    Die Belegung steht oben und ohne Titel - die erste Zeile bleibt die
+    Kopfzeile der Tabelle, wie es jedes einlesende Programm erwartet.
+    Was auf dem Blatt im Schriftfeld steht, kommt darunter, so wie es
+    dort am Blattfuss steht.
+    """
+    bloecke = [("", SPALTEN, belegungszeilen(projekt))]
+    kabel = kabelzeilen(projekt)
+    if kabel:
+        bloecke.append(("Kabel je Leiste", KABELSPALTEN, kabel))
+    stammdaten = projektdatenzeilen(projekt)
+    if stammdaten:
+        bloecke.append(("Projektdaten", ("Feld", "Wert"), stammdaten))
+    return bloecke
+
+
 def csv_schreiben(projekt: Projekt, ziel: pathlib.Path) -> pathlib.Path:
-    """Nur die Belegung; Kabel und Projektdaten haben in einer CSV keinen Platz."""
+    """Die Belegung, darunter Kabel und Projektdaten.
+
+    Eine CSV traegt nur eine Tabelle - also stehen die weiteren als
+    eigene Bloecke darunter, durch eine Leerzeile getrennt und mit
+    eigener Kopfzeile. Oben bleibt die Belegung: die erste Zeile ist
+    ihre Kopfzeile, damit eingelesen werden kann wie bisher.
+    """
     ziel = pathlib.Path(ziel)
     try:
         # BOM, damit Excel die Umlaute nicht zerlegt.
         with ziel.open("w", newline="", encoding="utf-8-sig") as datei:
             schreiber = csv.writer(datei, delimiter=TRENNER)
-            schreiber.writerow(SPALTEN)
-            schreiber.writerows(belegungszeilen(projekt))
+            for i, (titel, ueberschriften, zeilen) in enumerate(csv_bloecke(projekt)):
+                if i:
+                    schreiber.writerow([])
+                if titel:
+                    schreiber.writerow([titel])
+                schreiber.writerow(list(ueberschriften))
+                # Eine Anschrift steht mehrzeilig in einer Zelle; die CSV
+                # gibt sie in einer Zeile wieder - sonst zerfiele die
+                # Tabelle an dieser Stelle in drei Zeilen.
+                schreiber.writerows(
+                    [
+                        [
+                            str(wert).replace("\n", " · ")
+                            if isinstance(wert, str) else wert
+                            for wert in zeile
+                        ]
+                        for zeile in zeilen
+                    ]
+                )
     except OSError as fehler:
         raise AusgabeFehler(str(fehler)) from fehler
     return ziel
@@ -142,16 +202,8 @@ def xlsx_schreiben(
                    get_column_letter)
 
     stammdaten = mappe.create_sheet("Projektdaten")
-    zeilen = [["Verteiler", projekt.verteiler.name],
-              ["Verteilernummer", projekt.verteiler.nummer]]
-    zeilen += [
-        [BRIEFKOPF_BESCHRIFTUNG.get(name, name), wert]
-        for name, wert in projekt.briefkopf.items()
-        if wert
-    ]
-    zeilen += [[name, wert] for name, wert in projekt.eigene_felder.items()]
-    _blatt_fuellen(stammdaten, ("Feld", "Wert"), zeilen, Font, Alignment,
-                   get_column_letter)
+    _blatt_fuellen(stammdaten, ("Feld", "Wert"), projektdatenzeilen(projekt),
+                   Font, Alignment, get_column_letter)
 
     try:
         mappe.save(ziel)

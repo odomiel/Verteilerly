@@ -411,7 +411,14 @@ ein, damit die freie Fläche darüber liegt und nicht darunter. Nachbilden
 lässt sich ein PDF damit trotzdem nicht:
 Excel ist ein Raster, das Blatt eine Zeichnung; das Schriftfeld steht darum
 unter der Tabelle statt am Blattfuß.
-Die CSV bleibt reine Daten — eine Zeile je Ader.
+Die **CSV trägt dieselben Angaben** wie die Mappe, nur ohne Blattbild:
+oben die Belegung — eine Zeile je Ader, die erste Zeile ihre Kopfzeile, damit
+sich die Datei einlesen lässt wie bisher —, darunter durch eine Leerzeile
+getrennt die Blöcke *Kabel je Leiste* und *Projektdaten*, jeder mit Titel und
+eigener Kopfzeile. Die Projektdaten stehen zuletzt, so wie das Schriftfeld am
+Blattfuß; eine mehrzeilige Anschrift steht in einer Zeile, mit `·` getrennt.
+Gefüllt wird aus denselben Zeilen wie das Projektdatenblatt der Mappe
+(`projektdatenzeilen`).
 
 **Kein Text läuft über sein Feld hinaus.** Passt eine Bezeichnung, eine
 Bemerkung oder ein Kabelname nicht in seine Spalte, wird die Schrift dafür

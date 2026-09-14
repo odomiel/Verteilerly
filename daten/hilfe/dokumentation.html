@@ -396,7 +396,8 @@ Verteilerbelegung und je Leiste ein Blatt — das Pflichtformat.</td></tr>
 <tr><td><b>Datei ▸ Als Excel-Mappe…</b></td><td>Vorn dieselben Blätter im
 Blattbild, dahinter die Daten als Tabelle: <i>Daten je Ader</i>, <i>Kabel je
 Leiste</i>, <i>Projektdaten</i> — filter- und sortierbar.</td></tr>
-<tr><td><b>Datei ▸ Als CSV…</b></td><td>Reine Daten, eine Zeile je Ader.</td></tr>
+<tr><td><b>Datei ▸ Als CSV…</b></td><td>Reine Daten: oben eine Zeile je Ader,
+darunter die Kabel und die Projektdaten.</td></tr>
 </table>
 
 <p>Die Excel-Mappe übernimmt Spaltenfolge und -breite, Schriftgrößen,
@@ -416,6 +417,14 @@ in Breite und Höhe.</p>
 
 <p>Das <b>Schriftfeld steht am Blattfuß</b> wie auf dem gedruckten Blatt: die
 freie Fläche liegt darüber, nicht darunter.</p>
+
+<p><b>Die CSV trägt dasselbe</b> — nur ohne Blattbild. Eine CSV kennt nur eine
+Tabelle, deshalb stehen die weiteren als Blöcke darunter, durch eine Leerzeile
+getrennt und mit eigener Überschrift: <i>Kabel je Leiste</i> und
+<i>Projektdaten</i>. Oben bleibt die Belegung, damit die erste Zeile die
+Kopfzeile ist und jedes Programm die Datei einlesen kann wie bisher; die
+Projektdaten stehen zuletzt, so wie das Schriftfeld am Blattfuß. Eine
+mehrzeilige Anschrift steht dabei in einer Zeile, mit „·" getrennt.</p>
 
 <p>Ein PDF nachbilden kann die Mappe trotzdem nicht: Excel ist ein Raster, das
 Blatt eine Zeichnung — der Kabelblock wird über seine Zeilen verbunden statt
