@@ -538,6 +538,23 @@ Felder untereinander —, baut der Dialog ihn in ein eigenes Widget und reicht
 es an `inhalt_rollbar()` weiter: der Inhalt rollt, die Knopfleiste bleibt
 außerhalb des Rollbereichs stehen. Gerollt wird nur, wenn es sein muss.
 
+**Jeder Dialog lässt sich frei verschieben** (`dialoge_freistellen()` in
+`gui/passform.py`). GNOMEs Mutter heftet unter X11 ein Fenster an
+sein Elternfenster, sobald es sich als modaler Dialog anmeldet
+(`_NET_WM_WINDOW_TYPE_DIALOG` plus `_NET_WM_STATE_MODAL`, Einstellung
+`attach-modal-dialogs`). Ein Ereignisfilter an der Anwendung meldet darum jeden
+`QDialog` beim Zeigen als Werkzeugfenster (`Qt.Tool`) an — auch die, die Qt
+selbst baut (`QMessageBox`, `QInputDialog`, Dateidialoge). Am Bildschirm
+ausprobiert: Mutter sieht dann `UTILITY` statt `DIALOG`, lässt das Fenster
+frei; Qt hält es modal und setzt `WM_TRANSIENT_FOR` weiter — es geht mittig
+über dem Hauptfenster auf, bleibt davor, bekommt Fokus und keinen
+Taskleisten-Eintrag. Die naheliegende Fensterart `Qt.Window` wäre auch frei,
+verlöre aber die Transient-Angabe; `_q_xcb_wm_window_type` wirkt nicht mehr,
+sobald das X-Fenster steht, und das steht schon vor dem ersten
+`Polish`-Ereignis. Eingeschaltet wird der Filter in `__main__.main()`, nur
+unter `xcb` (`FREISTELLEN_AUF`) — das AppImage bringt ohnehin nur diese
+Plattform mit.
+
 **Was Qt selbst mitbringt, folgt dem Erscheinungsbild** (`gui/thema.py`): Ankreuzfelder und Auswahlknöpfe bekommen eigene Regeln im Stilblatt,
 weil Fusion sie im dunklen Satz dunkel auf dunkel zeichnet. Qts
 **Standardbilder** sind feste Dateien in dunklem Grau — die Pfeile der Datei-

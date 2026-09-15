@@ -17,11 +17,19 @@ Zwei Regeln darum:
 
 Geprueft wird beides beim Zeigen, nicht beim Bauen - erst dann steht
 fest, auf welchem Bildschirm das Fenster aufgeht.
+
+Und eine dritte Regel: **ein Dialog laesst sich frei verschieben.** GNOMEs
+Fensterverwaltung heftet ein modales Dialogfenster an sein Elternfenster
+(``attach-modal-dialogs``); wer das Hauptfenster darunter lesen will, kann
+den Dialog dann nicht beiseiteschieben. `dialoge_freistellen` meldet jeden
+Dialog darum als Werkzeugfenster an - fuer Qt bleibt er modal und fuer die
+Fensterverwaltung transient ueber dem Hauptfenster, nur angeheftet wird er
+nicht mehr.
 """
 
 from __future__ import annotations
 
-from PySide6.QtCore import QSize
+from PySide6.QtCore import QEvent, QObject, QSize, Qt
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import (
     QDialog,
@@ -138,3 +146,62 @@ class PassenderDialog(QDialog):
     def showEvent(self, ereignis) -> None:  # noqa: N802 - Qt-Name
         super().showEvent(ereignis)
         einpassen(self)
+
+
+# -- Frei verschiebbar ----------------------------------------------
+
+#: Wo Dialoge freigestellt werden. Nur unter X11: dort heftet GNOMEs
+#: Mutter modale Dialogfenster an. Das AppImage bringt ohnehin nur xcb
+#: mit; unter Windows gaebe die Fensterart Werkzeug schmale Rahmen, und
+#: offscreen in den Tests gibt es keine Fensterverwaltung.
+FREISTELLEN_AUF = ("xcb",)
+
+
+def freie_fensterart(art: Qt.WindowType) -> Qt.WindowType:
+    """Dieselben Fensterangaben - nur als Werkzeugfenster statt als Dialog.
+
+    Ausprobiert an Mutter: ein Dialog der Art ``Window`` waere auch frei,
+    verloere aber die Angabe, zu welchem Fenster er gehoert, und bekaeme
+    einen eigenen Eintrag in der Taskleiste. Ein Werkzeugfenster behaelt
+    beides - Qt setzt die Transient-Angabe dafuer weiter -, geht mittig
+    ueber dem Hauptfenster auf und bekommt Titelleiste und Fokus.
+    Titel- und Schliessknopf-Angaben bleiben, wie sie waren.
+    """
+    maske = Qt.WindowType.WindowType_Mask
+    return (art & ~maske) | Qt.WindowType.Tool
+
+
+class DialogeFreistellen(QObject):
+    """Stellt jeden Dialog beim Zeigen frei - auch Qts eigene.
+
+    Ein Ereignisfilter an der Anwendung, weil nicht nur die eigenen
+    Dialoge gemeint sind: ``QMessageBox.warning``, ``QInputDialog.getText``
+    und die Dateidialoge bauen ihr Fenster selbst. Umgestellt wird beim
+    Zeigen - vorher gibt es kein Fenster, und das X-Fenster wird erst
+    danach auf den Bildschirm gebracht; so sieht die Fensterverwaltung
+    von Anfang an ein Werkzeugfenster.
+    """
+
+    def eventFilter(self, beobachtet, ereignis) -> bool:  # noqa: N802 - Qt-Name
+        if (ereignis.type() == QEvent.Type.Show
+                and isinstance(beobachtet, QDialog) and beobachtet.isWindow()):
+            fenster = beobachtet.windowHandle()
+            if fenster is not None:
+                art = fenster.flags()
+                # Nur echte Dialoge - was schon anders angemeldet ist, bleibt.
+                if art & Qt.WindowType.WindowType_Mask == Qt.WindowType.Dialog:
+                    fenster.setFlags(freie_fensterart(art))
+        return False
+
+
+def dialoge_freistellen(anwendung) -> DialogeFreistellen | None:
+    """Setzt den Filter an die Anwendung - wo es noetig ist.
+
+    Gibt den Filter zurueck, oder None, wenn auf dieser Plattform nichts
+    zu tun ist.
+    """
+    if QGuiApplication.platformName() not in FREISTELLEN_AUF:
+        return None
+    filter_ = DialogeFreistellen(anwendung)
+    anwendung.installEventFilter(filter_)
+    return filter_

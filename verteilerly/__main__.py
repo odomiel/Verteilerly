@@ -58,6 +58,7 @@ def main() -> int:
 
     from verteilerly import pfade, sprachen
     from verteilerly.gui.hauptfenster import Hauptfenster
+    from verteilerly.gui.passform import dialoge_freistellen
     from verteilerly.gui.sprache import deutsch_einrichten
     from verteilerly.version import VERSION
 
@@ -76,6 +77,9 @@ def main() -> int:
     anwendung.setOrganizationName("Verteilerly")
     # Damit auch Qts eigene Dialoge deutsch sprechen.
     deutsch_einrichten(anwendung)
+    # Unter X11 heftet GNOME modale Dialoge ans Hauptfenster - sie liessen
+    # sich nicht mehr verschieben. Gilt auch fuer Qts eigene Dialoge.
+    dialoge_freistellen(anwendung)
 
     fenster = Hauptfenster()
     fenster.show()

@@ -2827,6 +2827,91 @@ class TestSucheImHauptfenster(unittest.TestCase):
 
 
 @unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
+class TestDialogeFreiBeweglich(unittest.TestCase):
+    """Kein Dialog klebt am Hauptfenster fest.
+
+    Eine Fensterverwaltung gibt es offscreen nicht - geprueft wird darum,
+    wie sich der Dialog anmeldet. Dass Mutter ihn dann freilaesst, ist am
+    Bildschirm ausprobiert und steht in ``freie_fensterart``.
+    """
+
+    def test_die_fensterart_wird_werkzeugfenster(self):
+        from PySide6.QtCore import Qt
+
+        from verteilerly.gui.passform import freie_fensterart
+
+        art = (Qt.WindowType.Dialog | Qt.WindowType.WindowTitleHint
+               | Qt.WindowType.WindowCloseButtonHint)
+        neu = freie_fensterart(art)
+        self.assertEqual(neu & Qt.WindowType.WindowType_Mask, Qt.WindowType.Tool)
+        # Titelleiste und Schließknopf bleiben, wie sie waren.
+        self.assertTrue(neu & Qt.WindowType.WindowTitleHint)
+        self.assertTrue(neu & Qt.WindowType.WindowCloseButtonHint)
+
+    def test_ohne_x11_bleibt_alles_wie_es_ist(self):
+        """Offscreen, unter Windows und Wayland gibt es nichts anzuheften."""
+        from verteilerly.gui import passform
+
+        self.assertNotIn(ANWENDUNG.platformName(), passform.FREISTELLEN_AUF)
+        self.assertIsNone(passform.dialoge_freistellen(ANWENDUNG))
+
+    def _unter_x11(self):
+        from verteilerly.gui import passform
+
+        with mock.patch.object(
+            passform.QGuiApplication, "platformName", return_value="xcb"
+        ):
+            filter_ = passform.dialoge_freistellen(ANWENDUNG)
+        self.assertIsNotNone(filter_)
+        self.addCleanup(ANWENDUNG.removeEventFilter, filter_)
+        return filter_
+
+    def test_jeder_dialog_wird_freigestellt_und_bleibt_modal(self):
+        """Auch Qts eigene: QMessageBox und QInputDialog bauen ihr Fenster selbst."""
+        from PySide6.QtCore import Qt
+        from PySide6.QtWidgets import QDialog, QInputDialog, QMessageBox
+
+        from verteilerly.gui.dialoge import PruefberichtDialog
+        from verteilerly.pruefung import Bericht
+
+        self._unter_x11()
+        for dialog in (
+            QDialog(), QMessageBox(), QInputDialog(),
+            PruefberichtDialog(Bericht("blattvorlage", pathlib.Path("x.yaml"))),
+        ):
+            with self.subTest(dialog=type(dialog).__name__):
+                dialog.setWindowModality(Qt.WindowModality.ApplicationModal)
+                dialog.show()
+                self.addCleanup(dialog.close)
+                art = dialog.windowHandle().flags() & Qt.WindowType.WindowType_Mask
+                self.assertEqual(art, Qt.WindowType.Tool)
+                self.assertNotEqual(
+                    dialog.windowModality(), Qt.WindowModality.NonModal
+                )
+                dialog.close()
+
+    def test_ein_hauptfenster_bleibt_ein_hauptfenster(self):
+        """Nur Dialoge - kein anderes Fenster wird umgemeldet."""
+        from PySide6.QtCore import Qt
+        from PySide6.QtWidgets import QMainWindow
+
+        self._unter_x11()
+        fenster = QMainWindow()
+        fenster.show()
+        self.addCleanup(fenster.close)
+        self.assertEqual(
+            fenster.windowHandle().flags() & Qt.WindowType.WindowType_Mask,
+            Qt.WindowType.Window,
+        )
+
+    def test_das_programm_stellt_die_dialoge_beim_start_frei(self):
+        """Der Filter muss dort sitzen, wo die Anwendung entsteht."""
+        quelle = (pathlib.Path(__file__).resolve().parent.parent
+                  / "verteilerly" / "__main__.py").read_text(encoding="utf-8")
+        self.assertIn("dialoge_freistellen(anwendung)", quelle)
+
+
+@unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
 class TestPassform(unittest.TestCase):
     """Kein Dialog wird größer als der Bildschirm."""
 
