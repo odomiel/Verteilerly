@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 
 import yaml
 
-from .modell import Kabel, ModellFehler, Verteiler
+from .modell import Kabel, ModellFehler, Verteiler, unbekannte_schluessel
 from .sprachen import u
 
 
@@ -122,12 +122,21 @@ class Kabeltypen:
         self.kuerzel = kuerzel
 
     @classmethod
-    def laden(cls, ordner: pathlib.Path) -> Kabeltypen:
+    def laden(cls, ordner: pathlib.Path, hinweise=None) -> Kabeltypen:
+        """Alle Kabeltypen eines Ordners.
+
+        Was am Eintrag selbst steht und hier nicht abgefragt wird, gehoert
+        der Regel (``daten``) - dort wird nichts gemeldet. Auf der Ebene
+        der Datei dagegen gibt es nur zwei Schluessel.
+        """
         typen: dict[str, Kabeltyp] = {}
         kuerzel: dict[str, str] = {}
 
         for datei in sorted(ordner.glob("*.yaml")):
             inhalt = yaml.safe_load(datei.read_text(encoding="utf-8")) or {}
+            unbekannte_schluessel(
+                inhalt, ("kuerzel", "kabeltypen"), datei.name, hinweise
+            )
             kuerzel.update(inhalt.get("kuerzel") or {})
             for eintrag in inhalt.get("kabeltypen") or []:
                 eintrag = dict(eintrag)

@@ -1885,6 +1885,36 @@ class TestMenuezustaende(unittest.TestCase):
         self.assertEqual(len(gemeldet), 1)
         self.assertIn("buchten_je_blatt", gemeldet[0])
 
+    def test_ein_vertippter_schluessel_kommt_in_dieselbe_meldung(self):
+        """Verteiler-, Blattvorlagen und Kabeltypen auf einem Zettel."""
+        import tempfile
+
+        from verteilerly.gui import hauptfenster
+
+        f = self.fenster
+        ordner = tempfile.TemporaryDirectory()
+        self.addCleanup(ordner.cleanup)
+        ziel = pathlib.Path(ordner.name)
+        (ziel / "tipp.yaml").write_text(
+            "id: tipp\nname: Tipp\nzeilenhohe_max: 7\n", encoding="utf-8"
+        )
+
+        zettel: list[str] = []
+        with mock.patch.object(hauptfenster.pfade, "blattvorlagenordner_alle",
+                               return_value=[ziel]):
+            vorlagen = f._blattvorlagen_laden(zettel)
+
+        # Gelesen wird sie trotzdem - nur der Schlüssel wird beanstandet.
+        self.assertIn("tipp", [v.id for v in vorlagen.alle])
+        self.assertEqual(len(zettel), 1)
+        self.assertIn("zeilenhohe_max", zettel[0])
+
+        gemeldet = []
+        with mock.patch.object(hauptfenster.QMessageBox, "warning",
+                               lambda *args, **kw: gemeldet.append(args[2])):
+            f._hinweise_zeigen(zettel)
+        self.assertIn("zeilenhohe_max", gemeldet[0])
+
     def test_geloeschte_blattvorlagen_bleiben_beim_laden_weg(self):
         """Ohne den Vermerk holte das Abbild sie zurück."""
         from verteilerly.gui import hauptfenster

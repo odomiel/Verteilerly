@@ -266,6 +266,49 @@ class TestMitgelieferte(unittest.TestCase):
             vorlagen = Blattvorlagen.aus_ordnern([ziel])
         self.assertEqual([v.id for v in vorlagen.alle], ["standard"])
 
+    def test_ein_vertippter_schluessel_wird_gemeldet(self):
+        """Sonst faellt er nirgends auf - die Vorgabe greift ja."""
+        hinweise: list[str] = []
+        vorlage = blattvorlage_aus_yaml(
+            {
+                "id": "x", "name": "X",
+                "zeilenhohe_max": 7,
+                "belegung": {"zelle_hoeh": 12},
+                "spalten": [{"feld": "stift", "uberschrift": "S"}],
+            },
+            "x.yaml", hinweise,
+        )
+        # Gelesen wird sie trotzdem: sie kann aus einer neueren Fassung sein.
+        self.assertEqual(vorlage.id, "x")
+        self.assertEqual(vorlage.zeilenhoehe_max, STANDARD.zeilenhoehe_max)
+        self.assertEqual(len(hinweise), 3, hinweise)
+        self.assertTrue(all(h.startswith("x.yaml: ") for h in hinweise))
+        self.assertIn("zeilenhohe_max", hinweise[0])
+        self.assertIn("belegung", " ".join(hinweise))
+        self.assertIn("spalten", " ".join(hinweise))
+
+    def test_bekannte_schluessel_geben_keine_meldung(self):
+        hinweise: list[str] = []
+        blattvorlage_aus_yaml(
+            {
+                "id": "x", "name": "X", "beschreibung": "", "standard": False,
+                "rand": 10, "schriftfeld_hoehe": 30, "kopfzeile_hoehe": 7,
+                "zeilenhoehe_max": 9, "zeilenhoehe_min": 5,
+                "schrift": {"gross": 20, "mittel": 11, "normal": 9, "klein": 7},
+                "spalten": ["stift", {"feld": "kabel", "ueberschrift": "K",
+                                      "anteil": 12, "ausrichtung": "mitte"}],
+                "schriftfeld": [["firma"]], "schriftfeld_art": "standard",
+                "schriftfeld_anteile": [0.5, 0.5], "buchten_je_blatt": 1,
+                "da_nummern": True, "kabel_gedreht": False,
+                "belegung": {"zelle_breite": 6, "zelle_hoehe": 9,
+                             "leistenlabel": 14, "abstand_leisten": 3,
+                             "abstand_buchten": 12, "fuellgrad_kabel": 0.8,
+                             "polster_kabel": 0.5},
+            },
+            "x.yaml", hinweise,
+        )
+        self.assertEqual(hinweise, [])
+
     def test_standard_steht_vorn(self):
         self.assertEqual(self.vorlagen.standard.id, "standard")
         self.assertEqual(self.vorlagen.alle[0].id, "standard")

@@ -27,7 +27,7 @@ from dataclasses import dataclass, replace
 
 import yaml
 
-from .modell import ModellFehler, Verteiler
+from .modell import ModellFehler, Verteiler, unbekannte_schluessel
 from .sprachen import u
 
 
@@ -124,6 +124,10 @@ ENDUNG = ".yaml"
 PFLICHTFELDER = ("id", "name", "buchten", "leisten_je_bucht", "da_je_leiste")
 # Vor der Umbenennung hiessen die Buchten Reihen - alte Dateien gelten weiter.
 FRUEHERE_NAMEN = {"buchten": "reihen", "leisten_je_bucht": "leisten_je_reihe"}
+# Was eine Vorlagendatei kennen darf; alles andere wird gemeldet.
+VORLAGENSCHLUESSEL = (
+    *PFLICHTFELDER, *FRUEHERE_NAMEN.values(), "beschreibung", "standard",
+)
 
 
 def _feld(inhalt: dict, name: str):
@@ -243,8 +247,11 @@ def vorlage_umbenennen(
     return neu
 
 
-def vorlage_aus_yaml(inhalt: dict, herkunft: str = "") -> Vorlage:
+def vorlage_aus_yaml(inhalt: dict, herkunft: str = "", hinweise=None) -> Vorlage:
     wo = f"{herkunft}: " if herkunft else ""
+    unbekannte_schluessel(
+        inhalt, VORLAGENSCHLUESSEL, herkunft or "Vorlage", hinweise
+    )
     buchten = _feld(inhalt, "buchten")
     # Eine Liste statt einer Zahl: der ungleich besetzte Verteiler.
     plan = _bauplan_lesen(buchten, wo) if isinstance(buchten, list) else ()
@@ -282,15 +289,15 @@ class Vorlagen:
         self._vorlagen = {v.id: v for v in vorlagen}
 
     @classmethod
-    def laden(cls, ordner: pathlib.Path) -> Vorlagen:
+    def laden(cls, ordner: pathlib.Path, hinweise=None) -> Vorlagen:
         gefunden: list[Vorlage] = []
         for datei in sorted(pathlib.Path(ordner).glob("*.yaml")):
             inhalt = yaml.safe_load(datei.read_text(encoding="utf-8")) or {}
-            gefunden.append(vorlage_aus_yaml(inhalt, datei.name))
+            gefunden.append(vorlage_aus_yaml(inhalt, datei.name, hinweise))
         return cls(gefunden)
 
     @classmethod
-    def aus_ordnern(cls, ordner, ausgelassen=()) -> Vorlagen:
+    def aus_ordnern(cls, ordner, ausgelassen=(), hinweise=None) -> Vorlagen:
         """Aus mehreren Ordnern; bei gleicher Kennung gilt der letzte.
 
         So kann eine eigene Vorlage eine mitgelieferte ersetzen, ohne
@@ -310,7 +317,7 @@ class Vorlagen:
                 if f"{ORDNERNAME}/{datei.name}" in weg:
                     continue
                 inhalt = yaml.safe_load(datei.read_text(encoding="utf-8")) or {}
-                gefunden.append(vorlage_aus_yaml(inhalt, datei.name))
+                gefunden.append(vorlage_aus_yaml(inhalt, datei.name, hinweise))
         return cls(gefunden)
 
     def entfernen(self, kennung: str) -> None:

@@ -431,6 +431,16 @@ Anleitung nicht auseinanderläuft. **Eine fehlerhafte Datei übergeht
 das Hauptfenster zeigt ihn beim Start. Vorher nahm ein Tippfehler in einer
 eigenen Vorlage das ganze Programm mit.
 
+**Eine Formatnummer wie in der Projektdatei gibt es hier bewusst nicht.**
+Eine Vorlagendatei wird von Hand geschrieben und sagt nur, was sie anders
+will; jede Erweiterung war bisher additiv, alte Dateien lesen sich
+unverändert. Der wunde Punkt ist ein anderer: ein vertippter Schlüssel fiele
+nirgends auf, weil die Vorgabe greift. `modell.unbekannte_schluessel()`
+meldet ihn darum — für Verteilervorlagen, Blattvorlagen und Kabeltypen.
+Gültig bleibt die Datei: sie kann aus einer neueren Fassung
+stammen. Das Hauptfenster sammelt alles in `self.hinweise` und zeigt es
+einmal beim Start (`_hinweise_zeigen()`).
+
 Über der Tabelle steht **keine Überschrift** — welche Leiste ein Blatt
 zeigt und wie viele Doppeladern sie hat, sagt das Schriftfeld unten; die
 Tabelle beginnt am Rand und hat den Platz.

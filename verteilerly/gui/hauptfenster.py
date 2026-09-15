@@ -99,9 +99,19 @@ class Hauptfenster(QMainWindow):
             str(pfade.einstellungsdatei()), QSettings.Format.IniFormat
         )
         self._grundausstattung_sichern()
-        self.vorlagen = self._vorlagen_laden()
-        self.blattvorlagen = self._blattvorlagen_laden()
-        self.kabeltypen = Kabeltypen.laden(pfade.kabeltypenordner())
+        # Was beim Lesen der Vorlagen auffiel, kommt hier zusammen und
+        # wird einmal gezeigt - nicht dreimal hintereinander.
+        self.hinweise: list[str] = []
+        self.vorlagen = self._vorlagen_laden(self.hinweise)
+        self.blattvorlagen = self._blattvorlagen_laden(self.hinweise)
+        try:
+            self.kabeltypen = Kabeltypen.laden(
+                pfade.kabeltypenordner(), self.hinweise
+            )
+        except (OSError, ModellFehler) as fehler:
+            self.hinweise.append(str(fehler))
+            self.kabeltypen = Kabeltypen({}, {})
+        self._hinweise_zeigen()
 
         self.projekt: Projekt | None = None
         self.pfad: pathlib.Path | None = None
@@ -1220,31 +1230,38 @@ class Hauptfenster(QMainWindow):
         except OSError:
             self.ausgelegt = []
 
-    def _blattvorlagen_laden(self) -> Blattvorlagen:
+    def _blattvorlagen_laden(self, hinweise=None) -> Blattvorlagen:
         """Alle Blattvorlagen; eigene gehen vor mitgelieferten.
 
         Eine selbst geschriebene Vorlage kann Fehler haben. Sie wird dann
-        uebergangen und gesagt, was daran nicht stimmt - das Programm
-        laeuft mit den uebrigen weiter.
+        uebergangen, der Grund kommt auf den Zettel ``hinweise`` - das
+        Programm laeuft mit den uebrigen weiter.
         """
         try:
             orte = list(reversed(pfade.blattvorlagenordner_alle()))
             weg = pfade.geloeschte()
         except OSError:
             orte, weg = [], set()
-        wunden: list[str] = []
-        vorlagen = Blattvorlagen.aus_ordnern(orte, weg, wunden)
-        if wunden:
-            QMessageBox.warning(
-                self,
-                mehrzahl(len(wunden), "Blattvorlage", "Blattvorlagen")
-                + u(" übergangen"),
-                u("Was nicht stimmt, steht dahinter. Die übrigen Vorlagen "
-                  "stehen weiter zur Wahl.\n\n{0}").format("\n".join(wunden)),
-            )
+        eigener = hinweise if hinweise is not None else []
+        vorher = len(eigener)
+        vorlagen = Blattvorlagen.aus_ordnern(orte, weg, eigener)
+        if hinweise is None and len(eigener) > vorher:
+            self._hinweise_zeigen(eigener)
         return vorlagen
 
-    def _vorlagen_laden(self) -> Vorlagen:
+    def _hinweise_zeigen(self, hinweise=None) -> None:
+        """Zeigt einmal, was beim Lesen der Vorlagen auffiel."""
+        gesammelt = self.hinweise if hinweise is None else hinweise
+        if not gesammelt:
+            return
+        QMessageBox.warning(
+            self,
+            mehrzahl(len(gesammelt), "Vorlage", "Vorlagen") + u(" beanstandet"),
+            u("Was nicht stimmt, steht dahinter. Die übrigen Vorlagen "
+              "stehen weiter zur Wahl.\n\n{0}").format("\n".join(gesammelt)),
+        )
+
+    def _vorlagen_laden(self, hinweise=None) -> Vorlagen:
         """Alle Vorlagenordner zusammen; eigene gehen vor mitgelieferten.
 
         Was der Anwender geloescht hat, bleibt draussen - die
@@ -1255,7 +1272,7 @@ class Hauptfenster(QMainWindow):
             weg = pfade.geloeschte()
         except OSError:
             orte, weg = [], set()
-        return Vorlagen.aus_ordnern(orte, weg)
+        return Vorlagen.aus_ordnern(orte, weg, hinweise)
 
     def _vorlagenordner(self):
         """Wohin eigene Vorlagen kommen - None, wenn dort nichts geht."""

@@ -392,8 +392,12 @@ rand: 8
 zeilenhoehe_max: 7
 spalten: [stift, ader, farbe, rangierung]</pre>
 
-<p><b>A typo?</b> A faulty file does not take the others with it: the program
-skips it and says at startup which file it was and what is wrong with it.</p>
+<p><b>A typo?</b> The program says so at startup. A <b>faulty</b> file does not
+take the others with it — it is skipped, the remaining templates stay
+available. And a <b>key it does not know</b> is remarked upon instead of being
+passed over in silence: <code>zeilenhohe_max</code> would otherwise do nothing
+and nobody would know why. The template still applies — it may come from a newer
+version of the program. The same goes for frame templates and cable types.</p>
 
 <h4>The sheet as a whole</h4>
 

@@ -17,7 +17,7 @@ from dataclasses import dataclass, field, replace
 
 import yaml
 
-from .modell import LINKS, MITTE, RECHTS, ModellFehler
+from .modell import LINKS, MITTE, RECHTS, ModellFehler, unbekannte_schluessel
 from .sprachen import u
 
 __all_ausrichtungen__ = (LINKS, MITTE, RECHTS)
@@ -28,6 +28,24 @@ AUSRICHTUNGEN = (LINKS, MITTE, RECHTS)
 # Matrix aus Datum und Name, darunter der Verteiler, rechts daneben die
 # Anschriften von Firma und Kunde.
 SCHRIFTFELDARTEN = ("standard", "beispiel")
+
+# Welche Schluessel eine Blattvorlage kennt. Was hier nicht steht, wird
+# gemeldet: ein vertippter Schluessel faellt sonst nirgends auf.
+BLATTSCHLUESSEL = (
+    "id", "name", "beschreibung", "standard",
+    "rand", "schriftfeld_hoehe", "kopfzeile_hoehe",
+    "zeilenhoehe_max", "zeilenhoehe_min",
+    "schrift", "spalten", "schriftfeld", "schriftfeld_art",
+    "schriftfeld_anteile", "buchten_je_blatt", "da_nummern",
+    "kabel_gedreht", "belegung",
+)
+SCHRIFTSCHLUESSEL = ("gross", "mittel", "normal", "klein")
+BELEGUNGSSCHLUESSEL = (
+    "zelle_breite", "zelle_hoehe", "leistenlabel",
+    "abstand_leisten", "abstand_buchten",
+    "fuellgrad_kabel", "polster_kabel",
+)
+SPALTENSCHLUESSEL = ("feld", "ueberschrift", "anteil", "ausrichtung")
 
 # Was eine Spalte des Leistenblattes zeigen kann.
 SPALTENFELDER = (
@@ -171,11 +189,15 @@ def _zahl(inhalt: dict, name: str, vorgabe: float, herkunft: str) -> float:
         raise BlattvorlagenFehler(u("{0}: {1} ist keine Zahl").format(herkunft, name)) from None
 
 
-def _spalten_aus_yaml(eintraege, herkunft: str) -> tuple[Spalte, ...]:
+def _spalten_aus_yaml(eintraege, herkunft: str, hinweise=None) -> tuple[Spalte, ...]:
     spalten = []
     for eintrag in eintraege:
         if isinstance(eintrag, str):
             eintrag = {"feld": eintrag}
+        else:
+            unbekannte_schluessel(
+                eintrag, SPALTENSCHLUESSEL, herkunft, hinweise, "spalten"
+            )
         feld = str(eintrag.get("feld", "")).strip()
         if feld not in SPALTENFELDER:
             bekannt = ", ".join(SPALTENFELDER)
@@ -221,8 +243,14 @@ def _schriftfeld_aus_yaml(eintraege, herkunft: str) -> tuple[tuple[str, ...], ..
     return tuple(spalten)
 
 
-def blattvorlage_aus_yaml(inhalt: dict, herkunft: str = "") -> Blattvorlage:
-    """Liest eine Blattvorlage; alles Weggelassene bleibt beim Standard."""
+def blattvorlage_aus_yaml(
+    inhalt: dict, herkunft: str = "", hinweise=None
+) -> Blattvorlage:
+    """Liest eine Blattvorlage; alles Weggelassene bleibt beim Standard.
+
+    ``hinweise`` nimmt auf, was zwar gelesen wurde, aber Fragen aufwirft -
+    Schluessel, die das Programm nicht kennt.
+    """
     wo = herkunft or "Blattvorlage"
     for feld in ("id", "name"):
         if not str(inhalt.get(feld, "")).strip():
@@ -230,6 +258,9 @@ def blattvorlage_aus_yaml(inhalt: dict, herkunft: str = "") -> Blattvorlage:
 
     schrift = inhalt.get("schrift") or {}
     belegung = inhalt.get("belegung") or {}
+    unbekannte_schluessel(inhalt, BLATTSCHLUESSEL, wo, hinweise)
+    unbekannte_schluessel(schrift, SCHRIFTSCHLUESSEL, wo, hinweise, "schrift")
+    unbekannte_schluessel(belegung, BELEGUNGSSCHLUESSEL, wo, hinweise, "belegung")
 
     vorlage = Blattvorlage(
         id=str(inhalt["id"]),
@@ -248,7 +279,7 @@ def blattvorlage_aus_yaml(inhalt: dict, herkunft: str = "") -> Blattvorlage:
         schrift_normal=_zahl(schrift, "normal", STANDARD.schrift_normal, wo),
         schrift_klein=_zahl(schrift, "klein", STANDARD.schrift_klein, wo),
         spalten=(
-            _spalten_aus_yaml(inhalt["spalten"], wo)
+            _spalten_aus_yaml(inhalt["spalten"], wo, hinweise)
             if inhalt.get("spalten")
             else STANDARD.spalten
         ),
@@ -418,7 +449,7 @@ class Blattvorlagen:
             for datei in sorted(ort.glob("*.yaml")):
                 try:
                     inhalt = yaml.safe_load(datei.read_text(encoding="utf-8")) or {}
-                    vorlage = blattvorlage_aus_yaml(inhalt, datei.name)
+                    vorlage = blattvorlage_aus_yaml(inhalt, datei.name, fehler)
                 except BlattvorlagenFehler as wunde:
                     # Die Meldung nennt die Datei bereits.
                     if fehler is not None:

@@ -56,6 +56,34 @@ class TestVorlagen(unittest.TestCase):
     def test_sortierung_nach_groesse(self):
         self.assertEqual([v.da_gesamt for v in self.vorlagen.alle], [40, 40])
 
+    def test_ein_vertippter_schluessel_wird_gemeldet(self):
+        """„standart" statt „standard" fiele sonst niemandem auf."""
+        from verteilerly.vorlagen import vorlage_aus_yaml
+
+        hinweise: list[str] = []
+        vorlage = vorlage_aus_yaml(
+            {"id": "x", "name": "X", "buchten": 1, "leisten_je_bucht": 4,
+             "da_je_leiste": 10, "standart": True},
+            "x.yaml", hinweise,
+        )
+        self.assertEqual(vorlage.id, "x")
+        self.assertFalse(vorlage.standard)
+        self.assertEqual(len(hinweise), 1)
+        self.assertIn("standart", hinweise[0])
+
+    def test_die_frueheren_namen_gelten_weiter(self):
+        """„reihen" ist die alte Schreibweise - kein Grund zur Klage."""
+        from verteilerly.vorlagen import vorlage_aus_yaml
+
+        hinweise: list[str] = []
+        vorlage = vorlage_aus_yaml(
+            {"id": "x", "name": "X", "reihen": 2, "leisten_je_reihe": 4,
+             "da_je_leiste": 10},
+            "alt.yaml", hinweise,
+        )
+        self.assertEqual(vorlage.buchten, 2)
+        self.assertEqual(hinweise, [])
+
     def test_unvollstaendige_vorlage_abgelehnt(self):
         with self.assertRaises(VorlagenFehler):
             vorlage_aus_yaml({"id": "x", "name": "X"}, "x.yaml")

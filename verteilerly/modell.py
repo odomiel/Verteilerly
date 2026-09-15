@@ -22,6 +22,27 @@ class ModellFehler(Exception):
     """Fachlicher Fehler im Datenmodell."""
 
 
+def unbekannte_schluessel(
+    inhalt: dict, bekannt, herkunft: str, hinweise=None, wo: str = ""
+) -> None:
+    """Meldet Schluessel, die das Programm nicht kennt.
+
+    Eine Vorlagendatei sagt nur, was sie anders will - was fehlt, kommt
+    aus der Vorgabe. Genau deshalb faellt ein vertippter Schluessel sonst
+    nirgends auf: ``zeilenhohe_max`` wird stillschweigend ueberlesen, und
+    niemand weiss, warum die Vorlage aussieht wie immer. Abgewiesen wird
+    die Datei nicht - sie kann aus einer neueren Fassung stammen.
+    """
+    if hinweise is None or not isinstance(inhalt, dict):
+        return
+    fremd = [str(name) for name in inhalt if str(name) not in set(bekannt)]
+    for name in sorted(fremd):
+        hinweise.append(
+            u("{0}: {1} kennt das Programm nicht{2} - Tippfehler oder neuere "
+              "Fassung?").format(herkunft, name, f" ({wo})" if wo else "")
+        )
+
+
 class UeberlaufFehler(ModellFehler):
     """Ein Kabel passt nicht vollstaendig auf die gewaehlte Leiste.
 
