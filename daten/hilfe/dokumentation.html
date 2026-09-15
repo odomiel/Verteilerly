@@ -378,9 +378,24 @@ zurück, so wie sie ausgeliefert wurden — geänderte eingeschlossen. Eigene
 bleiben davon unberührt. Die eingebaute Standardvorlage steht in jedem Fall
 weiter zur Wahl, auch wenn ihre Datei weg ist.</p>
 
-<p>Eine <b>eigene Blattvorlage</b> ist eine YAML-Datei im Unterordner
-<code>blattvorlagen/</code> des Arbeitsordners. Sie gibt nur an, was sie
-anders will:</p>
+<h3>7.1 &nbsp; Eine eigene Blattvorlage schreiben</h3>
+
+<p>Eine Blattvorlage ist eine <b>YAML-Datei</b> im Unterordner
+<code>blattvorlagen/</code> des Arbeitsordners:</p>
+
+<ul>
+<li>Windows: <code>&lt;Programmordner&gt;\daten\blattvorlagen\</code></li>
+<li>Linux: <code>~/.config/Verteilerly/blattvorlagen/</code></li>
+</ul>
+
+<p><b>Der Dateiname ist die Kennung</b>: die Datei zu <code>id: eng</code> heißt
+<code>eng.yaml</code>. Nur so finden <i>Umbenennen</i> und <i>Löschen</i> sie
+wieder. Gelesen wird beim <b>Start</b> — eine neue Datei steht nach einem
+Neustart zur Wahl.</p>
+
+<p><b>Nötig sind zwei Zeilen</b>, <code>id</code> und <code>name</code>. Alles
+andere ist freiwillig: was fehlt, kommt aus der eingebauten Vorgabe. Eine
+Vorlage sagt also nur, was sie <i>anders</i> will:</p>
 
 <pre>id: eng
 name: "Eng"
@@ -388,14 +403,149 @@ rand: 8
 zeilenhoehe_max: 7
 spalten: [stift, ader, farbe, rangierung]</pre>
 
-<p>Wiederkehrende Einstellungen sind unter anderem <code>rand</code>,
-<code>spalten</code>, <code>schriftfeld</code>, <code>schriftfeld_art</code>,
-<code>schriftfeld_anteile</code>, <code>kabel_gedreht</code>,
-<code>da_nummern</code> und <code>buchten_je_blatt</code>. Unter
-<code>belegung</code> stehen die Maße der Verteilerbelegung — darunter
-<code>fuellgrad_kabel</code> (wie viel seines Blocks der Kabelname einnehmen
-darf, Vorgabe 0,82) und <code>polster_kabel</code> (wie viel Luft am Rahmen
-mindestens bleibt, Vorgabe 0,6 mm).</p>
+<p><b>Vertippt?</b> Eine fehlerhafte Datei nimmt die anderen nicht mit: das
+Programm übergeht sie und sagt beim Start, welche Datei es war und was an ihr
+nicht stimmt.</p>
+
+<h4>Das ganze Blatt</h4>
+
+<table border="1" cellspacing="0" cellpadding="5">
+<tr><th>Schlüssel</th><th>Bedeutung</th><th>Vorgabe</th></tr>
+<tr><td><code>id</code></td><td><b>Nötig.</b> Kennung, zugleich der Dateiname;
+sie steht in der <code>Verteilerly.conf</code>.</td><td>—</td></tr>
+<tr><td><code>name</code></td><td><b>Nötig.</b> Wie die Vorlage im Menü
+heißt.</td><td>—</td></tr>
+<tr><td><code>beschreibung</code></td><td>Ein Satz dazu; er steht im
+Vorlagendialog unter der Liste.</td><td>leer</td></tr>
+<tr><td><code>standard</code></td><td><code>true</code> macht sie zur
+Vorauswahl für neue Verteiler.</td><td><code>false</code></td></tr>
+<tr><td><code>rand</code></td><td>Blattrand ringsum in mm.</td><td>12</td></tr>
+<tr><td><code>schriftfeld_hoehe</code></td><td>Höhe des Schriftfeldes am
+Blattfuß in mm. Zwei Anschriften brauchen mehr.</td><td>26</td></tr>
+<tr><td><code>kopfzeile_hoehe</code></td><td>Höhe der Überschriftenzeile des
+Leistenblattes in mm.</td><td>7</td></tr>
+<tr><td><code>zeilenhoehe_max</code> /
+<code>zeilenhoehe_min</code></td><td>Zwischen diesen
+Höhen (mm) wächst eine Tabellenzeile, damit das Blatt voll wird.</td>
+<td>9,5 / 4,2</td></tr>
+<tr><td><code>buchten_je_blatt</code></td><td>Wie viele Buchten die
+Verteilerbelegung nebeneinander nimmt; mindestens 1.</td><td>2</td></tr>
+<tr><td><code>da_nummern</code></td><td><code>true</code> schreibt 1…n in jede
+Zelle der Belegung.</td><td><code>false</code></td></tr>
+<tr><td><code>kabel_gedreht</code></td><td><code>true</code> stellt den
+Kabelnamen im Leistenblatt quer — für schmale Kabelspalten.</td>
+<td><code>true</code></td></tr>
+</table>
+
+<p>Die vier Schriftgrößen stehen in Punkt unter <code>schrift</code>:
+<code>gross</code> (20) für das Deckblatt, <code>mittel</code> (11) für
+Überschriften und Kabelnamen, <code>normal</code> (8,5) für die Tabelle,
+<code>klein</code> (7) für Beschriftungen.</p>
+
+<h4>Die Spalten des Leistenblattes</h4>
+
+<p><code>spalten</code> ist eine Liste in der Reihenfolge, in der sie auf dem
+Blatt stehen. Kurzform ist der bloße Feldname, lang geht es mit eigener
+Überschrift, Breite und Ausrichtung:</p>
+
+<pre>spalten:
+  - {feld: stift,       ueberschrift: "Stift",  anteil: 10, ausrichtung: mitte}
+  - {feld: ader,        ueberschrift: "",       anteil: 7,  ausrichtung: mitte}
+  - {feld: bezeichnung, ueberschrift: "Was",    anteil: 46}
+  - bemerkung</pre>
+
+<p>Wählbar sind <code>stift</code>, <code>ader</code>, <code>farbe</code>,
+<code>bezeichnung</code>, <code>rangierung</code>, <code>bemerkung</code> und
+<code>kabel</code> — ein anderer Name wird abgewiesen. <code>ausrichtung</code>
+ist <code>links</code>, <code>mitte</code> oder <code>rechts</code>. Der
+<code>anteil</code> ist <b>keine Millimeterzahl, sondern ein Verhältnis</b>:
+alle Anteile zusammen werden auf die Blattbreite gestreckt, die Vorlage bleibt
+also brauchbar, wenn der Rand sich ändert. Eine Spalte <b>ohne eigene
+Überschrift</b> gehört zur vorigen — so steht <i>Stift</i> über der Nummer und
+über a/b.</p>
+
+<h4>Das Schriftfeld</h4>
+
+<p><code>schriftfeld</code> ist eine Liste von <b>Blöcken</b>, jeder Block eine
+Liste von Marken; die Blöcke stehen nebeneinander:</p>
+
+<pre>schriftfeld:
+  - [verteiler, verteilernummer, leiste]
+  - [erstellt, stand, geprueft]
+  - [firma, kunde]</pre>
+
+<p>Marken sind <code>firma</code>, <code>kunde</code>,
+<code>anlagennummer</code>, <code>kundennummer</code>, <code>verteiler</code>,
+<code>verteilernummer</code>, <code>leiste</code>, <code>blatt</code>,
+<code>erstellt</code>, <code>stand</code>, <code>geprueft</code>,
+<code>gezeichnet</code>, <code>dokumenttitel</code> und <code>eigene</code> —
+letzteres steht für alle selbst angelegten Felder. Abgewählte Projektdaten
+verschwinden mitsamt ihrer Beschriftung, und auf der Verteilerbelegung fällt
+<code>leiste</code> weg: dieses Blatt zeigt alle.</p>
+
+<p><code>schriftfeld_anteile</code> gibt die Breiten der Blöcke als Verhältnis
+(<code>[0.42, 0.58]</code>); ohne Angabe teilt das Programm nach Augenmaß.
+<code>schriftfeld_art</code> ist <code>standard</code> (Beschriftung und Wert in
+Spalten) oder <code>beispiel</code> (Matrix, Verteiler und zwei Anschriften wie
+oben beschrieben).</p>
+
+<h4>Die Maße der Verteilerbelegung</h4>
+
+<p>Alles unter <code>belegung</code>, in Millimetern:</p>
+
+<table border="1" cellspacing="0" cellpadding="5">
+<tr><th>Schlüssel</th><th>Bedeutung</th><th>Vorgabe</th></tr>
+<tr><td><code>zelle_breite</code> / <code>zelle_hoehe</code>
+<td>Grundmaß einer Doppelader-Zelle. Die Zellen wachsen von dort aus, so weit
+das Blatt es hergibt.</td><td>6 / 9</td></tr>
+<tr><td><code>leistenlabel</code></td><td>Breite der Spalte, in der
+<i>Leiste 1</i> steht.</td><td>14</td></tr>
+<tr><td><code>abstand_leisten</code> / <code>abstand_buchten</code>
+<td>Luft zwischen zwei Leisten bzw. zwei Buchten.</td><td>3 / 12</td></tr>
+<tr><td><code>fuellgrad_kabel</code></td><td>Wie viel seines Blocks der
+Kabelname höchstens einnimmt (0,1 bis 1).</td><td>0,82</td></tr>
+<tr><td><code>polster_kabel</code></td><td>Wie viel Luft am Rahmen des Blocks
+mindestens bleibt.</td><td>0,6</td></tr>
+</table>
+
+<h4>Ein vollständiges Beispiel</h4>
+
+<pre># Rangierblatt Halle: knappes Blatt, große Schrift, eine Bucht je Seite.
+id: halle
+name: "Rangierblatt Halle"
+beschreibung: "Nur Rangierungen, für die Halle gedruckt."
+
+rand: 10
+schriftfeld_hoehe: 30
+zeilenhoehe_max: 11
+
+schrift:
+  normal: 10
+  klein: 8
+
+spalten:
+  - {feld: stift,      ueberschrift: "Stift",      anteil: 12, ausrichtung: mitte}
+  - {feld: ader,       ueberschrift: "",           anteil: 8,  ausrichtung: mitte}
+  - {feld: rangierung, ueberschrift: "Rangierung", anteil: 60}
+  - {feld: kabel,      ueberschrift: "Kabel",      anteil: 20}
+
+kabel_gedreht: false
+
+schriftfeld:
+  - [verteiler, verteilernummer, leiste]
+  - [erstellt, geprueft]
+  - [firma, kunde]
+schriftfeld_art: beispiel
+schriftfeld_anteile: [0.4, 0.6]
+
+belegung:
+  zelle_hoehe: 12
+  fuellgrad_kabel: 0.7</pre>
+
+<p>Die Datei kommt als <code>halle.yaml</code> in den Ordner oben; nach dem
+nächsten Start steht <i>Rangierblatt Halle</i> unter <b>Einstellungen ▸
+Blattvorlage…</b>. Die Vorschau zeigt sofort, was die Zahlen anrichten —
+probieren, ansehen, nachbessern.</p>
 
 <h2><a name="blattbild"></a>8 &nbsp; Was auf den Blättern gilt</h2>
 

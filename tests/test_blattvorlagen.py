@@ -238,6 +238,34 @@ class TestMitgelieferte(unittest.TestCase):
         self.assertEqual([v.id for v in vorlagen.alle if v.id == "standard"],
                          ["standard"])
 
+    def test_eine_kaputte_datei_nimmt_die_anderen_nicht_mit(self):
+        """Wer eine Vorlage schreibt, vertippt sich."""
+        with tempfile.TemporaryDirectory() as ordner:
+            ziel = pathlib.Path(ordner)
+            (ziel / "kaputt.yaml").write_text(
+                "id: kaputt\nname: Kaputt\nbuchten_je_blatt: 0\n", encoding="utf-8"
+            )
+            (ziel / "krumm.yaml").write_text("kein: [gueltiges, {yaml", encoding="utf-8")
+            (ziel / "eng.yaml").write_text("id: eng\nname: Eng\n", encoding="utf-8")
+            wunden: list[str] = []
+            vorlagen = Blattvorlagen.aus_ordnern([ziel], fehler=wunden)
+
+        self.assertIn("eng", [v.id for v in vorlagen.alle])
+        self.assertNotIn("kaputt", [v.id for v in vorlagen.alle])
+        self.assertEqual(len(wunden), 2, wunden)
+        # Die Meldung nennt Datei und Grund, und zwar je einmal.
+        kaputt = next(w for w in wunden if w.startswith("kaputt.yaml"))
+        self.assertEqual(kaputt.count("kaputt.yaml"), 1)
+        self.assertIn("buchten_je_blatt", kaputt)
+
+    def test_ohne_liste_wird_trotzdem_uebergangen(self):
+        """Der Aufrufer muss sich nicht fuer die Gruende interessieren."""
+        with tempfile.TemporaryDirectory() as ordner:
+            ziel = pathlib.Path(ordner)
+            (ziel / "kaputt.yaml").write_text("id: x\n", encoding="utf-8")
+            vorlagen = Blattvorlagen.aus_ordnern([ziel])
+        self.assertEqual([v.id for v in vorlagen.alle], ["standard"])
+
     def test_standard_steht_vorn(self):
         self.assertEqual(self.vorlagen.standard.id, "standard")
         self.assertEqual(self.vorlagen.alle[0].id, "standard")

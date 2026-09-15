@@ -1854,6 +1854,37 @@ class TestMenuezustaende(unittest.TestCase):
         self.assertEqual(dialog.geloescht, [])
         self.assertFalse(dialog.wiederhergestellt)
 
+    def test_eine_kaputte_blattvorlage_haelt_das_fenster_nicht_auf(self):
+        """Übergangen und gemeldet, statt den Start zu verhindern."""
+        import shutil
+        import tempfile
+
+        from verteilerly import pfade
+        from verteilerly.gui import hauptfenster
+
+        f = self.fenster
+        ordner = tempfile.TemporaryDirectory()
+        self.addCleanup(ordner.cleanup)
+        ziel = pathlib.Path(ordner.name)
+        shutil.copy2(
+            pfade.mitgeliefert() / "blattvorlagen" / "knapp.yaml", ziel / "knapp.yaml"
+        )
+        (ziel / "kaputt.yaml").write_text(
+            "id: kaputt\nname: Kaputt\nbuchten_je_blatt: 0\n", encoding="utf-8"
+        )
+
+        gemeldet = []
+        with mock.patch.object(hauptfenster.pfade, "blattvorlagenordner_alle",
+                               return_value=[ziel]), \
+             mock.patch.object(hauptfenster.QMessageBox, "warning",
+                               lambda *args, **kw: gemeldet.append(args[2])):
+            vorlagen = f._blattvorlagen_laden()
+
+        self.assertIn("knapp", [v.id for v in vorlagen.alle])
+        self.assertNotIn("kaputt", [v.id for v in vorlagen.alle])
+        self.assertEqual(len(gemeldet), 1)
+        self.assertIn("buchten_je_blatt", gemeldet[0])
+
     def test_geloeschte_blattvorlagen_bleiben_beim_laden_weg(self):
         """Ohne den Vermerk holte das Abbild sie zurück."""
         from verteilerly.gui import hauptfenster

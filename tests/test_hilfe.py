@@ -81,6 +81,76 @@ class TestDokumentation(unittest.TestCase):
 
 
 @unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
+class TestVorlagenanleitung(unittest.TestCase):
+    """Die Anleitung zur Blattvorlage muss das Format vollstaendig nennen.
+
+    Ein Schluessel, den das Programm liest, aber die Anleitung nicht
+    kennt, findet niemand - und einer, den nur die Anleitung kennt,
+    fuehrt in die Irre.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.seiten = {
+            "de": hilfe.dokumentation("de"),
+            "en": hilfe.dokumentation("en"),
+        }
+
+    def test_jeder_schluessel_steht_in_beiden_anleitungen(self):
+        from dataclasses import fields
+
+        from verteilerly.blattvorlagen import Blattvorlage
+
+        # Die Schriftgroessen stehen in der Datei unter "schrift" und
+        # heissen dort gross/mittel/normal/klein, nicht schrift_gross.
+        schluessel = {
+            f.name for f in fields(Blattvorlage)
+            if not f.name.startswith("schrift_")
+        } | {"schrift", "belegung", "gross", "mittel", "normal", "klein"}
+        for sprache, seite in self.seiten.items():
+            for name in sorted(schluessel):
+                with self.subTest(sprache=sprache, schluessel=name):
+                    self.assertIn(f"<code>{name}</code>", seite)
+
+    def test_die_erlaubten_werte_stehen_dabei(self):
+        from verteilerly.blattvorlagen import (
+            AUSRICHTUNGEN,
+            SCHRIFTFELDARTEN,
+            SCHRIFTFELDMARKEN,
+            SPALTENFELDER,
+        )
+
+        for sprache, seite in self.seiten.items():
+            for wert in (*SPALTENFELDER, *SCHRIFTFELDMARKEN,
+                         *AUSRICHTUNGEN, *SCHRIFTFELDARTEN):
+                with self.subTest(sprache=sprache, wert=wert):
+                    self.assertIn(f"<code>{wert}</code>", seite)
+
+    def test_das_beispiel_der_anleitung_laesst_sich_lesen(self):
+        """Was in der Anleitung steht, muss das Programm annehmen."""
+        import re
+
+        import yaml
+
+        from verteilerly.blattvorlagen import blattvorlage_aus_yaml
+
+        for sprache, seite in self.seiten.items():
+            bloecke = re.findall(r"<pre>(.*?)</pre>", seite, re.S)
+            ganze = [
+                b for b in bloecke
+                if "id:" in b and "name:" in b and "spalten:" in b
+            ]
+            self.assertTrue(ganze, f"kein vollständiges Beispiel in {sprache}")
+            for block in ganze:
+                text = block.replace("&lt;", "<").replace("&gt;", ">")
+                text = text.replace("&amp;", "&").replace("&quot;", '"')
+                with self.subTest(sprache=sprache):
+                    vorlage = blattvorlage_aus_yaml(
+                        yaml.safe_load(text) or {}, "anleitung"
+                    )
+                    self.assertTrue(vorlage.id and vorlage.name)
+
+
 class TestGegenDieMenues(unittest.TestCase):
     """Was im Menü steht, muss in der Dokumentation stehen."""
 

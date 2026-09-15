@@ -419,6 +419,18 @@ zeilenhoehe_max: 7
 spalten: [stift, ader, farbe, rangierung]
 ```
 
+Nötig sind nur `id` und `name`; **der Dateiname ist die Kennung**
+(`eng.yaml`), sonst finden Umbenennen und Löschen die Datei nicht. Das
+vollständige Format — alle Schlüssel mit Vorgaben, die erlaubten Werte für
+`spalten`, `schriftfeld` und `ausrichtung`, dazu ein ganzes Beispiel — steht
+in der Dokumentation im Programm, Abschnitt *Blattvorlagen*;
+`tests/test_hilfe.py` hält beide Sprachfassungen gegen `Blattvorlage` und
+liest das dortige Beispiel mit `blattvorlage_aus_yaml` ein, damit die
+Anleitung nicht auseinanderläuft. **Eine fehlerhafte Datei übergeht
+`Blattvorlagen.aus_ordnern()`** und hängt den Grund an seine `fehler`-Liste;
+das Hauptfenster zeigt ihn beim Start. Vorher nahm ein Tippfehler in einer
+eigenen Vorlage das ganze Programm mit.
+
 Über der Tabelle steht **keine Überschrift** — welche Leiste ein Blatt
 zeigt und wie viele Doppeladern sie hat, sagt das Schriftfeld unten; die
 Tabelle beginnt am Rand und hat den Platz.

@@ -367,9 +367,24 @@ as they were delivered — changed ones included. Your own stay untouched by it.
 The built-in standard template remains available in any case, even when its
 file is gone.</p>
 
-<p>A <b>sheet template of your own</b> is a YAML file in the subfolder
-<code>blattvorlagen/</code> of the working folder. It states only what it wants
-differently:</p>
+<h3>7.1 &nbsp; Writing a sheet template of your own</h3>
+
+<p>A sheet template is a <b>YAML file</b> in the subfolder
+<code>blattvorlagen/</code> of the working folder:</p>
+
+<ul>
+<li>Windows: <code>&lt;program folder&gt;\daten\blattvorlagen\</code></li>
+<li>Linux: <code>~/.config/Verteilerly/blattvorlagen/</code></li>
+</ul>
+
+<p><b>The file name is the identifier</b>: the file for <code>id: eng</code> is
+called <code>eng.yaml</code>. Only then do <i>rename</i> and <i>delete</i> find
+it again. It is read at <b>startup</b> — a new file is offered after a restart.
+The keys stay German, they are the format of the file.</p>
+
+<p><b>Two lines are required</b>, <code>id</code> and <code>name</code>.
+Everything else is optional: what is missing comes from the built-in default. A
+template therefore states only what it wants <i>differently</i>:</p>
 
 <pre>id: eng
 name: "Eng"
@@ -377,14 +392,149 @@ rand: 8
 zeilenhoehe_max: 7
 spalten: [stift, ader, farbe, rangierung]</pre>
 
-<p>Recurring settings are among others <code>rand</code> (margin),
-<code>spalten</code> (columns), <code>schriftfeld</code> (title block),
-<code>schriftfeld_art</code>, <code>schriftfeld_anteile</code>,
-<code>kabel_gedreht</code>, <code>da_nummern</code> and
-<code>buchten_je_blatt</code>. Under <code>belegung</code> stand the measures
-of the frame layout — among them <code>fuellgrad_kabel</code> (how much of its
-block the cable name may take up, default 0.82) and <code>polster_kabel</code>
-(how much air stays at the frame at least, default 0.6 mm).</p>
+<p><b>A typo?</b> A faulty file does not take the others with it: the program
+skips it and says at startup which file it was and what is wrong with it.</p>
+
+<h4>The sheet as a whole</h4>
+
+<table border="1" cellspacing="0" cellpadding="5">
+<tr><th>Key</th><th>Meaning</th><th>Default</th></tr>
+<tr><td><code>id</code></td><td><b>Required.</b> Identifier and file name at
+once; it is kept in the <code>Verteilerly.conf</code>.</td><td>—</td></tr>
+<tr><td><code>name</code></td><td><b>Required.</b> How the template is called in
+the menu.</td><td>—</td></tr>
+<tr><td><code>beschreibung</code></td><td>A sentence about it, shown in the
+template dialog below the list.</td><td>empty</td></tr>
+<tr><td><code>standard</code></td><td><code>true</code> makes it the
+preselection for new frames.</td><td><code>false</code></td></tr>
+<tr><td><code>rand</code></td><td>Sheet margin all round in mm.</td><td>12</td></tr>
+<tr><td><code>schriftfeld_hoehe</code></td><td>Height of the title block at the
+foot of the sheet in mm. Two addresses need more.</td><td>26</td></tr>
+<tr><td><code>kopfzeile_hoehe</code></td><td>Height of the heading row of the
+strip sheet in mm.</td><td>7</td></tr>
+<tr><td><code>zeilenhoehe_max</code> /
+<code>zeilenhoehe_min</code></td><td>Between these
+heights (mm) a table row grows, so that the sheet is filled.</td>
+<td>9.5 / 4.2</td></tr>
+<tr><td><code>buchten_je_blatt</code></td><td>How many bays the frame layout
+puts side by side; at least 1.</td><td>2</td></tr>
+<tr><td><code>da_nummern</code></td><td><code>true</code> writes 1…n into every
+cell of the layout.</td><td><code>false</code></td></tr>
+<tr><td><code>kabel_gedreht</code></td><td><code>true</code> turns the cable name
+in the strip sheet sideways — for narrow cable columns.</td>
+<td><code>true</code></td></tr>
+</table>
+
+<p>The four font sizes stand in points under <code>schrift</code>:
+<code>gross</code> (20) for the cover sheet, <code>mittel</code> (11) for
+headings and cable names, <code>normal</code> (8.5) for the table,
+<code>klein</code> (7) for labels.</p>
+
+<h4>The columns of the strip sheet</h4>
+
+<p><code>spalten</code> is a list in the order in which they stand on the sheet.
+The short form is the bare field name; the long one takes a heading, a width and
+an alignment:</p>
+
+<pre>spalten:
+  - {feld: stift,       ueberschrift: "Stift",  anteil: 10, ausrichtung: mitte}
+  - {feld: ader,        ueberschrift: "",       anteil: 7,  ausrichtung: mitte}
+  - {feld: bezeichnung, ueberschrift: "Was",    anteil: 46}
+  - bemerkung</pre>
+
+<p>Available are <code>stift</code> (pin), <code>ader</code> (wire),
+<code>farbe</code> (color), <code>bezeichnung</code> (designation),
+<code>rangierung</code> (jumper), <code>bemerkung</code> (remark) and
+<code>kabel</code> (cable) — any other name is rejected.
+<code>ausrichtung</code> is <code>links</code>, <code>mitte</code> or
+<code>rechts</code>. The <code>anteil</code> is <b>not a millimetre figure but a
+ratio</b>: all shares together are stretched to the sheet width, so the template
+stays usable when the margin changes. A column <b>without a heading of its
+own</b> belongs to the previous one — that is how <i>Stift</i> stands above the
+number and above a/b.</p>
+
+<h4>The title block</h4>
+
+<p><code>schriftfeld</code> is a list of <b>blocks</b>, each block a list of
+marks; the blocks stand side by side:</p>
+
+<pre>schriftfeld:
+  - [verteiler, verteilernummer, leiste]
+  - [erstellt, stand, geprueft]
+  - [firma, kunde]</pre>
+
+<p>Marks are <code>firma</code>, <code>kunde</code>, <code>anlagennummer</code>,
+<code>kundennummer</code>, <code>verteiler</code>, <code>verteilernummer</code>,
+<code>leiste</code>, <code>blatt</code>, <code>erstellt</code>,
+<code>stand</code>, <code>geprueft</code>, <code>gezeichnet</code>,
+<code>dokumenttitel</code> and <code>eigene</code> — the last one stands for all
+fields of your own. Deselected project data disappear together with their label,
+and on the frame layout <code>leiste</code> falls away: that sheet shows all of
+them.</p>
+
+<p><code>schriftfeld_anteile</code> gives the widths of the blocks as a ratio
+(<code>[0.42, 0.58]</code>); without it the program divides them by eye.
+<code>schriftfeld_art</code> is <code>standard</code> (label and value in
+columns) or <code>beispiel</code> (matrix, frame and two addresses as described
+above).</p>
+
+<h4>The measures of the frame layout</h4>
+
+<p>Everything under <code>belegung</code>, in millimetres:</p>
+
+<table border="1" cellspacing="0" cellpadding="5">
+<tr><th>Key</th><th>Meaning</th><th>Default</th></tr>
+<tr><td><code>zelle_breite</code> / <code>zelle_hoehe</code>
+<td>Base measure of one pair cell. The cells grow from there, as far as the
+sheet allows.</td><td>6 / 9</td></tr>
+<tr><td><code>leistenlabel</code></td><td>Width of the column in which
+<i>Leiste 1</i> stands.</td><td>14</td></tr>
+<tr><td><code>abstand_leisten</code> / <code>abstand_buchten</code>
+<td>Air between two strips resp. two bays.</td><td>3 / 12</td></tr>
+<tr><td><code>fuellgrad_kabel</code></td><td>How much of its block the cable
+name may take up at most (0.1 to 1).</td><td>0.82</td></tr>
+<tr><td><code>polster_kabel</code></td><td>How much air stays at the frame of
+the block at least.</td><td>0.6</td></tr>
+</table>
+
+<h4>A complete example</h4>
+
+<pre># Jumper sheet hall: spare sheet, large type, one bay per page.
+id: halle
+name: "Rangierblatt Halle"
+beschreibung: "Nur Rangierungen, für die Halle gedruckt."
+
+rand: 10
+schriftfeld_hoehe: 30
+zeilenhoehe_max: 11
+
+schrift:
+  normal: 10
+  klein: 8
+
+spalten:
+  - {feld: stift,      ueberschrift: "Stift",      anteil: 12, ausrichtung: mitte}
+  - {feld: ader,       ueberschrift: "",           anteil: 8,  ausrichtung: mitte}
+  - {feld: rangierung, ueberschrift: "Rangierung", anteil: 60}
+  - {feld: kabel,      ueberschrift: "Kabel",      anteil: 20}
+
+kabel_gedreht: false
+
+schriftfeld:
+  - [verteiler, verteilernummer, leiste]
+  - [erstellt, geprueft]
+  - [firma, kunde]
+schriftfeld_art: beispiel
+schriftfeld_anteile: [0.4, 0.6]
+
+belegung:
+  zelle_hoehe: 12
+  fuellgrad_kabel: 0.7</pre>
+
+<p>The file goes into the folder above as <code>halle.yaml</code>; after the
+next start <i>Rangierblatt Halle</i> stands under <b>Settings ▸ Sheet
+template…</b>. The preview shows at once what the numbers do — try, look,
+improve.</p>
 
 <h2><a name="blattbild"></a>8 &nbsp; What applies on the sheets</h2>
 

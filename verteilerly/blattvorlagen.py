@@ -396,13 +396,18 @@ class Blattvorlagen:
         return cls(gefunden)
 
     @classmethod
-    def aus_ordnern(cls, ordner, ausgelassen=()) -> Blattvorlagen:
+    def aus_ordnern(cls, ordner, ausgelassen=(), fehler=None) -> Blattvorlagen:
         """Aus mehreren Ordnern; bei gleicher Kennung gilt der letzte.
 
         ``ausgelassen`` nennt Marken wie ``blattvorlagen/knapp.yaml``,
         die weggeworfen wurden: eine geloeschte mitgelieferte Vorlage
         liegt im Abbild weiter und kaeme sonst durch die Hintertuer
         zurueck.
+
+        **Eine unbrauchbare Datei nimmt nicht das Programm mit**: sie
+        wird uebergangen, und was an ihr nicht stimmt, haengt diese
+        Methode an die Liste ``fehler``. Wer eine Vorlage schreibt,
+        vertippt sich - das darf den Start nicht verhindern.
         """
         weg = set(ausgelassen)
         gefunden: list[Blattvorlage] = []
@@ -410,7 +415,19 @@ class Blattvorlagen:
             ort = pathlib.Path(ort)
             if not ort.is_dir():
                 continue
-            for vorlage in cls.laden(ort).alle:
+            for datei in sorted(ort.glob("*.yaml")):
+                try:
+                    inhalt = yaml.safe_load(datei.read_text(encoding="utf-8")) or {}
+                    vorlage = blattvorlage_aus_yaml(inhalt, datei.name)
+                except BlattvorlagenFehler as wunde:
+                    # Die Meldung nennt die Datei bereits.
+                    if fehler is not None:
+                        fehler.append(str(wunde))
+                    continue
+                except (yaml.YAMLError, OSError, ValueError, TypeError) as wunde:
+                    if fehler is not None:
+                        fehler.append(f"{datei.name}: {wunde}")
+                    continue
                 if f"{ort.name}/{vorlage.id}.yaml" in weg:
                     continue
                 gefunden.append(vorlage)

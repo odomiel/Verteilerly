@@ -1221,13 +1221,28 @@ class Hauptfenster(QMainWindow):
             self.ausgelegt = []
 
     def _blattvorlagen_laden(self) -> Blattvorlagen:
-        """Alle Blattvorlagen; eigene gehen vor mitgelieferten."""
+        """Alle Blattvorlagen; eigene gehen vor mitgelieferten.
+
+        Eine selbst geschriebene Vorlage kann Fehler haben. Sie wird dann
+        uebergangen und gesagt, was daran nicht stimmt - das Programm
+        laeuft mit den uebrigen weiter.
+        """
         try:
             orte = list(reversed(pfade.blattvorlagenordner_alle()))
             weg = pfade.geloeschte()
         except OSError:
             orte, weg = [], set()
-        return Blattvorlagen.aus_ordnern(orte, weg)
+        wunden: list[str] = []
+        vorlagen = Blattvorlagen.aus_ordnern(orte, weg, wunden)
+        if wunden:
+            QMessageBox.warning(
+                self,
+                mehrzahl(len(wunden), "Blattvorlage", "Blattvorlagen")
+                + u(" übergangen"),
+                u("Was nicht stimmt, steht dahinter. Die übrigen Vorlagen "
+                  "stehen weiter zur Wahl.\n\n{0}").format("\n".join(wunden)),
+            )
+        return vorlagen
 
     def _vorlagen_laden(self) -> Vorlagen:
         """Alle Vorlagenordner zusammen; eigene gehen vor mitgelieferten.
