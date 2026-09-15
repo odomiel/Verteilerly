@@ -2940,6 +2940,93 @@ class TestPassform(unittest.TestCase):
 
 
 @unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
+class TestToolsMenue(unittest.TestCase):
+    """Vorlagen prüfen, bevor sie ins Programm kommen."""
+
+    def setUp(self):
+        from verteilerly.gui.hauptfenster import Hauptfenster
+
+        self.fenster = Hauptfenster()
+        self.addCleanup(self.fenster.close)
+        self.ordner = tempfile.TemporaryDirectory()
+        self.addCleanup(self.ordner.cleanup)
+        self.ziel = pathlib.Path(self.ordner.name)
+
+    def _menue(self):
+        return next(
+            a.menu() for a in self.fenster.menuBar().actions()
+            if "Tools" in a.text()
+        )
+
+    def test_das_menue_steht_zwischen_ansicht_und_hilfe(self):
+        namen = [
+            a.text().replace("&", "") for a in self.fenster.menuBar().actions()
+        ]
+        self.assertEqual(
+            namen[-3:], ["Ansicht", "Tools", "Hilfe"], namen
+        )
+
+    def test_je_vorlagenart_ein_eintrag(self):
+        from verteilerly.pruefung import ARTEN
+
+        eintraege = [a.text() for a in self._menue().actions()]
+        self.assertEqual(len(eintraege), len(ARTEN))
+        for eintrag, (_art, wie) in zip(eintraege, ARTEN):
+            with self.subTest(eintrag=eintrag):
+                self.assertTrue(eintrag.startswith(wie), eintrag)
+                self.assertIn("prüfen", eintrag)
+
+    def _pruefen(self, stelle: int, datei: pathlib.Path):
+        """Klickt einen Eintrag und fängt Dateidialog und Bericht ab."""
+        from verteilerly.gui import hauptfenster
+
+        gezeigt = {}
+        with mock.patch.object(hauptfenster.QFileDialog, "getOpenFileName",
+                               return_value=(str(datei), "")), \
+             mock.patch.object(
+                 hauptfenster.PruefberichtDialog, "exec",
+                 lambda dialog: gezeigt.update(
+                     text=dialog.text.toPlainText(), bericht=dialog.bericht
+                 )):
+            self._menue().actions()[stelle].trigger()
+        return gezeigt
+
+    def test_eine_gute_blattvorlage_wird_vorgelesen(self):
+        datei = self.ziel / "eng.yaml"
+        datei.write_text(
+            "id: eng\nname: Eng\nspalten: [stift, rangierung]\n", encoding="utf-8"
+        )
+        gezeigt = self._pruefen(1, datei)
+        self.assertTrue(gezeigt["bericht"].gut)
+        self.assertIn("stift, rangierung", gezeigt["text"])
+        self.assertIn("Ordnung", self.fenster.statusBar().currentMessage())
+
+    def test_ein_fehler_steht_im_bericht_und_in_der_statuszeile(self):
+        datei = self.ziel / "kaputt.yaml"
+        datei.write_text("id: x\nname: X\nbuchten_je_blatt: 0\n", encoding="utf-8")
+        gezeigt = self._pruefen(1, datei)
+        self.assertFalse(gezeigt["bericht"].gut)
+        self.assertIn("buchten_je_blatt", gezeigt["text"])
+        self.assertIn("nicht lesen", self.fenster.statusBar().currentMessage())
+
+    def test_ein_abgebrochener_dateidialog_tut_nichts(self):
+        from verteilerly.gui import hauptfenster
+
+        gezeigt = []
+        with mock.patch.object(hauptfenster.QFileDialog, "getOpenFileName",
+                               return_value=("", "")), \
+             mock.patch.object(hauptfenster.PruefberichtDialog, "exec",
+                               lambda dialog: gezeigt.append(dialog)):
+            self._menue().actions()[0].trigger()
+        self.assertEqual(gezeigt, [])
+
+    def test_der_dateidialog_geht_beim_passenden_ordner_auf(self):
+        ordner = self.fenster._pruefordner("blattvorlage")
+        self.assertTrue(ordner.is_dir())
+        self.assertEqual(ordner.name, "blattvorlagen")
+
+
+@unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
 class TestVerteilervorlagenDialog(unittest.TestCase):
     """Verteilervorlagen umbenennen, löschen, zurückholen."""
 

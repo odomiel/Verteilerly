@@ -431,6 +431,15 @@ Anleitung nicht auseinanderläuft. **Eine fehlerhafte Datei übergeht
 das Hauptfenster zeigt ihn beim Start. Vorher nahm ein Tippfehler in einer
 eigenen Vorlage das ganze Programm mit.
 
+**Prüfen, bevor die Datei ins Programm kommt** (`pruefung.py`):
+das Menü *Tools* führt je Vorlagenart einen Eintrag. `pruefen(pfad, art)`
+liest die Datei mit denselben Funktionen wie der Betrieb — eine zweite
+Auslegung des Formats liefe auseinander — und gibt einen `Bericht`: taugt
+sie, was wurde gelesen (Kennung, Spalten, Schriftfeld, Maße), was fiel auf.
+Geworfen wird nichts, ein Bericht kommt immer. Die Oberfläche macht daraus
+den `PruefberichtDialog`; `PruefberichtDialog.als_text()` setzt denselben
+Text, den der Dialog zeigt.
+
 **Eine Formatnummer wie in der Projektdatei gibt es hier bewusst nicht.**
 Eine Vorlagendatei wird von Hand geschrieben und sagt nur, was sie anders
 will; jede Erweiterung war bisher additiv, alte Dateien lesen sich

@@ -120,6 +120,11 @@ class TestWortliste(unittest.TestCase):
         )
         from verteilerly.gui.leistenansicht import UEBERSCHRIFTEN
 
+        # Die Arten der Vorlagenprüfung stehen als Tabelle im Modul und
+        # gehen erst beim Anzeigen durch u(…).
+        from verteilerly.pruefung import ARTEN
+
+        gebraucht |= {wie for _art, wie in ARTEN}
         gebraucht |= set(BRIEFKOPF_BESCHRIFTUNG.values())
         gebraucht |= set(BLATTART_BESCHRIFTUNG.values())
         gebraucht |= {t for t in UEBERSCHRIFTEN if t}
@@ -141,9 +146,9 @@ class TestWortliste(unittest.TestCase):
         """Eine Zeile, die deutsch wie englisch gleich lautet, ist vergessen."""
         # Zahlen, Kürzel und Eigennamen dürfen gleich bleiben.
         erlaubt = {"OK", "PDF", "CSV", "{0}\n{1}", "{0} / {1}", "{0} · {1}: {2}",
-                   "{0} ({1})", " ({0})",
-                   # "Export" heißt in beiden Sprachen so.
-                   "Export ({0})"}
+                   "{0} ({1})", " ({0})", ", ",
+                   # "Export", "Tools" und "Name" heißen in beiden Sprachen so.
+                   "Export ({0})", "&Tools", "Name: {0}"}
         gleich = [
             deutsch for deutsch, englisch in self.katalog.items()
             if deutsch == englisch and deutsch not in erlaubt

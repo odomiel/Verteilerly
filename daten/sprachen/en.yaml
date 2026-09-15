@@ -503,3 +503,42 @@ mitgelieferte Blattvorlagen wiederhergestellt: supplied sheet templates restored
 ? "Was nicht stimmt, steht dahinter. Die übrigen Vorlagen stehen weiter zur Wahl.\n\n{0}"
 : "What is wrong with it stands behind it. The remaining templates are still available.\n\n{0}"
 '{0}: {1} kennt das Programm nicht{2} - Tippfehler oder neuere Fassung?': '{0}: the program does not know {1}{2} - a typo, or a newer version?'
+' dazu': ' as well'
+' in dieser Datei': ' in this file'
+' je Blatt': ' per sheet'
+'&Tools': '&Tools'
+', ': ', '
+Anmerkungen: Remarks
+'Aufbau: {0} × {1} Leisten zu {2} DA': 'Layout: {0} × {1} strips of {2} pairs'
+'Bauplan je Bucht: {0}': 'Plan per bay: {0}'
+'Beschreibung: {0}': 'Description: {0}'
+'Der Dateiname sollte die Kennung tragen: {0}.yaml statt {1}': 'The file name should carry
+  the identifier: {0}.yaml instead of {1}'
+'Die Datei enthält keine Vorlage, sondern {0}': 'The file holds no template, but {0}'
+Die Datei ist brauchbar, mit Anmerkungen.: The file is usable, with remarks.
+Die Datei ist in Ordnung.: The file is fine.
+Diese Datei kann das Programm nicht lesen.: The program cannot read this file.
+? Eine Vorlagendatei lesen und sagen, was darin steht — bevor sie in den Arbeitsordner
+  kommt
+: Read a template file and say what is in it — before it goes into the working folder
+Farbkürzel: color abbreviation
+Fehler: Error
+Gelesen: Read
+Kabeltyp: cable type
+Kabeltypen: cable types
+'Kennung: {0}': 'Identifier: {0}'
+'Name: {0}': 'Name: {0}'
+'Nicht lesbar: {0}': 'Not readable: {0}'
+'Ränder und Höhen: Rand {0} mm, Schriftfeld {1} mm, Zeile {2} bis {3} mm': 'Margins and
+  heights: margin {0} mm, title block {1} mm, row {2} to {3} mm'
+'Schriftfeld ({0}): {1}': 'Title block ({0}): {1}'
+'Spalten: {0}': 'Columns: {0}'
+'Unbekannte Art: {0}': 'Unknown kind: {0}'
+Vorauswahl für neue Verteiler: Preselection for new frames
+Vorlage geprüft: Template checked
+'Vorlagendateien (*.yaml *.yml);;Alle Dateien (*)': 'Template files (*.yaml *.yml);;All
+  files (*)'
+'{0} ({1}), Regel {2}': '{0} ({1}), rule {2}'
+'{0} prüfen': 'Check {0}'
+'{0} prüfen…': 'Check {0}…'
+Verteilervorlage: frame template

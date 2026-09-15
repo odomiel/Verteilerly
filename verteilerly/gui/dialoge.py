@@ -1114,6 +1114,59 @@ class UeberlaufDialog(PassenderDialog):
         return self.FORTSETZEN, self.leiste.currentData(), self.start.value()
 
 
+class PruefberichtDialog(PassenderDialog):
+    """Was die Pruefung einer Vorlagendatei ergab.
+
+    Oben das Urteil in einem Satz, darunter die Datei, dann was das
+    Programm darin gelesen hat - wer eine Vorlage schreibt, sieht daran,
+    ob sie so verstanden wird, wie sie gemeint war.
+    """
+
+    def __init__(self, bericht, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.bericht = bericht
+        self.setWindowTitle(u("Vorlage geprüft"))
+
+        urteil = QLabel(bericht.urteil)
+        schrift = urteil.font()
+        schrift.setBold(True)
+        urteil.setFont(schrift)
+
+        self.text = QPlainTextEdit()
+        self.text.setReadOnly(True)
+        self.text.setPlainText(self.als_text(bericht))
+        self.text.setMinimumSize(520, 260)
+
+        knoepfe = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        knoepfe.button(QDialogButtonBox.StandardButton.Close).setText(u("Schließen"))
+        knoepfe.rejected.connect(self.reject)
+        knoepfe.accepted.connect(self.accept)
+
+        aufbau = QVBoxLayout(self)
+        aufbau.addWidget(urteil)
+        aufbau.addWidget(QLabel(str(bericht.datei)))
+        aufbau.addWidget(self.text)
+        aufbau.addWidget(knoepfe)
+
+    @staticmethod
+    def als_text(bericht) -> str:
+        """Der Bericht als Text - dasselbe, was der Dialog zeigt."""
+        zeilen: list[str] = []
+        if bericht.fehler:
+            zeilen += [u("Fehler"), f"  {bericht.fehler}"]
+        if bericht.angaben:
+            if zeilen:
+                zeilen.append("")
+            zeilen.append(u("Gelesen"))
+            zeilen += [f"  {zeile}" for zeile in bericht.angaben]
+        if bericht.hinweise:
+            if zeilen:
+                zeilen.append("")
+            zeilen.append(u("Anmerkungen"))
+            zeilen += [f"  {zeile}" for zeile in bericht.hinweise]
+        return "\n".join(zeilen)
+
+
 class DokumentationDialog(PassenderDialog):
     """Die Dokumentation im Programm.
 

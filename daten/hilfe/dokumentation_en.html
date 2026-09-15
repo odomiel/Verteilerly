@@ -540,6 +540,10 @@ next start <i>Rangierblatt Halle</i> stands under <b>Settings ▸ Sheet
 template…</b>. The preview shows at once what the numbers do — try, look,
 improve.</p>
 
+<p><b>Check it first:</b> <b>Tools ▸ Check sheet template…</b> reads the file
+wherever it lies and says whether the program accepts it and what it has read
+in it (section 10).</p>
+
 <h2><a name="blattbild"></a>8 &nbsp; What applies on the sheets</h2>
 
 <ul>
@@ -636,6 +640,25 @@ registry</td></tr>
 supplied file is only refreshed if it still lies exactly as it was put there —
 <b>your own changes stay untouched</b>.</p>
 
+<p><b>Checking templates before they go into the program</b> — the menu
+<b>Tools</b> carries one entry per kind of template: <i>Check frame
+template…</i>, <i>Check sheet template…</i> and <i>Check cable types…</i>. Each
+opens a YAML file — anywhere on the disk, it need not lie in the working folder
+yet — and reports on it:</p>
+
+<ul>
+<li>whether the program <b>can read</b> the file, and if not, what is wrong;</li>
+<li>what it has <b>read</b> in it: identifier, name, columns, title block,
+measures. That shows whether the file is understood the way it was
+meant;</li>
+<li><b>remarks</b> — keys the program does not know, and for a sheet template a
+file name that does not carry its identifier.</li>
+</ul>
+
+<p>It is read by the same rules as at startup: what the report approves, the
+program accepts as well. Only then put the file into the working folder and
+restart.</p>
+
 <p><b>Managing templates</b> — <b>Settings ▸ Frame templates…</b>
 (Ctrl+Shift+V) renames a template or deletes it, a supplied one as well:
 whoever never needs one should not have it in the menu with every new frame.
@@ -724,6 +747,9 @@ working folder.</p>
 <tr><td>Allow free text in the jumper field</td><td></td></tr>
 <tr><td rowspan="2"><b>View</b></td><td>Dark appearance</td><td>Ctrl+D</td></tr>
 <tr><td>Show preview</td><td>F9</td></tr>
+<tr><td rowspan="3"><b>Tools</b></td><td>Check frame template…</td><td></td></tr>
+<tr><td>Check sheet template…</td><td></td></tr>
+<tr><td>Check cable types…</td><td></td></tr>
 <tr><td rowspan="2"><b>Help</b></td><td>Documentation</td><td>F1</td></tr>
 <tr><td>About Verteilerly</td><td></td></tr>
 </table>

@@ -22,7 +22,16 @@ from PySide6.QtWidgets import (
 )
 
 from .. import einstellungen as einstellungsspeicher
-from .. import bestand, paket, pfade, projektdatei, schreibweisen, sprachen, suche
+from .. import (
+    bestand,
+    paket,
+    pfade,
+    projektdatei,
+    pruefung,
+    schreibweisen,
+    sprachen,
+    suche,
+)
 from ..ausgabe import AusgabeFehler, csv_schreiben, pdf_schreiben, xlsx_schreiben
 from ..blattvorlagen import Blattvorlagen
 from ..farbcodes import (
@@ -52,6 +61,7 @@ from .dialoge import (
     KabelDialog,
     NeuerVerteilerDialog,
     PaketDialog,
+    PruefberichtDialog,
     UeberlaufDialog,
     als_vorlage_speichern,
 )
@@ -376,6 +386,17 @@ class Hauptfenster(QMainWindow):
         werkzeuge.addSeparator()
         werkzeuge.addAction(self.aktion_vorschau)
         self.vorschau_zeigen(self.aktion_vorschau.isChecked())
+
+        werkzeugmenue = self.menuBar().addMenu(u("&Tools"))
+        werkzeugmenue.setToolTipsVisible(True)
+        for art, wie in pruefung.ARTEN:
+            aktion(
+                u("{0} prüfen…").format(u(wie)),
+                lambda _an=False, art=art: self.vorlage_pruefen(art),
+                menue=werkzeugmenue,
+                hinweis=u("Eine Vorlagendatei lesen und sagen, was darin steht "
+                          "— bevor sie in den Arbeitsordner kommt"),
+            )
 
         hilfe = self.menuBar().addMenu(u("&Hilfe"))
         aktion(u("&Dokumentation"), self.dokumentation, "F1", menue=hilfe,
@@ -1229,6 +1250,42 @@ class Hauptfenster(QMainWindow):
             self.ausgelegt = pfade.grundausstattung_auslegen()
         except OSError:
             self.ausgelegt = []
+
+    def vorlage_pruefen(self, art: str) -> None:
+        """Eine Vorlagendatei prüfen, bevor sie eingespielt wird.
+
+        Gelesen wird sie mit denselben Funktionen wie im Betrieb; der
+        Bericht sagt, ob sie taugt, was darin steht und was auffiel.
+        """
+        wie = dict(pruefung.ARTEN).get(art, art)
+        name, _ = QFileDialog.getOpenFileName(
+            self,
+            u("{0} prüfen").format(u(wie)),
+            str(self._pruefordner(art)),
+            u("Vorlagendateien (*.yaml *.yml);;Alle Dateien (*)"),
+        )
+        if not name:
+            return
+        bericht = pruefung.pruefen(pathlib.Path(name), art)
+        PruefberichtDialog(bericht, self).exec()
+        self.statusBar().showMessage(
+            f"{pathlib.Path(name).name}: {bericht.urteil}", 8000
+        )
+
+    def _pruefordner(self, art: str) -> pathlib.Path:
+        """Wo der Dateidialog aufgeht - beim passenden Unterordner."""
+        unterordner = {
+            "vorlage": VORLAGENORDNER,
+            "blattvorlage": BLATTVORLAGENORDNER,
+            "kabeltypen": "kabeltypen",
+        }.get(art, "")
+        try:
+            ordner = pfade.eigener_datenordner() / unterordner
+            if ordner.is_dir():
+                return ordner
+        except OSError:
+            pass
+        return pathlib.Path.home()
 
     def _blattvorlagen_laden(self, hinweise=None) -> Blattvorlagen:
         """Alle Blattvorlagen; eigene gehen vor mitgelieferten.
