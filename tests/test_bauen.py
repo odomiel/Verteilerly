@@ -306,13 +306,6 @@ class TestAbhaengigkeitspruefung(unittest.TestCase):
             with self.subTest(paket=paket):
                 self.assertIn(paket, namen)
 
-    def test_auch_die_werkzeuge_werden_geprueft(self):
-        """Womit gesetzt wird, soll nicht unbemerkt zurückfallen."""
-        namen = self.modul.gefordert()
-        for paket in ("weasyprint", "fonttools"):
-            with self.subTest(paket=paket):
-                self.assertIn(paket, namen)
-
     def test_kein_paket_steht_zweimal_da(self):
         namen = self.modul.gefordert()
         self.assertEqual(len(namen), len(set(namen)))

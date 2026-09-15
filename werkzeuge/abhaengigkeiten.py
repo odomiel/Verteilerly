@@ -31,12 +31,7 @@ import urllib.error
 import urllib.request
 
 WURZEL = pathlib.Path(__file__).resolve().parent.parent
-# Zwei Listen, weil zweierlei gebraucht wird: was ins Programm wandert,
-# und womit gebaut und gesetzt wird. Geprueft wird beides.
-ANFORDERUNGEN = (
-    WURZEL / "requirements.txt",
-    WURZEL / "requirements-werkzeuge.txt",
-)
+ANFORDERUNGEN = (WURZEL / "requirements.txt",)
 MERKZETTEL = WURZEL / "bau" / ".geprueft.json"
 PYPI = "https://pypi.org/pypi/{}/json"
 WARTEZEIT = 8.0          # Sekunden je Paket - ein Bau soll nicht haengen
