@@ -19,77 +19,130 @@ als GPL-3.0.txt.
 
 Quelltext von Verteilerly
 -------------------------
-Der vollstaendige Quelltext dieser Fassung gehoert zu diesem Programm.
-Er liegt im Git-Verzeichnis des Projekts; die Fassung nennt das Programm
-unter "Hilfe > Ueber Verteilerly". Wer dieses Abbild bekommen hat und
-den Quelltext nicht mitbekam, kann ihn beim Weitergebenden anfordern -
-die GPL Abschnitt 6 verpflichtet ihn dazu.
+Der vollstaendige Quelltext jeder Fassung gehoert zu diesem Programm. Er
+steht dort, wo die Programmdateien veroeffentlicht sind, als Archiv
+daneben; die Fassung nennt das Programm unter "Hilfe > Ueber
+Verteilerly". Wer das Programm ohne den Quelltext weitergibt, muss ihn
+nach Abschnitt 6 der GPL ebenso zugaenglich machen.
+
+Wo die Texte liegen
+-------------------
+Jeder hier genannte Lizenztext liegt in diesem Ordner. Das Programm legt
+den Ordner beim Start in seinen Arbeitsordner aus, damit er auch nach dem
+Beenden nachzulesen ist; "Hilfe > Ueber Verteilerly" zeigt, wo.
 
 
-Mitgelieferte Bestandteile
-==========================
+Bestandteile in AppImage und .exe
+=================================
 
-Dieses Abbild bringt seine Laufzeit selbst mit. Die folgenden Teile
-stammen von Dritten und stehen unter ihren eigenen Lizenzen; sie bleiben
-es auch, unabhaengig von der GPL fuer Verteilerly selbst.
+Die folgenden Teile stammen von Dritten und stehen unter ihren eigenen
+Lizenzen; sie bleiben es auch, unabhaengig von der GPL fuer Verteilerly.
 
-Qt 6 und PySide6 / shiboken6            LGPL-3.0-only
-    Bindung dynamisch ueber PySide6; die Bibliotheken liegen als
-    libQt6*.so im Abbild und lassen sich austauschen: Abbild mit
-    "--appimage-extract" auspacken, Bibliothek ersetzen, mit
-    appimagetool neu packen. Lizenztext: LGPL-3.0.txt (sie verweist auf
-    GPL-3.0.txt). Quelltext: https://download.qt.io/official_releases/qt/
-    und https://download.qt.io/official_releases/QtForPython/
-    Reverse Engineering zum Beheben von Fehlern ist ausdruecklich
+Qt 6 und PySide6 / shiboken6             LGPL-3.0-only
+    Texte: LGPL-3.0.txt (verweist auf GPL-3.0.txt)
+    Quelltext: https://download.qt.io/official_releases/qt/
+    und https://download.qt.io/official_releases/QtForPython/pyside6/
+    Verteilerly bindet Qt dynamisch ueber PySide6. Wer Qt gegen eine
+    eigene Fassung tauschen will: das AppImage mit "--appimage-extract"
+    auspacken, die libQt6*.so ersetzen und mit appimagetool neu packen;
+    fuer die .exe den Quelltext von Verteilerly nehmen und mit dem
+    gewuenschten Qt/PySide6 nach BUILD_WINDOWS.md neu bauen. Aendern und
+    Reverse Engineering zum Beheben von Fehlern sind ausdruecklich
     gestattet.
 
+Fremdbestandteile in Qt                  BSD / MIT / FTL / IJG / zlib /
+                                         Libpng / Unicode-3.0 / CC0 /
+                                         Apache-2.0 u. a.
+    Qt baut unter anderem PCRE2, HarfBuzz, double-conversion, TinyCBOR,
+    Unicode-Daten und - vor allem unter Windows - FreeType, libjpeg-turbo,
+    libpng und zlib in seine Bibliotheken ein.
+    Texte je Bestandteil: Qt-Fremdbestandteile.txt
+    Portions of this software are copyright (C) The FreeType Project
+    (www.freetype.org). All rights reserved.
+    This software is based in part on the work of the
+    Independent JPEG Group.
+
 Python 3.14                              PSF License 2.0
-    Lizenztext im Abbild unter opt/python3.14/lib/python3.14/LICENSE.txt
+    Text: Python-LICENSE.txt
+    Eingebaute Fremdbestandteile (expat, libffi, mpdecimal, zlib, HACL*,
+    mimalloc, Zstandard-Anbindung u. a.): Python-Fremdbestandteile.txt
     Quelltext: https://www.python.org/downloads/source/
 
 ReportLab                                BSD-3-Clause
-openpyxl, et_xmlfile, PyYAML             MIT
+    Text: reportlab-LICENSE.txt
 Pillow                                   MIT-CMU
-    Lizenztexte je Paket unter
-    opt/python3.14/lib/python3.14/site-packages/<paket>-*.dist-info/
+    Text samt den eingebauten Bildbibliotheken (libjpeg-turbo, libtiff,
+    OpenJPEG, zlib, xz u. a.): pillow-LICENSE.txt
+openpyxl                                 MIT
+    Text: openpyxl-LICENCE.rst.txt
+et_xmlfile                               MIT
+    Texte: et_xmlfile-LICENCE.rst.txt, et_xmlfile-LICENCE.python.txt
+PyYAML                                   MIT
+    Text: PyYAML-LICENSE.txt
+charset-normalizer                       MIT
+    Text: charset-normalizer-LICENSE.txt
+    Quelltext der Python-Pakete: https://pypi.org/project/<name>/
+
+zstd                                     BSD-3-Clause
+    Text: zstd.txt
+    Quelltext: https://github.com/facebook/zstd
+
+
+Nur im AppImage (Linux)
+=======================
+
+ICU 73 (mit Qt)                          Unicode-3.0 / ICU
+    Text: ICU.txt
+    Quelltext: https://github.com/unicode-org/icu/releases/tag/release-73-2
 
 GLib (libgthread-2.0)                    LGPL-2.1-or-later
+    Texte: LGPL-2.1.txt, Debian-libglib2.0-0.txt
     Quelltext: https://deb.debian.org/debian/pool/main/g/glib2.0/
     Austauschbar auf demselben Weg wie Qt.
 
-libatomic (GCC)                          GPL-3.0 mit GCC Runtime
-                                         Library Exception
+libatomic (GCC 12)                       GPL-3.0-or-later mit GCC Runtime
+                                         Library Exception 3.1
+    Texte: GPL-3.0.txt, GCC-Laufzeitausnahme-3.1.txt
     Die Ausnahme erlaubt ausdruecklich auch die Verwendung in nicht
     freier Software; hier ist ohnehin alles frei.
     Quelltext: https://deb.debian.org/debian/pool/main/g/gcc-12/
 
-OpenSSL 3                                Apache-2.0
-SQLite                                   Public Domain
-ICU, HarfBuzz, libjpeg, libwebp,
-libavif, OpenJPEG, lcms2, libtiff,
-libpng, FreeType, Brotli, zstd,
-PCRE2, xz, bzip2, libffi, libmpdec,
-ncurses, Tcl/Tk, libX11, libxcb,
-libXau, libXdmcp, libXft, libXrender,
-libxkbcommon                             MIT / BSD / zlib / FTL /
-                                         Public Domain
-    Die Debian-Pakete und ihre Quellen stehen unter
-    https://deb.debian.org/debian/pool/main/ ; die von den
-    PySide6- und Pillow-Radern mitgebrachten Bibliotheken unter den
-    Adressen der jeweiligen Projekte.
+libX11-xcb, libXau, libXdmcp, libxcb-*,
+libxkbcommon, libxkbcommon-x11,
+libpng16, Brotli, bzip2, PCRE2 (libpcre2-8)
+                                         MIT / X11 / BSD / Libpng / bzip2
+    Texte: Debian-<paket>.txt - die Copyright-Datei des jeweiligen
+    Debian-Pakets (Debian 12 "bookworm")
+    Quelltext: https://deb.debian.org/debian/pool/main/
 
-DarkGarden (Schrift in ReportLab)        GPL-2.0-or-later mit
-                                         Font-Ausnahme
-    Die Ausnahme haelt fest, dass ein Dokument, das diese Schrift
-    einbettet, dadurch nicht selbst unter die GPL faellt. Quelle
-    (DarkGarden.sfd) und Lizenztext liegen im Abbild neben der Schrift.
+libffi, mpdecimal, xz (liblzma)          MIT / BSD-2-Clause / 0BSD
+    Aus der Python-AppImage; die Texte zu libffi und mpdecimal stehen in
+    Python-Fremdbestandteile.txt, xz ist gemeinfrei bzw. 0BSD.
 
-AppImage-Laufzeit (appimagetool)         MIT, mit BSD-Teilen
-    Quelltext: https://github.com/AppImage/appimagetool
+AppImage-Laufzeit (type2-runtime)        MIT
+    Statisch gebaut mit musl, squashfuse (BSD-2-Clause) und libfuse
+    (LGPL-2.1-or-later, Text: LGPL-2.1.txt).
+    Quelltext samt Bauanleitung: https://github.com/AppImage/type2-runtime
+
+
+Nur in der .exe (Windows)
+=========================
+
+Microsoft Visual C++ Laufzeit            Lizenzbedingungen fuer
+(vcruntime140*.dll, msvcp140*.dll)       weitergebbaren Code von
+                                         Visual Studio
+    Kommt mit Python und Qt; die Weitergabe zusammen mit einem Programm
+    ist nach diesen Bedingungen erlaubt.
+
+PyInstaller-Startprogramm                GPL-2.0-or-later mit
+                                         Bootloader-Ausnahme
+    Die Ausnahme erlaubt, das erzeugte Programm unter eigenen
+    Bedingungen weiterzugeben.
+    Quelltext: https://github.com/pyinstaller/pyinstaller
 
 
 Werkzeuge, die nicht mitkommen
 ==============================
 
-Zum Bauen wird PyInstaller (GPL-2.0-or-later mit Ausnahme fuer die
-erzeugten Programme) benutzt. Es steckt nicht in diesem Abbild.
+Gebaut wird mit PyInstaller (Windows) und appimagetool (Linux). Von
+beiden steckt nur das jeweilige Startprogramm im Ergebnis - siehe oben.

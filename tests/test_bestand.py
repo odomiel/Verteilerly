@@ -85,6 +85,28 @@ class TestLizenz(unittest.TestCase):
             with self.subTest(wort=wort):
                 self.assertIn(wort, text)
 
+    def test_der_quellbaum_traegt_alle_lizenztexte(self):
+        """Was ins Abbild und in die .exe wandert, steht auch hier.
+
+        Geprueft am Quellbaum, nicht an der ausgelegten Kopie im
+        Arbeitsordner - die hinkt nach, bis das Programm einmal lief.
+        """
+        import pathlib
+
+        ordner = pathlib.Path(__file__).resolve().parent.parent / "lizenzen"
+        for name in ("LGPL-3.0.txt", "LGPL-2.1.txt", "ICU.txt", "zstd.txt",
+                     "GCC-Laufzeitausnahme-3.1.txt", "Qt-Fremdbestandteile.txt",
+                     "Python-Fremdbestandteile.txt", "QUELLEN.txt"):
+            with self.subTest(datei=name):
+                self.assertTrue((ordner / name).is_file())
+        quellen = (ordner / "QUELLEN.txt").read_text(encoding="utf-8")
+        for wort in ("ICU", "GLib", "LGPL-2.1", "zstd", "libatomic",
+                     "Qt-Fremdbestandteile.txt", "Python-Fremdbestandteile.txt",
+                     "charset-normalizer", "Independent JPEG Group",
+                     "FreeType Project", "PyInstaller", "Visual C++"):
+            with self.subTest(wort=wort):
+                self.assertIn(wort, quellen)
+
     def test_das_paket_nennt_seine_lizenz(self):
         import verteilerly
 

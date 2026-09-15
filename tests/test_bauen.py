@@ -107,7 +107,10 @@ class TestSpec(unittest.TestCase):
             for quelle, ziel in self.aufrufe["analysis"]["datas"]
         }
         self.assertEqual(dateien.get("LICENSE"), ".")
-        for name in ("LGPL-3.0.txt", "QUELLEN.txt"):
+        for name in ("LGPL-3.0.txt", "QUELLEN.txt", "Qt-Fremdbestandteile.txt",
+                     "Python-Fremdbestandteile.txt", "reportlab-LICENSE.txt",
+                     "pillow-LICENSE.txt", "PyYAML-LICENSE.txt",
+                     "openpyxl-LICENCE.rst.txt"):
             with self.subTest(datei=name):
                 self.assertEqual(dateien.get(name), "lizenzen")
 
@@ -125,6 +128,30 @@ class TestSpec(unittest.TestCase):
             with self.subTest(modul=modul):
                 self.assertIn(modul, heraus)
         self.assertNotIn("PySide6.QtWidgets", heraus)
+
+    def test_openssl_bleibt_draussen(self):
+        """Ohne _ssl und _hashlib kommen auch OpenSSLs DLLs nicht mit."""
+        heraus = self.aufrufe["analysis"]["excludes"]
+        for modul in ("_ssl", "_hashlib"):
+            with self.subTest(modul=modul):
+                self.assertIn(modul, heraus)
+
+    def test_die_gpl_tastatur_bleibt_draussen(self):
+        """Qt Virtual Keyboard steht nur unter der GPL-3 - samt Anhang raus."""
+        mitnehmen = self.aufrufe["namensraum"]["mitnehmen"]
+        for datei in ("PySide6\\Qt6VirtualKeyboard.dll",
+                      "PySide6/plugins/platforminputcontexts/qtvirtualkeyboardplugin.dll",
+                      "PySide6/Qt6Quick.dll", "PySide6/Qt6QmlModels.dll",
+                      "PySide6/Qt6Network.dll", "PySide6/opengl32sw.dll",
+                      "PySide6/plugins/imageformats/qtiff.dll"):
+            with self.subTest(weg=datei):
+                self.assertFalse(mitnehmen((datei, datei, "BINARY")))
+        for datei in ("PySide6\\Qt6Widgets.dll", "PySide6/Qt6Gui.dll",
+                      "PySide6/plugins/platforms/qwindows.dll",
+                      "PySide6/plugins/styles/qmodernwindowsstyle.dll",
+                      "PySide6/plugins/imageformats/qsvg.dll", "python314.dll"):
+            with self.subTest(bleibt=datei):
+                self.assertTrue(mitnehmen((datei, datei, "BINARY")))
 
     def test_pillow_bleibt_drin(self):
         """Beim Windows-Build gefunden: ohne Pillow startet die .exe nicht.
@@ -266,6 +293,20 @@ class TestSymbol(unittest.TestCase):
             with self.subTest(bibliothek=lib):
                 self.assertIn(lib, appimage.UNNOETIGE_BIBLIOTHEKEN)
 
+    def test_was_die_python_basis_mitbringt_bleibt_draussen(self):
+        """certifi steht unter der MPL-2.0 und wird nie gebraucht."""
+        import appimage
+
+        for name in ("pip", "certifi", "build", "packaging", "pyproject_hooks",
+                     "sitecustomize"):
+            with self.subTest(paket=name):
+                self.assertIn(name, appimage.BASIS_WEG)
+        self.assertIn("reportlab/fonts", appimage.REPORTLAB_WEG)
+        self.assertIn("_curses", appimage.UNNOETIGE_MODULE)
+        for lib in ("libncursesw", "libtinfo", "libXft", "libXrender"):
+            with self.subTest(bibliothek=lib):
+                self.assertIn(lib, appimage.UNNOETIGE_BIBLIOTHEKEN)
+
     def test_ohne_strip_wird_trotzdem_gebaut(self):
         import appimage
 
@@ -286,6 +327,51 @@ class TestSymbol(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestLizenztexte(unittest.TestCase):
+    """Die Lizenzdateien der Pakete kommen als flache Texte mit."""
+
+    def test_die_pakete_bringen_ihre_texte(self):
+        import lizenztexte
+
+        namen = [name for name, _ in lizenztexte.pakettexte()]
+        for name in ("reportlab-LICENSE.txt", "pillow-LICENSE.txt",
+                     "PyYAML-LICENSE.txt", "openpyxl-LICENCE.rst.txt",
+                     "charset-normalizer-LICENSE.txt"):
+            with self.subTest(datei=name):
+                self.assertIn(name, namen)
+        self.assertEqual(len(namen), len(set(namen)))
+
+    def test_jede_quelle_ist_eine_datei(self):
+        import lizenztexte
+
+        for name, quelle in lizenztexte.pakettexte():
+            with self.subTest(datei=name):
+                self.assertTrue(quelle.is_file())
+                self.assertTrue(name.endswith(".txt"))
+
+    def test_die_python_lizenz_nimmt_die_erste_vorhandene(self):
+        import lizenztexte
+
+        with tempfile.TemporaryDirectory() as ordner:
+            da = pathlib.Path(ordner) / "LICENSE.txt"
+            da.write_text("PSF", encoding="utf-8")
+            fehlt = pathlib.Path(ordner) / "fehlt.txt"
+            self.assertEqual(lizenztexte.python_lizenz([fehlt, da]), da)
+            self.assertIsNone(lizenztexte.python_lizenz([fehlt]))
+
+    def test_die_qt_liste_passt_zur_qt_fassung(self):
+        """Nach einem Qt-Wechsel: werkzeuge/qt_fremdbestandteile.py aufrufen."""
+        from PySide6.QtCore import qVersion
+
+        text = (WURZEL / "lizenzen" / "Qt-Fremdbestandteile.txt").read_text(encoding="utf-8")
+        treffer = re.search(r"^Qt-Fassung: (\d+\.\d+)", text, re.MULTILINE)
+        self.assertIsNotNone(treffer)
+        self.assertEqual(treffer.group(1), ".".join(qVersion().split(".")[:2]))
+        for teil in ("PCRE2", "HarfBuzz-NG", "LibJPEG-turbo", "Freetype 2", "XSVG"):
+            with self.subTest(teil=teil):
+                self.assertIn(teil, text)
 
 
 class TestAbhaengigkeitspruefung(unittest.TestCase):

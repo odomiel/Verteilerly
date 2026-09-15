@@ -37,6 +37,8 @@ sys.path.insert(0, str(WURZEL))
 
 from verteilerly.version import VERSION  # noqa: E402
 
+import lizenztexte  # noqa: E402
+
 NAME = "verteilerly"
 ANZEIGENAME = "Verteilerly"
 PYTHONFASSUNG = "3.14"
@@ -279,6 +281,13 @@ def programm_einbauen() -> None:
     # Die GPL liegt im Quellbaum als LICENSE, wo sie jedes Werkzeug sucht;
     # im Abbild heisst sie wie die uebrigen Lizenztexte.
     shutil.copy2(WURZEL / "LICENSE", lizenzziel / "GPL-3.0.txt")
+    # Die Lizenzen der Pakete liegen in ihren dist-info-Ordnern, die im
+    # Einhaengepunkt stecken - ausgelegt wird nur lizenzen/.
+    for name, quelle in lizenztexte.pakettexte([_site_packages()]):
+        shutil.copy2(quelle, lizenzziel / name)
+    python = lizenztexte.python_lizenz([_site_packages().parent / "LICENSE.txt"])
+    if python:
+        shutil.copy2(python, lizenzziel / "Python-LICENSE.txt")
     melden(
         f"Programm, Daten und Lizenzen eingebaut "
         f"({ziel.name}, {datenziel.name}, {lizenzziel.name})"
@@ -295,10 +304,22 @@ def programm_einbauen() -> None:
 # stecken als eigene Module in Python. _sqlite3 braucht hier niemand:
 # ein Verteiler ist eine Datei, keine Datenbank.
 UNNOETIGE_MODULE = ("_gdbm", "_dbm", "readline", "_tkinter",
-                    "_ssl", "_hashlib", "_sqlite3")
+                    "_ssl", "_hashlib", "_sqlite3", "_curses", "_curses_panel")
 UNNOETIGE_BIBLIOTHEKEN = ("libgdbm", "libgdbm_compat", "libreadline",
                           "libtcl", "libtk", "libssl", "libcrypto",
-                          "libsqlite3")
+                          "libsqlite3", "libncursesw", "libpanelw", "libtinfo",
+                          "libXft", "libXrender")
+# Was die Python-AppImage selbst mitbringt und das Programm nie aufruft:
+# pip samt seinen Bauwerkzeugen, certifi (MPL-2.0) fuer Netzzugriffe, die
+# es nicht gibt, und der Haken, der pip-Installationen umbiegt. Was nicht
+# mitkommt, braucht auch keinen Lizenzhinweis.
+BASIS_WEG = ("pip", "setuptools", "wheel", "pkg_resources", "build",
+             "certifi", "packaging", "pyproject_hooks", "sitecustomize")
+# ReportLab bringt Schriften mit - DarkGarden unter der GPL-2, Bitstream
+# Vera und Type-1-Nachbildungen der Standardschriften. Das Programm setzt
+# nur die vierzehn Standardschriften, die jeder PDF-Betrachter selbst hat:
+# eingebettet und gelesen wird davon nichts. Die .exe kommt ohnehin ohne.
+REPORTLAB_WEG = ("reportlab/fonts",)
 
 
 def python_abspecken() -> None:
@@ -319,6 +340,11 @@ def python_abspecken() -> None:
             # dahinter - das Muster muss beides fangen.
             for datei in ordner.glob(f"{name}*.so*") if ordner.is_dir() else ():
                 datei.unlink()
+
+    # Tcl/Tk ist mit tkinter draussen; seine Skripte lagen noch daneben.
+    shutil.rmtree(APPDIR / "usr" / "share" / "tcltk", ignore_errors=True)
+    for teil in REPORTLAB_WEG:
+        shutil.rmtree(_site_packages() / teil, ignore_errors=True)
 
     for ordner in APPDIR.rglob("__pycache__"):
         shutil.rmtree(ordner, ignore_errors=True)
@@ -350,7 +376,7 @@ def qt_abspecken() -> int:
         datei.unlink()
 
     # pip und Konsorten braucht das fertige Programm nicht mehr.
-    for name in ("pip", "setuptools", "wheel", "pkg_resources"):
+    for name in BASIS_WEG:
         for ordner in _site_packages().glob(f"{name}*"):
             shutil.rmtree(ordner, ignore_errors=True) if ordner.is_dir() else ordner.unlink()
 
@@ -488,12 +514,28 @@ def systembibliotheken_mitnehmen() -> list[str]:
             shutil.copy2(ort, lib / name)
             vom_rechner.append(name)
 
+    for name in aus_debian:
+        _copyright_mitnehmen(DEBIAN_PAKETE[name])
     if aus_debian:
         melden(f"aus Debian {DEBIAN}: {', '.join(aus_debian)}")
     if vom_rechner:
         melden(f"vom Baurechner (setzt die glibc-Untergrenze): "
                f"{', '.join(vom_rechner)}")
     return sorted(gebraucht)
+
+
+def _copyright_mitnehmen(paket: str) -> None:
+    """Legt die Copyright-Datei eines Debian-Pakets zu den Lizenzen.
+
+    Die X11-, xcb- und Kompressionsbibliotheken stehen unter MIT- und
+    BSD-artigen Lizenzen, die ihren Hinweis bei jeder Weitergabe
+    verlangen. Wo Debian das Verzeichnis nur verlinkt (libatomic1 auf
+    gcc-12-base), gelten GPL-3.0.txt und GCC-Laufzeitausnahme-3.1.txt.
+    """
+    for datei in (DEBIANORDNER / paket).glob("usr/share/doc/*/copyright"):
+        if datei.is_file():
+            shutil.copy2(datei, APPDIR / LIZENZEN.name / f"Debian-{paket}.txt")
+            return
 
 
 def _debian_index() -> dict[str, str]:

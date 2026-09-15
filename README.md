@@ -614,11 +614,17 @@ weitergibt, gibt den Quelltext mit oder bietet ihn an. Ohne jede
 Gewährleistung.
 
 Die Bausteine bleiben bei ihren eigenen Lizenzen: Qt und PySide6 unter der
-LGPLv3 — dynamisch gebunden und im Abbild austauschbar, wie die LGPL es
-verlangt —, ReportLab unter BSD, openpyxl, PyYAML und Pillow unter MIT, Python
-unter der PSF-Lizenz. `lizenzen/` trägt die vollständigen Texte und
-`QUELLEN.txt`, das für jeden Bestandteil Lizenz und Quelltextadresse nennt;
-beides wandert ins AppImage und neben die `.exe`.
+LGPLv3 — dynamisch gebunden und austauschbar, wie die LGPL es verlangt —,
+ReportLab unter BSD, openpyxl, PyYAML und Pillow unter MIT, Python unter der
+PSF-Lizenz. `lizenzen/` trägt die vollständigen Texte, dazu die der
+Fremdbestandteile, die Qt und Python in sich tragen (`Qt-Fremdbestandteile.txt`,
+`Python-Fremdbestandteile.txt`), und `QUELLEN.txt`, das für jeden Bestandteil
+Lizenz, Text und Quelltextadresse nennt. Beide Bauwege legen die
+Lizenzdateien der Python-Pakete und von Python selbst dazu
+(`werkzeuge/lizenztexte.py`), das AppImage außerdem die Copyright-Dateien der
+Debian-Bibliotheken; das Programm legt den Ordner in seinen Arbeitsordner aus.
+Nach einem Qt-Wechsel stellt `werkzeuge/qt_fremdbestandteile.py` die Qt-Liste
+neu zusammen — ein Test vergleicht die Fassung.
 
 Gelesen werden sie an zwei Stellen: das Über-Fenster **verweist** auf gnu.org
 und auf den Qt-Quelltext, und `grundausstattung_auslegen()` legt die Texte beim

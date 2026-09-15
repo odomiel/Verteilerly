@@ -1505,7 +1505,7 @@ class Hauptfenster(QMainWindow):
             + u("Dokumentation für LSA+-Verteiler in der Fernmeldetechnik.")
             + u(
                 "<p>© 2026 {0} — freie Software unter der "
-                "<b>GNU GPL, Version 3</b>. Ohne jede Gewährleistung.</p>"
+                "<b>GNU GPL, Version 3 oder später</b>. Ohne jede Gewährleistung.</p>"
             ).format(URHEBER)
             + u(
                 "<p><i>Mit KI-Unterstützung entwickelt: Teile des Quelltextes "

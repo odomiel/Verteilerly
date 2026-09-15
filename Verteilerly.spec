@@ -14,6 +14,8 @@
 
 import os
 import re
+import shutil
+import sys
 
 from PyInstaller.utils.hooks import collect_submodules
 
@@ -68,6 +70,24 @@ if os.path.isdir(_lizenzen):
         if name.endswith(".txt"):
             datas.append((os.path.join(_lizenzen, name), "lizenzen"))
 
+# Dazu die Lizenzen der Python-Pakete und von Python selbst: MIT und BSD
+# verlangen ihren Hinweis auch in der gebauten Weitergabe, und PyInstaller
+# nimmt die dist-info-Ordner nicht mit. Sie heissen alle LICENSE - darum
+# werden sie unter eindeutigem Namen in bau/ zwischengelegt.
+sys.path.insert(0, os.path.join(_wurzel, "werkzeuge"))
+from lizenztexte import pakettexte, python_lizenz  # noqa: E402
+
+_texte = os.path.join(_wurzel, "bau", "lizenztexte")
+os.makedirs(_texte, exist_ok=True)
+_fremd = list(pakettexte())
+_python = python_lizenz([os.path.join(sys.base_prefix, "LICENSE.txt")])
+if _python:
+    _fremd.append(("Python-LICENSE.txt", _python))
+for name, quelle in _fremd:
+    ziel = os.path.join(_texte, name)
+    shutil.copyfile(quelle, ziel)
+    datas.append((ziel, "lizenzen"))
+
 # Qts deutsche Uebersetzung mitnehmen: sie beschriftet die Datei- und
 # Rueckfragedialoge, die Qt selbst zeichnet. Ohne sie stuenden dort
 # "Save" und "Cancel" mitten im deutschen Programm.
@@ -117,6 +137,10 @@ excludes = [
     "PIL.AvifImagePlugin",
     "PIL.WebPImagePlugin",
     "sqlite3",
+    # Das Programm geht nie ins Netz - ohne _ssl und _hashlib bleiben auch
+    # OpenSSLs DLLs draussen. hashlib rechnet mit Pythons eigenen Modulen.
+    "_ssl",
+    "_hashlib",
     # PIL/Pillow NICHT ausschliessen: reportlab.lib.utils importiert es beim
     # Laden von reportlab.lib.colors - ohne Pillow bricht die .exe beim ersten
     # Import des Hauptfensters ab (ModuleNotFoundError: No module named 'PIL').
@@ -148,6 +172,26 @@ a = Analysis(
     excludes=excludes,
     noarchive=False,
 )
+# Was PySides Hooks mitziehen, ohne dass die Oberflaeche es anfasst. Qt
+# Virtual Keyboard steht nur unter der GPL-3, nicht unter der LGPL, und kaeme
+# ueber sein Eingabe-Steckmodul herein - samt Qt Quick, Qml und Network, die
+# nur es braucht. opengl32sw ist Mesa als OpenGL-Ersatz fuer Rechner ohne
+# Treiber; gezeichnet wird mit QPainter. Die Bildformate liest das Programm nie.
+WEG_AUS_DER_EXE = (
+    "qt6virtualkeyboard", "qtvirtualkeyboardplugin", "qt6quick", "qt6qml",
+    "qt6network", "qtuiotouchplugin", "qt6pdf", "qpdf", "opengl32sw",
+    "qtiff", "qwebp", "qicns", "qtga", "qwbmp",
+)
+
+
+def mitnehmen(eintrag) -> bool:
+    name = os.path.basename(str(eintrag[0]).replace("\\", "/")).lower()
+    return not name.startswith(WEG_AUS_DER_EXE)
+
+
+a.binaries = [eintrag for eintrag in a.binaries if mitnehmen(eintrag)]
+a.datas = [eintrag for eintrag in a.datas if mitnehmen(eintrag)]
+
 pyz = PYZ(a.pure, a.zipped_data)
 exe = EXE(
     pyz, a.scripts, a.binaries, a.datas, [],
