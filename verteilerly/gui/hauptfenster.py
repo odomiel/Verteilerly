@@ -166,6 +166,7 @@ class Hauptfenster(QMainWindow):
         obenaufbau = QVBoxLayout(oben)
         obenaufbau.setContentsMargins(0, 0, 0, 0)
         obenaufbau.addWidget(rollbereich)
+        self.uebersichtsbereich = oben
 
         self.leistenansicht = LeistenAnsicht()
         self.leistenansicht.belegung_geaendert.connect(self._belegung_geaendert)
@@ -374,6 +375,29 @@ class Hauptfenster(QMainWindow):
             self.schreibweisen_gruppe.addAction(handlung)
             rangierungen.addAction(handlung)
         einstellungen.addAction(self.aktion_freitext)
+
+        # Wie die Vorschau lassen sich Verteileruebersicht und Leistenansicht
+        # ausblenden: wer nur tippt, gibt der Leistenansicht die ganze Hoehe,
+        # wer nur das Blatt sehen will, der Vorschau das ganze Fenster.
+        self.aktion_uebersicht = QAction(u("Verteiler&übersicht anzeigen"), self)
+        self.aktion_uebersicht.setCheckable(True)
+        self.aktion_uebersicht.setShortcut(QKeySequence("F7"))
+        self.aktion_uebersicht.setChecked(
+            self.einstellungen.value("uebersicht", True, type=bool)
+        )
+        self.aktion_uebersicht.triggered.connect(self.uebersicht_zeigen)
+        ansicht.addAction(self.aktion_uebersicht)
+
+        self.aktion_leistenansicht = QAction(u("&Leistenansicht anzeigen"), self)
+        self.aktion_leistenansicht.setCheckable(True)
+        self.aktion_leistenansicht.setShortcut(QKeySequence("F8"))
+        self.aktion_leistenansicht.setChecked(
+            self.einstellungen.value("leistenansicht", True, type=bool)
+        )
+        self.aktion_leistenansicht.triggered.connect(self.leistenansicht_zeigen)
+        ansicht.addAction(self.aktion_leistenansicht)
+        self.uebersicht_zeigen(self.aktion_uebersicht.isChecked())
+        self.leistenansicht_zeigen(self.aktion_leistenansicht.isChecked())
 
         self.aktion_vorschau = QAction(u("&Vorschau anzeigen"), self)
         self.aktion_vorschau.setCheckable(True)
@@ -589,6 +613,24 @@ class Hauptfenster(QMainWindow):
         self.einstellungen.setValue("vorschau", bool(an))
         if an:
             self._vorschau_auffrischen()
+
+    def uebersicht_zeigen(self, an: bool) -> None:
+        """Blendet die Verteileruebersicht ein oder aus."""
+        self.uebersichtsbereich.setVisible(an)
+        self.einstellungen.setValue("uebersicht", bool(an))
+        self._linke_seite_anpassen()
+
+    def leistenansicht_zeigen(self, an: bool) -> None:
+        """Blendet die Leistenansicht ein oder aus."""
+        self.leistenansicht.setVisible(an)
+        self.einstellungen.setValue("leistenansicht", bool(an))
+        self._linke_seite_anpassen()
+
+    def _linke_seite_anpassen(self) -> None:
+        """Sind Uebersicht und Leistenansicht aus, gehoert der Platz der Vorschau."""
+        self.teiler.setVisible(
+            not (self.uebersichtsbereich.isHidden() and self.leistenansicht.isHidden())
+        )
 
     def _vorschau_anstossen(self) -> None:
         """Sammelt schnelle Aenderungen, statt bei jedem Tastendruck neu zu bauen."""

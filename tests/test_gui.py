@@ -2062,6 +2062,50 @@ class TestMenuezustaende(unittest.TestCase):
         self.assertEqual(len(angehakt), 1)
         self.assertEqual(angehakt[0].data(), self.fenster.schreibweise.id)
 
+    def test_uebersicht_und_leistenansicht_lassen_sich_ausblenden(self):
+        """Wie die Vorschau - F7 und F8, und gemerkt wird es auch."""
+        f = self.fenster
+        self.addCleanup(f.leistenansicht_zeigen, True)
+        self.addCleanup(f.uebersicht_zeigen, True)
+        for aktion in (f.aktion_uebersicht, f.aktion_leistenansicht):
+            aktion.setChecked(True)
+        f.uebersicht_zeigen(True)
+        f.leistenansicht_zeigen(True)
+        self.assertEqual(f.aktion_uebersicht.shortcut().toString(), "F7")
+        self.assertEqual(f.aktion_leistenansicht.shortcut().toString(), "F8")
+
+        f.aktion_uebersicht.trigger()
+        self.assertTrue(f.uebersichtsbereich.isHidden())
+        self.assertFalse(f.leistenansicht.isHidden())
+        self.assertFalse(f.einstellungen.value("uebersicht", True, type=bool))
+        self.assertFalse(f.teiler.isHidden())
+
+        # Ist links nichts mehr, gehört der Platz der Vorschau.
+        f.aktion_leistenansicht.trigger()
+        self.assertTrue(f.leistenansicht.isHidden())
+        self.assertFalse(f.einstellungen.value("leistenansicht", True, type=bool))
+        self.assertTrue(f.teiler.isHidden())
+
+        f.aktion_uebersicht.trigger()
+        self.assertFalse(f.uebersichtsbereich.isHidden())
+        self.assertFalse(f.teiler.isHidden())
+        self.assertTrue(f.einstellungen.value("uebersicht", False, type=bool))
+
+    def test_ein_neues_fenster_uebernimmt_die_wahl(self):
+        """Die Schalter stehen nach einem Neustart, wie sie verlassen wurden."""
+        from verteilerly.gui.hauptfenster import Hauptfenster
+
+        f = self.fenster
+        self.addCleanup(f.leistenansicht_zeigen, True)
+        f.aktion_leistenansicht.setChecked(False)
+        f.leistenansicht_zeigen(False)
+
+        zweites = Hauptfenster()
+        self.addCleanup(zweites.close)
+        self.assertFalse(zweites.aktion_leistenansicht.isChecked())
+        self.assertTrue(zweites.leistenansicht.isHidden())
+        self.assertFalse(zweites.teiler.isHidden())
+
     def test_freitext_wird_gemerkt_und_durchgereicht(self):
         """Die Wahl gilt für den Editor und steht in der Conf."""
         f = self.fenster
