@@ -2000,6 +2000,38 @@ class TestMenuezustaende(unittest.TestCase):
             ["Als PDF…", "Als Excel-Mappe…", "Als CSV…"],
         )
 
+    def test_der_vorschauknopf_klappt_die_ansichten_aus(self):
+        """Wie der Exportknopf: links die Vorschau, rechts die drei Bereiche."""
+        from PySide6.QtWidgets import QToolBar, QToolButton
+
+        f = self.fenster
+        knopf = f.ansicht_knopf
+        self.assertIn(knopf, f.findChild(QToolBar).findChildren(QToolButton))
+        self.assertIs(knopf.defaultAction(), f.aktion_vorschau)
+        self.assertEqual(
+            knopf.popupMode(), QToolButton.ToolButtonPopupMode.MenuButtonPopup
+        )
+        self.assertEqual(
+            [h.text().replace("&", "") for h in knopf.menu().actions()],
+            ["Verteilerübersicht anzeigen", "Leistenansicht anzeigen",
+             "Vorschau anzeigen"],
+        )
+
+    def test_eine_wahl_im_ausklappmenue_aendert_die_ansicht(self):
+        """Dieselben Schalter wie unter Ansicht - die Haken gehen mit."""
+        f = self.fenster
+        self.addCleanup(f.leistenansicht_zeigen, True)
+        f.aktion_leistenansicht.setChecked(True)
+        f.leistenansicht_zeigen(True)
+
+        eintrag = next(h for h in f.ansicht_knopf.menu().actions()
+                       if "Leistenansicht" in h.text())
+        eintrag.trigger()
+        self.assertTrue(f.leistenansicht.isHidden())
+        self.assertFalse(f.aktion_leistenansicht.isChecked())
+        eintrag.trigger()
+        self.assertFalse(f.leistenansicht.isHidden())
+
     def test_der_knopf_gibt_das_gewaehlte_format_aus(self):
         self._projekt()
         self.fenster.exportformat_setzen("csv", ausgeben=False)

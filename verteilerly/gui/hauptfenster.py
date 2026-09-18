@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QLabel,
     QMainWindow,
+    QMenu,
     QMessageBox,
     QScrollArea,
     QSplitter,
@@ -408,7 +409,7 @@ class Hauptfenster(QMainWindow):
         self.aktion_vorschau.triggered.connect(self.vorschau_zeigen)
         ansicht.addAction(self.aktion_vorschau)
         werkzeuge.addSeparator()
-        werkzeuge.addAction(self.aktion_vorschau)
+        self._ansichtsknopf_bauen(werkzeuge)
         self.vorschau_zeigen(self.aktion_vorschau.isChecked())
 
         werkzeugmenue = self.menuBar().addMenu(u("&Tools"))
@@ -1006,6 +1007,28 @@ class Hauptfenster(QMainWindow):
         self.exportformat_setzen(
             str(self.einstellungen.value("exportformat", "pdf")), ausgeben=False
         )
+
+    def _ansichtsknopf_bauen(self, werkzeuge) -> None:
+        """Der Vorschauknopf, zweigeteilt wie der Exportknopf.
+
+        Ein Druck links schaltet die Vorschau wie F9; der Pfeil klappt die
+        drei Bereiche des Fensters auf. Im Menue stehen dieselben Aktionen
+        wie unter *Ansicht* - die Haken stimmen also an beiden Stellen.
+        """
+        self.ansichtsmenue = QMenu(self)
+        for handlung in (self.aktion_uebersicht, self.aktion_leistenansicht,
+                         self.aktion_vorschau):
+            self.ansichtsmenue.addAction(handlung)
+        self.ansicht_knopf = QToolButton(self)
+        self.ansicht_knopf.setDefaultAction(self.aktion_vorschau)
+        self.ansicht_knopf.setMenu(self.ansichtsmenue)
+        self.ansicht_knopf.setPopupMode(
+            QToolButton.ToolButtonPopupMode.MenuButtonPopup
+        )
+        self.ansicht_knopf.setToolButtonStyle(
+            Qt.ToolButtonStyle.ToolButtonTextOnly
+        )
+        werkzeuge.addWidget(self.ansicht_knopf)
 
     def exportformat_setzen(self, kennung: str, ausgeben: bool = True) -> None:
         """Merkt das Format, beschriftet den Knopf - und gibt aus."""

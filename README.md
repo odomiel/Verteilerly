@@ -468,6 +468,11 @@ Die drei Wege aus dem Programm heraus stehen unter *Datei ▸ Exportieren*
 beieinander — PDF (Strg+E), Excel-Mappe und CSV. In der Werkzeugleiste steht
 dafür **ein** Knopf: links *Export (PDF)*, rechts ein Pfeil, der dasselbe Menü
 öffnet; das zuletzt gewählte Format steht danach auf dem Knopf und in der
+`Verteilerly.conf`. Daneben steht der Vorschauknopf, ebenso zweigeteilt: ein
+Druck blendet die Vorschau ein und aus, sein Pfeil klappt die drei Bereiche des
+Fensters auf — Verteilerübersicht (F7), Leistenansicht (F8) und Vorschau (F9),
+dieselben Schalter wie unter *Ansicht*. Sind Übersicht und Leistenansicht beide
+aus, füllt die Vorschau das Fenster; gemerkt wird alles in der
 `Verteilerly.conf`.
 Die **Excel-Mappe trägt beides**: vorn die Blätter im Blattbild —
 Deckblatt, Verteilerbelegung und je Leiste eines, gesetzt nach der
