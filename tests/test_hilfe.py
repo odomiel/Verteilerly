@@ -313,7 +313,7 @@ class TestEnglischeDokumentation(unittest.TestCase):
                 gedruckt[zellen[-2]] = zellen[-1]
 
         abweichung = []
-        for handlung in self.fenster.findChildren(QAction):
+        for handlung in self._menueaktionen():
             name = _sauber(handlung.text())
             if not name or handlung.actionGroup() is not None:
                 continue
@@ -328,10 +328,32 @@ class TestEnglischeDokumentation(unittest.TestCase):
         # Und jeder Menüeintrag mit Kürzel steht auch in der Tabelle.
         mit_kuerzel = {
             _sauber(h.text())
-            for h in self.fenster.findChildren(QAction)
+            for h in self._menueaktionen()
             if h.shortcut().toString() and _sauber(h.text())
         }
         self.assertEqual(sorted(mit_kuerzel - set(gedruckt)), [])
+
+    def _menueaktionen(self) -> list:
+        """Die Eintraege der Menueleiste - die Tabelle beschreibt nur sie.
+
+        Das Pfeilmenue des Ansichtsknopfs traegt dieselben Namen, aber
+        absichtlich kein Kuerzel: zweimal F7 loeste gar nichts mehr aus.
+        """
+        gefunden = []
+
+        def sammeln(menue):
+            for handlung in menue.actions():
+                if handlung.isSeparator():
+                    continue
+                if handlung.menu() is not None:
+                    sammeln(handlung.menu())
+                else:
+                    gefunden.append(handlung)
+
+        for handlung in self.fenster.menuBar().actions():
+            if handlung.menu() is not None:
+                sammeln(handlung.menu())
+        return gefunden
 
     def test_der_dialog_zeigt_die_englische_seite(self):
         from verteilerly.gui.dialoge import DokumentationDialog

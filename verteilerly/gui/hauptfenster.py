@@ -1008,19 +1008,37 @@ class Hauptfenster(QMainWindow):
             str(self.einstellungen.value("exportformat", "pdf")), ausgeben=False
         )
 
-    def _ansichtsknopf_bauen(self, werkzeuge) -> None:
-        """Der Vorschauknopf, zweigeteilt wie der Exportknopf.
+    def _ansichtsaktionen(self) -> dict[str, QAction]:
+        """Die drei Bereiche des Fensters und ihre Schalter unter *Ansicht*."""
+        return {
+            "uebersicht": self.aktion_uebersicht,
+            "leistenansicht": self.aktion_leistenansicht,
+            "vorschau": self.aktion_vorschau,
+        }
 
-        Ein Druck links schaltet die Vorschau wie F9; der Pfeil klappt die
-        drei Bereiche des Fensters auf. Im Menue stehen dieselben Aktionen
-        wie unter *Ansicht* - die Haken stimmen also an beiden Stellen.
+    def _ansichtsknopf_bauen(self, werkzeuge) -> None:
+        """Ein Knopf mit Pfeil wie der Exportknopf: links der gewaehlte Bereich.
+
+        Auf dem Knopf steht, welchen Bereich ein Druck ein- und ausblendet;
+        eingedrueckt ist er, solange der Bereich zu sehen ist. Der Pfeil
+        klappt die drei Bereiche auf - eine Wahl dort schaltet sofort und
+        legt den Bereich auf den Knopf. Die Eintraege sind eigene Aktionen,
+        deren Haken den Schaltern unter *Ansicht* folgen: haengten dort
+        dieselben Aktionen, stellten auch F7/F8 den Knopf um.
         """
         self.ansichtsmenue = QMenu(self)
-        for handlung in (self.aktion_uebersicht, self.aktion_leistenansicht,
-                         self.aktion_vorschau):
-            self.ansichtsmenue.addAction(handlung)
+        self.ansichtswahl: dict[str, QAction] = {}
+        for kennung, aktion in self._ansichtsaktionen().items():
+            eintrag = QAction(aktion.text(), self.ansichtsmenue)
+            eintrag.setCheckable(True)
+            eintrag.setChecked(aktion.isChecked())
+            aktion.toggled.connect(eintrag.setChecked)
+            eintrag.triggered.connect(
+                lambda _an=False, kennung=kennung: self._ansicht_gewaehlt(kennung)
+            )
+            self.ansichtsmenue.addAction(eintrag)
+            self.ansichtswahl[kennung] = eintrag
         self.ansicht_knopf = QToolButton(self)
-        self.ansicht_knopf.setDefaultAction(self.aktion_vorschau)
         self.ansicht_knopf.setMenu(self.ansichtsmenue)
         self.ansicht_knopf.setPopupMode(
             QToolButton.ToolButtonPopupMode.MenuButtonPopup
@@ -1029,6 +1047,23 @@ class Hauptfenster(QMainWindow):
             Qt.ToolButtonStyle.ToolButtonTextOnly
         )
         werkzeuge.addWidget(self.ansicht_knopf)
+        self.ansichtsknopf_setzen(
+            str(self.einstellungen.value("ansichtsknopf", "vorschau"))
+        )
+
+    def ansichtsknopf_setzen(self, kennung: str) -> None:
+        """Legt fest, welchen Bereich ein Druck auf den Knopf schaltet."""
+        aktionen = self._ansichtsaktionen()
+        if kennung not in aktionen:
+            kennung = "vorschau"
+        self.ansicht_knopf.setDefaultAction(aktionen[kennung])
+        self.ansichtsknopf = kennung
+        self.einstellungen.setValue("ansichtsknopf", kennung)
+
+    def _ansicht_gewaehlt(self, kennung: str) -> None:
+        """Wie beim Export: die Wahl wirkt sofort und bleibt auf dem Knopf."""
+        self.ansichtsknopf_setzen(kennung)
+        self._ansichtsaktionen()[kennung].trigger()
 
     def exportformat_setzen(self, kennung: str, ausgeben: bool = True) -> None:
         """Merkt das Format, beschriftet den Knopf - und gibt aus."""

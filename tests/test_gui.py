@@ -2000,14 +2000,13 @@ class TestMenuezustaende(unittest.TestCase):
             ["Als PDF…", "Als Excel-Mappe…", "Als CSV…"],
         )
 
-    def test_der_vorschauknopf_klappt_die_ansichten_aus(self):
-        """Wie der Exportknopf: links die Vorschau, rechts die drei Bereiche."""
+    def test_der_ansichtsknopf_klappt_die_drei_bereiche_aus(self):
+        """Wie der Exportknopf: ein Knopf mit Pfeil in der Werkzeugleiste."""
         from PySide6.QtWidgets import QToolBar, QToolButton
 
         f = self.fenster
         knopf = f.ansicht_knopf
         self.assertIn(knopf, f.findChild(QToolBar).findChildren(QToolButton))
-        self.assertIs(knopf.defaultAction(), f.aktion_vorschau)
         self.assertEqual(
             knopf.popupMode(), QToolButton.ToolButtonPopupMode.MenuButtonPopup
         )
@@ -2017,20 +2016,54 @@ class TestMenuezustaende(unittest.TestCase):
              "Vorschau anzeigen"],
         )
 
-    def test_eine_wahl_im_ausklappmenue_aendert_die_ansicht(self):
-        """Dieselben Schalter wie unter Ansicht - die Haken gehen mit."""
+    def test_die_wahl_steht_danach_auf_dem_ansichtsknopf(self):
+        """Gewählt wird im Pfeilmenü, geschaltet danach mit dem Knopf."""
         f = self.fenster
+        self.addCleanup(f.ansichtsknopf_setzen, "vorschau")
         self.addCleanup(f.leistenansicht_zeigen, True)
         f.aktion_leistenansicht.setChecked(True)
         f.leistenansicht_zeigen(True)
+        f.ansichtsknopf_setzen("vorschau")
+        self.assertIs(f.ansicht_knopf.defaultAction(), f.aktion_vorschau)
 
-        eintrag = next(h for h in f.ansicht_knopf.menu().actions()
-                       if "Leistenansicht" in h.text())
-        eintrag.trigger()
+        # Die Wahl wirkt sofort und steht dann auf dem Knopf.
+        f.ansichtswahl["leistenansicht"].trigger()
         self.assertTrue(f.leistenansicht.isHidden())
-        self.assertFalse(f.aktion_leistenansicht.isChecked())
-        eintrag.trigger()
+        self.assertIs(f.ansicht_knopf.defaultAction(), f.aktion_leistenansicht)
+        self.assertEqual(
+            f.ansicht_knopf.text().replace("&", ""), "Leistenansicht anzeigen"
+        )
+        self.assertFalse(f.ansicht_knopf.isChecked())
+        self.assertFalse(f.ansichtswahl["leistenansicht"].isChecked())
+        self.assertEqual(f.einstellungen.value("ansichtsknopf"), "leistenansicht")
+
+        # Ein Druck auf den Knopf blendet denselben Bereich wieder ein.
+        f.ansicht_knopf.click()
         self.assertFalse(f.leistenansicht.isHidden())
+        self.assertTrue(f.ansicht_knopf.isChecked())
+        self.assertTrue(f.ansichtswahl["leistenansicht"].isChecked())
+
+    def test_f7_und_f8_stellen_den_knopf_nicht_um(self):
+        """Nur die Wahl im Pfeilmenü legt einen Bereich auf den Knopf."""
+        f = self.fenster
+        self.addCleanup(f.uebersicht_zeigen, True)
+        self.addCleanup(f.ansichtsknopf_setzen, "vorschau")
+        f.ansichtsknopf_setzen("vorschau")
+        f.aktion_uebersicht.setChecked(True)
+        f.uebersicht_zeigen(True)
+        f.aktion_uebersicht.trigger()
+        self.assertTrue(f.uebersichtsbereich.isHidden())
+        self.assertFalse(f.ansichtswahl["uebersicht"].isChecked())
+        self.assertIs(f.ansicht_knopf.defaultAction(), f.aktion_vorschau)
+
+    def test_ein_neues_fenster_kennt_die_wahl_des_knopfs(self):
+        from verteilerly.gui.hauptfenster import Hauptfenster
+
+        self.addCleanup(self.fenster.ansichtsknopf_setzen, "vorschau")
+        self.fenster.ansichtsknopf_setzen("uebersicht")
+        zweites = Hauptfenster()
+        self.addCleanup(zweites.close)
+        self.assertIs(zweites.ansicht_knopf.defaultAction(), zweites.aktion_uebersicht)
 
     def test_der_knopf_gibt_das_gewaehlte_format_aus(self):
         self._projekt()
