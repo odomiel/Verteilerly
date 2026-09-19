@@ -578,10 +578,7 @@ class BlattwahlDialog(PassenderDialog):
         kasten.setLayout(felder)
 
         aufbau = QVBoxLayout(self)
-        hinweis = QLabel(u(
-            "Gezählt wird, was hineinkommt: ohne Deckblatt beginnt die "
-            "Verteilerbelegung bei Blatt 1."
-        ))
+        hinweis = QLabel(u("Bitte treffen Sie eine Auswahl."))
         hinweis.setWordWrap(True)
         aufbau.addWidget(hinweis)
         aufbau.addWidget(kasten)
