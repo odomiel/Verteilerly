@@ -1,19 +1,31 @@
 """Gemeinsames fuer die Testreihen."""
 
+import atexit
 import os
+import shutil
+import tempfile
 
-# Die Testreihe baut das echte Hauptfenster. Eigene Erweiterungen aus dem
-# echten Arbeitsordner haben darin nichts zu suchen - geprueft wird das
-# Laden fremder Erweiterungen an eigenen Ordnern.
+# Die Testreihe bekommt einen eigenen Einstellungs- und Arbeitsordner.
+# Unter Linux haengen beide an XDG_CONFIG_HOME (pfade.einstellungsordner):
+# so schreibt kein Test in die echte Verteilerly.conf und keiner legt
+# etwas in ~/.config/Verteilerly ab - auch nicht das Programm, das
+# TestSelbstbericht als Unterprozess startet, denn es erbt die Umgebung.
+# Gesetzt wird das hier, vor jedem Import aus verteilerly.
+_TESTHEIM = tempfile.mkdtemp(prefix="verteilerly-tests-")
+os.environ["XDG_CONFIG_HOME"] = _TESTHEIM
+atexit.register(shutil.rmtree, _TESTHEIM, True)
+
+# Eigene Erweiterungen haben in der Testreihe nichts zu suchen - geprueft
+# wird das Laden fremder Erweiterungen an eigenen Ordnern.
 os.environ.setdefault("VERTEILERLY_OHNE_FREMDE_ERWEITERUNGEN", "1")
 
 
 def einstellung_bewahren(test, einstellungen, schluessel: str) -> None:
     """Stellt nach dem Test den Wert zurueck, der vorher in der Conf stand.
 
-    Die GUI-Tests schreiben in die echte Verteilerly.conf. Wer dort nur
-    loescht, nimmt dem Anwender seine Wahl - zurueckgestellt wird darum,
-    was vorher dastand, und geloescht nur, was vorher fehlte.
+    Die GUI-Tests teilen sich die Verteilerly.conf der Testreihe. Wer dort
+    nur loescht, aendert, was der naechste Test vorfindet - zurueckgestellt
+    wird darum, was vorher dastand, und geloescht nur, was vorher fehlte.
     """
     vorher = einstellungen.value(schluessel)
 

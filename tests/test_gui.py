@@ -1247,6 +1247,14 @@ class TestMenuezustaende(unittest.TestCase):
             verteiler.kabel_anlegen("Leitung", 1, 1, 4)
         self.fenster._projekt_setzen(Projekt(verteiler=verteiler), None)
 
+    def test_die_conf_ist_die_der_testreihe(self):
+        """Kein GUI-Test schreibt in die echte Verteilerly.conf."""
+        import os
+
+        conf = pathlib.Path(self.fenster.einstellungen.fileName())
+        self.assertIn(pathlib.Path(os.environ["XDG_CONFIG_HOME"]), conf.parents)
+        self.assertNotIn(pathlib.Path.home() / ".config" / "Verteilerly", conf.parents)
+
     def test_ohne_verteiler_ist_fast_alles_aus(self):
         f = self.fenster
         for name in ("aktion_speichern", "aktion_speichern_unter", "aktion_pdf",

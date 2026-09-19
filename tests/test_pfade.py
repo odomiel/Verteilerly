@@ -318,5 +318,19 @@ class TestLizenzenAuslegen(unittest.TestCase):
         self.assertIn("QUELLEN.txt", {datei.name for datei in angelegt})
 
 
+class TestAbgeschottet(unittest.TestCase):
+    """Die Testreihe bleibt aus dem echten Arbeitsordner heraus."""
+
+    def test_conf_und_arbeitsordner_liegen_im_ordner_der_testreihe(self):
+        import os
+
+        echt = pathlib.Path.home() / ".config" / "Verteilerly"
+        eigen = pathlib.Path(os.environ["XDG_CONFIG_HOME"])
+        self.assertNotEqual(eigen, pathlib.Path.home() / ".config")
+        for ort in (pfade.einstellungsdatei(), pfade.eigener_datenordner()):
+            with self.subTest(ort=str(ort)):
+                self.assertNotIn(echt, [ort, *ort.parents])
+                self.assertIn(eigen, ort.parents)
+
 if __name__ == "__main__":
     unittest.main()
