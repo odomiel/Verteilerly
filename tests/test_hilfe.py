@@ -169,6 +169,9 @@ class TestGegenDieMenues(unittest.TestCase):
             for handlung in menue.actions():
                 if handlung.isSeparator():
                     continue
+                # Eintraege eigener Erweiterungen beschreibt die Hilfe nicht.
+                if handlung.property("fremd"):
+                    continue
                 if handlung.menu() is not None:
                     gefunden.append(handlung.text())
                     sammeln(handlung.menu())
@@ -220,6 +223,9 @@ class TestGegenDieMenues(unittest.TestCase):
         def sammeln(menue):
             for handlung in menue.actions():
                 if handlung.isSeparator():
+                    continue
+                # Eintraege eigener Erweiterungen beschreibt die Hilfe nicht.
+                if handlung.property("fremd"):
                     continue
                 if handlung.menu() is not None:
                     sammeln(handlung.menu())
@@ -288,6 +294,9 @@ class TestEnglischeDokumentation(unittest.TestCase):
             for handlung in menue.actions():
                 if handlung.isSeparator():
                     continue
+                # Eintraege eigener Erweiterungen beschreibt die Hilfe nicht.
+                if handlung.property("fremd"):
+                    continue
                 gefunden.append(handlung.text())
                 if handlung.menu() is not None:
                     sammeln(handlung.menu())
@@ -344,6 +353,9 @@ class TestEnglischeDokumentation(unittest.TestCase):
         def sammeln(menue):
             for handlung in menue.actions():
                 if handlung.isSeparator():
+                    continue
+                # Eintraege eigener Erweiterungen beschreibt die Hilfe nicht.
+                if handlung.property("fremd"):
                     continue
                 if handlung.menu() is not None:
                     sammeln(handlung.menu())

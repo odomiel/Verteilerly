@@ -25,6 +25,8 @@ verteilerly/        Programmpaket
   suche.py          Fundstellen im Projekt - Adern, Kabel, Projektdaten
   sprachen.py       Deutsch oder Englisch - u("…") schlägt nach
   pfade.py          Wo die Daten liegen - entpackt wie gepackt
+  erweiterungen/    Eingebaute Erweiterungen, Laden eigener aus dem Arbeitsordner
+    blattvorlageneditor/  Der Blattvorlagen-Editor mit Vorschau
   gui/              Oberfläche
     hauptfenster.py Fenster, Menüs, Datei- und Kabelbefehle
     uebersicht.py   Verteilerübersicht, gezeichnet wie im Beispiel
@@ -34,6 +36,7 @@ verteilerly/        Programmpaket
     passform.py     Dialoge bleiben auf dem Bildschirm
     thema.py        Farbsätze hell und dunkel
     sprache.py      Deutsche Beschriftung der Qt-Dialoge
+    erweiterungen.py  Was eine Erweiterung vom Fenster sieht; Verwalten-Dialog
 beispiele/          Hinweise zum Einspielen eigener Vorlagen
 daten/              Liegt neben dem Programm und ist frei erweiterbar
   sprachen/         Wortlisten der Oberfläche (en.yaml)
@@ -611,8 +614,38 @@ System, Arbeitsordner und Einstellungsdatei. Die Fassungen liest
 Liste; ein fehlender Baustein steht als *nicht vorhanden* darin, statt
 den Bericht abbrechen zu lassen.
 
-Zurückgestellt: Widerstandssymbol,
-Pluginschnittstelle, Blatt „Änderungen“, Strichregel.
+Zurückgestellt: Widerstandssymbol, Blatt „Änderungen“, Strichregel.
+
+## Erweiterungen
+
+Das Menü **Erweiterungen** trägt, was über den Kern hinausgeht. Eine
+Erweiterung ist ein Modul mit einem Objekt `erweiterung`, das von
+`verteilerly.erweiterungen.Erweiterung` erbt und in `einrichten(programm)` seine
+Menüeinträge anmeldet; `programm` ist eine bewusst schmale Schnittstelle
+(`gui/erweiterungen.py`): Menüeintrag, offenes Projekt, Blattvorlagen,
+Statuszeile, Farbsatz und — ohne Zusage — das Hauptfenster.
+
+**Eingebaute** stehen in `EINGEBAUT` — eine feste Liste statt einer Suche, damit
+AppImage und `.exe` sie wie der Quellbaum finden — und sind von Haus aus an.
+**Eigene** sind Python-Dateien oder -Pakete im Ordner `erweiterungen` des
+Arbeitsordners. Sie sind Programmcode mit allen Rechten und darum **aus**, bis
+sie unter *Erweiterungen ▸ Erweiterungen verwalten…* eingeschaltet werden;
+vorher liest das Programm nur die erste Zeile ihres Docstrings, statt sie
+auszuführen. Die Wahl steht in der `Verteilerly.conf` und gilt ab dem nächsten
+Start. Was sich nicht laden oder einrichten lässt, wird übergangen und beim
+Start genannt; ein Fehler in einem Menüaufruf wird angezeigt, statt das
+Programm anzuhalten. Verhindert eine eigene Erweiterung den Start, startet
+`--ohne-fremde-erweiterungen` ohne sie. Die Hilfe (Abschnitt 11) zeigt ein
+vollständiges Beispiel; ein Test lädt es.
+
+Die erste eingebaute ist der **Blattvorlagen-Editor**: links alle Werte einer
+Blattvorlage samt der Spalten des Leistenblatts, rechts das Blatt, gezeichnet
+mit demselben Modell wie Vorschau und PDF — am offenen Verteiler oder an einem
+Beispiel. Jede Änderung wird mit denselben Regeln geprüft wie eine Datei beim
+Lesen. Gespeichert wird **immer als neue Vorlage**
+(`blattvorlage_speichern()` öffnet die Datei exklusiv), und in der Datei steht
+nur, was von der Vorgabe abweicht (`blattvorlage_als_yaml()`, die Umkehrung von
+`blattvorlage_aus_yaml()`).
 
 ## Lizenz
 

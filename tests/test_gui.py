@@ -1725,9 +1725,11 @@ class TestMenuezustaende(unittest.TestCase):
         """Wer „beispiel" gewählt hatte, soll das Programm noch starten können."""
         from verteilerly.gui.hauptfenster import Hauptfenster
 
+        from . import einstellung_bewahren
+
         f = self.fenster
+        einstellung_bewahren(self, f.einstellungen, "blattvorlage")
         f.einstellungen.setValue("blattvorlage", "gibtsnicht")
-        self.addCleanup(f.einstellungen.remove, "blattvorlage")
         zweites = Hauptfenster()
         self.addCleanup(zweites.close)
         self.assertEqual(
@@ -2083,14 +2085,18 @@ class TestMenuezustaende(unittest.TestCase):
         from pypdf import PdfReader
         from verteilerly.gui.dialoge import BlattwahlDialog
 
+        from . import einstellung_bewahren
+
         f = self.fenster
         self._projekt()
-        self.addCleanup(f.einstellungen.remove, "pdf_blaetter")
+        einstellung_bewahren(self, f.einstellungen, "pdf_blaetter")
         ziel = pathlib.Path(self.ordner.name) / "teil.pdf"
 
         def nur_leisten(dialog):
+            # Vorbelegt ist, was in der echten Conf steht - also alles setzen.
             dialog.haken["deckblatt"].setChecked(False)
             dialog.haken["belegung"].setChecked(False)
+            dialog.haken["leisten"].setChecked(True)
             return BlattwahlDialog.DialogCode.Accepted
 
         with mock.patch.object(BlattwahlDialog, "exec", nur_leisten), \
@@ -2765,7 +2771,9 @@ class TestSprachwahlImMenue(unittest.TestCase):
         self.addCleanup(sprachen.sprache_setzen, sprachen.VORGABE)
         self.fenster = Hauptfenster()
         self.addCleanup(self.fenster.close)
-        self.addCleanup(self.fenster.einstellungen.remove, "sprache")
+        from . import einstellung_bewahren
+
+        einstellung_bewahren(self, self.fenster.einstellungen, "sprache")
 
     def test_jede_sprache_steht_im_menue(self):
         eintraege = [h.text() for h in self.fenster.sprachen_gruppe.actions()]
@@ -3199,12 +3207,13 @@ class TestToolsMenue(unittest.TestCase):
             if "Tools" in a.text()
         )
 
-    def test_das_menue_steht_zwischen_ansicht_und_hilfe(self):
+    def test_das_menue_folgt_auf_die_ansicht(self):
+        """Tools nach Ansicht; dahinter die Erweiterungen, zuletzt die Hilfe."""
         namen = [
             a.text().replace("&", "") for a in self.fenster.menuBar().actions()
         ]
         self.assertEqual(
-            namen[-3:], ["Ansicht", "Tools", "Hilfe"], namen
+            namen[-4:], ["Ansicht", "Tools", "Erweiterungen", "Hilfe"], namen
         )
 
     def test_je_vorlagenart_ein_eintrag(self):

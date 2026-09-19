@@ -28,6 +28,8 @@ UNTERORDNER = ("vorlagen", "kabeltypen", "blattvorlagen")
 # Die Lizenztexte liegen neben dem Datenordner, nicht darin: sie gehoeren
 # zum Programm, nicht zum Bestand des Anwenders.
 LIZENZORDNER = "lizenzen"
+# Eigene Erweiterungen: Python-Dateien oder -Pakete im Arbeitsordner.
+ERWEITERUNGSORDNER = "erweiterungen"
 LIZENZ_EIGEN = "GPL-3.0.txt"
 ANWENDUNG = "Verteilerly"
 # Merkzettel im Arbeitsordner: welche Datei mit welchem Inhalt ausgelegt
@@ -216,6 +218,20 @@ def blattvorlagenordner_alle() -> list[pathlib.Path]:
         ort / "blattvorlagen"
         for ort in datenordner_alle()
         if (ort / "blattvorlagen").is_dir()
+    ]
+
+
+def erweiterungsordner() -> pathlib.Path:
+    """Wohin eigene Erweiterungen gelegt werden."""
+    return eigener_datenordner() / ERWEITERUNGSORDNER
+
+
+def erweiterungsordner_alle() -> list[pathlib.Path]:
+    """Jeder Ort, an dem Erweiterungen liegen koennen - der wichtigste zuerst."""
+    return [
+        ort / ERWEITERUNGSORDNER
+        for ort in datenordner_alle()
+        if (ort / ERWEITERUNGSORDNER).is_dir()
     ]
 
 

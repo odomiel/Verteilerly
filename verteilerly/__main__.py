@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import pathlib
 import sys
 
@@ -52,6 +53,12 @@ def main() -> int:
         stelle = sys.argv.index("--selbsttest")
         ziel = sys.argv[stelle + 1] if len(sys.argv) > stelle + 1 else None
         return selbsttest(pathlib.Path(ziel) if ziel else None)
+    if "--ohne-fremde-erweiterungen" in sys.argv:
+        # Falls eine eigene Erweiterung den Start verhindert: so kommt man
+        # ins Programm und kann sie unter Erweiterungen ausschalten.
+        from verteilerly.erweiterungen import OHNE_FREMDE
+
+        os.environ[OHNE_FREMDE] = "1"
 
     from PySide6.QtCore import QSettings
     from PySide6.QtWidgets import QApplication

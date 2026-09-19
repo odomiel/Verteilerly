@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import pathlib
 import shutil
 import tempfile
@@ -25,6 +26,7 @@ from PySide6.QtWidgets import (
 from .. import einstellungen as einstellungsspeicher
 from .. import (
     bestand,
+    erweiterungen,
     paket,
     pfade,
     projektdatei,
@@ -69,6 +71,7 @@ from .dialoge import (
     UeberlaufDialog,
     als_vorlage_speichern,
 )
+from .erweiterungen import ErweiterungenDialog, Schnittstelle
 from .leistenansicht import LeistenAnsicht
 from .sprache import frage
 from .symbol import symbol_icon
@@ -425,6 +428,17 @@ class Hauptfenster(QMainWindow):
                 hinweis=u("Eine Vorlagendatei lesen und sagen, was darin steht "
                           "— bevor sie in den Arbeitsordner kommt"),
             )
+
+        # Erweiterungen tragen sich oberhalb des Trenners ein; darunter
+        # steht, womit man sie ein- und ausschaltet. "E&rweiterungen":
+        # Alt+E gehoert schon den Einstellungen.
+        self.erweiterungsmenue = self.menuBar().addMenu(u("E&rweiterungen"))
+        self.erweiterungsmenue.setToolTipsVisible(True)
+        self._erweiterungstrenner = self.erweiterungsmenue.addSeparator()
+        aktion(u("Erweiterungen &verwalten…"), self.erweiterungen_verwalten,
+               menue=self.erweiterungsmenue,
+               hinweis=u("Eingebaute und eigene Erweiterungen ein- und ausschalten"))
+        self._erweiterungen_einrichten()
 
         hilfe = self.menuBar().addMenu(u("&Hilfe"))
         aktion(u("&Dokumentation"), self.dokumentation, "F1", menue=hilfe,
@@ -1436,6 +1450,82 @@ class Hauptfenster(QMainWindow):
         if hinweise is None and len(eigener) > vorher:
             self._hinweise_zeigen(eigener)
         return vorlagen
+
+    # -- Erweiterungen ------------------------------------------------------
+
+    def _erweiterungswahl(self) -> tuple[set[str], set[str]]:
+        """(eingeschaltete fremde, ausgeschaltete eingebaute) aus der Conf."""
+        return (
+            erweiterungen.wahl_lesen(self.einstellungen.value("erweiterungen_an", "")),
+            erweiterungen.wahl_lesen(self.einstellungen.value("erweiterungen_aus", "")),
+        )
+
+    def _ohne_fremde(self) -> bool:
+        return bool(os.environ.get(erweiterungen.OHNE_FREMDE))
+
+    def _erweiterungen_einrichten(self) -> None:
+        """Findet die Erweiterungen und laesst die eingeschalteten sich eintragen.
+
+        Was dabei schiefgeht, nimmt das Programm nicht mit: die Erweiterung
+        wird uebergangen, der Grund einmal gezeigt und im Dialog
+        *Erweiterungen verwalten* festgehalten.
+        """
+        try:
+            orte = pfade.erweiterungsordner_alle()
+        except OSError:
+            orte = []
+        self.erweiterungen = erweiterungen.finden(orte)
+        an, aus = self._erweiterungswahl()
+        uebergangen = []
+        for fund in self.erweiterungen:
+            if not erweiterungen.eingeschaltet(fund, an, aus):
+                continue
+            if not fund.eingebaut and self._ohne_fremde():
+                continue
+            erweiterungen.laden(fund)
+            if fund.erweiterung is not None and not fund.fehler:
+                try:
+                    fund.erweiterung.einrichten(Schnittstelle(
+                        self, self.erweiterungsmenue, self._erweiterungstrenner, fund
+                    ))
+                except Exception as fehler:  # noqa: BLE001 - Code einer Erweiterung
+                    fund.fehler = f"{type(fehler).__name__}: {fehler}"
+            if fund.fehler:
+                uebergangen.append(f"{u(fund.name)}: {fund.fehler}")
+        if uebergangen:
+            QMessageBox.warning(
+                self, u("Erweiterungen übergangen"),
+                u("Diese Erweiterungen wurden nicht geladen; das Programm läuft "
+                  "ohne sie weiter.\n\n{0}").format("\n".join(uebergangen)),
+            )
+
+    def erweiterungen_verwalten(self) -> None:
+        """Erweiterungen ein- und ausschalten - wirksam ab dem naechsten Start."""
+        an, aus = self._erweiterungswahl()
+        try:
+            ordner = pfade.erweiterungsordner()
+        except OSError:
+            ordner = None
+        dialog = ErweiterungenDialog(
+            self.erweiterungen, an, aus, ordner, self._ohne_fremde(), self
+        )
+        if dialog.exec() != ErweiterungenDialog.DialogCode.Accepted:
+            return
+        neu_an, neu_aus = dialog.wahl()
+        if (neu_an, neu_aus) == (an, aus):
+            return
+        self.einstellungen.setValue("erweiterungen_an", erweiterungen.wahl_schreiben(neu_an))
+        self.einstellungen.setValue("erweiterungen_aus", erweiterungen.wahl_schreiben(neu_aus))
+        self.statusBar().showMessage(
+            u("Die Wahl der Erweiterungen gilt ab dem nächsten Start"), 8000
+        )
+
+    def blattvorlagen_neu_laden(self) -> None:
+        """Liest die Blattvorlagen neu ein - etwa nach dem Speichern einer neuen."""
+        self.blattvorlagen = self._blattvorlagen_laden()
+        self.vorschau.blattvorlagen_setzen(
+            self.blattvorlagen, self.vorschau.blattvorlage.id
+        )
 
     def _hinweise_zeigen(self, hinweise=None) -> None:
         """Zeigt einmal, was beim Lesen der Vorlagen auffiel."""

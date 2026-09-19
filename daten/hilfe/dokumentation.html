@@ -763,7 +763,102 @@ Dialog zeigt vorher, was im Paket steckt. Beim Einspielen werden nur die
 bekannten Unterordner und nur YAML übernommen — ein Paket aus fremder Hand
 kann nichts außerhalb des Arbeitsordners anlegen.</p>
 
-<h2><a name="menue"></a>11 &nbsp; Menüs und Tastenkürzel</h2>
+<h2><a name="erweiterungen"></a>11 &nbsp; Erweiterungen</h2>
+
+<p>Das Menü <b>Erweiterungen</b> trägt, was über den Kern des Programms
+hinausgeht. Eingebaut ist bisher der <b>Blattvorlagen-Editor</b>; eigene
+Erweiterungen lassen sich dazulegen.</p>
+
+<h3>11.1 &nbsp; Der Blattvorlagen-Editor</h3>
+
+<p><b>Erweiterungen ▸ Blattvorlagen-Editor…</b> zeigt links die Werte einer
+Blattvorlage und rechts ein Blatt, gezeichnet genau wie Vorschau und PDF. Oben
+steht die <i>Ausgangsvorlage</i> — anfangs die gerade gewählte, jede andere
+lässt sich dort holen. Jede Änderung ist nach einem Augenblick am Blatt zu
+sehen: Rand, Kopfzeile, Schriftfeld und Zeilenhöhen, die vier Schriftgrößen,
+die Maße der Verteilerbelegung samt Kabelblock, die Schalter für DA-Nummern
+und den quer gestellten Kabelnamen und die <b>Spalten des Leistenblatts</b> —
+Feld, Überschrift, Anteil an der Breite und Ausrichtung, mit
+<i>Hinzufügen</i>, <i>Entfernen</i>, <i>Nach oben</i> und <i>Nach unten</i>.
+Über dem Blatt wird gewählt, welches zu sehen ist; gezeigt wird der offene
+Verteiler, sonst ein Beispiel.</p>
+
+<p>Was das Programm beim Lesen einer Vorlagendatei abwiese, steht als roter
+Satz unter dem Blatt, und gespeichert werden kann dann nicht. <b>Als neue
+Vorlage speichern…</b> fragt nach einem Namen und legt eine <b>neue</b> Datei
+im Arbeitsordner an (<code>blattvorlagen/</code>) — eine vorhandene Vorlage
+wird nie überschrieben, auch eine eigene nicht; bei gleichem Namen bekommt die
+Datei eine Nummer angehängt. In der Datei steht nur, was von der eingebauten
+Vorgabe abweicht, wie in einer von Hand geschriebenen (Abschnitt 7.1).
+Gewählt wird die neue Vorlage wie jede andere unter <i>Einstellungen ▸
+Blattvorlage</i>. Die Aufteilung des Schriftfeldes stellt der Editor nicht
+ein; sie kommt aus der Ausgangsvorlage.</p>
+
+<h3>11.2 &nbsp; Erweiterungen verwalten</h3>
+
+<p><b>Erweiterungen ▸ Erweiterungen verwalten…</b> listet jede gefundene
+Erweiterung mit Haken, Herkunft und Beschreibung — oder mit dem Grund, warum
+sie sich nicht laden ließ. Eingebaute sind eingeschaltet, eigene erst, wenn
+man sie einschaltet. Die Wahl gilt ab dem nächsten Start und steht in der
+<code>Verteilerly.conf</code>.</p>
+
+<h3>11.3 &nbsp; Eine eigene Erweiterung schreiben</h3>
+
+<p>Eine Erweiterung ist eine Python-Datei — oder ein Ordner mit
+<code>__init__.py</code> — im Ordner <code>erweiterungen</code> des
+Arbeitsordners; <i>Erweiterungen verwalten</i> nennt ihn und öffnet ihn auf
+Knopfdruck. <b>Eine eigene Erweiterung ist Programmcode und läuft mit allen
+Rechten von Verteilerly.</b> Darum wird sie erst ausgeführt, wenn sie
+eingeschaltet ist; bis dahin liest das Programm nur die erste Zeile ihres
+Docstrings. Sie kann alles benutzen, was im Programm steckt — Qt über PySide6,
+YAML, ReportLab, openpyxl und die Module von Verteilerly —, aber keine
+weiteren Bibliotheken.</p>
+
+<pre>"""Hallo: sagt Hallo in der Statuszeile."""
+from verteilerly.erweiterungen import Erweiterung
+
+
+class Hallo(Erweiterung):
+    kennung = "hallo"
+    name = "Hallo"
+    beschreibung = "Sagt Hallo in der Statuszeile"
+
+    def einrichten(self, programm):
+        programm.menueeintrag("Hallo sagen",
+                              lambda: programm.meldung("Hallo!"))
+
+
+erweiterung = Hallo()</pre>
+
+<p>Das Objekt <code>erweiterung</code> ist, was das Programm sucht. In
+<code>einrichten()</code> bekommt es die Schnittstelle <code>programm</code>:</p>
+
+<table border="1" cellspacing="0" cellpadding="5">
+<tr><th>Aufruf</th><th>Was er tut</th></tr>
+<tr><td><code>menueeintrag(text, aufruf, hinweis, kuerzel)</code></td><td>Ein
+Eintrag im Menü Erweiterungen. Ein Fehler im Aufruf wird angezeigt, statt das
+Programm anzuhalten.</td></tr>
+<tr><td><code>projekt()</code></td><td>Der offene Verteiler samt Projektdaten —
+oder <code>None</code>.</td></tr>
+<tr><td><code>blattvorlagen()</code>, <code>blattvorlage()</code></td><td>Alle
+Blattvorlagen und die gerade gewählte.</td></tr>
+<tr><td><code>blattvorlagen_neu_laden()</code></td><td>Liest die Blattvorlagen
+neu ein.</td></tr>
+<tr><td><code>blattvorlagenordner()</code></td><td>Wohin eigene Blattvorlagen
+geschrieben werden.</td></tr>
+<tr><td><code>meldung(text)</code></td><td>Ein Satz in der Statuszeile.</td></tr>
+<tr><td><code>farben()</code></td><td>Der Farbsatz des Erscheinungsbilds.</td></tr>
+<tr><td><code>fenster</code></td><td>Das Hauptfenster, etwa als Eltern eines
+eigenen Dialogs.</td></tr>
+</table>
+
+<p>Lässt sich eine Erweiterung nicht laden oder einrichten, wird sie
+übergangen, und das Programm sagt beim Start, woran es lag. Verhindert eine
+eigene Erweiterung den Start, hilft der Aufruf mit
+<code>--ohne-fremde-erweiterungen</code>: dann lädt das Programm keine eigene,
+und sie lässt sich unter <i>Erweiterungen verwalten</i> ausschalten.</p>
+
+<h2><a name="menue"></a>12 &nbsp; Menüs und Tastenkürzel</h2>
 
 <table border="1" cellspacing="0" cellpadding="5">
 <tr><th>Menü</th><th>Eintrag</th><th>Kürzel</th></tr>
@@ -797,6 +892,8 @@ kann nichts außerhalb des Arbeitsordners anlegen.</p>
 <tr><td rowspan="3"><b>Tools</b></td><td>Verteilervorlage prüfen…</td><td></td></tr>
 <tr><td>Blattvorlage prüfen…</td><td></td></tr>
 <tr><td>Kabeltypen prüfen…</td><td></td></tr>
+<tr><td rowspan="2"><b>Erweiterungen</b></td><td>Blattvorlagen-Editor…</td><td></td></tr>
+<tr><td>Erweiterungen verwalten…</td><td></td></tr>
 <tr><td rowspan="2"><b>Hilfe</b></td><td>Dokumentation</td><td>F1</td></tr>
 <tr><td>Über Verteilerly</td><td></td></tr>
 </table>
@@ -809,7 +906,7 @@ ein Kabel liegt, <i>Speichern</i> nur, wenn es etwas zu speichern gibt. Jeder
 Eintrag trägt einen Statushinweis, der auch im ausgegrauten Zustand erscheint
 und sagt, wofür er da ist.</p>
 
-<h2><a name="ueber"></a>12 &nbsp; Auskunft über das Programm</h2>
+<h2><a name="ueber"></a>13 &nbsp; Auskunft über das Programm</h2>
 
 <p><b>Hilfe ▸ Dokumentation</b> (F1) öffnet diese Seite: links das
 Verzeichnis, rechts der Text.</p>

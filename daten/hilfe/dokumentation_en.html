@@ -746,7 +746,101 @@ what is in the package. On restoring, only the known subfolders and only YAML
 are taken over — a package from someone else cannot create anything outside the
 working folder.</p>
 
-<h2><a name="menue"></a>11 &nbsp; Menus and keyboard shortcuts</h2>
+<h2><a name="erweiterungen"></a>11 &nbsp; Extensions</h2>
+
+<p>The <b>Extensions</b> menu carries what goes beyond the core of the
+program. Built in so far is the <b>sheet template editor</b>; extensions of
+your own can be added.</p>
+
+<h3>11.1 &nbsp; The sheet template editor</h3>
+
+<p><b>Extensions ▸ Sheet template editor…</b> shows the values of a sheet
+template on the left and a sheet on the right, drawn exactly like the preview
+and the PDF. At the top is the <i>starting template</i> — at first the one
+currently chosen, any other can be fetched there. Every change shows on the
+sheet after a moment: margin, header, title block and row heights, the four
+font sizes, the measurements of the frame layout including the cable block,
+the switches for pair numbers and the cable name turned across, and the
+<b>columns of the strip sheet</b> — field, heading, share of the width and
+alignment, with <i>Add</i>, <i>Remove</i>, <i>Up</i> and <i>Down</i>. Above the
+sheet you choose which one is shown; shown is the open frame, otherwise an
+example.</p>
+
+<p>Whatever the program would reject when reading a template file appears as
+a red sentence below the sheet, and then it cannot be saved. <b>Save as new
+template…</b> asks for a name and creates a <b>new</b> file in the working
+folder (<code>blattvorlagen/</code>) — an existing template is never
+overwritten, not even one of your own; with the same name the file gets a
+number appended. The file only holds what differs from the built-in default,
+like a hand-written one (section 7.1). The new template is chosen like any
+other under <i>Settings ▸ Sheet template</i>. The layout of the title block is
+not set in the editor; it comes from the starting template.</p>
+
+<h3>11.2 &nbsp; Managing extensions</h3>
+
+<p><b>Extensions ▸ Manage extensions…</b> lists every extension found with a
+check mark, its origin and description — or the reason why it could not be
+loaded. Built-in ones are switched on, your own ones only once you switch them
+on. The choice applies from the next start and is kept in the
+<code>Verteilerly.conf</code>.</p>
+
+<h3>11.3 &nbsp; Writing an extension of your own</h3>
+
+<p>An extension is a Python file — or a folder with <code>__init__.py</code> —
+in the <code>erweiterungen</code> folder of the working folder; <i>Manage
+extensions</i> names it and opens it at the press of a button. <b>An extension
+of your own is program code and runs with all the rights of
+Verteilerly.</b> That is why it is only executed once it is switched on; until
+then the program only reads the first line of its docstring. It can use
+everything the program carries — Qt through PySide6, YAML, ReportLab,
+openpyxl and the modules of Verteilerly —, but no further libraries.</p>
+
+<pre>"""Hello: says hello in the status bar."""
+from verteilerly.erweiterungen import Erweiterung
+
+
+class Hallo(Erweiterung):
+    kennung = "hallo"
+    name = "Hello"
+    beschreibung = "Says hello in the status bar"
+
+    def einrichten(self, programm):
+        programm.menueeintrag("Say hello",
+                              lambda: programm.meldung("Hello!"))
+
+
+erweiterung = Hallo()</pre>
+
+<p>The object <code>erweiterung</code> is what the program looks for. In
+<code>einrichten()</code> it gets the interface <code>programm</code>:</p>
+
+<table border="1" cellspacing="0" cellpadding="5">
+<tr><th>Call</th><th>What it does</th></tr>
+<tr><td><code>menueeintrag(text, aufruf, hinweis, kuerzel)</code></td><td>An
+entry in the Extensions menu. An error in the call is shown instead of
+stopping the program.</td></tr>
+<tr><td><code>projekt()</code></td><td>The open frame including the project
+data — or <code>None</code>.</td></tr>
+<tr><td><code>blattvorlagen()</code>, <code>blattvorlage()</code></td><td>All
+sheet templates and the one currently chosen.</td></tr>
+<tr><td><code>blattvorlagen_neu_laden()</code></td><td>Reads the sheet templates
+anew.</td></tr>
+<tr><td><code>blattvorlagenordner()</code></td><td>Where your own sheet
+templates are written.</td></tr>
+<tr><td><code>meldung(text)</code></td><td>A sentence in the status
+bar.</td></tr>
+<tr><td><code>farben()</code></td><td>The color set of the appearance.</td></tr>
+<tr><td><code>fenster</code></td><td>The main window, for instance as the parent
+of a dialog of your own.</td></tr>
+</table>
+
+<p>If an extension cannot be loaded or set up, it is skipped, and the program
+says at start what went wrong. If an extension of your own prevents the start,
+calling the program with <code>--ohne-fremde-erweiterungen</code> helps: then
+it loads none of your own, and it can be switched off under <i>Manage
+extensions</i>.</p>
+
+<h2><a name="menue"></a>12 &nbsp; Menus and keyboard shortcuts</h2>
 
 <table border="1" cellspacing="0" cellpadding="5">
 <tr><th>Menu</th><th>Entry</th><th>Shortcut</th></tr>
@@ -780,6 +874,8 @@ working folder.</p>
 <tr><td rowspan="3"><b>Tools</b></td><td>Check frame template…</td><td></td></tr>
 <tr><td>Check sheet template…</td><td></td></tr>
 <tr><td>Check cable types…</td><td></td></tr>
+<tr><td rowspan="2"><b>Extensions</b></td><td>Sheet template editor…</td><td></td></tr>
+<tr><td>Manage extensions…</td><td></td></tr>
 <tr><td rowspan="2"><b>Help</b></td><td>Documentation</td><td>F1</td></tr>
 <tr><td>About Verteilerly</td><td></td></tr>
 </table>
@@ -792,7 +888,7 @@ lies, <i>Save</i> only if there is something to save. Every entry carries a
 status hint that appears in the grayed-out state as well and says what it is
 for.</p>
 
-<h2><a name="ueber"></a>12 &nbsp; Information about the program</h2>
+<h2><a name="ueber"></a>13 &nbsp; Information about the program</h2>
 
 <p><b>Help ▸ Documentation</b> (F1) opens this page: on the left the table of
 contents, on the right the text.</p>

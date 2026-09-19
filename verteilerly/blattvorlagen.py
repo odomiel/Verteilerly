@@ -331,6 +331,96 @@ def blattvorlage_aus_yaml(
     return vorlage
 
 
+# -- Als YAML --------------------------------------------------------------
+
+
+def _zahlwert(wert):
+    """12.0 als 12 - so, wie es ein Mensch in die Datei schriebe."""
+    if isinstance(wert, float) and wert.is_integer():
+        return int(wert)
+    return wert
+
+
+def _abweichung(ziel: dict, schluessel: str, wert, vorgabe) -> None:
+    if wert != vorgabe:
+        ziel[schluessel] = _zahlwert(wert)
+
+
+def blattvorlage_als_yaml(vorlage: Blattvorlage) -> dict:
+    """Die Vorlage als Inhalt einer Datei - nur, was vom Standard abweicht.
+
+    Die Umkehrung von ``blattvorlage_aus_yaml``: eine Datei sagt, was sie
+    anders will als die eingebaute Vorgabe, und bleibt so von Hand lesbar.
+    """
+    inhalt: dict = {"id": vorlage.id, "name": vorlage.name}
+    if vorlage.beschreibung:
+        inhalt["beschreibung"] = vorlage.beschreibung
+    if vorlage.standard:
+        inhalt["standard"] = True
+    for feld in ("rand", "schriftfeld_hoehe", "kopfzeile_hoehe",
+                 "zeilenhoehe_max", "zeilenhoehe_min"):
+        _abweichung(inhalt, feld, getattr(vorlage, feld), getattr(STANDARD, feld))
+    schrift: dict = {}
+    for groesse in SCHRIFTSCHLUESSEL:
+        _abweichung(schrift, groesse, getattr(vorlage, f"schrift_{groesse}"),
+                    getattr(STANDARD, f"schrift_{groesse}"))
+    if schrift:
+        inhalt["schrift"] = schrift
+    if vorlage.spalten != STANDARD.spalten:
+        inhalt["spalten"] = [
+            {"feld": s.feld, "ueberschrift": s.ueberschrift,
+             "anteil": _zahlwert(s.anteil), "ausrichtung": s.ausrichtung}
+            for s in vorlage.spalten
+        ]
+    if vorlage.schriftfeld != STANDARD.schriftfeld:
+        inhalt["schriftfeld"] = [list(spalte) for spalte in vorlage.schriftfeld]
+    _abweichung(inhalt, "schriftfeld_art", vorlage.schriftfeld_art, STANDARD.schriftfeld_art)
+    if vorlage.schriftfeld_anteile:
+        inhalt["schriftfeld_anteile"] = [_zahlwert(a) for a in vorlage.schriftfeld_anteile]
+    for feld in ("buchten_je_blatt", "da_nummern", "kabel_gedreht"):
+        _abweichung(inhalt, feld, getattr(vorlage, feld), getattr(STANDARD, feld))
+    belegung: dict = {}
+    for feld in BELEGUNGSSCHLUESSEL:
+        _abweichung(belegung, feld, getattr(vorlage, feld), getattr(STANDARD, feld))
+    if belegung:
+        inhalt["belegung"] = belegung
+    return inhalt
+
+
+def freie_kennung(name: str, vergeben, ordner: pathlib.Path) -> str:
+    """Eine Kennung aus dem Namen, die weder vergeben ist noch als Datei liegt."""
+    from .vorlagen import kennung_bilden
+
+    grund = kennung_bilden(name)
+    kennung, zaehler = grund, 2
+    while kennung in vergeben or (pathlib.Path(ordner) / f"{kennung}.yaml").exists():
+        kennung = f"{grund}-{zaehler}"
+        zaehler += 1
+    return kennung
+
+
+def blattvorlage_speichern(vorlage: Blattvorlage, ordner: pathlib.Path) -> pathlib.Path:
+    """Schreibt die Vorlage als neue Datei - eine vorhandene bleibt, wie sie ist."""
+    ordner = pathlib.Path(ordner)
+    ordner.mkdir(parents=True, exist_ok=True)
+    ziel = ordner / f"{vorlage.id}.yaml"
+    text = (
+        "# Blattvorlage fuer Verteilerly, geschrieben vom Blattvorlagen-Editor.\n"
+        "# Darin steht nur, was von der eingebauten Vorgabe abweicht.\n"
+        + yaml.safe_dump(
+            blattvorlage_als_yaml(vorlage), allow_unicode=True, sort_keys=False
+        )
+    )
+    try:
+        with open(ziel, "x", encoding="utf-8") as datei:
+            datei.write(text)
+    except FileExistsError:
+        raise BlattvorlagenFehler(
+            u("{0} gibt es schon - überschrieben wird nichts").format(ziel.name)
+        ) from None
+    return ziel
+
+
 def _namenszeile(text: str, name: str) -> str:
     """Setzt ``name:`` in einer YAML-Datei neu - und laesst alles andere.
 

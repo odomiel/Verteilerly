@@ -549,3 +549,94 @@ Vorlage geprüft: Template checked
 '{0} prüfen': 'Check {0}'
 '{0} prüfen…': 'Check {0}…'
 Verteilervorlage: frame template
+# Erweiterungen und Blattvorlagen-Editor
+'&Blattvorlagen-Editor…': '&Sheet template editor…'
+(kein beschreibbarer Ordner): (no writable folder)
+Als neue Vorlage speichern: Save as new template
+Als neue Vorlage speichern…: Save as new template…
+Anteil: Share
+'Ausgangsvorlage:': 'Starting template:'
+Ausrichtung: Alignment
+Beispiel: Example
+Beschreibung: Description
+'Beschreibung:': 'Description:'
+Blattvorlage „{0}“ gespeichert ({1}) — zu wählen unter Einstellungen ▸ Blattvorlage: Sheet template “{0}” saved ({1}) — choose it under Settings ▸ Sheet template
+Blattvorlagen-Editor: Sheet template editor
+'Buchten je Blatt:': 'Bays per sheet:'
+Die Kennung {0!r} trägt schon eine eingebaute Erweiterung: The identifier {0!r} already belongs to a built-in extension
+Die Wahl der Erweiterungen gilt ab dem nächsten Start: The choice of extensions applies from the next start
+Die Änderungen sind noch nicht gespeichert. Verwerfen?: The changes are not saved yet. Discard them?
+? 'Diese Erweiterungen wurden nicht geladen; das Programm läuft ohne sie weiter.
+
+
+  {0}'
+: 'These extensions were not loaded; the program carries on without them.
+
+
+  {0}'
+E&rweiterungen: E&xtensions
+'Eigene Erweiterungen liegen in:': 'Your own extensions are in:'
+Eine Blattvorlage anpassen und als neue speichern — mit Vorschau am Blatt: Adjust a sheet template and save it as a new one — with a preview of the sheet
+? Eingebaute Erweiterungen sind eingeschaltet, eigene erst, wenn Sie sie einschalten. Eine eigene Erweiterung ist Programmcode und läuft mit allen Rechten von Verteilerly — schalten Sie nur ein, was Sie kennen. Die Wahl gilt ab dem nächsten Start.
+: Built-in extensions are switched on, your own ones only once you switch them on. An extension of your own is program code and runs with all the rights of Verteilerly — only switch on what you know. The choice applies from the next start.
+Eingebaute und eigene Erweiterungen ein- und ausschalten: Switch built-in extensions and your own ones on and off
+Entfernen: Remove
+Erweiterung: Extension
+Erweiterungen: Extensions
+Erweiterungen &verwalten…: '&Manage extensions…'
+Erweiterungen verwalten: Manage extensions
+Erweiterungen übergangen: Extensions skipped
+Gezeigt wird der offene Verteiler.: Shown is the open frame.
+Gezeigt wird ein Beispielverteiler — es ist keiner geöffnet.: Shown is an example frame — none is open.
+Herkunft: Origin
+Hinzufügen: Add
+In diesem Lauf sind eigene Erweiterungen abgeschaltet (--ohne-fremde-erweiterungen).: In this run your own extensions are switched off (--ohne-fremde-erweiterungen).
+Musterleitung Obergeschoss: Sample cable upper floor
+Nach oben: Up
+Nach unten: Down
+'Name der neuen Blattvorlage:': 'Name of the new sheet template:'
+'Nicht geladen: {0}': 'Not loaded: {0}'
+Ordner öffnen: Open folder
+Schalter: Switches
+'Schriftfeld:': 'Title block:'
+Spalten des Leistenblatts: Columns of the strip sheet
+angepasst: adjusted
+eingebaut: built-in
+kein Objekt „erweiterung“ vom Typ Erweiterung: no object “erweiterung” of type Erweiterung
+'{0} gibt es schon - überschrieben wird nichts': '{0} exists already - nothing is overwritten'
+? '{0} ist auf einen Fehler gelaufen:
+
+
+  {1}'
+: '{0} ran into an error:
+
+
+  {1}'
+Überschrift: Heading
+Abstand der Buchten: Gap between bays
+Abstand der Leisten: Gap between strips
+Ader: Wire
+Blatt: Sheet
+DA-Nummern in der Verteilerbelegung: Pair numbers in the frame layout
+Füllgrad des Kabelnamens: Fill ratio of the cable name
+Groß: Large
+Kabelname quer in der Kabelspalte: Cable name across in the cable column
+Klein: Small
+Kopfzeile: Header
+Leistenbeschriftung: Strip label
+Mit Anschriften: With addresses
+Mittel: Medium
+Normal: Regular
+Polster um den Kabelnamen: Padding around the cable name
+Rand: Margin
+Schriftfeld: Title block
+Schriftgrößen: Font sizes
+Standard: Default
+Werte einer Blattvorlage ändern, die Wirkung sofort am Blatt sehen und als neue Vorlage speichern: Change the values of a sheet template, see the effect on the sheet at once and save it as a new template
+Zeilenhöhe höchstens: Row height at most
+Zeilenhöhe mindestens: Row height at least
+Zellenbreite: Cell width
+Zellenhöhe: Cell height
+links: left
+mittig: centered
+rechts: right

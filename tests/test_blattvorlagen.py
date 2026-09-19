@@ -113,6 +113,76 @@ class TestAusYaml(unittest.TestCase):
             )
 
 
+class TestAlsYaml(unittest.TestCase):
+    """Die Umkehrung des Lesens - fuer den Blattvorlagen-Editor."""
+
+    def test_der_standard_schreibt_nur_kennung_und_name(self):
+        import dataclasses
+
+        from verteilerly.blattvorlagen import STANDARD, blattvorlage_als_yaml
+
+        vorlage = dataclasses.replace(STANDARD, id="x", name="X", standard=False,
+                                      beschreibung="")
+        self.assertEqual(blattvorlage_als_yaml(vorlage), {"id": "x", "name": "X"})
+
+    def test_hin_und_zurueck_bleibt_alles_gleich(self):
+        import dataclasses
+
+        import yaml
+
+        from verteilerly.blattvorlagen import (
+            STANDARD,
+            blattvorlage_als_yaml,
+            blattvorlage_aus_yaml,
+        )
+
+        eigene = dataclasses.replace(
+            STANDARD, id="probe", name="Probe", standard=False, rand=17.5,
+            schrift_klein=6.0, spalten=STANDARD.spalten[:3], da_nummern=True,
+            fuellgrad_kabel=0.5, zelle_hoehe=7.25, buchten_je_blatt=3,
+        )
+        vorlagen = [BEISPIELVORLAGE, eigene]
+        for datei in sorted(blattvorlagenordner().glob("*.yaml")):
+            vorlagen.append(blattvorlage_aus_yaml(
+                yaml.safe_load(datei.read_text(encoding="utf-8")), datei.name
+            ))
+        for vorlage in vorlagen:
+            with self.subTest(vorlage=vorlage.id):
+                inhalt = yaml.safe_load(yaml.safe_dump(blattvorlage_als_yaml(vorlage)))
+                self.assertEqual(blattvorlage_aus_yaml(inhalt), vorlage)
+
+    def test_ganze_zahlen_stehen_ohne_komma(self):
+        import dataclasses
+
+        from verteilerly.blattvorlagen import STANDARD, blattvorlage_als_yaml
+
+        inhalt = blattvorlage_als_yaml(dataclasses.replace(STANDARD, id="x", name="X", rand=20.0))
+        self.assertIsInstance(inhalt["rand"], int)
+
+    def test_speichern_ueberschreibt_nie(self):
+        import dataclasses
+
+        from verteilerly.blattvorlagen import (
+            STANDARD,
+            BlattvorlagenFehler,
+            blattvorlage_speichern,
+            freie_kennung,
+        )
+
+        with tempfile.TemporaryDirectory() as name:
+            ordner = pathlib.Path(name)
+            vorlage = dataclasses.replace(STANDARD, id="eng", name="Eng", standard=False)
+            ziel = blattvorlage_speichern(vorlage, ordner)
+            self.assertEqual(ziel, ordner / "eng.yaml")
+            vorher = ziel.read_text(encoding="utf-8")
+            with self.assertRaises(BlattvorlagenFehler):
+                blattvorlage_speichern(dataclasses.replace(vorlage, rand=30.0), ordner)
+            self.assertEqual(ziel.read_text(encoding="utf-8"), vorher)
+            self.assertEqual(freie_kennung("Eng", set(), ordner), "eng-2")
+            self.assertEqual(freie_kennung("Eng", {"eng-2"}, ordner), "eng-3")
+            self.assertEqual(freie_kennung("Ganz Neu", set(), ordner), "ganz-neu")
+
+
 class TestMitgelieferte(unittest.TestCase):
     def setUp(self):
         self.vorlagen = Blattvorlagen.laden(blattvorlagenordner())

@@ -130,6 +130,20 @@ class TestWortliste(unittest.TestCase):
         gebraucht |= set(BLATTART_BESCHRIFTUNG.values())
         gebraucht |= set(BLATTART_NAMEN.values())
         gebraucht |= {t for t in UEBERSCHRIFTEN if t}
+        # Der Blattvorlagen-Editor fuehrt seine Beschriftungen als Tabellen,
+        # die eingebauten Erweiterungen Name und Beschreibung als Attribute.
+        from verteilerly import erweiterungen
+        from verteilerly.erweiterungen.blattvorlageneditor import dialog as editor
+
+        for gruppe, felder in editor.ZAHLEN:
+            gebraucht.add(gruppe)
+            gebraucht |= {feld[1] for feld in felder}
+        gebraucht |= {beschriftung for _feld, beschriftung in editor.SCHALTER}
+        for tabelle in (editor.FELDNAMEN, editor.AUSRICHTUNGSNAMEN,
+                        editor.SCHRIFTFELDNAMEN):
+            gebraucht |= set(tabelle.values())
+        for fund in erweiterungen.finden():
+            gebraucht |= {fund.name, fund.beschreibung}
         uebrig = sorted(set(self.katalog) - gebraucht)
         self.assertEqual(uebrig, [])
 
