@@ -51,6 +51,7 @@ from ..blattvorlagen import (
 from ..farbcodes import Kabeltypen
 from ..modell import (
     BLATTART_BESCHRIFTUNG,
+    BLATTART_NAMEN,
     BLATTARTEN,
     BLATTBESCHRIFTUNG,
     BRIEFKOPF_BESCHRIFTUNG,
@@ -549,6 +550,58 @@ class PaketDialog(PassenderDialog):
 
     def auswahl(self) -> set[str]:
         return {teil for teil, haken in self.haken.items() if haken.isChecked()}
+
+
+class BlattwahlDialog(PassenderDialog):
+    """Welche Blattarten ins PDF kommen.
+
+    Je Blattart ein Haken mit der Zahl ihrer Blaetter dahinter. Ohne einen
+    einzigen Haken gaebe es nichts auszugeben - dann ist der Knopf aus.
+    """
+
+    def __init__(
+        self, anzahlen: dict, gewaehlt, parent: QWidget | None = None
+    ) -> None:
+        super().__init__(parent)
+        self.setWindowTitle(u("PDF ausgeben"))
+
+        self.haken: dict[str, QCheckBox] = {}
+        felder = QVBoxLayout()
+        for art in BLATTARTEN:
+            anzahl = int(anzahlen.get(art, 0))
+            haken = QCheckBox(u(BLATTART_NAMEN[art]) + u(" ({0})").format(anzahl))
+            haken.setChecked(art in gewaehlt and anzahl > 0)
+            haken.setEnabled(anzahl > 0)
+            self.haken[art] = haken
+            felder.addWidget(haken)
+        kasten = QGroupBox(u("Blätter"))
+        kasten.setLayout(felder)
+
+        aufbau = QVBoxLayout(self)
+        hinweis = QLabel(u(
+            "Gezählt wird, was hineinkommt: ohne Deckblatt beginnt die "
+            "Verteilerbelegung bei Blatt 1."
+        ))
+        hinweis.setWordWrap(True)
+        aufbau.addWidget(hinweis)
+        aufbau.addWidget(kasten)
+        knoepfe = _knopfleiste(self)
+        knoepfe.button(QDialogButtonBox.StandardButton.Ok).setText(u("Weiter…"))
+        self.knoepfe = knoepfe
+        aufbau.addWidget(knoepfe)
+        for haken in self.haken.values():
+            haken.toggled.connect(self._knopf_auffrischen)
+        self._knopf_auffrischen()
+        self.resize(360, 240)
+
+    def _knopf_auffrischen(self) -> None:
+        """Ohne einen einzigen Haken gibt es nichts auszugeben."""
+        self.knoepfe.button(QDialogButtonBox.StandardButton.Ok).setEnabled(
+            bool(self.auswahl())
+        )
+
+    def auswahl(self) -> set[str]:
+        return {art for art, haken in self.haken.items() if haken.isChecked()}
 
 
 class VerteilervorlagenDialog(PassenderDialog):

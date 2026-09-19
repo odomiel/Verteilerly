@@ -465,7 +465,10 @@ QPainter, die PDF-Ausgabe mit ReportLab: eine einzige Quelle für das
 Blattbild, Vorschau und Ausdruck können nicht auseinanderlaufen.
 
 Die drei Wege aus dem Programm heraus stehen unter *Datei ▸ Exportieren*
-beieinander — PDF (Strg+E), Excel-Mappe und CSV. In der Werkzeugleiste steht
+beieinander — PDF (Strg+E), Excel-Mappe und CSV. Vor dem PDF fragt ein kleiner Dialog, welche
+Blattarten hineinkommen — Deckblatt, Verteilerbelegung, Leistenblätter;
+gezählt wird, was darin steht, und die Wahl bleibt in der `Verteilerly.conf`.
+In der Werkzeugleiste steht
 dafür **ein** Knopf: links *Export (PDF)*, rechts ein Pfeil, der dasselbe Menü
 öffnet; das zuletzt gewählte Format steht danach auf dem Knopf und in der
 `Verteilerly.conf`. Daneben steht der Ansichtsknopf, gebaut wie der Exportknopf: auf ihm

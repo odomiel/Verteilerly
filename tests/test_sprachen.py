@@ -116,6 +116,7 @@ class TestWortliste(unittest.TestCase):
         # aus Tabellen im Modell, nicht aus u("…") im Quelltext.
         from verteilerly.modell import (
             BLATTART_BESCHRIFTUNG,
+            BLATTART_NAMEN,
             BRIEFKOPF_BESCHRIFTUNG,
         )
         from verteilerly.gui.leistenansicht import UEBERSCHRIFTEN
@@ -127,6 +128,7 @@ class TestWortliste(unittest.TestCase):
         gebraucht |= {wie for _art, wie in ARTEN}
         gebraucht |= set(BRIEFKOPF_BESCHRIFTUNG.values())
         gebraucht |= set(BLATTART_BESCHRIFTUNG.values())
+        gebraucht |= set(BLATTART_NAMEN.values())
         gebraucht |= {t for t in UEBERSCHRIFTEN if t}
         uebrig = sorted(set(self.katalog) - gebraucht)
         self.assertEqual(uebrig, [])

@@ -42,7 +42,9 @@ from ..farbcodes import (
     farben_verwaist_loeschen,
     farbplan,
 )
+from ..layout import verteilerbelegungen
 from ..modell import (
+    BLATTARTEN,
     BRIEFKOPF_FELDER,
     Kabelabschnitt,
     ModellFehler,
@@ -56,6 +58,7 @@ from ..version import VERSION
 from ..vorlagen import Vorlagen
 from .dialoge import (
     BlattvorlagenDialog,
+    BlattwahlDialog,
     SuchDialog,
     VerteilervorlagenDialog,
     ProjektdatenDialog,
@@ -1088,14 +1091,42 @@ class Hauptfenster(QMainWindow):
         getattr(self, bekannt.get(self.exportformat, "pdf_ausgeben"))()
 
     def pdf_ausgeben(self) -> None:
-        """PDF ist das Pflichtformat."""
+        """PDF ist das Pflichtformat - welche Blaetter hinein, fragt ein Dialog."""
         self._format_merken("pdf")
+        if self.projekt is None:
+            return
+        blattarten = self._pdf_blaetter_waehlen()
+        if not blattarten:
+            return
         ziel = self._ausgabeziel(".pdf", PDFFILTER)
         if ziel is None:
             return
+        vorlage = self.vorschau.blattvorlage
         self._ausgeben(
-            lambda: pdf_schreiben(self.projekt, ziel, self.vorschau.blattvorlage), ziel
+            lambda: pdf_schreiben(self.projekt, ziel, vorlage, blattarten), ziel
         )
+
+    def _pdf_blaetter_waehlen(self) -> set[str] | None:
+        """Fragt, welche Blattarten ins PDF kommen - die letzte Wahl steht vor.
+
+        Gemerkt wird als Text mit Kommas: eine Liste gibt QSettings bei
+        einem einzigen Eintrag als blossen Text zurueck.
+        """
+        gemerkt = str(self.einstellungen.value("pdf_blaetter", ",".join(BLATTARTEN)))
+        gewaehlt = {art for art in gemerkt.split(",") if art in BLATTARTEN}
+        anzahlen = {
+            "deckblatt": 1,
+            "belegung": len(verteilerbelegungen(self.projekt, self.vorschau.blattvorlage)),
+            "leisten": len(self.projekt.verteiler.alle_leisten),
+        }
+        dialog = BlattwahlDialog(anzahlen, gewaehlt or set(BLATTARTEN), self)
+        if dialog.exec() != BlattwahlDialog.DialogCode.Accepted:
+            return None
+        auswahl = dialog.auswahl()
+        self.einstellungen.setValue(
+            "pdf_blaetter", ",".join(art for art in BLATTARTEN if art in auswahl)
+        )
+        return auswahl
 
     def xlsx_ausgeben(self) -> None:
         self._format_merken("xlsx")

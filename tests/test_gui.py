@@ -2065,6 +2065,53 @@ class TestMenuezustaende(unittest.TestCase):
         self.addCleanup(zweites.close)
         self.assertIs(zweites.ansicht_knopf.defaultAction(), zweites.aktion_uebersicht)
 
+    def test_der_blattwahldialog_laesst_nichts_leeres_zu(self):
+        from PySide6.QtWidgets import QDialogButtonBox
+        from verteilerly.gui.dialoge import BlattwahlDialog
+
+        dialog = BlattwahlDialog({"deckblatt": 1, "belegung": 1, "leisten": 4}, {"leisten"})
+        self.addCleanup(dialog.close)
+        self.assertEqual(dialog.auswahl(), {"leisten"})
+        self.assertIn("(4)", dialog.haken["leisten"].text())
+        weiter = dialog.knoepfe.button(QDialogButtonBox.StandardButton.Ok)
+        self.assertTrue(weiter.isEnabled())
+        dialog.haken["leisten"].setChecked(False)
+        self.assertFalse(weiter.isEnabled())
+
+    def test_das_pdf_traegt_nur_die_gewaehlten_blaetter(self):
+        """Abgewählt ist nicht im PDF - und beim nächsten Mal steht die Wahl vor."""
+        from pypdf import PdfReader
+        from verteilerly.gui.dialoge import BlattwahlDialog
+
+        f = self.fenster
+        self._projekt()
+        self.addCleanup(f.einstellungen.remove, "pdf_blaetter")
+        ziel = pathlib.Path(self.ordner.name) / "teil.pdf"
+
+        def nur_leisten(dialog):
+            dialog.haken["deckblatt"].setChecked(False)
+            dialog.haken["belegung"].setChecked(False)
+            return BlattwahlDialog.DialogCode.Accepted
+
+        with mock.patch.object(BlattwahlDialog, "exec", nur_leisten), \
+                mock.patch.object(f, "_ausgabeziel", return_value=ziel):
+            f.pdf_ausgeben()
+        self.assertEqual(len(PdfReader(str(ziel)).pages), 4)
+        self.assertEqual(f.einstellungen.value("pdf_blaetter"), "leisten")
+
+        gesehen = {}
+
+        def abbrechen(dialog):
+            gesehen["auswahl"] = dialog.auswahl()
+            return BlattwahlDialog.DialogCode.Rejected
+
+        with mock.patch.object(BlattwahlDialog, "exec", abbrechen), \
+                mock.patch.object(f, "_ausgabeziel") as dateidialog:
+            f.pdf_ausgeben()
+        self.assertEqual(gesehen["auswahl"], {"leisten"})
+        # Abgebrochen wird vor dem Dateidialog.
+        self.assertFalse(dateidialog.called)
+
     def test_der_knopf_gibt_das_gewaehlte_format_aus(self):
         self._projekt()
         self.fenster.exportformat_setzen("csv", ausgeben=False)

@@ -25,6 +25,25 @@ def _texte(blatt: Blatt) -> list[str]:
 
 
 class TestBlattfolge(unittest.TestCase):
+    def test_abgewaehlte_blattarten_fehlen_und_gezaehlt_wird_der_rest(self):
+        """Ohne Deckblatt beginnt die Verteilerbelegung bei Blatt 1."""
+        projekt = Projekt(verteiler=Verteiler.aus_geometrie(1, 4, 10, name="Probe"))
+        alle = blaetter(projekt)
+
+        def fusszeile(blatt):
+            return [e.text for e in blatt.elemente
+                    if isinstance(e, Text) and e.text.startswith("Blatt ")]
+
+        ohne_deckblatt = blaetter(projekt, blattarten={"belegung", "leisten"})
+        self.assertEqual(len(ohne_deckblatt), len(alle) - 1)
+        self.assertEqual(fusszeile(ohne_deckblatt[0]), [f"Blatt 1 von {len(alle) - 1}"])
+        self.assertEqual(ohne_deckblatt[0].titel, alle[1].titel)
+
+        nur_leisten = blaetter(projekt, blattarten={"leisten"})
+        self.assertEqual(len(nur_leisten), 4)
+        self.assertEqual(fusszeile(nur_leisten[-1]), ["Blatt 4 von 4"])
+        self.assertEqual(blaetter(projekt, blattarten=set()), [])
+
     def test_deckblatt_belegung_dann_je_leiste_eines(self):
         """Deckblatt, Belegung, dann je Leiste ein Blatt."""
         for buchten, leisten, da, erwartet in [

@@ -602,7 +602,8 @@ lines end before it, the cable stands as a block across its rows.</li>
 <table border="1" cellspacing="0" cellpadding="5">
 <tr><th>Way</th><th>What comes out</th></tr>
 <tr><td><b>File ▸ Export ▸ As PDF…</b> (Ctrl+E)</td><td>Cover sheet, frame layout and
-one sheet per strip — the required format.</td></tr>
+one sheet per strip — the required format. Single kinds of sheet can be
+left out.</td></tr>
 <tr><td><b>File ▸ Export ▸ As Excel workbook…</b></td><td>At the front the same sheets
 in the sheet layout, behind them the data as a table: <i>data per wire</i>,
 <i>cables per strip</i>, <i>project data</i> — filterable and
@@ -610,6 +611,15 @@ sortable.</td></tr>
 <tr><td><b>File ▸ Export ▸ As CSV…</b></td><td>Plain data: one row per wire at the top,
 the cables and the project data below.</td></tr>
 </table>
+
+<p><b>Which sheets go into the PDF</b> a small dialog asks before saving:
+<i>cover sheet</i>, <i>frame layout</i> and <i>strip sheets</i>, each with the
+number of its sheets behind it. Whatever is unchecked is missing from the PDF —
+cover sheet and frame layout, say, when only the strip sheets are to be printed
+anew. Only what goes in is counted: without a cover sheet the frame layout
+starts at <i>sheet 1</i>. Without a single check mark <i>Next…</i> is off. The
+choice is preset the next time; Excel workbook and CSV still carry
+everything.</p>
 
 <p>The Excel workbook takes over the order and width of the columns, the font
 sizes, the row heights, the merged cable block including its rotation and the

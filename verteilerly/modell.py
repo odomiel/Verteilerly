@@ -946,6 +946,13 @@ BLATTART_BESCHRIFTUNG = {
     "belegung": "Verteilerbelegung",
     "leisten": "Leistenblättern",
 }
+# Dieselben Blattarten, wie sie fuer sich heissen - die Beschriftung oben
+# steht im Dativ ("eigene Felder auf Leistenblaettern").
+BLATTART_NAMEN = {
+    "deckblatt": "Deckblatt",
+    "belegung": "Verteilerbelegung",
+    "leisten": "Leistenblätter",
+}
 
 
 @dataclass

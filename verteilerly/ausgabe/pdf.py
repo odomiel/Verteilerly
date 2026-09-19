@@ -25,7 +25,7 @@ from ..layout import (
     blaetter,
     textzeilen,
 )
-from ..modell import Projekt
+from ..modell import BLATTARTEN, Projekt
 from ..version import VERSION
 from . import AusgabeFehler
 
@@ -42,11 +42,14 @@ SCHRITT = 0.25
 
 
 def pdf_schreiben(
-    projekt: Projekt, ziel: pathlib.Path, vorlage: Blattvorlage = STANDARD
+    projekt: Projekt,
+    ziel: pathlib.Path,
+    vorlage: Blattvorlage = STANDARD,
+    blattarten=BLATTARTEN,
 ) -> pathlib.Path:
-    """Schreibt die vollstaendige Dokumentation als PDF."""
+    """Schreibt die Dokumentation als PDF - alle Blattarten oder die gewaehlten."""
     ziel = pathlib.Path(ziel)
-    seiten = blaetter(projekt, vorlage)
+    seiten = blaetter(projekt, vorlage, blattarten)
     if not seiten:
         raise AusgabeFehler("Der Verteiler hat keine Blätter.")
 

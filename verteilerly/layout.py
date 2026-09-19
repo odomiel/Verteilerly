@@ -15,6 +15,7 @@ from dataclasses import dataclass, field
 
 from .blattvorlagen import LINKS, MITTE, RECHTS, STANDARD, Blattvorlage
 from .modell import (
+    BLATTARTEN,
     BLATTBESCHRIFTUNG,
     LEERER_STIL,
     STILFELDER,
@@ -1546,11 +1547,24 @@ def _kabelklammern(
 # -- Blattfolge ------------------------------------------------------------
 
 
-def blaetter(projekt: Projekt, vorlage: Blattvorlage = STANDARD) -> list[Blatt]:
-    """Deckblatt, Verteilerbelegung, je Leiste ein Blatt."""
-    folge = [deckblatt(projekt, vorlage), *verteilerbelegungen(projekt, vorlage)]
-    for leiste in projekt.verteiler.alle_leisten:
-        folge.append(leistenblatt(projekt, leiste.nummer, vorlage))
+def blaetter(
+    projekt: Projekt,
+    vorlage: Blattvorlage = STANDARD,
+    blattarten=BLATTARTEN,
+) -> list[Blatt]:
+    """Deckblatt, Verteilerbelegung, je Leiste ein Blatt - soweit gewaehlt.
+
+    Gezaehlt wird, was herauskommt: ohne Deckblatt beginnt die
+    Verteilerbelegung bei Blatt 1.
+    """
+    folge: list[Blatt] = []
+    if "deckblatt" in blattarten:
+        folge.append(deckblatt(projekt, vorlage))
+    if "belegung" in blattarten:
+        folge += verteilerbelegungen(projekt, vorlage)
+    if "leisten" in blattarten:
+        for leiste in projekt.verteiler.alle_leisten:
+            folge.append(leistenblatt(projekt, leiste.nummer, vorlage))
     for i, blatt in enumerate(folge, 1):
         _fusszeile(blatt, i, len(folge), vorlage)
     return folge

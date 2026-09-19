@@ -66,6 +66,22 @@ class TestPdf(unittest.TestCase):
         seiten = PdfReader(str(self.ziel)).pages
         self.assertEqual(len(seiten), 6)
 
+    def test_nur_die_gewaehlten_blattarten(self):
+        """Nur die Leistenblaetter - und gezaehlt wird ab 1."""
+        pdf_schreiben(_projekt(), self.ziel, blattarten={"leisten"})
+        from pypdf import PdfReader
+
+        seiten = PdfReader(str(self.ziel)).pages
+        self.assertEqual(len(seiten), 4)
+        self.assertIn("Blatt 1 von 4", seiten[0].extract_text())
+
+    def test_ohne_jede_blattart_gibt_es_nichts(self):
+        from verteilerly.ausgabe import AusgabeFehler
+
+        with self.assertRaises(AusgabeFehler):
+            pdf_schreiben(_projekt(), self.ziel, blattarten=set())
+        self.assertFalse(self.ziel.exists())
+
     def test_buchten_landen_als_eigene_seiten_im_pdf(self):
         """Ab drei Buchten bekommt jede Bucht eine eigene Seite."""
         projekt = _projekt()
