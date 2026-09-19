@@ -598,7 +598,6 @@ Nach unten: Down
 'Nicht geladen: {0}': 'Not loaded: {0}'
 Ordner öffnen: Open folder
 Schalter: Switches
-'Schriftfeld:': 'Title block:'
 Spalten des Leistenblatts: Columns of the strip sheet
 angepasst: adjusted
 eingebaut: built-in
@@ -629,7 +628,6 @@ Mittel: Medium
 Normal: Regular
 Polster um den Kabelnamen: Padding around the cable name
 Rand: Margin
-Schriftfeld: Title block
 Schriftgrößen: Font sizes
 Standard: Default
 Werte einer Blattvorlage ändern, die Wirkung sofort am Blatt sehen und als neue Vorlage speichern: Change the values of a sheet template, see the effect on the sheet at once and save it as a new template
@@ -640,3 +638,27 @@ Zellenhöhe: Cell height
 links: left
 mittig: centered
 rechts: right
+# Schriftfeld im Blattvorlagen-Editor
+'Bauart:': 'Type:'
+'Bei „Mit Anschriften“ ist die Aufteilung fest: links Matrix und Verteiler, rechts die beiden Anschriften.': 'With “With addresses” the layout is fixed: matrix and frame on the left, the two addresses on the right.'
+Block hinzufügen: Add block
+'{0}. Block': Block {0}
+Breite: Width
+Breiten selbst festlegen: Set the widths myself
+Die gewählte Angabe entfernen: Remove the chosen entry
+Eine Angabe hinzufügen: Add an entry
+Letzten Block entfernen: Remove last block
+Links: Left
+Rechts: Right
+Schriftfeld (Briefkopf): Title block (letterhead)
+Welche Angaben in welchem Block stehen. Einträge lassen sich zwischen den Blöcken ziehen.: Which entries stand in which block. Entries can be dragged between the blocks.
+Anlage: Installation
+Erstellt: Created
+Geprüft: Checked
+Gezeichnet: Drawn
+Kunden-Nr.: Customer no.
+Stand: Revision
+Titel: Title
+Verteiler: Frame
+Verteiler-Nr.: Frame no.
+Höhe: Height

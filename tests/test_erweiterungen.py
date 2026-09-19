@@ -398,5 +398,123 @@ class TestBlattvorlagenEditor(unittest.TestCase):
         self.assertFalse(d.isVisible())
 
 
+class TestSchriftfeldEditor(unittest.TestCase):
+    """Die Bloecke des Schriftfeldes - der Briefkopf am Blattfuss."""
+
+    def setUp(self):
+        from verteilerly.blattvorlagen import STANDARDSCHRIFTFELD
+        from verteilerly.erweiterungen.blattvorlageneditor.schriftfeld import SchriftfeldEditor
+
+        self.editor = SchriftfeldEditor()
+        self.addCleanup(self.editor.deleteLater)
+        self.editor.setzen("standard", STANDARDSCHRIFTFELD, ())
+        self.gemeldet = []
+        self.editor.geaendert.connect(lambda: self.gemeldet.append(True))
+
+    def test_die_bloecke_der_vorlage_stehen_da(self):
+        from verteilerly.blattvorlagen import STANDARDSCHRIFTFELD
+
+        bloecke, anteile = self.editor.werte()
+        self.assertEqual(bloecke, STANDARDSCHRIFTFELD)
+        self.assertEqual(anteile, ())
+        self.assertEqual(len(self.editor.listen), len(STANDARDSCHRIFTFELD))
+        self.assertEqual(self.editor.listen[0].item(0).text(), "Firma")
+        self.assertFalse(self.gemeldet)
+
+    def test_angaben_und_bloecke_lassen_sich_aendern(self):
+        e = self.editor
+        e.marke_hinzufuegen(0, "dokumenttitel")
+        self.assertEqual(e.werte()[0][0][-1], "dokumenttitel")
+        e.marke_entfernen(0, 0)
+        self.assertNotIn("firma", e.werte()[0][0])
+        e.block_hinzufuegen()
+        self.assertEqual(len(e.werte()[0]), 4)
+        self.assertEqual(e.werte()[0][3], ())
+        e.block_entfernen()
+        e.block_entfernen()
+        e.block_entfernen()
+        # Einer bleibt.
+        e.block_entfernen()
+        self.assertEqual(len(e.werte()[0]), 1)
+        self.assertFalse(e.block_weg.isEnabled())
+        self.assertTrue(self.gemeldet)
+
+    def test_eigene_breiten_gibt_es_nur_mit_haken(self):
+        e = self.editor
+        self.assertFalse(e.breiten[0].isEnabled())
+        e.eigene_breiten.setChecked(True)
+        self.assertTrue(all(feld.isEnabled() for feld in e.breiten))
+        e.breiten[0].setValue(2.0)
+        anteile = e.werte()[1]
+        self.assertEqual(len(anteile), 3)
+        self.assertEqual(anteile[0], 2.0)
+        e.eigene_breiten.setChecked(False)
+        self.assertEqual(e.werte()[1], ())
+
+    def test_mit_anschriften_bleiben_zwei_breiten_und_die_bloecke(self):
+        from verteilerly.blattvorlagen import STANDARDSCHRIFTFELD
+
+        e = self.editor
+        e.art_setzen("beispiel")
+        self.assertEqual(len(e.breiten), 2)
+        self.assertEqual(e.listen, [])
+        self.assertFalse(e.fest.isHidden())
+        self.assertTrue(e.block_hinzu.isHidden())
+        # Zurueck auf standard: die Bloecke sind noch da.
+        e.art_setzen("standard")
+        self.assertEqual(e.werte()[0], STANDARDSCHRIFTFELD)
+
+
+class TestSchriftfeldImEditor(unittest.TestCase):
+    def setUp(self):
+        from verteilerly.erweiterungen.blattvorlageneditor.dialog import EditorDialog
+
+        self._ordner = tempfile.TemporaryDirectory()
+        self.addCleanup(self._ordner.cleanup)
+        self.ordner = pathlib.Path(self._ordner.name)
+        self.dialog = EditorDialog(Programmattrappe(self.ordner))
+        self.addCleanup(self.dialog.done, 0)
+
+    def test_das_beispiel_hat_projektdaten(self):
+        """Sonst stuenden im Schriftfeld nur Beschriftungen."""
+        self.assertIn("Musterfirma", self.dialog.projekt.briefkopf["firma"])
+
+    def test_die_ausgangsvorlage_stellt_das_schriftfeld_ein(self):
+        d = self.dialog
+        d.basiswahl.setCurrentIndex(d.basiswahl.findData(BEISPIELVORLAGE.id))
+        self.assertEqual(d.schriftfeld.art, "beispiel")
+        self.assertEqual(d.schriftfeld.werte(), (BEISPIELVORLAGE.schriftfeld,
+                                                 BEISPIELVORLAGE.schriftfeld_anteile))
+        self.assertEqual(d.vorlage().schriftfeld_anteile, (0.42, 0.58))
+
+    def test_die_bauart_schaltet_die_bloecke_um(self):
+        d = self.dialog
+        d.schriftfeldart.setCurrentIndex(d.schriftfeldart.findData("beispiel"))
+        self.assertEqual(d.schriftfeld.art, "beispiel")
+        self.assertTrue(d.geaendert)
+        d._neu_zeichnen()
+        self.assertEqual(d.vorlage().schriftfeld_art, "beispiel")
+
+    def test_der_briefkopf_wird_gespeichert_und_wieder_gelesen(self):
+        import yaml
+
+        d = self.dialog
+        d.schriftfeld.block_entfernen()
+        d.schriftfeld.marke_hinzufuegen(0, "dokumenttitel")
+        d.schriftfeld.eigene_breiten.setChecked(True)
+        d.schriftfeld.breiten[0].setValue(3.0)
+        d.schriftfeld.breiten[1].setValue(1.0)
+        d._neu_zeichnen()
+        self.assertTrue(d.speichern_knopf.isEnabled())
+        kennung = d.speichern("Eigener Briefkopf")
+        inhalt = yaml.safe_load((self.ordner / f"{kennung}.yaml").read_text(encoding="utf-8"))
+        self.assertEqual(len(inhalt["schriftfeld"]), 2)
+        self.assertEqual(inhalt["schriftfeld"][0][-1], "dokumenttitel")
+        self.assertEqual(inhalt["schriftfeld_anteile"], [3, 1])
+        gelesen = blattvorlage_aus_yaml(inhalt)
+        self.assertEqual(gelesen.schriftfeld, d.vorlage().schriftfeld)
+        self.assertEqual(gelesen.schriftfeld_anteile, (3.0, 1.0))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -139,6 +139,10 @@ class TestWortliste(unittest.TestCase):
             gebraucht.add(gruppe)
             gebraucht |= {feld[1] for feld in felder}
         gebraucht |= {beschriftung for _feld, beschriftung in editor.SCHALTER}
+        gebraucht.add(editor.SCHRIFTFELDHOEHE[1])
+        from verteilerly.erweiterungen.blattvorlageneditor.schriftfeld import MARKENNAMEN
+
+        gebraucht |= set(MARKENNAMEN.values())
         for tabelle in (editor.FELDNAMEN, editor.AUSRICHTUNGSNAMEN,
                         editor.SCHRIFTFELDNAMEN):
             gebraucht |= set(tabelle.values())

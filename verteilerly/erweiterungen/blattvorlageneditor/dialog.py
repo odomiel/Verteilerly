@@ -54,6 +54,7 @@ from ...gui.vorschau import Blattflaeche
 from ...layout import blaetter
 from ...modell import Projekt, Verteiler
 from ...sprachen import u
+from .schriftfeld import SchriftfeldEditor
 
 # Was sich als Zahl einstellen laesst: Feld der Blattvorlage, Beschriftung,
 # Einheit, kleinster und groesster Wert, Schrittweite. Die Beschriftungen
@@ -62,7 +63,6 @@ ZAHLEN = (
     ("Blatt", (
         ("rand", "Rand", "mm", 0.0, 40.0, 0.5),
         ("kopfzeile_hoehe", "Kopfzeile", "mm", 3.0, 20.0, 0.5),
-        ("schriftfeld_hoehe", "Schriftfeld", "mm", 10.0, 80.0, 0.5),
         ("zeilenhoehe_max", "Zeilenhöhe höchstens", "mm", 1.0, 20.0, 0.1),
         ("zeilenhoehe_min", "Zeilenhöhe mindestens", "mm", 1.0, 20.0, 0.1),
     )),
@@ -82,6 +82,8 @@ ZAHLEN = (
         ("polster_kabel", "Polster um den Kabelnamen", "mm", 0.0, 5.0, 0.1),
     )),
 )
+# Die Hoehe des Schriftfeldes steht bei seinen Bloecken, nicht beim Blatt.
+SCHRIFTFELDHOEHE = ("schriftfeld_hoehe", "Höhe", "mm", 10.0, 80.0, 0.5)
 SCHALTER = (
     ("da_nummern", "DA-Nummern in der Verteilerbelegung"),
     ("kabel_gedreht", "Kabelname quer in der Kabelspalte"),
@@ -101,11 +103,23 @@ VERZUG = 150  # ms - tippen, ohne dass das Blatt bei jeder Ziffer neu entsteht
 
 
 def beispielprojekt() -> Projekt:
-    """Ein kleiner Verteiler, an dem man etwas sieht - wenn keiner offen ist."""
+    """Ein kleiner Verteiler, an dem man etwas sieht - wenn keiner offen ist.
+
+    Mit Projektdaten, damit im Schriftfeld nicht nur Beschriftungen stehen.
+    """
     verteiler = Verteiler.aus_geometrie(2, 4, 10, name=u("Beispiel"), nummer="V-1")
     verteiler.kabel_anlegen(u("Musterleitung Obergeschoss"), 1, 1, 6)
     verteiler.kabel_anlegen("K2", 2, 3, 4)
-    return Projekt(verteiler=verteiler)
+    return Projekt(verteiler=verteiler, briefkopf={
+        "firma": "Musterfirma GmbH\nHauptstraße 1\n12345 Musterstadt",
+        "kunde": "Beispielkunde AG\nAm Markt 5\n54321 Beispielstadt",
+        "anlagennummer": "A-4711",
+        "kundennummer": "K-0815",
+        "erstellt_am": "01.09.2026",
+        "erstellt_von": "M. Muster",
+        "stand_am": "15.09.2026",
+        "stand_von": "M. Muster",
+    })
 
 
 class EditorDialog(PassenderDialog):
@@ -132,7 +146,7 @@ class EditorDialog(PassenderDialog):
         self.schriftfeldart = QComboBox()
         for art in SCHRIFTFELDARTEN:
             self.schriftfeldart.addItem(u(SCHRIFTFELDNAMEN.get(art, art)), art)
-        self.schriftfeldart.currentIndexChanged.connect(self._geaendert)
+        self.schriftfeldart.currentIndexChanged.connect(self._schriftfeldart_gewechselt)
         self.buchten = QSpinBox()
         self.buchten.setRange(1, 6)
         self.buchten.valueChanged.connect(self._geaendert)
@@ -140,7 +154,6 @@ class EditorDialog(PassenderDialog):
         kopf = QFormLayout()
         kopf.addRow(u("Ausgangsvorlage:"), self.basiswahl)
         kopf.addRow(u("Beschreibung:"), self.beschreibung)
-        kopf.addRow(u("Schriftfeld:"), self.schriftfeldart)
         kopf.addRow(u("Buchten je Blatt:"), self.buchten)
 
         links = QWidget()
@@ -175,6 +188,7 @@ class EditorDialog(PassenderDialog):
         linksaufbau.addWidget(schalterkasten)
 
         linksaufbau.addWidget(self._spaltenkasten())
+        linksaufbau.addWidget(self._schriftfeldkasten())
         linksaufbau.addStretch(1)
 
         rollbereich = QScrollArea()
@@ -235,6 +249,34 @@ class EditorDialog(PassenderDialog):
 
         self._basisliste_fuellen(programm.blattvorlage().id)
         self.resize(1240, 800)
+
+    # -- Schriftfeld ---------------------------------------------------------
+
+    def _schriftfeldkasten(self) -> QGroupBox:
+        """Bauart, Hoehe und die Bloecke des Schriftfeldes - der Briefkopf."""
+        feld, beschriftung, einheit, unten, oben, schritt = SCHRIFTFELDHOEHE
+        hoehe = QDoubleSpinBox()
+        hoehe.setRange(unten, oben)
+        hoehe.setSingleStep(schritt)
+        hoehe.setDecimals(2)
+        hoehe.setSuffix(f" {einheit}")
+        hoehe.valueChanged.connect(self._geaendert)
+        self.zahlen[feld] = hoehe
+        formular = QFormLayout()
+        formular.addRow(u("Bauart:"), self.schriftfeldart)
+        formular.addRow(u(beschriftung) + ":", hoehe)
+
+        self.schriftfeld = SchriftfeldEditor()
+        self.schriftfeld.geaendert.connect(self._geaendert)
+        kasten = QGroupBox(u("Schriftfeld (Briefkopf)"))
+        aufbau = QVBoxLayout(kasten)
+        aufbau.addLayout(formular)
+        aufbau.addWidget(self.schriftfeld)
+        return kasten
+
+    def _schriftfeldart_gewechselt(self, _index: int) -> None:
+        self.schriftfeld.art_setzen(self.schriftfeldart.currentData())
+        self._geaendert()
 
     # -- Spalten -------------------------------------------------------------
 
@@ -354,6 +396,9 @@ class EditorDialog(PassenderDialog):
         for feld in felder:
             feld.blockSignals(False)
         self._spalten_setzen(vorlage.spalten)
+        self.schriftfeld.setzen(
+            vorlage.schriftfeld_art, vorlage.schriftfeld, vorlage.schriftfeld_anteile
+        )
         self.geaendert = False
         self._neu_zeichnen()
 
@@ -370,9 +415,12 @@ class EditorDialog(PassenderDialog):
 
     def vorlage(self) -> Blattvorlage:
         """Die Vorlage, wie sie gerade eingestellt ist."""
+        schriftfeld, anteile = self.schriftfeld.werte()
         return dataclasses.replace(
             self.basis,
             standard=False,
+            schriftfeld=schriftfeld,
+            schriftfeld_anteile=anteile,
             beschreibung=self.beschreibung.text().strip(),
             schriftfeld_art=self.schriftfeldart.currentData(),
             buchten_je_blatt=self.buchten.value(),
