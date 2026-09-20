@@ -299,6 +299,28 @@ class TestBlattvorlagenEditor(unittest.TestCase):
         self.dialog = EditorDialog(self.programm)
         self.addCleanup(self.dialog.done, 0)
 
+    def test_der_editor_ist_ein_fenster_und_laesst_sich_maximieren(self):
+        """Als Dialog oder Werkzeugfenster gäbe es keinen Maximieren-Knopf."""
+        from PySide6.QtCore import Qt
+
+        from verteilerly.gui.passform import freie_fensterart
+
+        art = self.dialog.windowFlags()
+        self.assertEqual(art & Qt.WindowType.WindowType_Mask, Qt.WindowType.Window)
+        self.assertTrue(art & Qt.WindowType.WindowMaximizeButtonHint)
+        self.assertTrue(art & Qt.WindowType.WindowMinimizeButtonHint)
+        # dialoge_freistellen() stellt nur echte Dialoge um - dieses Fenster
+        # bliebe also, wie es ist.
+        self.assertNotEqual(
+            art & Qt.WindowType.WindowType_Mask, Qt.WindowType.Dialog
+        )
+        self.assertEqual(
+            freie_fensterart(art) & Qt.WindowType.WindowType_Mask,
+            Qt.WindowType.Tool,
+            "freie_fensterart macht aus allem ein Werkzeugfenster - "
+            "der Filter darf dieses Fenster gar nicht erst anfassen",
+        )
+
     def test_ohne_offenen_verteiler_zeigt_er_ein_beispiel(self):
         d = self.dialog
         self.assertEqual(d.basis.id, STANDARD.id)

@@ -128,6 +128,19 @@ class EditorDialog(PassenderDialog):
     def __init__(self, programm, parent: QWidget | None = None) -> None:
         super().__init__(parent or programm.fenster)
         self.setWindowTitle(u("Blattvorlagen-Editor"))
+        # Der Editor ist eher ein Fenster als ein Dialog: Werte links, Blatt
+        # rechts, und je groesser, desto besser. Als Dialog - und erst recht
+        # als Werkzeugfenster, zu dem dialoge_freistellen() jeden Dialog
+        # macht - haette er keinen Maximieren-Knopf. Als Fenster hat er ihn;
+        # ueber dem Hauptfenster bleibt er, weil showEvent das Elternfenster
+        # als transient anmeldet.
+        self.setWindowFlags(
+            Qt.WindowType.Window
+            | Qt.WindowType.WindowTitleHint
+            | Qt.WindowType.WindowSystemMenuHint
+            | Qt.WindowType.WindowMinMaxButtonsHint
+            | Qt.WindowType.WindowCloseButtonHint
+        )
         self.programm = programm
         self.projekt = programm.projekt() or beispielprojekt()
         self.blaetter = []
@@ -496,6 +509,18 @@ class EditorDialog(PassenderDialog):
               "Einstellungen ▸ Blattvorlage").format(name, ziel.name)
         )
         return vorlage.id
+
+    def showEvent(self, ereignis) -> None:  # noqa: N802 - Qt-Name
+        """Meldet das Hauptfenster als Eltern an - sonst faellt der Editor dahinter.
+
+        Ein Fenster der Art ``Window`` traegt die Angabe nicht von selbst,
+        anders als ein Dialog.
+        """
+        super().showEvent(ereignis)
+        eltern = self.parentWidget()
+        eigenes = self.windowHandle()
+        if eltern is not None and eigenes is not None:
+            eigenes.setTransientParent(eltern.window().windowHandle())
 
     def _verwerfen_erlaubt(self) -> bool:
         antwort = frage(
