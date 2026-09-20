@@ -556,12 +556,12 @@ Verteilervorlage: frame template
 Als neue Vorlage speichern: Save as new template
 Als neue Vorlage speichern…: Save as new template…
 Anteil: Share
-'Ausgangsvorlage:': 'Starting template:'
 Ausrichtung: Alignment
 Beispiel: Example
 Beschreibung: Description
 'Beschreibung:': 'Description:'
 Blattvorlage „{0}“ gespeichert ({1}) — zu wählen unter Einstellungen ▸ Blattvorlage: Sheet template “{0}” saved ({1}) — choose it under Settings ▸ Sheet template
+Blattvorlage „{0}“ gespeichert ({1}): Sheet template “{0}” saved ({1})
 Blattvorlagen-Editor: Sheet template editor
 'Buchten je Blatt:': 'Bays per sheet:'
 Die Kennung {0!r} trägt schon eine eingebaute Erweiterung: The identifier {0!r} already belongs to a built-in extension
@@ -596,11 +596,15 @@ Musterleitung Obergeschoss: Sample cable upper floor
 Nach oben: Up
 Nach unten: Down
 'Name der neuen Blattvorlage:': 'Name of the new sheet template:'
+'Name:': 'Name:'
 'Nicht geladen: {0}': 'Not loaded: {0}'
 Ordner öffnen: Open folder
 Schalter: Switches
+Schreibt die Änderungen in die Datei der geladenen Vorlage: Writes the changes into the file of the loaded template
 Spalten des Leistenblatts: Columns of the strip sheet
+Speichern: Save
 Version: Version
+'Vorlage:': 'Template:'
 Wird mit Verteilerly ausgeliefert: Shipped with Verteilerly
 angepasst: adjusted
 eingebaut: built-in

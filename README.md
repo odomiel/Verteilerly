@@ -645,10 +645,12 @@ Blattvorlage samt der Spalten des Leistenblatts und dem Schriftfeld (dem
 Briefkopf: Blöcke, Angaben, ihre Ausrichtung, Breiten), rechts das Blatt, gezeichnet
 mit demselben Modell wie Vorschau und PDF — am offenen Verteiler oder an einem
 Beispiel. Jede Änderung wird mit denselben Regeln geprüft wie eine Datei beim
-Lesen. Gespeichert wird **immer als neue Vorlage**
-(`blattvorlage_speichern()` öffnet die Datei exklusiv), und in der Datei steht
-nur, was von der Vorgabe abweicht (`blattvorlage_als_yaml()`, die Umkehrung von
-`blattvorlage_aus_yaml()`).
+Lesen. Gespeichert wird auf zwei Wegen: *Speichern* schreibt die geladene
+Vorlage in **ihre eigene Datei** zurück — so wird eine vorhandene bearbeitet —,
+*Als neue Vorlage speichern* legt eine **neue** an und lässt jede vorhandene,
+wie sie ist (`blattvorlage_speichern()` öffnet die Datei sonst exklusiv). In
+der Datei steht nur, was von der Vorgabe abweicht (`blattvorlage_als_yaml()`,
+die Umkehrung von `blattvorlage_aus_yaml()`).
 
 ## Lizenz
 

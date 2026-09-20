@@ -168,7 +168,7 @@ class TestWortliste(unittest.TestCase):
                    "{0} ({1})", " ({0})", ", ",
                    # "Export", "Tools", "Name" und "Version" heißen in beiden
                    # Sprachen so.
-                   "Export ({0})", "&Tools", "Name: {0}", "Version"}
+                   "Export ({0})", "&Tools", "Name: {0}", "Name:", "Version"}
         gleich = [
             deutsch for deutsch, englisch in self.katalog.items()
             if deutsch == englisch and deutsch not in erlaubt

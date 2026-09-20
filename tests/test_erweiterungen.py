@@ -455,6 +455,50 @@ class TestBlattvorlagenEditor(unittest.TestCase):
         self.assertEqual(zweite, "breiter-rand-2")
         self.assertEqual(datei.read_text(encoding="utf-8"), vorher)
 
+    def test_eine_vorhandene_vorlage_wird_geladen_und_zurueckgeschrieben(self):
+        """Bearbeiten heißt: in dieselbe Datei zurück, nicht in eine neue."""
+        import yaml
+
+        d = self.dialog
+        kennung = d.speichern("Erste Fassung")
+        datei = self.ordner / f"{kennung}.yaml"
+        # Neu laden, so wie sie jetzt auf der Platte liegt.
+        d.basiswahl.setCurrentIndex(d.basiswahl.findData(kennung))
+        self.assertEqual(d.basis.id, kennung)
+        self.assertEqual(d.name.text(), "Erste Fassung")
+        self.assertEqual(d.vorlagendatei(), datei)
+        self.assertTrue(d.ueberschreiben_knopf.isEnabled())
+
+        d.zahlen["rand"].setValue(21.0)
+        d.name.setText("Zweite Fassung")
+        d._neu_zeichnen()
+        self.assertEqual(d.ueberschreiben(), kennung)
+        self.assertEqual(sorted(p.name for p in self.ordner.glob("*.yaml")),
+                         [datei.name])
+        inhalt = yaml.safe_load(datei.read_text(encoding="utf-8"))
+        self.assertEqual((inhalt["id"], inhalt["name"], inhalt["rand"]),
+                         (kennung, "Zweite Fassung", 21))
+        self.assertFalse(d.geaendert)
+        self.assertEqual(d.basis.name, "Zweite Fassung")
+
+    def test_ohne_eigene_datei_wird_nichts_ueberschrieben(self):
+        """Die eingebaute Vorgabe steht im Programm, nicht im Arbeitsordner."""
+        d = self.dialog
+        self.assertEqual(d.basis.id, "standard")
+        self.assertIsNone(d.vorlagendatei())
+        self.assertFalse(d.ueberschreiben_knopf.isEnabled())
+        self.assertTrue(d.speichern_knopf.isEnabled())
+        self.assertIsNone(d.ueberschreiben())
+        self.assertEqual(list(self.ordner.glob("*.yaml")), [])
+
+    def test_ohne_namen_laesst_sich_nichts_speichern(self):
+        d = self.dialog
+        d.name.setText("   ")
+        d._neu_zeichnen()
+        self.assertIn("name", d.meldung.text())
+        self.assertFalse(d.speichern_knopf.isEnabled())
+        self.assertFalse(d.ueberschreiben_knopf.isEnabled())
+
     def test_was_eine_datei_abwiese_laesst_sich_nicht_speichern(self):
         from verteilerly.blattvorlagen import BlattvorlagenFehler
         from verteilerly.erweiterungen.blattvorlageneditor import dialog as modul

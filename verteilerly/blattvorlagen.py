@@ -462,8 +462,16 @@ def freie_kennung(name: str, vergeben, ordner: pathlib.Path) -> str:
     return kennung
 
 
-def blattvorlage_speichern(vorlage: Blattvorlage, ordner: pathlib.Path) -> pathlib.Path:
-    """Schreibt die Vorlage als neue Datei - eine vorhandene bleibt, wie sie ist."""
+def blattvorlage_speichern(
+    vorlage: Blattvorlage, ordner: pathlib.Path, ueberschreiben: bool = False
+) -> pathlib.Path:
+    """Schreibt die Vorlage als Datei ``<kennung>.yaml`` in den Ordner.
+
+    Ohne ``ueberschreiben`` wird die Datei **exklusiv** angelegt: eine
+    vorhandene bleibt, wie sie ist - so kann eine neue Vorlage keine
+    andere aus Versehen ersetzen. Wer eine vorhandene bearbeitet, will
+    genau das Gegenteil und sagt es ausdruecklich.
+    """
     ordner = pathlib.Path(ordner)
     ordner.mkdir(parents=True, exist_ok=True)
     ziel = ordner / f"{vorlage.id}.yaml"
@@ -475,7 +483,7 @@ def blattvorlage_speichern(vorlage: Blattvorlage, ordner: pathlib.Path) -> pathl
         )
     )
     try:
-        with open(ziel, "x", encoding="utf-8") as datei:
+        with open(ziel, "w" if ueberschreiben else "x", encoding="utf-8") as datei:
             datei.write(text)
     except FileExistsError:
         raise BlattvorlagenFehler(

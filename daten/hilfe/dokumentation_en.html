@@ -772,8 +772,9 @@ your own can be added.</p>
 
 <p><b>Extensions ▸ Sheet template editor…</b> shows the values of a sheet
 template on the left and a sheet on the right, drawn exactly like the preview
-and the PDF. At the top is the <i>starting template</i> — at first the one
-currently chosen, any other can be fetched there. Every change shows on the
+and the PDF. At the top is the <i>template</i> — at first the one currently
+chosen, any other can be fetched there; below it its <i>name</i> and its
+<i>description</i>, both editable. Every change shows on the
 sheet after a moment: margin, header, title block and row heights, the four
 font sizes, the measurements of the frame layout including the cable block,
 the switches for pair numbers and the cable name turned across, and the
@@ -784,12 +785,24 @@ one is shown; shown is the open frame, otherwise an
 example.</p>
 
 <p>Whatever the program would reject when reading a template file appears as
-a red sentence below the sheet, and then it cannot be saved. <b>Save as new
-template…</b> asks for a name and creates a <b>new</b> file in the working
-folder (<code>blattvorlagen/</code>) — an existing template is never
-overwritten, not even one of your own; with the same name the file gets a
-number appended. The file only holds what differs from the built-in default,
-like a hand-written one (section 7.1). The new template is chosen like any
+a red sentence below the sheet, and then it cannot be saved — an empty name
+belongs to that as well. There are two ways to save:</p>
+
+<ul>
+<li><b>Save</b> writes the changes back into the file of the loaded
+template: this is how an existing one is <b>edited</b>. The button is only to
+be had if it has a file in the working folder
+(<code>blattvorlagen/</code>) — the built-in default stands in the program and
+cannot be overwritten. A <b>supplied</b> template can be changed this way too;
+it is then no longer refreshed, and <i>Tools ▸ Restore supplied templates</i>
+brings it back if need be.</li>
+<li><b>Save as new template…</b> asks for a name and creates a <b>new</b>
+file; with the same name it gets a number appended. An existing template is
+never overwritten in the process.</li>
+</ul>
+
+<p>The file only holds what differs from the built-in default,
+like a hand-written one (section 7.1). A template is chosen like any
 other under <i>Settings ▸ Sheet template</i>. Where no frame is open, the example carries project data, so that the title
 block shows values as well.</p>
 

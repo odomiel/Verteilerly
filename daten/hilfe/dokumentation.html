@@ -791,8 +791,9 @@ Erweiterungen lassen sich dazulegen.</p>
 
 <p><b>Erweiterungen ▸ Blattvorlagen-Editor…</b> zeigt links die Werte einer
 Blattvorlage und rechts ein Blatt, gezeichnet genau wie Vorschau und PDF. Oben
-steht die <i>Ausgangsvorlage</i> — anfangs die gerade gewählte, jede andere
-lässt sich dort holen. Jede Änderung ist nach einem Augenblick am Blatt zu
+steht die <i>Vorlage</i> — anfangs die gerade gewählte, jede andere lässt sich
+dort holen; darunter ihr <i>Name</i> und ihre <i>Beschreibung</i>, beide
+änderbar. Jede Änderung ist nach einem Augenblick am Blatt zu
 sehen: Rand, Kopfzeile, Schriftfeld und Zeilenhöhen, die vier Schriftgrößen,
 die Maße der Verteilerbelegung samt Kabelblock, die Schalter für DA-Nummern
 und den quer gestellten Kabelnamen und die <b>Spalten des Leistenblatts</b> —
@@ -802,13 +803,25 @@ Das Fenster des Editors lässt sich vergrößern und <b>maximieren</b> — je gr
 Verteiler, sonst ein Beispiel.</p>
 
 <p>Was das Programm beim Lesen einer Vorlagendatei abwiese, steht als roter
-Satz unter dem Blatt, und gespeichert werden kann dann nicht. <b>Als neue
-Vorlage speichern…</b> fragt nach einem Namen und legt eine <b>neue</b> Datei
-im Arbeitsordner an (<code>blattvorlagen/</code>) — eine vorhandene Vorlage
-wird nie überschrieben, auch eine eigene nicht; bei gleichem Namen bekommt die
-Datei eine Nummer angehängt. In der Datei steht nur, was von der eingebauten
+Satz unter dem Blatt, und gespeichert werden kann dann nicht — auch ein leerer
+Name gehört dazu. Gespeichert wird auf zwei Wegen:</p>
+
+<ul>
+<li><b>Speichern</b> schreibt die Änderungen in die Datei der geladenen
+Vorlage zurück: so <b>bearbeitet</b> man eine vorhandene. Der Knopf ist nur zu
+haben, wenn sie eine Datei im Arbeitsordner hat
+(<code>blattvorlagen/</code>) — die eingebaute Vorgabe steht im Programm und
+lässt sich nicht überschreiben. Auch eine <b>mitgelieferte</b> Vorlage ist so
+zu ändern; sie wird danach nicht mehr aufgefrischt, und <i>Tools ▸
+Mitgelieferte wiederherstellen</i> holt sie im Zweifel zurück.</li>
+<li><b>Als neue Vorlage speichern…</b> fragt nach einem Namen und legt eine
+<b>neue</b> Datei an; bei gleichem Namen bekommt sie eine Nummer angehängt.
+Eine vorhandene Vorlage wird dabei nie überschrieben.</li>
+</ul>
+
+<p>In der Datei steht nur, was von der eingebauten
 Vorgabe abweicht, wie in einer von Hand geschriebenen (Abschnitt 7.1).
-Gewählt wird die neue Vorlage wie jede andere unter <i>Einstellungen ▸
+Gewählt wird eine Vorlage wie jede andere unter <i>Einstellungen ▸
 Blattvorlage</i>. Ist kein Verteiler offen, trägt das Beispiel Projektdaten, damit im
 Schriftfeld auch Werte stehen.</p>
 

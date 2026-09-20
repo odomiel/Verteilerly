@@ -167,6 +167,33 @@ class TestAlsYaml(unittest.TestCase):
         inhalt = blattvorlage_als_yaml(dataclasses.replace(STANDARD, id="x", name="X", rand=20.0))
         self.assertIsInstance(inhalt["rand"], int)
 
+    def test_wer_bearbeitet_darf_ausdruecklich_ueberschreiben(self):
+        """Eine vorhandene Vorlage zu ändern heißt: dieselbe Datei neu."""
+        import dataclasses
+        import tempfile
+
+        import yaml
+
+        from verteilerly.blattvorlagen import (
+            STANDARD,
+            blattvorlage_speichern,
+        )
+
+        with tempfile.TemporaryDirectory() as ordner:
+            ordner = pathlib.Path(ordner)
+            vorlage = dataclasses.replace(
+                STANDARD, id="probe", name="Probe", standard=False
+            )
+            erste = blattvorlage_speichern(vorlage, ordner)
+            zweite = blattvorlage_speichern(
+                dataclasses.replace(vorlage, rand=20.0), ordner, ueberschreiben=True
+            )
+            self.assertEqual(erste, zweite)
+            self.assertEqual(sorted(p.name for p in ordner.glob("*.yaml")),
+                             ["probe.yaml"])
+            inhalt = yaml.safe_load(erste.read_text(encoding="utf-8"))
+            self.assertEqual(inhalt["rand"], 20)
+
     def test_speichern_ueberschreibt_nie(self):
         import dataclasses
 

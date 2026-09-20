@@ -6,13 +6,17 @@ prueft sie mit denselben Regeln wie beim Lesen einer Datei - was dort
 abgewiesen wuerde, zeigt der Editor als Satz unter dem Blatt und laesst
 sich nicht speichern.
 
-Gespeichert wird **immer als neue Vorlage**: eine vorhandene Datei bleibt,
-wie sie ist. In der Datei steht nur, was von der Vorgabe abweicht.
+Gespeichert wird auf zwei Wegen: **Speichern** schreibt die geladene
+Vorlage in ihre eigene Datei zurueck - das geht nur, wenn sie eine im
+Arbeitsordner hat -, **Als neue Vorlage speichern** legt eine neue an und
+laesst jede vorhandene, wie sie ist. In der Datei steht nur, was von der
+Vorgabe abweicht.
 """
 
 from __future__ import annotations
 
 import dataclasses
+import pathlib
 
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
@@ -148,6 +152,8 @@ class EditorDialog(PassenderDialog):
         # -- links: die Werte ---------------------------------------------
         self.basiswahl = QComboBox()
         self.basiswahl.currentIndexChanged.connect(self._basis_gewaehlt)
+        self.name = QLineEdit()
+        self.name.textChanged.connect(self._geaendert)
         self.beschreibung = QLineEdit()
         self.beschreibung.textChanged.connect(self._geaendert)
         self.buchten = QSpinBox()
@@ -155,7 +161,8 @@ class EditorDialog(PassenderDialog):
         self.buchten.valueChanged.connect(self._geaendert)
 
         kopf = QFormLayout()
-        kopf.addRow(u("Ausgangsvorlage:"), self.basiswahl)
+        kopf.addRow(u("Vorlage:"), self.basiswahl)
+        kopf.addRow(u("Name:"), self.name)
         kopf.addRow(u("Beschreibung:"), self.beschreibung)
         kopf.addRow(u("Buchten je Blatt:"), self.buchten)
 
@@ -237,12 +244,18 @@ class EditorDialog(PassenderDialog):
         teiler.setStretchFactor(0, 2)
         teiler.setStretchFactor(1, 3)
 
+        self.ueberschreiben_knopf = QPushButton(u("Speichern"))
+        self.ueberschreiben_knopf.setToolTip(
+            u("Schreibt die Änderungen in die Datei der geladenen Vorlage")
+        )
+        self.ueberschreiben_knopf.clicked.connect(self.ueberschreiben)
         self.speichern_knopf = QPushButton(u("Als neue Vorlage speichern…"))
         self.speichern_knopf.clicked.connect(self.speichern)
         schliessen = QPushButton(u("Schließen"))
         schliessen.clicked.connect(self.reject)
         knoepfe = QHBoxLayout()
         knoepfe.addStretch(1)
+        knoepfe.addWidget(self.ueberschreiben_knopf)
         knoepfe.addWidget(self.speichern_knopf)
         knoepfe.addWidget(schliessen)
 
@@ -380,10 +393,11 @@ class EditorDialog(PassenderDialog):
     def basis_uebernehmen(self, vorlage: Blattvorlage) -> None:
         """Stellt alle Felder auf eine vorhandene Vorlage."""
         self.basis = vorlage
-        felder = [self.beschreibung, self.buchten,
+        felder = [self.name, self.beschreibung, self.buchten,
                   *self.zahlen.values(), *self.schalter.values()]
         for feld in felder:
             feld.blockSignals(True)
+        self.name.setText(vorlage.name)
         self.beschreibung.setText(vorlage.beschreibung)
         self.buchten.setValue(vorlage.buchten_je_blatt)
         for feld, wert in self.zahlen.items():
@@ -419,6 +433,7 @@ class EditorDialog(PassenderDialog):
             schriftfeld_art="standard",
             schriftfeld=schriftfeld,
             schriftfeld_anteile=anteile,
+            name=self.name.text().strip(),
             beschreibung=self.beschreibung.text().strip(),
             buchten_je_blatt=self.buchten.value(),
             spalten=tuple(self.spaltenliste()),
@@ -434,15 +449,17 @@ class EditorDialog(PassenderDialog):
         """Prueft die Vorlage wie eine Datei und zeichnet die Blaetter neu."""
         try:
             vorlage = self.vorlage()
-            probe = dataclasses.replace(vorlage, id="probe", name="Probe")
+            # Der Name geht mit durch die Pruefung: ein leerer faellt sonst
+            # erst beim Speichern auf.
+            probe = dataclasses.replace(vorlage, id="probe")
             blattvorlage_aus_yaml(blattvorlage_als_yaml(probe), u("Blattvorlagen-Editor"))
             self.blaetter = blaetter(self.projekt, vorlage)
         except Exception as fehler:  # noqa: BLE001 - beim Ausprobieren darf nichts abstuerzen
             self.meldung.setText(str(fehler))
-            self.speichern_knopf.setEnabled(False)
+            self._speicherknoepfe(False)
             return
         self.meldung.setText("")
-        self.speichern_knopf.setEnabled(True)
+        self._speicherknoepfe(True)
         stelle = self.blattwahl.currentIndex()
         self.blattwahl.blockSignals(True)
         self.blattwahl.clear()
@@ -463,12 +480,60 @@ class EditorDialog(PassenderDialog):
 
     # -- Speichern und Schliessen -------------------------------------------
 
+    def vorlagendatei(self, kennung: str = "") -> pathlib.Path | None:
+        """Die Datei dieser Vorlage im Arbeitsordner - oder None.
+
+        Nur was dort liegt, laesst sich bearbeiten: die eingebaute Vorgabe
+        steht im Programm, und in einen mitgelieferten Ordner neben dem
+        Abbild wird nicht geschrieben.
+        """
+        ordner = self.programm.blattvorlagenordner()
+        kennung = kennung or self.basis.id
+        if ordner is None or not kennung:
+            return None
+        datei = pathlib.Path(ordner) / f"{kennung}.yaml"
+        return datei if datei.is_file() else None
+
+    def _speicherknoepfe(self, gueltig: bool) -> None:
+        """Speichern geht nur, was auch als Datei taugt - und nur in eine eigene."""
+        self.speichern_knopf.setEnabled(gueltig)
+        self.ueberschreiben_knopf.setEnabled(
+            gueltig and self.vorlagendatei() is not None
+        )
+
+    def ueberschreiben(self) -> str | None:
+        """Schreibt die Aenderungen in die Datei der geladenen Vorlage."""
+        datei = self.vorlagendatei()
+        if datei is None:
+            return None
+        vorlage = dataclasses.replace(
+            self.vorlage(),
+            id=self.basis.id,
+            # Welche Vorlage die Vorgabe ist, sagt die Datei weiter - der
+            # Editor stellt das nicht um.
+            standard=self.basis.standard,
+        )
+        try:
+            ziel = blattvorlage_speichern(
+                vorlage, datei.parent, ueberschreiben=True
+            )
+        except Exception as fehler:  # noqa: BLE001 - Platte voll, keine Rechte ...
+            QMessageBox.critical(self, u("Speichern fehlgeschlagen"), str(fehler))
+            return None
+        self.programm.blattvorlagen_neu_laden()
+        self.gespeichert.append(vorlage.id)
+        self._basisliste_fuellen(vorlage.id)
+        self.programm.meldung(
+            u("Blattvorlage „{0}“ gespeichert ({1})").format(vorlage.name, ziel.name)
+        )
+        return vorlage.id
+
     def speichern(self, name: str | None = None) -> str | None:
         """Speichert als neue Vorlage und gibt ihre Kennung zurueck."""
         if name is None:
             name, genommen = QInputDialog.getText(
                 self, u("Als neue Vorlage speichern"), u("Name der neuen Blattvorlage:"),
-                text=self.basis.name + " – " + u("angepasst"),
+                text=self.name.text().strip() + " – " + u("angepasst"),
             )
             if not genommen:
                 return None
