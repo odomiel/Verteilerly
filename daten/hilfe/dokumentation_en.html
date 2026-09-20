@@ -55,6 +55,11 @@ it carries and how large they are. This is how an unevenly equipped frame is
 built — one bay with two 20-pair strips next to two bays with ten 10-pair
 strips. One strip size per bay. Such a frame can be stored as a
 <b>template</b> as well — the file then carries one row per bay.</li>
+<li><b>Letters instead of numbers</b> — the check mark below the custom frame
+gives the strips letters: <i>strip A</i> instead of <i>strip 1</i>. It applies
+to <b>both</b> ways — a template says how many strips there are, not what they
+are called. It comes preset with the last choice made, and later it can be
+changed under <i>Settings ▸ Label the strips</i> (section 3).</li>
 <li><b>Project data</b> — company, customer, author and so on. Whatever is
 kept in the defaults is already filled in.</li>
 </ul>
@@ -81,8 +86,15 @@ is then called <code>AA</code>. The choice applies wherever a strip is named:
 in the chooser, on the sheets, in the frame layout, in the PDF, in the Excel
 workbook and in the data lists — and in the jumpers, because they point at the
 same strips. <b>Both may be typed</b>: whoever enters <code>C 2a</code> means
-the third strip, and <code>3 2a</code> means it too. The project file holds
-the number anyway, so switching costs no project anything.</p>
+the third strip, and <code>3 2a</code> means it too; in the project file the
+addresses are numbers anyway.</p>
+
+<p><b>It belongs to the frame</b>, not to the program: its strips carry those
+labels on the hardware, and so the choice is kept in the <b>project file</b>.
+A frame with letters and one with numbers can be kept side by side — each
+brings its own labelling. At the same time the choice is remembered as the
+<b>default</b>: the next <i>new</i> frame gets it, just like the project
+data.</p>
 
 <p>On the right the <b>strip view</b> of the chosen strip with the columns
 <i>pin</i>, <i>color</i>, <i>designation</i>, <i>jumper</i> (two fields),
@@ -760,8 +772,9 @@ The names of the supplied templates stay German as well: they are data in the
 working folder, and you may rename them.</p>
 
 <p>In the <code>Verteilerly.conf</code> are the sheet template, the language,
-the notation of the jumpers, the free-text switch, the appearance and the
-remembered project data. What concerns the single frame is in the project file
+the notation of the jumpers, the free-text switch, the appearance, the
+remembered project data and the default for how new frames label their
+strips. What concerns the single frame is in the project file
 instead.</p>
 
 <p><b>Backup and restore</b> — <b>Settings ▸ Back up templates and

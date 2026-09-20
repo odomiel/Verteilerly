@@ -1730,7 +1730,9 @@ class TestMenuezustaende(unittest.TestCase):
         f.schreibweise_waehlen("einfach")
 
     def test_leisten_heissen_auf_wunsch_mit_buchstaben(self):
-        """Die Wahl gilt für Wahlliste, Blatt, Rangierung und Projekt."""
+        """Die Beschriftung gehört dem Verteiler - und wird als Vorgabe gemerkt."""
+        from verteilerly.modell import Verteiler
+
         from . import einstellung_bewahren
 
         f = self.fenster
@@ -1740,26 +1742,84 @@ class TestMenuezustaende(unittest.TestCase):
         f.leistenweise_waehlen("buchstaben")
         self.assertEqual(f.leisten_schreibweise, "buchstaben")
         self.assertEqual(f.projekt.leisten_schreibweise, "buchstaben")
-        self.assertEqual(
-            f.einstellungen.value("leisten_schreibweise"), "buchstaben"
-        )
+        # Das Projekt ist damit geändert - es steht ja in seiner Datei.
+        self.assertTrue(f.veraendert)
         self.assertEqual(f.leistenansicht.modell.leisten_schreibweise, "buchstaben")
         self.assertTrue(f.leistenansicht.auswahl.itemText(0).startswith("Leiste A"))
         angehakt = [e for e in f.leistenweisen_gruppe.actions() if e.isChecked()]
         self.assertEqual([e.data() for e in angehakt], ["buchstaben"])
 
-        # Auch ein danach geöffnetes Projekt folgt der Wahl.
-        self._projekt()
+        # Gemerkt wird sie als Vorgabe für den nächsten neuen Verteiler.
+        self.assertEqual(
+            f.einstellungen.value("leisten_schreibweise"), "buchstaben"
+        )
+        neu = f.neues_projekt(Verteiler.aus_geometrie(1, 2, 10))
+        self.assertEqual(neu.leisten_schreibweise, "buchstaben")
+
+    def test_der_haken_im_neuen_verteiler_gilt_und_wird_vorgabe(self):
+        """Was im Dialog steht, zählt - auch das Weglassen des Hakens."""
+        from unittest import mock
+
+        from verteilerly.gui import hauptfenster as modul
+
+        from . import einstellung_bewahren
+
+        f = self.fenster
+        einstellung_bewahren(self, f.einstellungen, "leisten_schreibweise")
+        self.addCleanup(f.leistenweise_waehlen, "zahlen")
+
+        def anlegen(haken):
+            def vorbereiten(dialog):
+                dialog.buchstaben.setChecked(haken)
+                return modul.NeuerVerteilerDialog.DialogCode.Accepted
+
+            with mock.patch.object(
+                modul.NeuerVerteilerDialog, "exec", vorbereiten
+            ):
+                f.neuer_verteiler()
+
+        anlegen(True)
         self.assertEqual(f.projekt.leisten_schreibweise, "buchstaben")
+        self.assertEqual(
+            f.einstellungen.value("leisten_schreibweise"), "buchstaben"
+        )
+        self.assertTrue(f.leistenansicht.auswahl.itemText(0).startswith("Leiste A"))
+
+        # Der nächste Dialog hat den Haken schon - wer ihn wegnimmt,
+        # bekommt Zahlen, die Vorgabe schreibt nichts dazwischen.
+        anlegen(False)
+        self.assertEqual(f.projekt.leisten_schreibweise, "zahlen")
+        self.assertEqual(f.einstellungen.value("leisten_schreibweise"), "zahlen")
+
+    def test_ein_geoeffnetes_projekt_bringt_seine_beschriftung_mit(self):
+        """Nicht die Einstellung gilt, sondern was in der Datei steht."""
+        from verteilerly.modell import Projekt, Verteiler
+
+        from . import einstellung_bewahren
+
+        f = self.fenster
+        einstellung_bewahren(self, f.einstellungen, "leisten_schreibweise")
+        self.addCleanup(f.leistenweise_waehlen, "zahlen")
+        self._projekt()
+        f.leistenweise_waehlen("buchstaben")
+
+        # Ein Projekt, das Zahlen führt, bleibt bei Zahlen.
+        gezaehlt = Projekt(verteiler=Verteiler.aus_geometrie(1, 2, 10, name="Alt"))
+        f._projekt_setzen(gezaehlt, None)
+        self.assertEqual(f.leisten_schreibweise, "zahlen")
+        self.assertTrue(f.leistenansicht.auswahl.itemText(0).startswith("Leiste 1"))
+        angehakt = [e for e in f.leistenweisen_gruppe.actions() if e.isChecked()]
+        self.assertEqual([e.data() for e in angehakt], ["zahlen"])
+        self.assertFalse(f.veraendert)
 
     def test_eine_unbekannte_leistenschreibweise_wird_gezaehlt(self):
-        """Eine Einstellung aus einer neueren Fassung hält nichts auf."""
-        from verteilerly.gui.hauptfenster import _leistenweise
+        """Eine Angabe aus einer neueren Fassung hält nichts auf."""
+        from verteilerly.einstellungen import leistenweise
 
-        self.assertEqual(_leistenweise("buchstaben"), "buchstaben")
+        self.assertEqual(leistenweise("buchstaben"), "buchstaben")
         for wert in ("roemisch", "", None):
             with self.subTest(wert=wert):
-                self.assertEqual(_leistenweise(wert), "zahlen")
+                self.assertEqual(leistenweise(wert), "zahlen")
 
     def test_eine_fehlende_blattvorlage_haelt_das_fenster_nicht_auf(self):
         """Wer „beispiel" gewählt hatte, soll das Programm noch starten können."""
@@ -2676,6 +2736,29 @@ class TestNeuerVerteilerDialog(unittest.TestCase):
             self.vorlagen, None, pathlib.Path(self.ordner.name)
         )
         self.dialog.eigen.setChecked(True)
+
+    def test_buchstaben_statt_zahlen_steht_im_dialog(self):
+        """Der Haken gilt für beide Wege - Vorlage wie eigene Geometrie."""
+        d = self.dialog
+        self.assertFalse(d.buchstaben.isChecked())
+        self.assertEqual(d.projekt().leisten_schreibweise, "zahlen")
+        d.buchstaben.setChecked(True)
+        self.assertEqual(d.leisten_schreibweise(), "buchstaben")
+        self.assertEqual(d.projekt().leisten_schreibweise, "buchstaben")
+        # Auch aus einer Vorlage: die sagt, wie viele Leisten es gibt,
+        # nicht wie sie heißen.
+        d.aus_vorlage.setChecked(True)
+        self.assertTrue(d.buchstaben.isEnabled())
+        self.assertEqual(d.projekt().leisten_schreibweise, "buchstaben")
+
+    def test_die_vorgabe_steht_im_haken_schon_da(self):
+        from verteilerly.gui.dialoge import NeuerVerteilerDialog
+
+        dialog = NeuerVerteilerDialog(
+            self.vorlagen, None, None, leisten="buchstaben"
+        )
+        self.addCleanup(dialog.done, 0)
+        self.assertTrue(dialog.buchstaben.isChecked())
 
     def test_erweitert_ist_zunaechst_aus(self):
         """Der Regelfall ist der gleichmäßige Verteiler."""

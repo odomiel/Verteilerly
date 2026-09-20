@@ -282,5 +282,46 @@ class TestNeuerVerteilerMitProjektdaten(unittest.TestCase):
         fenster.einstellungen.sync()
 
 
+class TestLeistenschreibweise(unittest.TestCase):
+    """Die Vorgabe für den nächsten neuen Verteiler."""
+
+    def setUp(self):
+        self.ordner = tempfile.TemporaryDirectory()
+        self.addCleanup(self.ordner.cleanup)
+        self.einstellungen = QSettings(
+            str(pathlib.Path(self.ordner.name) / "probe.conf"),
+            QSettings.Format.IniFormat,
+        )
+
+    def test_ohne_angabe_wird_gezaehlt(self):
+        self.assertEqual(
+            sp.leistenweise_laden(self.einstellungen), "zahlen"
+        )
+
+    def test_gemerkt_und_wieder_gelesen(self):
+        sp.leistenweise_merken(self.einstellungen, "buchstaben")
+        self.assertEqual(
+            sp.leistenweise_laden(self.einstellungen), "buchstaben"
+        )
+
+    def test_ein_verteiler_ohne_wahl_bekommt_die_vorgabe(self):
+        from verteilerly.modell import Projekt, Verteiler
+
+        sp.leistenweise_merken(self.einstellungen, "buchstaben")
+        projekt = sp.leistenweise_uebernehmen(
+            self.einstellungen, Projekt(verteiler=Verteiler.aus_geometrie(1, 2, 10))
+        )
+        self.assertEqual(projekt.leisten_schreibweise, "buchstaben")
+
+    def test_der_briefkopf_fasst_die_beschriftung_nicht_an(self):
+        """Wer den Haken im Dialog weggenommen hat, behält Zahlen."""
+        from verteilerly.modell import Projekt, Verteiler
+
+        sp.leistenweise_merken(self.einstellungen, "buchstaben")
+        projekt = Projekt(verteiler=Verteiler.aus_geometrie(1, 2, 10))
+        sp.briefkopf_uebernehmen(self.einstellungen, projekt)
+        self.assertEqual(projekt.leisten_schreibweise, "zahlen")
+
+
 if __name__ == "__main__":
     unittest.main()

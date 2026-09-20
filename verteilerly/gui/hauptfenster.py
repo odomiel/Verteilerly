@@ -49,7 +49,6 @@ from ..modell import (
     BLATTARTEN,
     BRIEFKOPF_FELDER,
     LEISTEN_BUCHSTABEN,
-    LEISTEN_SCHREIBWEISEN,
     LEISTEN_ZAHLEN,
     Kabelabschnitt,
     ModellFehler,
@@ -69,12 +68,6 @@ LEISTENWEISEN = (
     (LEISTEN_ZAHLEN, "1, 2, 3", "Die Leisten werden gezählt"),
     (LEISTEN_BUCHSTABEN, "A, B, C", "Die Leisten tragen Buchstaben"),
 )
-
-
-def _leistenweise(kennung) -> str:
-    """Eine gemerkte Wahl - Unbekanntes wird wieder gezaehlt."""
-    kennung = str(kennung or "")
-    return kennung if kennung in LEISTEN_SCHREIBWEISEN else LEISTEN_ZAHLEN
 from .dialoge import (
     BlattvorlagenDialog,
     BlattwahlDialog,
@@ -156,10 +149,11 @@ class Hauptfenster(QMainWindow):
         self.schreibweise = schreibweisen.holen(
             self.einstellungen.value("schreibweise", schreibweisen.STANDARD.id)
         )
-        # Wie die Leisten heissen: gezaehlt oder mit Buchstaben. Ebenfalls
-        # eine Anzeigesache - im Modell traegt jede Leiste ihre Nummer.
-        self.leisten_schreibweise = _leistenweise(
-            self.einstellungen.value("leisten_schreibweise", LEISTEN_ZAHLEN)
+        # Wie die Leisten heissen, gehoert zum Verteiler und steht in der
+        # Projektdatei. Die conf haelt nur die Vorgabe fuer den naechsten
+        # neuen fest - wie bei den Projektdaten.
+        self.leistenweise_vorgabe = einstellungsspeicher.leistenweise_laden(
+            self.einstellungen
         )
         # Freitext im Rangierfeld - aus, bis er gebraucht wird.
         self.freitext = self.einstellungen.value("freitext", False, type=bool)
@@ -411,7 +405,7 @@ class Hauptfenster(QMainWindow):
         for kennung, beispiel, erklaerung in LEISTENWEISEN:
             handlung = QAction(beispiel, self)
             handlung.setCheckable(True)
-            handlung.setChecked(kennung == self.leisten_schreibweise)
+            handlung.setChecked(kennung == self.leistenweise_vorgabe)
             handlung.setData(kennung)
             handlung.setStatusTip(u(erklaerung))
             handlung.setToolTip(u(erklaerung))
@@ -614,32 +608,50 @@ class Hauptfenster(QMainWindow):
         )
 
     def leistenweise_waehlen(self, kennung: str) -> None:
-        """Stellt um, wie die Leisten heissen: 1, 2, 3 oder A, B, C.
+        """Stellt um, wie die Leisten dieses Verteilers heissen.
 
-        Gezaehlt wird weiter ab 1 - der Buchstabe ist nur ein anderer
-        Name. Getippt werden darf beides, gleich was eingestellt ist.
+        Die Beschriftung gehoert zum Verteiler - sie steht in der
+        Projektdatei. Gemerkt wird sie zugleich als Vorgabe fuer den
+        naechsten neuen. Gezaehlt wird innen weiter ab 1, und getippt
+        werden darf beides, gleich was eingestellt ist.
         """
-        self.leisten_schreibweise = _leistenweise(kennung)
-        self.einstellungen.setValue(
-            "leisten_schreibweise", self.leisten_schreibweise
-        )
+        kennung = einstellungsspeicher.leistenweise(kennung)
+        self.leistenweise_vorgabe = kennung
+        einstellungsspeicher.leistenweise_merken(self.einstellungen, kennung)
+        if self.projekt is not None and self.projekt.leisten_schreibweise != kennung:
+            self.projekt.leisten_schreibweise = kennung
+            self.veraendert = True
+            self._titel_setzen()
         self._leistenweise_anwenden()
-        beispiel = dict((k, b) for k, b, _e in LEISTENWEISEN)[self.leisten_schreibweise]
+        beispiel = dict((k, b) for k, b, _e in LEISTENWEISEN)[kennung]
         self.statusBar().showMessage(
             u("Die Leisten heißen {0}").format(beispiel), 6000
         )
+
+    @property
+    def leisten_schreibweise(self) -> str:
+        """Wie die Leisten des offenen Verteilers heissen.
+
+        Ohne Projekt gilt die Vorgabe - dann ist ohnehin nichts zu
+        beschriften.
+        """
+        if self.projekt is not None:
+            return einstellungsspeicher.leistenweise(
+                self.projekt.leisten_schreibweise
+            )
+        return self.leistenweise_vorgabe
 
     def _leistenname(self, nummer: int) -> str:
         """Wie diese Leiste gerade heisst - "3" oder "C"."""
         return leistenname(nummer, self.leisten_schreibweise)
 
     def _leistenweise_anwenden(self) -> None:
+        """Traegt die Beschriftung in Menue, Ansichten und Vorschau."""
+        weise = self.leisten_schreibweise
         for handlung in self.leistenweisen_gruppe.actions():
-            handlung.setChecked(handlung.data() == self.leisten_schreibweise)
-        self.leistenansicht.leisten_schreibweise_setzen(self.leisten_schreibweise)
-        self.uebersicht.leisten_schreibweise_setzen(self.leisten_schreibweise)
-        if self.projekt is not None:
-            self.projekt.leisten_schreibweise = self.leisten_schreibweise
+            handlung.setChecked(handlung.data() == weise)
+        self.leistenansicht.leisten_schreibweise_setzen(weise)
+        self.uebersicht.leisten_schreibweise_setzen(weise)
         self._vorschau_anstossen()
 
     def _schreibweise_anwenden(self) -> None:
@@ -740,13 +752,13 @@ class Hauptfenster(QMainWindow):
         verteiler = projekt.verteiler if projekt else None
         if projekt is not None:
             projekt.rangierung_schreibweise = self.schreibweise.id
-            projekt.leisten_schreibweise = self.leisten_schreibweise
         self.uebersicht.verteiler_setzen(verteiler)
         self.leistenansicht.verteiler_setzen(verteiler)
         self.leistenansicht.schreibweise_setzen(self.schreibweise)
-        self.leistenansicht.leisten_schreibweise_setzen(self.leisten_schreibweise)
-        self.uebersicht.leisten_schreibweise_setzen(self.leisten_schreibweise)
         self.leistenansicht.freitext_erlauben(self.freitext)
+        # Wie die Leisten heissen, bringt das Projekt mit - Menue und
+        # Ansichten folgen ihm, nicht umgekehrt.
+        self._leistenweise_anwenden()
         self.vorschau.projekt_setzen(projekt)
         self.aktionen_auffrischen()
         self._titel_setzen()
@@ -822,10 +834,17 @@ class Hauptfenster(QMainWindow):
         dialog = NeuerVerteilerDialog(
             self.vorlagen, self, self._vorlagenordner(), gemerkt, ausgeblendet,
             self.blattvorlagen, self.vorschau.blattvorlage.id,
+            self.leistenweise_vorgabe,
         )
         if dialog.exec() != NeuerVerteilerDialog.DialogCode.Accepted:
             return
         self.vorschau.blattvorlage_setzen(dialog.blattvorlage())
+        # Was hier gewaehlt wurde, ist zugleich die Vorgabe fuer den
+        # naechsten neuen Verteiler - wie im Menue.
+        self.leistenweise_vorgabe = dialog.leisten_schreibweise()
+        einstellungsspeicher.leistenweise_merken(
+            self.einstellungen, self.leistenweise_vorgabe
+        )
         # Was der Dialog trägt, gilt; die eigenen Felder kommen aus der conf.
         projekt = self.neues_projekt(dialog.projekt())
         self._projekt_setzen(projekt, None)
@@ -849,9 +868,13 @@ class Hauptfenster(QMainWindow):
         zweiten Fall bleibt stehen, was schon eingetragen ist - ergaenzt
         wird nur, was fehlt.
         """
-        projekt = (
-            angaben if isinstance(angaben, Projekt) else Projekt(verteiler=angaben)
-        )
+        if isinstance(angaben, Projekt):
+            projekt = angaben
+        else:
+            # Kein Dialog, kein Haken: dann gilt die gemerkte Vorgabe.
+            projekt = einstellungsspeicher.leistenweise_uebernehmen(
+                self.einstellungen, Projekt(verteiler=angaben)
+            )
         return einstellungsspeicher.briefkopf_uebernehmen(
             self.einstellungen, projekt
         )
@@ -982,10 +1005,8 @@ class Hauptfenster(QMainWindow):
         self.schreibweise = schreibweisen.holen(
             self.einstellungen.value("schreibweise", self.schreibweise.id)
         )
-        self.leisten_schreibweise = _leistenweise(
-            self.einstellungen.value(
-                "leisten_schreibweise", self.leisten_schreibweise
-            )
+        self.leistenweise_vorgabe = einstellungsspeicher.leistenweise_laden(
+            self.einstellungen
         )
         self.freitext = self.einstellungen.value("freitext", self.freitext, type=bool)
         self.aktion_freitext.setChecked(self.freitext)

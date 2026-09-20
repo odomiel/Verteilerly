@@ -361,9 +361,13 @@ beschriften* stellt um; gezählt wird innen weiter ab 1, der Buchstabe ist nur
 ein anderer Name (die 27. heißt `AA`). Die Wahl gilt überall, wo eine Leiste
 genannt wird — Wahlliste, Blätter, Verteilerbelegung, PDF, Mappe, Datenlisten
 — und in den Rangierungen, denn die zeigen auf dieselben Leisten. Getippt
-werden darf beides: `C 2a` und `3 2a` meinen dieselbe Ader. In der
-Projektdatei steht immer die Nummer, wie bei der Schreibweise der
-Rangierungen auch.
+werden darf beides: `C 2a` und `3 2a` meinen dieselbe Ader; die Adressen
+stehen in der Projektdatei ohnehin als Nummern. Die Beschriftung **gehört dem
+Verteiler** — seine Leisten sind am Gerät so beschriftet — und steht darum in
+der Projektdatei; die `Verteilerly.conf` merkt sie nur als Vorgabe für den
+nächsten neuen Verteiler. Im Dialog *Neuer Verteiler* steht sie darum gleich
+als Haken **Buchstaben statt Zahlen** — vorbelegt mit der letzten Wahl und
+wirksam für die Vorlage wie für den benutzerdefinierten Verteiler.
 
 Wie das Blatt aussieht, sagt eine **Blattvorlage**; was darauf steht,
 kommt aus dem Projekt. **Drei liegen bei** — *Standard* mit allen Spalten,

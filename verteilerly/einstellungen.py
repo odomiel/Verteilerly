@@ -11,12 +11,16 @@ nicht; damit sind sie ohne Fenster prüfbar.
 
 from __future__ import annotations
 
-from .modell import Projekt
+from .modell import LEISTEN_SCHREIBWEISEN, LEISTEN_ZAHLEN, Projekt
 
 GRUPPE_BRIEFKOPF = "briefkopf"
 GRUPPE_EIGENE = "eigene_felder"
 GRUPPE_BESCHRIFTUNGEN = "beschriftungen"
 SCHLUESSEL_AUSGEBLENDET = "felder_ausgeblendet"
+#: Wie die Leisten im naechsten neuen Verteiler heissen. Im Projekt steht
+#: die Wahl mit; hier steht sie als Vorgabe, weil ein Errichter seine
+#: Verteiler meist gleich beschriftet.
+SCHLUESSEL_LEISTEN = "leisten_schreibweise"
 
 
 def _liste(wert) -> list[str]:
@@ -76,6 +80,27 @@ def beschriftungen_laden(einstellungen) -> dict[str, str]:
     return _gruppe_lesen(einstellungen, GRUPPE_BESCHRIFTUNGEN)
 
 
+def leistenweise_merken(einstellungen, schreibweise: str) -> None:
+    """Merkt, wie die Leisten im naechsten neuen Verteiler heissen."""
+    einstellungen.setValue(SCHLUESSEL_LEISTEN, leistenweise(schreibweise))
+    einstellungen.sync()
+
+
+def leistenweise_laden(einstellungen) -> str:
+    """Die gemerkte Vorgabe - Unbekanntes wird wieder gezaehlt."""
+    return leistenweise(einstellungen.value(SCHLUESSEL_LEISTEN, LEISTEN_ZAHLEN))
+
+
+def leistenweise(wert) -> str:
+    """Prueft eine Angabe; was das Programm nicht kennt, wird gezaehlt.
+
+    Eine Einstellung aus einer neueren Fassung soll nichts aufhalten -
+    dann heissen die Leisten eben wieder 1, 2, 3.
+    """
+    wert = str(wert or "")
+    return wert if wert in LEISTEN_SCHREIBWEISEN else LEISTEN_ZAHLEN
+
+
 def briefkopf_uebernehmen(einstellungen, projekt: Projekt) -> Projekt:
     """Legt die gemerkten Angaben in ein frisches Projekt.
 
@@ -90,4 +115,15 @@ def briefkopf_uebernehmen(einstellungen, projekt: Projekt) -> Projekt:
     for marke, wert in beschriftungen_laden(einstellungen).items():
         projekt.beschriftungen.setdefault(marke, wert)
     projekt.ausgeblendet |= ausgeblendet
+    return projekt
+
+
+def leistenweise_uebernehmen(einstellungen, projekt: Projekt) -> Projekt:
+    """Legt die gemerkte Beschriftung in ein Projekt, das keine nennt.
+
+    Eigener Aufruf, nicht Teil von ``briefkopf_uebernehmen``: wer den
+    Verteiler im Dialog anlegt, hat den Haken dort schon gesetzt oder
+    weggenommen, und eine Vorgabe darf eine Eingabe nicht ueberschreiben.
+    """
+    projekt.leisten_schreibweise = leistenweise_laden(einstellungen)
     return projekt

@@ -278,5 +278,40 @@ class TestAeltereDateien(unittest.TestCase):
             projektdatei.aus_dict(daten)
 
 
+class TestLeistenschreibweise(unittest.TestCase):
+    """Wie die Leisten heißen, gehört zum Verteiler."""
+
+    def _projekt(self):
+        from verteilerly.modell import Projekt, Verteiler
+
+        return Projekt(verteiler=Verteiler.aus_geometrie(1, 2, 10, name="Probe"))
+
+    def test_buchstaben_stehen_in_der_datei(self):
+        from verteilerly.modell import LEISTEN_BUCHSTABEN
+
+        projekt = self._projekt()
+        projekt.leisten_schreibweise = LEISTEN_BUCHSTABEN
+        daten = projektdatei.als_dict(projekt)
+        self.assertEqual(daten["leisten_schreibweise"], "buchstaben")
+        self.assertEqual(
+            projektdatei.aus_dict(daten).leisten_schreibweise, "buchstaben"
+        )
+
+    def test_gezaehlt_steht_nicht_in_der_datei(self):
+        """Geschrieben wird nur, was von der Vorgabe abweicht."""
+        daten = projektdatei.als_dict(self._projekt())
+        self.assertNotIn("leisten_schreibweise", daten)
+
+    def test_eine_aeltere_datei_zaehlt_weiter(self):
+        daten = projektdatei.als_dict(self._projekt())
+        daten["formatversion"] = 8
+        self.assertEqual(projektdatei.aus_dict(daten).leisten_schreibweise, "zahlen")
+
+    def test_was_das_programm_nicht_kennt_wird_gezaehlt(self):
+        daten = projektdatei.als_dict(self._projekt())
+        daten["leisten_schreibweise"] = "roemisch"
+        self.assertEqual(projektdatei.aus_dict(daten).leisten_schreibweise, "zahlen")
+
+
 if __name__ == "__main__":
     unittest.main()

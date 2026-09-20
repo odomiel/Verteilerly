@@ -56,6 +56,7 @@ from ..modell import (
     BLATTBESCHRIFTUNG,
     BRIEFKOPF_BESCHRIFTUNG,
     BRIEFKOPF_FELDER,
+    LEISTEN_BUCHSTABEN,
     LEISTEN_ZAHLEN,
     Kabel,
     Projekt,
@@ -161,6 +162,7 @@ class NeuerVerteilerDialog(PassenderDialog):
         ausgeblendet: set[str] | None = None,
         blattvorlagen: Blattvorlagen | None = None,
         blattvorlage: str = "",
+        leisten: str = LEISTEN_ZAHLEN,
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle(u("Neuer Verteiler"))
@@ -294,6 +296,18 @@ class NeuerVerteilerDialog(PassenderDialog):
         self.aus_vorlage.toggled.connect(lambda an: eigenkasten.setEnabled(not an))
         eigenkasten.setEnabled(False)
 
+        # Wie die Leisten heissen, gehoert zum Verteiler - darum gleich
+        # hier. Der Haken steht unter dem eigenen Verteiler und gilt
+        # trotzdem fuer beide Wege: eine Vorlage sagt, wie viele Leisten
+        # es gibt, nicht wie sie heissen.
+        self.buchstaben = QCheckBox(u("Buchstaben statt Zahlen"))
+        self.buchstaben.setToolTip(
+            u("Die Leisten heißen dann A, B, C statt 1, 2, 3 — auch aus "
+              "einer Vorlage. Später unter Einstellungen ▸ Leisten "
+              "beschriften zu ändern.")
+        )
+        self.buchstaben.setChecked(leisten == LEISTEN_BUCHSTABEN)
+
         # Die Projektdaten gleich mit: was in der Verteilerly.conf gemerkt
         # ist, steht schon drin und lässt sich hier für diesen Verteiler
         # ändern. Er sitzt in einem Rollbereich, sonst wäre der
@@ -319,6 +333,7 @@ class NeuerVerteilerDialog(PassenderDialog):
         links.addWidget(vorlagenkasten)
         links.addWidget(self.eigen)
         links.addWidget(eigenkasten)
+        links.addWidget(self.buchstaben)
         links.addStretch(1)
 
         nebeneinander = QHBoxLayout()
@@ -483,12 +498,17 @@ class NeuerVerteilerDialog(PassenderDialog):
         """Die Kennung der gewaehlten Blattvorlage."""
         return self.blattvorlagenwahl.currentData() or ""
 
+    def leisten_schreibweise(self) -> str:
+        """Wie die Leisten dieses Verteilers heissen sollen."""
+        return LEISTEN_BUCHSTABEN if self.buchstaben.isChecked() else LEISTEN_ZAHLEN
+
     def projekt(self) -> Projekt:
         """Der neue Verteiler samt den hier eingetippten Projektdaten."""
         return Projekt(
             verteiler=self.verteiler(),
             briefkopf=self.projektdaten.werte(),
             ausgeblendet=self.projektdaten.ausgeblendet(),
+            leisten_schreibweise=self.leisten_schreibweise(),
         )
 
 

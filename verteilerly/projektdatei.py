@@ -13,6 +13,8 @@ from typing import Any
 from .modell import (
     Ader,
     BLATTARTEN,
+    LEISTEN_SCHREIBWEISEN,
+    LEISTEN_ZAHLEN,
     STILFELDER,
     TEILBARE_FELDER,
     Textstil,
@@ -31,14 +33,15 @@ from .modell import (
 from .sprachen import u
 
 DATEIKENNUNG = "verteilerly-projekt"
-FORMATVERSION = 8
+FORMATVERSION = 9
 # Fassung 1 nannte die Buchten noch Reihen, Fassung 2 kannte noch keine
 # abgewaehlten Felder, Fassung 3 noch keinen Vermerk im Rangierfeld,
 # Fassung 4 noch keine Wahl der Blattarten fuer die eigenen Felder,
 # Fassung 5 noch keine eigenen Beschriftungen, Fassung 6 noch keinen
-# Textstil je Zelle, Fassung 7 noch keine geteilten Zellen. Solche
-# Dateien werden weiter gelesen; geschrieben wird immer die neue Fassung.
-LESBARE_VERSIONEN = (1, 2, 3, 4, 5, 6, 7, 8)
+# Textstil je Zelle, Fassung 7 noch keine geteilten Zellen, Fassung 8
+# noch keine Leisten mit Buchstaben. Solche Dateien werden weiter
+# gelesen; geschrieben wird immer die neue Fassung.
+LESBARE_VERSIONEN = (1, 2, 3, 4, 5, 6, 7, 8, 9)
 
 
 class ProjektdateiFehler(ModellFehler):
@@ -124,7 +127,7 @@ def _verteiler_raus(verteiler: Verteiler) -> dict[str, Any]:
 
 
 def als_dict(projekt: Projekt) -> dict[str, Any]:
-    return {
+    daten: dict[str, Any] = {
         "dateikennung": DATEIKENNUNG,
         "formatversion": FORMATVERSION,
         "briefkopf": dict(projekt.briefkopf),
@@ -138,6 +141,12 @@ def als_dict(projekt: Projekt) -> dict[str, Any]:
         "beschriftungen": projekt.eigene_beschriftungen(),
         "verteiler": _verteiler_raus(projekt.verteiler),
     }
+    # Wie die Leisten heissen, gehoert zum Verteiler: seine Leisten sind
+    # am Gerät selbst so beschriftet. Geschrieben wird es nur, wenn es von
+    # der Vorgabe abweicht - eine gezaehlte Leiste braucht keinen Eintrag.
+    if projekt.leisten_schreibweise != LEISTEN_ZAHLEN:
+        daten["leisten_schreibweise"] = projekt.leisten_schreibweise
+    return daten
 
 
 def speichern(projekt: Projekt, pfad: pathlib.Path) -> None:
@@ -243,6 +252,13 @@ def aus_dict(daten: dict[str, Any]) -> Projekt:
         )
         & set(BLATTARTEN),
         beschriftungen=dict(daten.get("beschriftungen") or {}),
+        # Aeltere Dateien kannten nur gezaehlte Leisten; eine Angabe, die
+        # das Programm nicht kennt, wird ebenfalls zur Zahl.
+        leisten_schreibweise=(
+            daten.get("leisten_schreibweise")
+            if daten.get("leisten_schreibweise") in LEISTEN_SCHREIBWEISEN
+            else LEISTEN_ZAHLEN
+        ),
     )
 
 

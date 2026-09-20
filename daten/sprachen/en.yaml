@@ -41,6 +41,7 @@ Spalten, Schriftgrößen und Ränder der Blätter. Später unter Einstellungen �
 'Blattvorlage:': 'Sheet template:'
 Aus Vorlage: From template
 Benutzerdefiniert: Custom
+Buchstaben statt Zahlen: Letters instead of numbers
 ' DA': ' pairs'
 'Erweiterte Verteiler: Buchten einzeln festlegen': 'Advanced frames: set up each bay separately'
 Jede Bucht bekommt ihre eigene Zahl an Leisten und ihre eigene Leistengröße. Eine Leistengröße je Bucht.: Every
@@ -293,6 +294,7 @@ Rangierungen werden als {0} geschrieben: Jumpers are written as {0}
 Die Leisten heißen {0}: The strips are named {0}
 Die Leisten werden gezählt: The strips are counted
 Die Leisten tragen Buchstaben: The strips carry letters
+Die Leisten heißen dann A, B, C statt 1, 2, 3 — auch aus einer Vorlage. Später unter Einstellungen ▸ Leisten beschriften zu ändern.: The strips are then named A, B, C instead of 1, 2, 3 — from a template as well. Can be changed later under Settings ▸ Label the strips.
 'Blattvorlage: {0}': 'Sheet template: {0}'
 Nicht gesichert: Not backed up
 'Gesichert nach {0}: {1}': 'Backed up to {0}: {1}'
