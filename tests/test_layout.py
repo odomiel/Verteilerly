@@ -336,6 +336,44 @@ class TestQuerstrich(unittest.TestCase):
         self.assertEqual(len(werte), 2)
 
 
+class TestEintragsausrichtung(unittest.TestCase):
+    """Jede Angabe des Schriftfeldes liegt, wie ihr Eintrag es sagt."""
+
+    def _blatt(self, ausrichtung):
+        import dataclasses
+
+        from verteilerly.blattvorlagen import STANDARD, Schriftfeldeintrag
+        from verteilerly.layout import leistenblatt
+
+        vorlage = dataclasses.replace(STANDARD, schriftfeld=(
+            (Schriftfeldeintrag("firma", ausrichtung),),
+        ))
+        projekt = Projekt(
+            verteiler=Verteiler.aus_geometrie(1, 2, 10, name="Probe"),
+            briefkopf={"firma": "Musterfirma"},
+        )
+        return leistenblatt(projekt, 1, vorlage)
+
+    def _wert(self, blatt):
+        return next(e for e in blatt.elemente
+                    if isinstance(e, Text) and e.text == "Musterfirma")
+
+    def test_der_wert_folgt_der_ausrichtung_des_eintrags(self):
+        for ausrichtung in ("links", "mitte", "rechts"):
+            with self.subTest(ausrichtung=ausrichtung):
+                self.assertEqual(
+                    self._wert(self._blatt(ausrichtung)).ausrichtung, ausrichtung
+                )
+
+    def test_die_beschriftung_bleibt_am_linken_rand(self):
+        """Ausgerichtet wird der Wert - die Beschriftung hält die Zeilen."""
+        blatt = self._blatt("rechts")
+        beschriftung = next(e for e in blatt.elemente
+                            if isinstance(e, Text) and e.text == "Firma")
+        self.assertEqual(beschriftung.ausrichtung, "links")
+        self.assertLess(beschriftung.x, self._wert(blatt).x)
+
+
 class TestSchriftfeld(unittest.TestCase):
     """Je Blatt korrekt, nicht kopiert."""
 

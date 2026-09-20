@@ -54,6 +54,29 @@ class TestQuerstrich(unittest.TestCase):
             self.assertTrue(mit_rand, "keine Zeile mit unterem Rand")
 
 
+class TestEintragsausrichtung(unittest.TestCase):
+    """Auch im Raster liegt der Wert, wie sein Eintrag es sagt."""
+
+    def test_der_wert_folgt_der_ausrichtung_des_eintrags(self):
+        import dataclasses
+
+        from verteilerly.blattvorlagen import Schriftfeldeintrag
+
+        vorlage = dataclasses.replace(STANDARD, schriftfeld=(
+            (Schriftfeldeintrag("firma", "rechts"),),
+        ))
+        with tempfile.TemporaryDirectory() as ordner:
+            ziel = pathlib.Path(ordner) / "probe.xlsx"
+            xlsx_schreiben(_projekt(), ziel, vorlage)
+            blatt = load_workbook(ziel)["Leiste 1"]
+            zellen = [
+                zelle for zeile in blatt.iter_rows() for zelle in zeile
+                if zelle.value == "Musterfirma"
+            ]
+            self.assertTrue(zellen, "der Wert steht nicht in der Mappe")
+            self.assertEqual(zellen[0].alignment.horizontal, "right")
+
+
 class TestMasse(unittest.TestCase):
     def test_millimeter_werden_umgerechnet(self):
         # 25.4 mm sind ein Zoll: 96 Bildpunkte, 72 Punkt.

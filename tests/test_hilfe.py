@@ -126,6 +126,26 @@ class TestVorlagenanleitung(unittest.TestCase):
                 with self.subTest(sprache=sprache, wert=wert):
                     self.assertIn(f"<code>{wert}</code>", seite)
 
+    def test_jedes_schriftfeld_der_anleitung_laesst_sich_lesen(self):
+        """Auch die kurzen Beispiele müssen das Programm annehmen."""
+        import re
+
+        import yaml
+
+        from verteilerly.blattvorlagen import blattvorlage_aus_yaml
+
+        for sprache, seite in self.seiten.items():
+            bloecke = [
+                b for b in re.findall(r"<pre>(.*?)</pre>", seite, re.S)
+                if b.strip().startswith("schriftfeld:")
+            ]
+            self.assertTrue(bloecke, f"kein Schriftfeld-Beispiel in {sprache}")
+            for block in bloecke:
+                with self.subTest(sprache=sprache, block=block[:40]):
+                    inhalt = yaml.safe_load(block)
+                    inhalt.update(id="probe", name="Probe")
+                    blattvorlage_aus_yaml(inhalt, "Anleitung")
+
     def test_das_beispiel_der_anleitung_laesst_sich_lesen(self):
         """Was in der Anleitung steht, muss das Programm annehmen."""
         import re

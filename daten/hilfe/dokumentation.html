@@ -511,6 +511,20 @@ reinen Datenlisten kommt sie nicht vor. Abgewählte Projektdaten
 verschwinden mitsamt ihrer Beschriftung, und auf der Verteilerbelegung fällt
 <code>leiste</code> weg: dieses Blatt zeigt alle.</p>
 
+<p>Kurzform ist die bloße Marke. Lang geschrieben bringt eine Angabe ihre
+eigene <code>ausrichtung</code> mit — <code>links</code> (Vorgabe),
+<code>mitte</code> oder <code>rechts</code>. Sie gilt dem <b>Wert</b>, nicht
+der Beschriftung: die steht am linken Rand ihres Blockes und hält die Zeilen
+untereinander. Gezeichnetes Blatt und Excel-Mappe halten sich gleichermaßen
+daran.</p>
+
+<pre>schriftfeld:
+  - [firma, kunde]
+  - - verteiler
+    - {marke: verteilernummer, ausrichtung: rechts}
+    - strich
+    - {marke: blatt, ausrichtung: mitte}</pre>
+
 <p><code>schriftfeld_anteile</code> gibt die Breiten der Blöcke als Verhältnis
 (<code>[0.42, 0.58]</code>); ohne Angabe teilt das Programm nach Augenmaß.
 <code>schriftfeld_art</code> ist <code>standard</code> (Beschriftung und Wert in
@@ -804,7 +818,10 @@ Blatt, jeder mit seinen Angaben untereinander (Firma, Kunde, Verteiler, Blatt,
 Erstellt, eigene Felder …). Einträge lassen sich zwischen den Blöcken ziehen;
 <b>+</b> fügt eine Angabe hinzu — darunter den <b>Querstrich</b>, der im Block
 eine Linie zieht —, <b>−</b> nimmt die gewählte Angabe weg und <b>✕</b>
-löscht genau diesen Block. <i>Block hinzufügen</i> und <i>Letzten Block
+löscht genau diesen Block. Hinter jeder Angabe steht ein Knopf für ihre
+<b>Ausrichtung</b> — linksbündig, mittig oder rechtsbündig; er gilt dem Wert,
+nicht der Beschriftung. Der Querstrich hat keinen: er ist eine Linie und hat
+nichts auszurichten. <i>Block hinzufügen</i> und <i>Letzten Block
 entfernen</i> ändern die Zahl der Blöcke; einer bleibt immer stehen. Mit <i>Breiten selbst festlegen</i> bekommt jeder Block seinen Anteil
 an der Breite, sonst teilt das Programm nach Augenmaß. Der Editor baut immer ein Schriftfeld aus Blöcken; die feste Aufteilung der
 Mustertabellen (<code>schriftfeld_art: beispiel</code>) stellt er nicht ein.</p>

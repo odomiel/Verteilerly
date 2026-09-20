@@ -445,9 +445,9 @@ class TestSchriftfeldEditor(unittest.TestCase):
     def test_angaben_und_bloecke_lassen_sich_aendern(self):
         e = self.editor
         e.marke_hinzufuegen(0, "dokumenttitel")
-        self.assertEqual(e.werte()[0][0][-1], "dokumenttitel")
+        self.assertEqual(e.werte()[0][0][-1].marke, "dokumenttitel")
         e.marke_entfernen(0, 0)
-        self.assertNotIn("firma", e.werte()[0][0])
+        self.assertNotIn("firma", [x.marke for x in e.werte()[0][0]])
         e.block_hinzufuegen()
         self.assertEqual(len(e.werte()[0]), 4)
         self.assertEqual(e.werte()[0][3], ())
@@ -481,8 +481,47 @@ class TestSchriftfeldEditor(unittest.TestCase):
         self.assertEqual(MARKENNAMEN["strich"], "Querstrich")
         e = self.editor
         e.marke_hinzufuegen(1, "strich")
-        self.assertEqual(e.werte()[0][1][-1], "strich")
+        self.assertEqual(e.werte()[0][1][-1].marke, "strich")
         self.assertEqual(e.listen[1].item(e.listen[1].count() - 1).text(), "Querstrich")
+
+    def test_hinter_jeder_angabe_steht_ein_ausrichtungsknopf(self):
+        """Nur der Querstrich braucht keinen - er hat nichts auszurichten."""
+        e = self.editor
+        liste = e.listen[0]
+        for stelle in range(liste.count()):
+            with self.subTest(zeile=stelle):
+                self.assertIsNotNone(liste.itemWidget(liste.item(stelle)))
+        e.marke_hinzufuegen(0, "strich")
+        liste = e.listen[0]
+        letzte = liste.item(liste.count() - 1)
+        self.assertIsNone(liste.itemWidget(letzte))
+
+    def test_die_ausrichtung_gehoert_der_angabe(self):
+        e = self.editor
+        e.ausrichten(0, 1, "rechts")
+        block = e.werte()[0][0]
+        self.assertEqual(block[1].ausrichtung, "rechts")
+        self.assertEqual(block[0].ausrichtung, "links")
+        self.assertTrue(self.gemeldet)
+
+    def test_die_ausrichtung_zieht_mit_in_den_anderen_block(self):
+        """Gezogen wird der Eintrag, nicht nur sein Name."""
+        from PySide6.QtCore import QModelIndex, Qt
+        from PySide6.QtWidgets import QApplication
+        from verteilerly.erweiterungen.blattvorlageneditor.schriftfeld import (
+            AUSRICHTUNG,
+        )
+
+        e = self.editor
+        e.ausrichten(0, 0, "mitte")
+        von, nach = e.listen[0], e.listen[1]
+        paket = von.model().mimeData([von.model().index(0, 0)])
+        nach.model().dropMimeData(paket, Qt.DropAction.MoveAction, 0, 0, QModelIndex())
+        angekommen = nach.item(0)
+        self.assertEqual(angekommen.data(AUSRICHTUNG), "mitte")
+        # Der Knopf kommt gleich nach dem Fallenlassen dazu.
+        QApplication.processEvents()
+        self.assertIsNotNone(nach.itemWidget(angekommen))
 
     def test_jeder_block_laesst_sich_einzeln_loeschen(self):
         e = self.editor
@@ -541,6 +580,7 @@ class TestSchriftfeldImEditor(unittest.TestCase):
         d.schriftfeld.block_entfernen()
         d.schriftfeld.marke_hinzufuegen(0, "dokumenttitel")
         d.schriftfeld.marke_hinzufuegen(0, "strich")
+        d.schriftfeld.ausrichten(0, 0, "rechts")
         d.schriftfeld.eigene_breiten.setChecked(True)
         d.schriftfeld.breiten[0].setValue(3.0)
         d.schriftfeld.breiten[1].setValue(1.0)
@@ -550,6 +590,10 @@ class TestSchriftfeldImEditor(unittest.TestCase):
         inhalt = yaml.safe_load((self.ordner / f"{kennung}.yaml").read_text(encoding="utf-8"))
         self.assertEqual(len(inhalt["schriftfeld"]), 2)
         self.assertEqual(inhalt["schriftfeld"][0][-2:], ["dokumenttitel", "strich"])
+        # Nur was abweicht, steht lang da - der Rest bleibt die bloße Marke.
+        self.assertEqual(
+            inhalt["schriftfeld"][0][0], {"marke": "firma", "ausrichtung": "rechts"}
+        )
         self.assertEqual(inhalt["schriftfeld_anteile"], [3, 1])
         gelesen = blattvorlage_aus_yaml(inhalt)
         self.assertEqual(gelesen.schriftfeld, d.vorlage().schriftfeld)

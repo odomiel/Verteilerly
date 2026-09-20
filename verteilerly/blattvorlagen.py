@@ -46,6 +46,7 @@ BELEGUNGSSCHLUESSEL = (
     "fuellgrad_kabel", "polster_kabel",
 )
 SPALTENSCHLUESSEL = ("feld", "ueberschrift", "anteil", "ausrichtung")
+SCHRIFTFELDSCHLUESSEL = ("marke", "ausrichtung")
 
 # Was eine Spalte des Leistenblattes zeigen kann.
 SPALTENFELDER = (
@@ -99,6 +100,25 @@ class Spalte:
     ausrichtung: str = LINKS
 
 
+@dataclass(frozen=True)
+class Schriftfeldeintrag:
+    """Eine Zeile des Schriftfeldes: was dort steht und wie es liegt.
+
+    Die Ausrichtung gilt dem Wert, nicht der Beschriftung - die steht am
+    linken Rand ihres Blockes und haelt die Zeilen untereinander.
+    """
+
+    marke: str
+    ausrichtung: str = LINKS
+
+
+def _als_eintrag(marke) -> Schriftfeldeintrag:
+    """Aus einer Marke ein Eintrag - ein Eintrag bleibt, was er ist."""
+    if isinstance(marke, Schriftfeldeintrag):
+        return marke
+    return Schriftfeldeintrag(str(marke))
+
+
 STANDARDSPALTEN = (
     Spalte("stift", "Stift", 10.0, MITTE),
     Spalte("ader", "", 7.0, MITTE),
@@ -109,10 +129,13 @@ STANDARDSPALTEN = (
     Spalte("kabel", "Kabel", 12.0),
 )
 
-STANDARDSCHRIFTFELD = (
-    ("firma", "kunde", "anlagennummer", "kundennummer"),
-    ("verteiler", "verteilernummer", "leiste", "blatt"),
-    ("erstellt", "stand", "geprueft", "gezeichnet", "eigene"),
+STANDARDSCHRIFTFELD = tuple(
+    tuple(Schriftfeldeintrag(marke) for marke in block)
+    for block in (
+        ("firma", "kunde", "anlagennummer", "kundennummer"),
+        ("verteiler", "verteilernummer", "leiste", "blatt"),
+        ("erstellt", "stand", "geprueft", "gezeichnet", "eigene"),
+    )
 )
 
 
@@ -137,7 +160,9 @@ class Blattvorlage:
     schrift_klein: float = 7.0
 
     spalten: tuple[Spalte, ...] = STANDARDSPALTEN
-    schriftfeld: tuple[tuple[str, ...], ...] = STANDARDSCHRIFTFELD
+    # Die Bloecke des Schriftfeldes. Eine blosse Marke darf dabeistehen,
+    # __post_init__ macht einen Eintrag daraus.
+    schriftfeld: tuple[tuple[Schriftfeldeintrag, ...], ...] = STANDARDSCHRIFTFELD
     schriftfeld_art: str = "standard"
     # Wie breit die Bloecke des Schriftfeldes sind. Leer heisst: nach
     # Augenmass verteilt, Namen brauchen mehr Platz als Nummern.
@@ -158,6 +183,15 @@ class Blattvorlage:
     # liesse den Block vollgestopft aussehen.
     fuellgrad_kabel: float = 0.82
     polster_kabel: float = 0.6
+
+    def __post_init__(self) -> None:
+        # Eine blosse Marke darf fuer sich stehen: ein von Hand gebautes
+        # Schriftfeld bleibt so lesbar. Was das Programm weiterreicht,
+        # ist danach immer ein Schriftfeldeintrag.
+        object.__setattr__(self, "schriftfeld", tuple(
+            tuple(_als_eintrag(eintrag) for eintrag in block)
+            for block in self.schriftfeld
+        ))
 
     def __str__(self) -> str:
         return self.name
@@ -228,18 +262,36 @@ def _spalten_aus_yaml(eintraege, herkunft: str, hinweise=None) -> tuple[Spalte, 
     return tuple(spalten)
 
 
-def _schriftfeld_aus_yaml(eintraege, herkunft: str) -> tuple[tuple[str, ...], ...]:
+def _schriftfeld_aus_yaml(
+    eintraege, herkunft: str, hinweise=None
+) -> tuple[tuple[Schriftfeldeintrag, ...], ...]:
+    """Die Bloecke des Schriftfeldes.
+
+    Kurzform ist die blosse Marke, lang geht es mit eigener Ausrichtung -
+    wie bei den Spalten des Leistenblattes.
+    """
     spalten = []
     for spalte in eintraege:
         marken = []
-        for marke in spalte:
-            marke = str(marke).strip()
+        for eintrag in spalte:
+            if not isinstance(eintrag, dict):
+                eintrag = {"marke": eintrag}
+            else:
+                unbekannte_schluessel(
+                    eintrag, SCHRIFTFELDSCHLUESSEL, herkunft, hinweise, "schriftfeld"
+                )
+            marke = str(eintrag.get("marke", "")).strip()
             if marke not in SCHRIFTFELDMARKEN:
                 bekannt = ", ".join(SCHRIFTFELDMARKEN)
                 raise BlattvorlagenFehler(
                     u("{0}: {1!r} gehört nicht ins Schriftfeld (bekannt: {2})").format(herkunft, marke, bekannt)
                 )
-            marken.append(marke)
+            ausrichtung = str(eintrag.get("ausrichtung", LINKS))
+            if ausrichtung not in AUSRICHTUNGEN:
+                raise BlattvorlagenFehler(
+                    u("{0}: Ausrichtung {1!r} gibt es nicht").format(herkunft, ausrichtung)
+                )
+            marken.append(Schriftfeldeintrag(marke, ausrichtung))
         spalten.append(tuple(marken))
     if not spalten:
         raise BlattvorlagenFehler(u("{0}: leeres Schriftfeld").format(herkunft))
@@ -287,7 +339,7 @@ def blattvorlage_aus_yaml(
             else STANDARD.spalten
         ),
         schriftfeld=(
-            _schriftfeld_aus_yaml(inhalt["schriftfeld"], wo)
+            _schriftfeld_aus_yaml(inhalt["schriftfeld"], wo, hinweise)
             if inhalt.get("schriftfeld")
             else STANDARD.schriftfeld
         ),
@@ -376,7 +428,15 @@ def blattvorlage_als_yaml(vorlage: Blattvorlage) -> dict:
             for s in vorlage.spalten
         ]
     if vorlage.schriftfeld != STANDARD.schriftfeld:
-        inhalt["schriftfeld"] = [list(spalte) for spalte in vorlage.schriftfeld]
+        # Kurzform, wo nichts abweicht: eine Marke fuer sich allein.
+        inhalt["schriftfeld"] = [
+            [
+                eintrag.marke if eintrag.ausrichtung == LINKS
+                else {"marke": eintrag.marke, "ausrichtung": eintrag.ausrichtung}
+                for eintrag in spalte
+            ]
+            for spalte in vorlage.schriftfeld
+        ]
     _abweichung(inhalt, "schriftfeld_art", vorlage.schriftfeld_art, STANDARD.schriftfeld_art)
     if vorlage.schriftfeld_anteile:
         inhalt["schriftfeld_anteile"] = [_zahlwert(a) for a in vorlage.schriftfeld_anteile]

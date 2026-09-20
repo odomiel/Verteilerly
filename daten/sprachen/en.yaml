@@ -263,6 +263,7 @@ Bezeichnungen, Bemerkungen, Rangierungen, Kabel und Projektdaten durchsuchen: Se
   jumpers, cables and project data
 Name und Nummer des Verteilers, Stammdaten und eigene Felder — was im Schriftfeld jedes Blattes steht: Name
   and number of the frame, master data and own fields — what stands in the title block of every sheet
+Wie der Wert in seinem Block liegt: How the value sits in its block
 Wie die Blätter aussehen — Spalten, Schriftgrößen, Ränder: How the sheets look — columns, font sizes,
   margins
 Vorlagen umbenennen, löschen und die mitgelieferten zurückholen: Rename and delete templates, and bring
@@ -645,7 +646,7 @@ Die gewählte Angabe entfernen: Remove the chosen entry
 Eine Angabe hinzufügen: Add an entry
 Letzten Block entfernen: Remove last block
 Schriftfeld (Briefkopf): Title block (letterhead)
-Welche Angaben in welchem Block stehen. Einträge lassen sich zwischen den Blöcken ziehen.: Which entries stand in which block. Entries can be dragged between the blocks.
+Welche Angaben in welchem Block stehen. Einträge lassen sich zwischen den Blöcken ziehen; der Knopf dahinter richtet den Wert aus.: Which entries stand in which block. Entries can be dragged between the blocks; the button behind one aligns its value.
 Anlage: Installation
 Erstellt: Created
 Geprüft: Checked

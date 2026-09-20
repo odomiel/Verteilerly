@@ -36,9 +36,6 @@ from PySide6.QtWidgets import (
 )
 
 from ...blattvorlagen import (
-    LINKS,
-    MITTE,
-    RECHTS,
     SPALTENFELDER,
     Blattvorlage,
     Spalte,
@@ -53,7 +50,7 @@ from ...gui.vorschau import Blattflaeche
 from ...layout import blaetter
 from ...modell import Projekt, Verteiler
 from ...sprachen import u
-from .schriftfeld import SchriftfeldEditor
+from .schriftfeld import AUSRICHTUNGSNAMEN, SchriftfeldEditor
 
 # Was sich als Zahl einstellen laesst: Feld der Blattvorlage, Beschriftung,
 # Einheit, kleinster und groesster Wert, Schrittweite. Die Beschriftungen
@@ -96,7 +93,6 @@ FELDNAMEN = {
     "bemerkung": "Bemerkung",
     "kabel": "Kabel",
 }
-AUSRICHTUNGSNAMEN = {LINKS: "links", MITTE: "mittig", RECHTS: "rechts"}
 VERZUG = 150  # ms - tippen, ohne dass das Blatt bei jeder Ziffer neu entsteht
 
 

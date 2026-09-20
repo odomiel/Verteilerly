@@ -136,10 +136,18 @@ class TestAlsYaml(unittest.TestCase):
             blattvorlage_aus_yaml,
         )
 
+        from verteilerly.blattvorlagen import Schriftfeldeintrag
+
         eigene = dataclasses.replace(
             STANDARD, id="probe", name="Probe", standard=False, rand=17.5,
             schrift_klein=6.0, spalten=STANDARD.spalten[:3], da_nummern=True,
             fuellgrad_kabel=0.5, zelle_hoehe=7.25, buchten_je_blatt=3,
+            schriftfeld=(
+                (Schriftfeldeintrag("firma"),
+                 Schriftfeldeintrag("strich"),
+                 Schriftfeldeintrag("verteiler", "rechts")),
+                (Schriftfeldeintrag("erstellt", "mitte"),),
+            ),
         )
         vorlagen = [BEISPIELVORLAGE, eigene]
         for datei in sorted(blattvorlagenordner().glob("*.yaml")):
@@ -194,6 +202,47 @@ class TestMitgelieferte(unittest.TestCase):
             ["ausfuehrlich", "knapp", "standard"],
         )
 
+    def test_eine_angabe_darf_ihre_ausrichtung_mitbringen(self):
+        """Kurzform ist die bloße Marke, lang geht es mit Ausrichtung."""
+        from verteilerly.blattvorlagen import blattvorlage_aus_yaml
+
+        vorlage = blattvorlage_aus_yaml(
+            {"id": "x", "name": "X", "schriftfeld": [
+                ["firma", {"marke": "verteiler", "ausrichtung": "rechts"}]
+            ]},
+            "x.yaml",
+        )
+        block = vorlage.schriftfeld[0]
+        self.assertEqual(block[0].ausrichtung, "links")
+        self.assertEqual(block[1].ausrichtung, "rechts")
+
+    def test_eine_ausrichtung_die_es_nicht_gibt_wird_abgewiesen(self):
+        from verteilerly.blattvorlagen import (
+            BlattvorlagenFehler,
+            blattvorlage_aus_yaml,
+        )
+
+        with self.assertRaises(BlattvorlagenFehler):
+            blattvorlage_aus_yaml(
+                {"id": "x", "name": "X", "schriftfeld": [
+                    [{"marke": "firma", "ausrichtung": "schräg"}]
+                ]},
+                "x.yaml",
+            )
+
+    def test_ein_vertippter_schluessel_der_angabe_wird_gemeldet(self):
+        from verteilerly.blattvorlagen import blattvorlage_aus_yaml
+
+        hinweise = []
+        blattvorlage_aus_yaml(
+            {"id": "x", "name": "X", "schriftfeld": [
+                [{"marke": "firma", "ausrichtng": "rechts"}]
+            ]},
+            "x.yaml",
+            hinweise,
+        )
+        self.assertTrue([h for h in hinweise if "ausrichtng" in h])
+
     def test_die_beispielvorlage_wird_nicht_mitgeliefert(self):
         """Nur die Bauart blieb im Programm, nicht die Vorlage."""
         self.assertFalse((mitgeliefert() / "blattvorlagen" / "beispiel.yaml").is_file())
@@ -203,12 +252,12 @@ class TestMitgelieferte(unittest.TestCase):
         vorlage = BEISPIELVORLAGE
         self.assertEqual(vorlage.schriftfeld_art, "beispiel")
         self.assertEqual(
-            vorlage.schriftfeld,
-            (
-                ("verteiler", "verteilernummer", "leiste"),
-                ("erstellt", "stand", "geprueft"),
-                ("firma", "kunde"),
-            ),
+            [[eintrag.marke for eintrag in block] for block in vorlage.schriftfeld],
+            [
+                ["verteiler", "verteilernummer", "leiste"],
+                ["erstellt", "stand", "geprueft"],
+                ["firma", "kunde"],
+            ],
         )
         # Für zwei Anschriften braucht das Schriftfeld mehr Höhe.
         self.assertGreater(vorlage.schriftfeld_hoehe, STANDARD.schriftfeld_hoehe)

@@ -497,6 +497,19 @@ border of the row; in the plain data lists it does not appear. Deselected projec
 and on the frame layout <code>leiste</code> falls away: that sheet shows all of
 them.</p>
 
+<p>The short form is the bare mark. Written out, an entry brings its own
+<code>ausrichtung</code> — <code>links</code> (the default),
+<code>mitte</code> or <code>rechts</code>. It applies to the <b>value</b>, not
+to the label: that one stands at the left edge of its block and keeps the rows
+lined up. Drawn sheet and Excel workbook both follow it.</p>
+
+<pre>schriftfeld:
+  - [firma, kunde]
+  - - verteiler
+    - {marke: verteilernummer, ausrichtung: rechts}
+    - strich
+    - {marke: blatt, ausrichtung: mitte}</pre>
+
 <p><code>schriftfeld_anteile</code> gives the widths of the blocks as a ratio
 (<code>[0.42, 0.58]</code>); without it the program divides them by eye.
 <code>schriftfeld_art</code> is <code>standard</code> (label and value in
@@ -786,7 +799,9 @@ as on the sheet, each with its entries one below the other (company, customer,
 frame, sheet, created, custom fields …). Entries can be dragged between the
 blocks; <b>+</b> adds an entry — among them the <b>horizontal rule</b>, which
 draws a line in the block —, <b>−</b> removes the chosen entry and <b>✕</b>
-deletes that very block. <i>Add block</i> and <i>Remove last block</i> change
+deletes that very block. Behind every entry stands a button for its
+<b>alignment</b> — left, centered or right; it applies to the value, not to the
+label. The horizontal rule has none: it is a line and has nothing to align. <i>Add block</i> and <i>Remove last block</i> change
 the number of blocks; one always remains. With
 <i>Set the widths myself</i> every block gets its share of the width,
 otherwise the program divides by eye. The editor always builds a title block of blocks; the fixed

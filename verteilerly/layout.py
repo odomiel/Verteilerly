@@ -589,12 +589,12 @@ def schriftfeldwerte(
     """
     traeger = Blatt(0, 0, titel=blatttitel)
     return [
-        eintrag
-        for marken in vorlage.schriftfeld
-        for marke in marken
-        for eintrag in _eintraege(marke, projekt, traeger, leiste, blattart)
+        zeile
+        for block in vorlage.schriftfeld
+        for eintrag in block
+        for zeile in _eintraege(eintrag.marke, projekt, traeger, leiste, blattart)
         # Eine Tabelle hat keine Striche - dort zaehlen nur die Angaben.
-        if eintrag[0] != STRICH
+        if zeile[0] != STRICH
     ]
 
 
@@ -604,20 +604,23 @@ def schriftfeldspalten(
     vorlage: Blattvorlage = STANDARD,
     blattart: str = "leisten",
     blatttitel: str = "",
-) -> list[list[tuple[str, str]]]:
+) -> list[list[tuple[str, str, str]]]:
     """Das Schriftfeld in Bloecken, wie die Blattvorlage es aufteilt.
 
-    Eine Liste je Block, darin die Zeilen aus Beschriftung und Wert.
-    Gezeichnetes Blatt und Excel-Mappe fragen dieselbe Stelle.
+    Eine Liste je Block, darin die Zeilen aus Beschriftung, Wert und
+    Ausrichtung. Gezeichnetes Blatt und Excel-Mappe fragen dieselbe
+    Stelle - die Ausrichtung gehoert dem Eintrag, nicht dem Zeichner.
     """
     traeger = Blatt(0, 0, titel=blatttitel)
     return [
-        schriftfeldzeilen(
-            [eintrag
-             for marke in marken
-             for eintrag in _eintraege(marke, projekt, traeger, leiste, blattart)]
-        )
-        for marken in vorlage.schriftfeld
+        [
+            (name, wert, eintrag.ausrichtung)
+            for eintrag in block
+            for name, wert in schriftfeldzeilen(
+                _eintraege(eintrag.marke, projekt, traeger, leiste, blattart)
+            )
+        ]
+        for block in vorlage.schriftfeld
     ]
 
 
@@ -708,7 +711,7 @@ def schriftfeld(
             blatt.linie(x, oben, x, oben + hoehe, 0.2, LINIE_FEIN)
         zeilenhoehe = hoehe / max(len(spalte), 4)
         label_b = 20.0
-        for j, (name, wert) in enumerate(spalte):
+        for j, (name, wert, ausrichtung) in enumerate(spalte):
             y = oben + j * zeilenhoehe
             if name == STRICH:
                 mitte = y + zeilenhoehe / 2
@@ -722,7 +725,7 @@ def schriftfeld(
             )
             blatt.text(
                 x + label_b + 2, y, spaltenbreite - label_b - 4, zeilenhoehe, wert,
-                vorlage.schrift_normal, LINKS,
+                vorlage.schrift_normal, ausrichtung,
             )
         x += spaltenbreite
 

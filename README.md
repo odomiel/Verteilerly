@@ -640,7 +640,7 @@ vollständiges Beispiel; ein Test lädt es.
 
 Die erste eingebaute ist der **Blattvorlagen-Editor**: links alle Werte einer
 Blattvorlage samt der Spalten des Leistenblatts und dem Schriftfeld (dem
-Briefkopf: Blöcke, Angaben, Breiten), rechts das Blatt, gezeichnet
+Briefkopf: Blöcke, Angaben, ihre Ausrichtung, Breiten), rechts das Blatt, gezeichnet
 mit demselben Modell wie Vorschau und PDF — am offenen Verteiler oder an einem
 Beispiel. Jede Änderung wird mit denselben Regeln geprüft wie eine Datei beim
 Lesen. Gespeichert wird **immer als neue Vorlage**

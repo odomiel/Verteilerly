@@ -91,7 +91,8 @@ def _blattvorlage(pfad: pathlib.Path, bericht: Bericht) -> None:
     vorlage = blattvorlage_aus_yaml(_inhalt(pfad), pfad.name, bericht.hinweise)
     spalten = ", ".join(spalte.feld for spalte in vorlage.spalten)
     bloecke = " | ".join(
-        ", ".join(block) for block in vorlage.schriftfeld
+        ", ".join(eintrag.marke for eintrag in block)
+        for block in vorlage.schriftfeld
     )
     bericht.angaben = [
         u("Kennung: {0}").format(vorlage.id),

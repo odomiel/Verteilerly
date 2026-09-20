@@ -3,8 +3,11 @@
 Die Bloecke stehen nebeneinander wie auf dem Blatt, darin die Angaben
 untereinander. Eintraege lassen sich zwischen den Bloecken ziehen; ``+``
 und ``−`` fuegen hinzu und nehmen weg, ``✕`` loescht den ganzen Block.
-Unter den Angaben steht auch der **Querstrich**: keine Angabe, sondern
-ein Strich quer durch den Block, der trennt, was darueber steht.
+Hinter jeder Angabe steht ein Knopf fuer ihre **Ausrichtung** - links,
+mittig oder rechts; er gilt dem Wert, nicht der Beschriftung. Unter den
+Angaben steht auch der **Querstrich**: keine Angabe, sondern ein Strich
+quer durch den Block, der trennt, was darueber steht - er hat nichts
+auszurichten und traegt darum keinen Knopf.
 
 Die Breiten sind Anteile: ohne Haken bei *Breiten selbst festlegen*
 teilt das Programm nach Augenmass.
@@ -12,7 +15,8 @@ teilt das Programm nach Augenmass.
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QPointF, QSize, Qt, QTimer, Signal
+from PySide6.QtGui import QIcon, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
@@ -28,9 +32,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ...blattvorlagen import SCHRIFTFELDMARKEN
+from ...blattvorlagen import SCHRIFTFELDMARKEN, Schriftfeldeintrag
 from ...layout import schriftfeldanteile
-from ...modell import BLATTBESCHRIFTUNG
+from ...modell import BLATTBESCHRIFTUNG, LINKS, MITTE, RECHTS
 from ...sprachen import u
 
 #: Wie die Angaben im Editor heissen - wie auf dem Blatt, dazu "eigene".
@@ -39,7 +43,41 @@ MARKENNAMEN = {
     "eigene": "Eigene Felder",
     "strich": "Querstrich",
 }
+#: Wie die Ausrichtungen heissen. Auch die Spaltentabelle des Dialogs
+#: nimmt diese Tabelle - eine zweite liefe irgendwann auseinander.
+AUSRICHTUNGSNAMEN = {LINKS: "links", MITTE: "mittig", RECHTS: "rechts"}
 HOECHSTENS_BLOECKE = 6
+
+#: Woran ein Listeneintrag seine Marke und seine Ausrichtung traegt.
+#: Beides reist beim Ziehen mit - Qt gibt alle Rollen eines Eintrags
+#: an den neuen Platz weiter.
+MARKE = Qt.ItemDataRole.UserRole
+AUSRICHTUNG = Qt.ItemDataRole.UserRole + 1
+
+
+def ausrichtungssymbol(ausrichtung: str, farbe) -> QIcon:
+    """Ein Sinnbild der Ausrichtung: vier Striche, so gelegt wie der Text.
+
+    Gezeichnet statt geschrieben: ein Buchstabe waere in jeder Sprache
+    ein anderer, das Bild ist ueberall dasselbe.
+    """
+    kante = 16
+    bild = QPixmap(kante, kante)
+    bild.fill(Qt.GlobalColor.transparent)
+    maler = QPainter(bild)
+    maler.setRenderHint(QPainter.RenderHint.Antialiasing)
+    maler.setPen(QPen(farbe, 1.6))
+    for i, laenge in enumerate((12, 8, 12, 8)):
+        if ausrichtung == RECHTS:
+            x = kante - 2 - laenge
+        elif ausrichtung == MITTE:
+            x = (kante - laenge) / 2
+        else:
+            x = 2
+        y = 3.5 + i * 3.0
+        maler.drawLine(QPointF(x, y), QPointF(x + laenge, y))
+    maler.end()
+    return QIcon(bild)
 
 
 class SchriftfeldEditor(QWidget):
@@ -49,19 +87,21 @@ class SchriftfeldEditor(QWidget):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self._bloecke: list[list[str]] = [[]]
+        self._bloecke: list[list[Schriftfeldeintrag]] = [[]]
         self._breiten: list[float] = []
+        self._symbole: dict[tuple[str, str], QIcon] = {}
         self.listen: list[QListWidget] = []
         self.breiten: list[QDoubleSpinBox] = []
 
         self.hinweis = hinweis = QLabel(u(
             "Welche Angaben in welchem Block stehen. Einträge lassen sich "
-            "zwischen den Blöcken ziehen."
+            "zwischen den Blöcken ziehen; der Knopf dahinter richtet den "
+            "Wert aus."
         ))
         hinweis.setWordWrap(True)
         # Eine umbrechende Beschriftung meldet im Rollbereich nur eine Zeile
         # Hoehe an - die zweite laege sonst ueber den Bloecken.
-        hinweis.setMinimumHeight(hinweis.fontMetrics().lineSpacing() * 2 + 4)
+        hinweis.setMinimumHeight(hinweis.fontMetrics().lineSpacing() * 3 + 4)
         self.bloecke = QHBoxLayout()
 
         self.block_hinzu = QPushButton(u("Block hinzufügen"))
@@ -100,7 +140,7 @@ class SchriftfeldEditor(QWidget):
         self.eigene_breiten.blockSignals(False)
         self._aufbauen()
 
-    def werte(self) -> tuple[tuple[tuple[str, ...], ...], tuple[float, ...]]:
+    def werte(self) -> tuple[tuple[tuple[Schriftfeldeintrag, ...], ...], tuple[float, ...]]:
         """(Bloecke, Breiten) - Breiten leer, wenn das Programm sie waehlt."""
         bloecke = tuple(tuple(block) for block in self._aus_listen())
         if not self.eigene_breiten.isChecked():
@@ -111,7 +151,7 @@ class SchriftfeldEditor(QWidget):
 
     def marke_hinzufuegen(self, block: int, marke: str) -> None:
         self._bloecke = self._aus_listen()
-        self._bloecke[block].append(marke)
+        self._bloecke[block].append(Schriftfeldeintrag(marke))
         self._aufbauen()
         self.geaendert.emit()
 
@@ -121,6 +161,18 @@ class SchriftfeldEditor(QWidget):
             del self._bloecke[block][zeile]
             self._aufbauen()
             self.geaendert.emit()
+
+    def ausrichten(self, block: int, zeile: int, ausrichtung: str) -> None:
+        """Legt fest, wie der Wert dieser Angabe im Block liegt."""
+        self._bloecke = self._aus_listen()
+        if not 0 <= zeile < len(self._bloecke[block]):
+            return
+        eintrag = self._bloecke[block][zeile]
+        if eintrag.ausrichtung == ausrichtung:
+            return
+        self._bloecke[block][zeile] = Schriftfeldeintrag(eintrag.marke, ausrichtung)
+        self._aufbauen()
+        self.geaendert.emit()
 
     def block_hinzufuegen(self) -> None:
         self._bloecke = self._aus_listen()
@@ -152,13 +204,19 @@ class SchriftfeldEditor(QWidget):
     def _teile(self) -> int:
         return len(self._bloecke)
 
-    def _aus_listen(self) -> list[list[str]]:
+    def _aus_listen(self) -> list[list[Schriftfeldeintrag]]:
         if not self.listen:
             return [list(block) for block in self._bloecke]
         return [
-            [liste.item(zeile).data(Qt.ItemDataRole.UserRole) for zeile in range(liste.count())]
+            [self._eintrag(liste.item(zeile)) for zeile in range(liste.count())]
             for liste in self.listen
         ]
+
+    @staticmethod
+    def _eintrag(zeile: QListWidgetItem) -> Schriftfeldeintrag:
+        return Schriftfeldeintrag(
+            zeile.data(MARKE), zeile.data(AUSRICHTUNG) or LINKS
+        )
 
     def _leeren(self) -> None:
         while self.bloecke.count():
@@ -203,15 +261,63 @@ class SchriftfeldEditor(QWidget):
         liste.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
         liste.setDefaultDropAction(Qt.DropAction.MoveAction)
         liste.setMinimumHeight(110)
-        for marke in self._bloecke[block]:
-            eintrag = QListWidgetItem(u(MARKENNAMEN.get(marke, marke)))
-            eintrag.setData(Qt.ItemDataRole.UserRole, marke)
-            liste.addItem(eintrag)
+        self.listen.append(liste)
+        for eintrag in self._bloecke[block]:
+            zeile = QListWidgetItem(u(MARKENNAMEN.get(eintrag.marke, eintrag.marke)))
+            zeile.setData(MARKE, eintrag.marke)
+            zeile.setData(AUSRICHTUNG, eintrag.ausrichtung)
+            liste.addItem(zeile)
+        self._knoepfe_setzen(liste)
         modell = liste.model()
         for signal in (modell.rowsInserted, modell.rowsRemoved, modell.rowsMoved):
             signal.connect(self._gezogen)
-        self.listen.append(liste)
         return liste
+
+    def _symbol(self, ausrichtung: str) -> QIcon:
+        farbe = self.palette().buttonText().color()
+        schluessel = (ausrichtung, farbe.name())
+        if schluessel not in self._symbole:
+            self._symbole[schluessel] = ausrichtungssymbol(ausrichtung, farbe)
+        return self._symbole[schluessel]
+
+    def _knoepfe_setzen(self, liste: QListWidget) -> None:
+        """Gibt jeder Angabe ihren Ausrichtungsknopf.
+
+        Ein gezogener Eintrag ist am neuen Platz ein neuer Eintrag und
+        kommt ohne Knopf an - darum wird jede Liste danach durchgesehen.
+        """
+        block = self.listen.index(liste)
+        for stelle in range(liste.count()):
+            zeile = liste.item(stelle)
+            if zeile.data(MARKE) == "strich" or liste.itemWidget(zeile) is not None:
+                continue
+            liste.setItemWidget(zeile, self._ausrichtungsknopf(block, zeile))
+
+    def _ausrichtungsknopf(self, block: int, zeile: QListWidgetItem) -> QWidget:
+        knopf = QToolButton()
+        knopf.setAutoRaise(True)
+        knopf.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        knopf.setIcon(self._symbol(zeile.data(AUSRICHTUNG) or LINKS))
+        knopf.setToolTip(u("Wie der Wert in seinem Block liegt"))
+        auswahl = QMenu(knopf)
+        for kennung, name in AUSRICHTUNGSNAMEN.items():
+            handlung = auswahl.addAction(self._symbol(kennung), u(name))
+            handlung.triggered.connect(
+                lambda _an=False, b=block, z=zeile, k=kennung: self.ausrichten(
+                    b, self.listen[b].row(z), k
+                )
+            )
+        knopf.setMenu(auswahl)
+        huelle = QWidget()
+        # Ohne eigenen Hintergrund: der Name des Eintrags steht darunter
+        # und soll sichtbar bleiben.
+        lage = QHBoxLayout(huelle)
+        lage.setContentsMargins(0, 0, 2, 0)
+        lage.addStretch(1)
+        lage.addWidget(knopf)
+        hoehe = max(huelle.sizeHint().height(), knopf.sizeHint().height())
+        zeile.setSizeHint(QSize(0, hoehe + 2))
+        return huelle
 
     def _listenknoepfe(self, block: int) -> QHBoxLayout:
         dazu = QToolButton()
@@ -244,9 +350,19 @@ class SchriftfeldEditor(QWidget):
         return knoepfe
 
     def _gezogen(self, *_args) -> None:
-        """Nach dem Ziehen: der Stand steht in den Listen."""
+        """Nach dem Ziehen: der Stand steht in den Listen.
+
+        Die Knoepfe kommen erst danach dazu - mitten im Fallenlassen
+        haengt Qt noch an seinen Zeilen.
+        """
         self._bloecke = self._aus_listen()
+        QTimer.singleShot(0, self.knoepfe_auffrischen)
         self.geaendert.emit()
+
+    def knoepfe_auffrischen(self) -> None:
+        """Jede Liste durchsehen und fehlende Ausrichtungsknoepfe nachtragen."""
+        for liste in self.listen:
+            self._knoepfe_setzen(liste)
 
     def _breiten_geschaltet(self, an: bool) -> None:
         for feld in self.breiten:

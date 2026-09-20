@@ -559,7 +559,7 @@ def _schriftfeld_spalten(
     hoehe = max(len(block) for block in bloecke)
     von = 1
     for block, bis in zip(bloecke, grenzen):
-        for i, (name, wert) in enumerate(block):
+        for i, (name, wert, ausrichtung) in enumerate(block):
             if name == STRICH:
                 _querstrich(blatt, zeug, zeile + i, von, bis)
                 continue
@@ -568,10 +568,13 @@ def _schriftfeld_spalten(
                 _wertfeld(
                     blatt, zeug, zeile + i, von,
                     f"{name}: {wert}".strip(" :") if name else str(wert), vorlage,
+                    ausrichtung,
                 )
                 continue
             _beschriftet(blatt, zeug, zeile + i, von, name, vorlage)
-            _wertfeld(blatt, zeug, zeile + i, von + 1, str(wert), vorlage)
+            _wertfeld(
+                blatt, zeug, zeile + i, von + 1, str(wert), vorlage, ausrichtung
+            )
             if bis > von + 1:
                 blatt.merge_cells(
                     start_row=zeile + i, start_column=von + 1,
