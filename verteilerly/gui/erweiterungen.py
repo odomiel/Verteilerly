@@ -22,6 +22,9 @@ from ..erweiterungen import Fund, eingeschaltet
 from ..sprachen import u
 from .passform import PassenderDialog
 
+#: Was in der Spalte *Version* steht, wenn eine Erweiterung keine nennt.
+OHNE_FASSUNG = "—"
+
 
 class Schnittstelle:
     """Das Programm, wie eine Erweiterung es sieht.
@@ -104,11 +107,12 @@ class Schnittstelle:
 class ErweiterungenDialog(PassenderDialog):
     """Erweiterungen ein- und ausschalten.
 
-    Je Erweiterung ein Haken, dazu woher sie kommt und was sie tut - oder
-    warum sie nicht geladen werden konnte. Fremde laufen mit allen Rechten
-    des Programms; eingeschaltet wird nur, was man kennt. Wirksam wird die
-    Wahl beim naechsten Start: Code laesst sich laden, aber nicht sauber
-    wieder entladen.
+    Je Erweiterung ein Haken, dazu ihre Fassung, woher sie kommt und was
+    sie tut - oder warum sie nicht geladen werden konnte. Eine eingebaute
+    traegt die Fassung des Programms, eine eigene zaehlt, wie sie will.
+    Fremde laufen mit allen Rechten des Programms; eingeschaltet wird nur,
+    was man kennt. Wirksam wird die Wahl beim naechsten Start: Code laesst
+    sich laden, aber nicht sauber wieder entladen.
     """
 
     def __init__(
@@ -129,8 +133,10 @@ class ErweiterungenDialog(PassenderDialog):
         hinweis.setWordWrap(True)
 
         self.liste = QTreeWidget()
-        self.liste.setColumnCount(3)
-        self.liste.setHeaderLabels([u("Erweiterung"), u("Herkunft"), u("Beschreibung")])
+        self.liste.setColumnCount(4)
+        self.liste.setHeaderLabels(
+            [u("Erweiterung"), u("Version"), u("Herkunft"), u("Beschreibung")]
+        )
         self.liste.setRootIsDecorated(False)
         self.eintraege: dict[str, QTreeWidgetItem] = {}
         for fund in funde:
@@ -138,18 +144,23 @@ class ErweiterungenDialog(PassenderDialog):
             text = u(fund.beschreibung) if fund.beschreibung else ""
             if fund.fehler:
                 text = u("Nicht geladen: {0}").format(fund.fehler)
-            eintrag = QTreeWidgetItem([u(fund.name), herkunft, text])
+            # Eine eigene Erweiterung muss keine Fassung nennen.
+            eintrag = QTreeWidgetItem(
+                [u(fund.name), fund.version or OHNE_FASSUNG, herkunft, text]
+            )
             eintrag.setFlags(eintrag.flags() | Qt.ItemFlag.ItemIsUserCheckable)
             eintrag.setCheckState(
                 0, Qt.CheckState.Checked if eingeschaltet(fund, an, aus)
                 else Qt.CheckState.Unchecked
             )
-            eintrag.setToolTip(2, text)
+            eintrag.setToolTip(3, text)
+            if fund.eingebaut:
+                eintrag.setToolTip(1, u("Wird mit Verteilerly ausgeliefert"))
             if fund.ort is not None:
-                eintrag.setToolTip(1, str(fund.ort))
+                eintrag.setToolTip(2, str(fund.ort))
             self.liste.addTopLevelItem(eintrag)
             self.eintraege[fund.kennung] = eintrag
-        for spalte in range(3):
+        for spalte in range(4):
             self.liste.resizeColumnToContents(spalte)
 
         ortzeile = QHBoxLayout()
@@ -179,7 +190,7 @@ class ErweiterungenDialog(PassenderDialog):
         knoepfe.accepted.connect(self.accept)
         knoepfe.rejected.connect(self.reject)
         aufbau.addWidget(knoepfe)
-        self.resize(720, 360)
+        self.resize(820, 360)
 
     def _ordner_oeffnen(self) -> None:
         if self.ordner is None:

@@ -10,8 +10,8 @@ Beide sind ein Modul mit einem Objekt ``erweiterung``, das von
 
 Fremder Code laeuft mit allen Rechten des Programms. Darum wird eine
 fremde Erweiterung erst geladen - und das heisst: ausgefuehrt -, wenn sie
-eingeschaltet ist; bis dahin liest ``finden()`` nur ihren Docstring aus
-der Datei, ohne sie auszufuehren. Eingebaute sind von Haus aus an, fremde
+eingeschaltet ist; bis dahin liest ``finden()`` nur ihren Docstring und
+ihre Fassung aus der Datei, ohne sie auszufuehren. Eingebaute sind von Haus aus an, fremde
 aus. Eine Erweiterung, die sich nicht laden oder einrichten laesst, wird
 uebergangen; der Grund steht an ihrem ``Fund``.
 
@@ -30,6 +30,7 @@ import sys
 from dataclasses import dataclass
 
 from ..sprachen import u
+from ..version import VERSION
 
 #: Die eingebauten Erweiterungen - Module dieses Pakets.
 EINGEBAUT = ("blattvorlageneditor",)
@@ -43,15 +44,21 @@ OHNE_FREMDE = "VERTEILERLY_OHNE_FREMDE_ERWEITERUNGEN"
 class Erweiterung:
     """Grundlage jeder Erweiterung.
 
-    ``kennung`` ist eindeutig und steht in der Verteilerly.conf, ``name``
-    und ``beschreibung`` zeigt der Dialog *Erweiterungen verwalten*.
-    ``einrichten()`` bekommt die Schnittstelle zum Programm und meldet dort
-    an, was die Erweiterung anbietet - etwa mit ``menueeintrag()``.
+    ``kennung`` ist eindeutig und steht in der Verteilerly.conf, ``name``,
+    ``beschreibung`` und ``version`` zeigt der Dialog *Erweiterungen
+    verwalten*. ``einrichten()`` bekommt die Schnittstelle zum Programm und
+    meldet dort an, was die Erweiterung anbietet - etwa mit
+    ``menueeintrag()``.
+
+    Die **Fassung** steht einer eingebauten Erweiterung nicht frei: sie wird
+    mit dem Programm ausgeliefert und traegt darum dessen Version
+    (``jahr.monat.tag``). Eine fremde zaehlt, wie sie will - oder gar nicht.
     """
 
     kennung: str = ""
     name: str = ""
     beschreibung: str = ""
+    version: str = ""
 
     def einrichten(self, programm) -> None:
         raise NotImplementedError
@@ -64,6 +71,9 @@ class Fund:
     kennung: str
     name: str
     beschreibung: str = ""
+    #: Die Fassung, wie die Erweiterung sie nennt. Bei eingebauten die des
+    #: Programms, bei fremden, was in der Datei steht - oder nichts.
+    version: str = ""
     eingebaut: bool = True
     #: Datei oder Paketordner einer fremden Erweiterung.
     ort: pathlib.Path | None = None
@@ -92,19 +102,57 @@ def _eingebaute() -> list[Fund]:
             continue
         funde.append(Fund(
             erweiterung.kennung or name, erweiterung.name or name,
-            erweiterung.beschreibung, erweiterung=erweiterung,
+            erweiterung.beschreibung,
+            # Eingebaute werden mit dem Programm ausgeliefert - ihre
+            # Fassung ist dessen Fassung, solange sie keine eigene nennen.
+            erweiterung.version or VERSION,
+            erweiterung=erweiterung,
         ))
     return funde
 
 
-def _docstring(datei: pathlib.Path) -> str:
-    """Die erste Zeile des Docstrings - gelesen, nicht ausgefuehrt."""
+def _zeichenkette(satz) -> tuple[str, str]:
+    """(Name, Wert) einer Zuweisung ``name = "text"`` - sonst ("", "")."""
+    if isinstance(satz, ast.Assign) and len(satz.targets) == 1:
+        ziel = satz.targets[0]
+    elif isinstance(satz, ast.AnnAssign):
+        ziel = satz.target
+    else:
+        return "", ""
+    wert = satz.value
+    if not isinstance(ziel, ast.Name) or not isinstance(wert, ast.Constant):
+        return "", ""
+    return ziel.id, wert.value if isinstance(wert.value, str) else ""
+
+
+def _version_im(baum: ast.Module) -> str:
+    """Die Fassung, wie die Datei sie nennt - erst das Modul, dann die Klasse.
+
+    Eine fremde Erweiterung zaehlt, wie sie will: hier wird nur gelesen,
+    nichts geprueft.
+    """
+    for satz in baum.body:
+        name, wert = _zeichenkette(satz)
+        if name in ("version", "__version__") and wert:
+            return wert
+    for satz in baum.body:
+        if not isinstance(satz, ast.ClassDef):
+            continue
+        for zeile in satz.body:
+            name, wert = _zeichenkette(zeile)
+            if name == "version" and wert:
+                return wert
+    return ""
+
+
+def _gelesen(datei: pathlib.Path) -> tuple[str, str]:
+    """(erste Zeile des Docstrings, Fassung) - gelesen, nicht ausgefuehrt."""
     try:
-        text = ast.get_docstring(ast.parse(datei.read_text(encoding="utf-8"))) or ""
+        baum = ast.parse(datei.read_text(encoding="utf-8"))
     except (OSError, SyntaxError, UnicodeDecodeError, ValueError):
-        return ""
-    zeilen = text.strip().splitlines()
-    return zeilen[0] if zeilen else ""
+        return "", ""
+    zeilen = (ast.get_docstring(baum) or "").strip().splitlines()
+    return (zeilen[0] if zeilen else ""), _version_im(baum)
 
 
 def _fremde(ordner_liste) -> list[Fund]:
@@ -127,7 +175,10 @@ def _fremde(ordner_liste) -> list[Fund]:
             if kennung in gesehen:
                 continue
             gesehen.add(kennung)
-            funde.append(Fund(kennung, kennung, _docstring(datei), eingebaut=False, ort=ort))
+            beschreibung, version = _gelesen(datei)
+            funde.append(Fund(
+                kennung, kennung, beschreibung, version, eingebaut=False, ort=ort
+            ))
     return funde
 
 
@@ -179,6 +230,9 @@ def laden(fund: Fund) -> None:
     fund.erweiterung = erweiterung
     fund.name = erweiterung.name or fund.kennung
     fund.beschreibung = erweiterung.beschreibung or fund.beschreibung
+    # Jetzt zaehlt, was die Erweiterung selbst sagt - gelesen wurde vorher
+    # nur, was in der Datei stand.
+    fund.version = erweiterung.version or fund.version
 
 
 def wahl_lesen(text) -> set[str]:

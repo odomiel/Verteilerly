@@ -630,8 +630,10 @@ AppImage und `.exe` sie wie der Quellbaum finden — und sind von Haus aus an.
 **Eigene** sind Python-Dateien oder -Pakete im Ordner `erweiterungen` des
 Arbeitsordners. Sie sind Programmcode mit allen Rechten und darum **aus**, bis
 sie unter *Erweiterungen ▸ Erweiterungen verwalten…* eingeschaltet werden;
-vorher liest das Programm nur die erste Zeile ihres Docstrings, statt sie
-auszuführen. Die Wahl steht in der `Verteilerly.conf` und gilt ab dem nächsten
+vorher liest das Programm nur die erste Zeile ihres Docstrings und ihre
+Fassung, statt sie auszuführen. *Erweiterungen verwalten* zeigt eine Spalte
+**Version**: eine eingebaute trägt die des Programms (`jahr.monat.tag`, sie
+wird ja damit ausgeliefert), eine eigene zählt, wie sie will — oder gar nicht. Die Wahl steht in der `Verteilerly.conf` und gilt ab dem nächsten
 Start. Was sich nicht laden oder einrichten lässt, wird übergangen und beim
 Start genannt; ein Fehler in einem Menüaufruf wird angezeigt, statt das
 Programm anzuhalten. Verhindert eine eigene Erweiterung den Start, startet

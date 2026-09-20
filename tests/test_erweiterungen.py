@@ -92,6 +92,55 @@ class TestFinden(unittest.TestCase):
         self.assertTrue(erweiterungen.eingeschaltet(editor, set(), set()))
         self.assertFalse(erweiterungen.eingeschaltet(editor, set(), {"blattvorlageneditor"}))
 
+    def test_eine_eingebaute_traegt_die_fassung_des_programms(self):
+        """Sie wird mit dem Programm ausgeliefert - also dessen Schema."""
+        from verteilerly.version import VERSION, zerlegen
+
+        for fund in erweiterungen.finden([]):
+            with self.subTest(erweiterung=fund.kennung):
+                self.assertEqual(fund.version, VERSION)
+                # Wirft, wenn es keine Verteilerly-Version ist.
+                zerlegen(fund.version)
+
+    def test_eine_fremde_zaehlt_wie_sie_will_und_wird_dabei_nicht_ausgefuehrt(self):
+        """Die Fassung wird gelesen wie der Docstring, nicht ausgeführt."""
+        marke = self.ordner / "ausgefuehrt"
+        self._datei("modul.py", f'"""Modul: zum Testen."""\n'
+                                f'version = "7.3-beta"\n'
+                                f'open({str(marke)!r}, "w").close()\n')
+        self._datei("doppel.py", '"""Doppel."""\n__version__ = "0.1+git"\n')
+        self._datei("klasse.py", (
+            '"""Klasse."""\n'
+            "from verteilerly.erweiterungen import Erweiterung\n"
+            "class K(Erweiterung):\n"
+            "    kennung = 'klasse'\n    version = 'v2'\n"
+            "    def einrichten(self, programm):\n        pass\n"
+            "erweiterung = K()\n"
+        ))
+        self._datei("ohne.py", '"""Ohne Fassung."""\n')
+        self.assertEqual(self._fremd("modul").version, "7.3-beta")
+        self.assertEqual(self._fremd("doppel").version, "0.1+git")
+        self.assertEqual(self._fremd("klasse").version, "v2")
+        self.assertEqual(self._fremd("ohne").version, "")
+        self.assertFalse(marke.exists())
+
+    def test_beim_laden_gilt_was_die_erweiterung_selbst_sagt(self):
+        self._datei("spaet.py", (
+            '"""Spät."""\n'
+            'version = "aus der Datei"\n'
+            "from verteilerly.erweiterungen import Erweiterung\n"
+            "class Spaet(Erweiterung):\n"
+            "    kennung = 'spaet'\n    name = 'Spät'\n"
+            "    version = 'aus dem Objekt'\n"
+            "    def einrichten(self, programm):\n        pass\n"
+            "erweiterung = Spaet()\n"
+        ))
+        fund = self._fremd("spaet")
+        self.assertEqual(fund.version, "aus der Datei")
+        erweiterungen.laden(fund)
+        self.assertEqual(fund.fehler, "")
+        self.assertEqual(fund.version, "aus dem Objekt")
+
     def test_eine_fremde_wird_beim_finden_nicht_ausgefuehrt(self):
         """Fremder Code laeuft erst, wenn jemand ihn eingeschaltet hat."""
         marke = self.ordner / "ausgefuehrt"
@@ -193,6 +242,9 @@ class TestFinden(unittest.TestCase):
                 (ordner / "hallo.py").write_text(beispiel, encoding="utf-8")
                 fund = next(f for f in erweiterungen.finden([ordner]) if f.kennung == "hallo")
                 self.assertTrue(fund.beschreibung)
+                # Die Fassung steht in der Klasse und wird gelesen, nicht
+                # ausgeführt.
+                self.assertEqual(fund.version, "1.0")
                 erweiterungen.laden(fund)
                 self.assertEqual(fund.fehler, "")
                 programm = Programmattrappe()
@@ -270,18 +322,32 @@ class TestVerwaltenDialog(unittest.TestCase):
         from verteilerly.gui.erweiterungen import ErweiterungenDialog
 
         funde = erweiterungen.finden([]) + [
-            Fund("hallo", "hallo", "Sagt Hallo", eingebaut=False, ort=pathlib.Path("/x/hallo.py")),
+            Fund("hallo", "hallo", "Sagt Hallo", "7.3-beta", eingebaut=False,
+                 ort=pathlib.Path("/x/hallo.py")),
             Fund("kaputt", "kaputt", eingebaut=False, ort=pathlib.Path("/x/kaputt.py"),
                  fehler="ModuleNotFoundError: gibtesnicht"),
         ]
         dialog = ErweiterungenDialog(funde, {"kaputt"}, set(), None)
         self.addCleanup(dialog.close)
         hallo, kaputt = dialog.eintraege["hallo"], dialog.eintraege["kaputt"]
-        self.assertEqual(hallo.text(1), "hallo.py")
+        self.assertEqual(hallo.text(2), "hallo.py")
         self.assertEqual(hallo.checkState(0), Qt.CheckState.Unchecked)
-        self.assertIn("gibtesnicht", kaputt.text(2))
+        self.assertIn("gibtesnicht", kaputt.text(3))
         self.assertEqual(kaputt.checkState(0), Qt.CheckState.Checked)
         self.assertFalse(dialog.ordnerknopf.isEnabled())
+
+        # Die Spalte Version: eigene Zählweise, eingebaut die des Programms,
+        # ohne Angabe ein Strich.
+        from verteilerly.gui.erweiterungen import OHNE_FASSUNG
+        from verteilerly.version import VERSION
+
+        self.assertEqual(hallo.text(1), "7.3-beta")
+        self.assertEqual(kaputt.text(1), OHNE_FASSUNG)
+        self.assertEqual(dialog.eintraege["blattvorlageneditor"].text(1), VERSION)
+        self.assertEqual(
+            [dialog.liste.headerItem().text(s) for s in range(4)],
+            ["Erweiterung", "Version", "Herkunft", "Beschreibung"],
+        )
 
         hallo.setCheckState(0, Qt.CheckState.Checked)
         dialog.eintraege["blattvorlageneditor"].setCheckState(0, Qt.CheckState.Unchecked)

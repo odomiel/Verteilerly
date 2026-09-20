@@ -811,10 +811,17 @@ there.</p>
 <h3>11.2 &nbsp; Managing extensions</h3>
 
 <p><b>Extensions ▸ Manage extensions…</b> lists every extension found with a
-check mark, its origin and description — or the reason why it could not be
-loaded. Built-in ones are switched on, your own ones only once you switch them
-on. The choice applies from the next start and is kept in the
+check mark, its <b>version</b>, its origin and description — or the reason why
+it could not be loaded. Built-in ones are switched on, your own ones only once
+you switch them on. The choice applies from the next start and is kept in the
 <code>Verteilerly.conf</code>.</p>
+
+<p>A <b>built-in</b> extension is shipped with the program and therefore
+carries its version — the date of the release,
+<code>year.month.day</code>, with <code>b2</code>, <code>b3</code> … appended
+for several builds on one day. One of <b>your own</b> counts however it likes:
+what stands in
+the column is its own statement. If it names none, a dash stands there.</p>
 
 <h3>11.3 &nbsp; Writing an extension of your own</h3>
 
@@ -823,7 +830,8 @@ in the <code>erweiterungen</code> folder of the working folder; <i>Manage
 extensions</i> names it and opens it at the press of a button. <b>An extension
 of your own is program code and runs with all the rights of
 Verteilerly.</b> That is why it is only executed once it is switched on; until
-then the program only reads the first line of its docstring. It can use
+then the program only reads the first line of its docstring and its
+version. It can use
 everything the program carries — Qt through PySide6, YAML, ReportLab,
 openpyxl and the modules of Verteilerly —, but no further libraries.</p>
 
@@ -835,6 +843,7 @@ class Hallo(Erweiterung):
     kennung = "hallo"
     name = "Hello"
     beschreibung = "Says hello in the status bar"
+    version = "1.0"
 
     def einrichten(self, programm):
         programm.menueeintrag("Say hello",
@@ -842,6 +851,14 @@ class Hallo(Erweiterung):
 
 
 erweiterung = Hallo()</pre>
+
+<p><code>kennung</code> is the name in the <code>Verteilerly.conf</code> and
+must be unique; <code>name</code> and <code>beschreibung</code> stand in
+<i>Manage extensions</i>. <code>version</code> is optional and may count
+however you like — <code>1.0</code>, <code>2026-09-20</code>,
+<code>v3-beta</code>. Like the docstring it is <b>read without executing the
+file</b>; for that it may just as well stand next to the class as
+<code>version = "1.0"</code> or <code>__version__ = "1.0"</code>.</p>
 
 <p>The object <code>erweiterung</code> is what the program looks for. In
 <code>einrichten()</code> it gets the interface <code>programm</code>:</p>

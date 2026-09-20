@@ -166,8 +166,9 @@ class TestWortliste(unittest.TestCase):
         # Zahlen, Kürzel und Eigennamen dürfen gleich bleiben.
         erlaubt = {"OK", "PDF", "CSV", "{0}\n{1}", "{0} / {1}", "{0} · {1}: {2}",
                    "{0} ({1})", " ({0})", ", ",
-                   # "Export", "Tools" und "Name" heißen in beiden Sprachen so.
-                   "Export ({0})", "&Tools", "Name: {0}"}
+                   # "Export", "Tools", "Name" und "Version" heißen in beiden
+                   # Sprachen so.
+                   "Export ({0})", "&Tools", "Name: {0}", "Version"}
         gleich = [
             deutsch for deutsch, englisch in self.katalog.items()
             if deutsch == englisch and deutsch not in erlaubt

@@ -829,10 +829,17 @@ Mustertabellen (<code>schriftfeld_art: beispiel</code>) stellt er nicht ein.</p>
 <h3>11.2 &nbsp; Erweiterungen verwalten</h3>
 
 <p><b>Erweiterungen ▸ Erweiterungen verwalten…</b> listet jede gefundene
-Erweiterung mit Haken, Herkunft und Beschreibung — oder mit dem Grund, warum
-sie sich nicht laden ließ. Eingebaute sind eingeschaltet, eigene erst, wenn
-man sie einschaltet. Die Wahl gilt ab dem nächsten Start und steht in der
-<code>Verteilerly.conf</code>.</p>
+Erweiterung mit Haken, <b>Version</b>, Herkunft und Beschreibung — oder mit dem
+Grund, warum sie sich nicht laden ließ. Eingebaute sind eingeschaltet, eigene
+erst, wenn man sie einschaltet. Die Wahl gilt ab dem nächsten Start und steht
+in der <code>Verteilerly.conf</code>.</p>
+
+<p>Eine <b>eingebaute</b> Erweiterung wird mit dem Programm ausgeliefert und
+trägt darum dessen Version — das Datum des Releases,
+<code>jahr.monat.tag</code>, bei mehreren Bauten eines Tages mit
+<code>b2</code>, <code>b3</code> … dahinter. Eine <b>eigene</b> zählt, wie sie
+will: was in der Spalte
+steht, ist ihre eigene Angabe. Nennt sie keine, steht dort ein Strich.</p>
 
 <h3>11.3 &nbsp; Eine eigene Erweiterung schreiben</h3>
 
@@ -842,7 +849,7 @@ Arbeitsordners; <i>Erweiterungen verwalten</i> nennt ihn und öffnet ihn auf
 Knopfdruck. <b>Eine eigene Erweiterung ist Programmcode und läuft mit allen
 Rechten von Verteilerly.</b> Darum wird sie erst ausgeführt, wenn sie
 eingeschaltet ist; bis dahin liest das Programm nur die erste Zeile ihres
-Docstrings. Sie kann alles benutzen, was im Programm steckt — Qt über PySide6,
+Docstrings und ihre Version. Sie kann alles benutzen, was im Programm steckt — Qt über PySide6,
 YAML, ReportLab, openpyxl und die Module von Verteilerly —, aber keine
 weiteren Bibliotheken.</p>
 
@@ -854,6 +861,7 @@ class Hallo(Erweiterung):
     kennung = "hallo"
     name = "Hallo"
     beschreibung = "Sagt Hallo in der Statuszeile"
+    version = "1.0"
 
     def einrichten(self, programm):
         programm.menueeintrag("Hallo sagen",
@@ -861,6 +869,14 @@ class Hallo(Erweiterung):
 
 
 erweiterung = Hallo()</pre>
+
+<p><code>kennung</code> ist der Name in der <code>Verteilerly.conf</code> und
+muss eindeutig sein; <code>name</code> und <code>beschreibung</code> stehen in
+<i>Erweiterungen verwalten</i>. <code>version</code> ist freiwillig und darf
+zählen, wie Sie wollen — <code>1.0</code>, <code>2026-09-20</code>,
+<code>v3-beta</code>. Sie wird wie der Docstring <b>gelesen, ohne die Datei
+auszuführen</b>; dafür darf sie auch als <code>version = "1.0"</code> oder
+<code>__version__ = "1.0"</code> neben der Klasse stehen.</p>
 
 <p>Das Objekt <code>erweiterung</code> ist, was das Programm sucht. In
 <code>einrichten()</code> bekommt es die Schnittstelle <code>programm</code>:</p>
