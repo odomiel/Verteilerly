@@ -23,8 +23,10 @@ from dataclasses import dataclass
 
 from .modell import (
     BRIEFKOPF_BESCHRIFTUNG,
+    LEISTEN_ZAHLEN,
     Aderadresse,
     Projekt,
+    leistenname,
     mehrzahl,
 )
 from .schreibweisen import Schreibweise
@@ -72,9 +74,9 @@ def _passt(text: str, wort: str) -> bool:
     return bool(text) and wort in text.casefold()
 
 
-def _ort(bucht: int, adresse: Aderadresse) -> str:
+def _ort(bucht: int, adresse: Aderadresse, leisten: str = LEISTEN_ZAHLEN) -> str:
     return u("Bucht {0} · Leiste {1} · Stift {2}{3}").format(
-        bucht, adresse.leiste, adresse.stift, adresse.seite
+        bucht, leistenname(adresse.leiste, leisten), adresse.stift, adresse.seite
     )
 
 
@@ -112,7 +114,9 @@ def suchen(
         anfang = kabel.abschnitte[0] if kabel.abschnitte else None
         leisten = sorted({teil.leiste for teil in kabel.abschnitte})
         ort = (
-            u("Leiste {0}").format(", ".join(str(nummer) for nummer in leisten))
+            u("Leiste {0}").format(", ".join(
+                projekt.leistenname(nummer) for nummer in leisten
+            ))
             if leisten
             else u("ohne Leiste")
         )
@@ -149,7 +153,9 @@ def _in_der_ader(
     gefunden = []
     for feld, beschriftung in ADERFELDER:
         if feld == "rangierung":
-            text = verteiler.rangierfeld(adresse, schreibweise)
+            text = verteiler.rangierfeld(
+                adresse, schreibweise, projekt.leisten_schreibweise
+            )
         else:
             text = getattr(ader, feld, "")
             zweiter = ader.teilung(feld).text
@@ -165,7 +171,7 @@ def _in_der_ader(
                     feld=feld,
                     beschriftung=u(beschriftung),
                     text=text,
-                    ort=_ort(bucht, adresse),
+                    ort=_ort(bucht, adresse, projekt.leisten_schreibweise),
                     adresse=adresse,
                     leiste=adresse.leiste,
                 )

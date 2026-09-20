@@ -77,6 +77,30 @@ class TestEintragsausrichtung(unittest.TestCase):
             self.assertEqual(zellen[0].alignment.horizontal, "right")
 
 
+class TestLeistenmitBuchstaben(unittest.TestCase):
+    """Auch die Register der Mappe heißen nach der Leiste."""
+
+    def test_register_und_beschriftung_folgen_der_wahl(self):
+        import dataclasses
+
+        from verteilerly.modell import LEISTEN_BUCHSTABEN
+
+        projekt = _projekt()
+        projekt.leisten_schreibweise = LEISTEN_BUCHSTABEN
+        with tempfile.TemporaryDirectory() as ordner:
+            ziel = pathlib.Path(ordner) / "probe.xlsx"
+            xlsx_schreiben(projekt, ziel)
+            mappe = load_workbook(ziel)
+            self.assertIn("Leiste A", mappe.sheetnames)
+            self.assertNotIn("Leiste 1", mappe.sheetnames)
+            belegung = mappe["Verteilerbelegung"]
+            texte = [
+                zelle.value for zeile in belegung.iter_rows() for zelle in zeile
+                if isinstance(zelle.value, str) and zelle.value.startswith("Leiste")
+            ]
+            self.assertIn("Leiste A", texte)
+
+
 class TestMasse(unittest.TestCase):
     def test_millimeter_werden_umgerechnet(self):
         # 25.4 mm sind ein Zoll: 96 Bildpunkte, 72 Punkt.

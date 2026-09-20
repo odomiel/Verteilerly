@@ -48,16 +48,33 @@ from ..layout import verteilerbelegungen
 from ..modell import (
     BLATTARTEN,
     BRIEFKOPF_FELDER,
+    LEISTEN_BUCHSTABEN,
+    LEISTEN_SCHREIBWEISEN,
+    LEISTEN_ZAHLEN,
     Kabelabschnitt,
     ModellFehler,
     Projekt,
     UeberlaufFehler,
     Verteiler,
+    leistenname,
     mehrzahl,
 )
 from .. import URHEBER
 from ..version import VERSION
 from ..vorlagen import Vorlagen
+
+#: Wie die Leisten heissen koennen - Kennung, Beispiel und Erklaerung.
+#: Die Woerter gehen beim Anzeigen durch die Uebersetzung.
+LEISTENWEISEN = (
+    (LEISTEN_ZAHLEN, "1, 2, 3", "Die Leisten werden gezählt"),
+    (LEISTEN_BUCHSTABEN, "A, B, C", "Die Leisten tragen Buchstaben"),
+)
+
+
+def _leistenweise(kennung) -> str:
+    """Eine gemerkte Wahl - Unbekanntes wird wieder gezaehlt."""
+    kennung = str(kennung or "")
+    return kennung if kennung in LEISTEN_SCHREIBWEISEN else LEISTEN_ZAHLEN
 from .dialoge import (
     BlattvorlagenDialog,
     BlattwahlDialog,
@@ -138,6 +155,11 @@ class Hauptfenster(QMainWindow):
         # darum in der Einstellungsdatei und nicht in der Projektdatei.
         self.schreibweise = schreibweisen.holen(
             self.einstellungen.value("schreibweise", schreibweisen.STANDARD.id)
+        )
+        # Wie die Leisten heissen: gezaehlt oder mit Buchstaben. Ebenfalls
+        # eine Anzeigesache - im Modell traegt jede Leiste ihre Nummer.
+        self.leisten_schreibweise = _leistenweise(
+            self.einstellungen.value("leisten_schreibweise", LEISTEN_ZAHLEN)
         )
         # Freitext im Rangierfeld - aus, bis er gebraucht wird.
         self.freitext = self.einstellungen.value("freitext", False, type=bool)
@@ -381,6 +403,23 @@ class Hauptfenster(QMainWindow):
             )
             self.schreibweisen_gruppe.addAction(handlung)
             rangierungen.addAction(handlung)
+
+        leistennamen = einstellungen.addMenu(u("&Leisten beschriften"))
+        leistennamen.setToolTipsVisible(True)
+        self.leistenweisen_gruppe = QActionGroup(self)
+        self.leistenweisen_gruppe.setExclusive(True)
+        for kennung, beispiel, erklaerung in LEISTENWEISEN:
+            handlung = QAction(beispiel, self)
+            handlung.setCheckable(True)
+            handlung.setChecked(kennung == self.leisten_schreibweise)
+            handlung.setData(kennung)
+            handlung.setStatusTip(u(erklaerung))
+            handlung.setToolTip(u(erklaerung))
+            handlung.triggered.connect(
+                lambda _an=False, kennung=kennung: self.leistenweise_waehlen(kennung)
+            )
+            self.leistenweisen_gruppe.addAction(handlung)
+            leistennamen.addAction(handlung)
         einstellungen.addAction(self.aktion_freitext)
 
         # Wie die Vorschau lassen sich Verteileruebersicht und Leistenansicht
@@ -574,6 +613,35 @@ class Hauptfenster(QMainWindow):
             6000,
         )
 
+    def leistenweise_waehlen(self, kennung: str) -> None:
+        """Stellt um, wie die Leisten heissen: 1, 2, 3 oder A, B, C.
+
+        Gezaehlt wird weiter ab 1 - der Buchstabe ist nur ein anderer
+        Name. Getippt werden darf beides, gleich was eingestellt ist.
+        """
+        self.leisten_schreibweise = _leistenweise(kennung)
+        self.einstellungen.setValue(
+            "leisten_schreibweise", self.leisten_schreibweise
+        )
+        self._leistenweise_anwenden()
+        beispiel = dict((k, b) for k, b, _e in LEISTENWEISEN)[self.leisten_schreibweise]
+        self.statusBar().showMessage(
+            u("Die Leisten heißen {0}").format(beispiel), 6000
+        )
+
+    def _leistenname(self, nummer: int) -> str:
+        """Wie diese Leiste gerade heisst - "3" oder "C"."""
+        return leistenname(nummer, self.leisten_schreibweise)
+
+    def _leistenweise_anwenden(self) -> None:
+        for handlung in self.leistenweisen_gruppe.actions():
+            handlung.setChecked(handlung.data() == self.leisten_schreibweise)
+        self.leistenansicht.leisten_schreibweise_setzen(self.leisten_schreibweise)
+        self.uebersicht.leisten_schreibweise_setzen(self.leisten_schreibweise)
+        if self.projekt is not None:
+            self.projekt.leisten_schreibweise = self.leisten_schreibweise
+        self._vorschau_anstossen()
+
     def _schreibweise_anwenden(self) -> None:
         # Der Haken folgt dem Zustand, nicht dem Klick: so stimmt das
         # Menue auch, wenn die Schreibweise von anderswo gesetzt wird.
@@ -605,9 +673,11 @@ class Hauptfenster(QMainWindow):
         self.leistenansicht.leiste_zeigen(leiste)
         kabel = self.projekt.verteiler.kabel_an(leiste, da)
         if kabel is not None:
-            self.statusBar().showMessage(u("Leiste {0}, DA {1} — {2}").format(leiste, da, kabel.beschriftung))
+            self.statusBar().showMessage(u("Leiste {0}, DA {1} — {2}").format(
+                self._leistenname(leiste), da, kabel.beschriftung))
         else:
-            self.statusBar().showMessage(u("Leiste {0}, DA {1} — frei").format(leiste, da))
+            self.statusBar().showMessage(u("Leiste {0}, DA {1} — frei").format(
+                self._leistenname(leiste), da))
 
     def _belegung_geaendert(self) -> None:
         self.veraendert = True
@@ -624,7 +694,7 @@ class Hauptfenster(QMainWindow):
 
     def _leiste_gewechselt(self, nummer: int) -> None:
         """Die Vorschau folgt der bearbeiteten Leiste."""
-        self.vorschau.blatt_zeigen(f"Leiste {nummer}")
+        self.vorschau.blatt_zeigen(f"Leiste {self._leistenname(nummer)}")
 
     def vorschau_zeigen(self, an: bool) -> None:
         self.vorschau.setVisible(an)
@@ -659,7 +729,7 @@ class Hauptfenster(QMainWindow):
         self.vorschau.aktualisieren()
         nummer = self.leistenansicht.modell.leiste_nr
         if nummer is not None:
-            self.vorschau.blatt_zeigen(f"Leiste {nummer}")
+            self.vorschau.blatt_zeigen(f"Leiste {self._leistenname(nummer)}")
 
     # -- Projekt -----------------------------------------------------------
 
@@ -670,9 +740,12 @@ class Hauptfenster(QMainWindow):
         verteiler = projekt.verteiler if projekt else None
         if projekt is not None:
             projekt.rangierung_schreibweise = self.schreibweise.id
+            projekt.leisten_schreibweise = self.leisten_schreibweise
         self.uebersicht.verteiler_setzen(verteiler)
         self.leistenansicht.verteiler_setzen(verteiler)
         self.leistenansicht.schreibweise_setzen(self.schreibweise)
+        self.leistenansicht.leisten_schreibweise_setzen(self.leisten_schreibweise)
+        self.uebersicht.leisten_schreibweise_setzen(self.leisten_schreibweise)
         self.leistenansicht.freitext_erlauben(self.freitext)
         self.vorschau.projekt_setzen(projekt)
         self.aktionen_auffrischen()
@@ -909,9 +982,15 @@ class Hauptfenster(QMainWindow):
         self.schreibweise = schreibweisen.holen(
             self.einstellungen.value("schreibweise", self.schreibweise.id)
         )
+        self.leisten_schreibweise = _leistenweise(
+            self.einstellungen.value(
+                "leisten_schreibweise", self.leisten_schreibweise
+            )
+        )
         self.freitext = self.einstellungen.value("freitext", self.freitext, type=bool)
         self.aktion_freitext.setChecked(self.freitext)
         self._schreibweise_anwenden()
+        self._leistenweise_anwenden()
         self.vorschau.aktualisieren()
 
     def vorgaben_bearbeiten(self) -> None:
@@ -1183,7 +1262,10 @@ class Hauptfenster(QMainWindow):
         if leiste is None or not isinstance(leiste, int):
             stelle = self.uebersicht.auswahl or (verteiler.alle_leisten[0].nummer, 1)
             leiste, start_da = stelle
-        dialog = KabelDialog(verteiler, self.kabeltypen, leiste, start_da or 1, self)
+        dialog = KabelDialog(
+            verteiler, self.kabeltypen, leiste, start_da or 1, self,
+            leisten=self.leisten_schreibweise,
+        )
         if dialog.exec() != KabelDialog.DialogCode.Accepted:
             return
 
@@ -1237,7 +1319,10 @@ class Hauptfenster(QMainWindow):
     def _ueberlauf_klaeren(self, angaben: dict, ueberlauf: UeberlaufFehler):
         """Fortsetzen oder Rest verfallen lassen."""
         verteiler = self.projekt.verteiler
-        dialog = UeberlaufDialog(verteiler, ueberlauf.passend, ueberlauf.rest, self)
+        dialog = UeberlaufDialog(
+            verteiler, ueberlauf.passend, ueberlauf.rest, self,
+            leisten=self.leisten_schreibweise,
+        )
         if dialog.exec() != UeberlaufDialog.DialogCode.Accepted:
             return None
 
@@ -1282,6 +1367,7 @@ class Hauptfenster(QMainWindow):
         dialog = KabelDialog(
             self.projekt.verteiler, self.kabeltypen,
             abschnitt.leiste, abschnitt.start_da, self, kabel=kabel,
+            leisten=self.leisten_schreibweise,
         )
         if dialog.exec() != KabelDialog.DialogCode.Accepted:
             return
@@ -1339,7 +1425,10 @@ class Hauptfenster(QMainWindow):
     def _ueberlauf_beim_wachsen(self, kabel, ueberlauf: UeberlaufFehler) -> bool:
         """Das Kabel waechst ueber seine Leiste hinaus."""
         verteiler = self.projekt.verteiler
-        dialog = UeberlaufDialog(verteiler, ueberlauf.passend, ueberlauf.rest, self)
+        dialog = UeberlaufDialog(
+            verteiler, ueberlauf.passend, ueberlauf.rest, self,
+            leisten=self.leisten_schreibweise,
+        )
         if dialog.exec() != UeberlaufDialog.DialogCode.Accepted:
             return False
 

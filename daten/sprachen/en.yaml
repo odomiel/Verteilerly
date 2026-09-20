@@ -17,6 +17,7 @@
 '{0}: Spalte {1!r} gibt es nicht (bekannt: {2})': '{0}: there is no column {1!r} (known: {2})'
 '{0}: Ausrichtung {1!r} gibt es nicht': '{0}: there is no alignment {1!r}'
 '{0}: Blattvorlage ohne {1}': '{0}: sheet template without {1}'
+'{0!r} ist keine Leiste': '{0!r} is not a strip'
 '{0}: {1!r} gehört nicht ins Schriftfeld (bekannt: {2})': '{0}: {1!r} does not belong in the title block
   (known: {2})'
 'Blattvorlage {0!r} gibt es nicht (bekannt: {1})': 'There is no sheet template {0!r} (known: {1})'
@@ -228,6 +229,7 @@ Vorlagen und Einstellungen &einspielen…: '&Restore templates and settings…'
 '&Dunkles Erscheinungsbild': '&Dark appearance'
 '&Sprache': '&Language'
 Schreibweise der &Rangierungen: Notation of the &jumpers
+'&Leisten beschriften': 'Label the &strips'
 '&Vorschau anzeigen': Show &preview
 '&Leistenansicht anzeigen': Show &strip view
 Verteiler&übersicht anzeigen: Show frame &overview
@@ -288,6 +290,9 @@ Projektdaten übernommen: Project data applied
 Die Oberfläche steht beim nächsten Start auf {0}.: The interface will be in {0} after the next start.
 'Sprache: {0} — gilt nach einem Neustart': 'Language: {0} — takes effect after a restart'
 Rangierungen werden als {0} geschrieben: Jumpers are written as {0}
+Die Leisten heißen {0}: The strips are named {0}
+Die Leisten werden gezählt: The strips are counted
+Die Leisten tragen Buchstaben: The strips carry letters
 'Blattvorlage: {0}': 'Sheet template: {0}'
 Nicht gesichert: Not backed up
 'Gesichert nach {0}: {1}': 'Backed up to {0}: {1}'

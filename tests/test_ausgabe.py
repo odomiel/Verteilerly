@@ -351,6 +351,18 @@ class TestTabellen(unittest.TestCase):
         self.assertEqual(len(zeilen), 80)
         self.assertEqual(len(zeilen[0]), len(SPALTEN))
 
+    def test_mit_buchstaben_heisst_die_leiste_anders(self):
+        """Spalte, Adresse und Rangierfeld folgen der Wahl - die Nummer bleibt."""
+        from verteilerly.modell import LEISTEN_BUCHSTABEN
+
+        self.projekt.leisten_schreibweise = LEISTEN_BUCHSTABEN
+        erste = belegungszeilen(self.projekt)[0]
+        self.assertEqual(erste[1], "A")
+        self.assertEqual(erste[4], "A 1a")
+        # Gezählt bleibt Zahl: dann sortiert Excel richtig.
+        self.projekt.leisten_schreibweise = "zahlen"
+        self.assertEqual(belegungszeilen(self.projekt)[0][1], 1)
+
     def test_zeile_traegt_die_werte_der_ader(self):
         erste = belegungszeilen(self.projekt)[0]
         self.assertEqual(erste[:5], [1, 1, 1, "a", "1 1a"])

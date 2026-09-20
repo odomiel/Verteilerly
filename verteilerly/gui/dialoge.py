@@ -56,9 +56,11 @@ from ..modell import (
     BLATTBESCHRIFTUNG,
     BRIEFKOPF_BESCHRIFTUNG,
     BRIEFKOPF_FELDER,
+    LEISTEN_ZAHLEN,
     Kabel,
     Projekt,
     Verteiler,
+    leistenname,
     mehrzahl,
 )
 from ..vorlagen import (
@@ -966,6 +968,7 @@ class KabelDialog(PassenderDialog):
         start_da: int,
         parent: QWidget | None = None,
         kabel: Kabel | None = None,
+        leisten: str = LEISTEN_ZAHLEN,
     ) -> None:
         super().__init__(parent)
         self.bearbeitet = kabel
@@ -978,7 +981,12 @@ class KabelDialog(PassenderDialog):
 
         self.leiste = QComboBox()
         for l in verteiler.alle_leisten:
-            self.leiste.addItem(u("Leiste {0}  ({1} DA)").format(l.nummer, l.da_anzahl), l.nummer)
+            self.leiste.addItem(
+                u("Leiste {0}  ({1} DA)").format(
+                    leistenname(l.nummer, leisten), l.da_anzahl
+                ),
+                l.nummer,
+            )
         stelle = self.leiste.findData(leiste)
         if stelle >= 0:
             self.leiste.setCurrentIndex(stelle)
@@ -1123,6 +1131,7 @@ class UeberlaufDialog(PassenderDialog):
         passend: int,
         rest: int,
         parent: QWidget | None = None,
+        leisten: str = LEISTEN_ZAHLEN,
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle(u("Kabel passt nicht vollständig"))
@@ -1138,7 +1147,12 @@ class UeberlaufDialog(PassenderDialog):
 
         self.leiste = QComboBox()
         for l in verteiler.alle_leisten:
-            self.leiste.addItem(u("Leiste {0}  ({1} DA)").format(l.nummer, l.da_anzahl), l.nummer)
+            self.leiste.addItem(
+                u("Leiste {0}  ({1} DA)").format(
+                    leistenname(l.nummer, leisten), l.da_anzahl
+                ),
+                l.nummer,
+            )
         self.start = QSpinBox()
         self.start.setRange(1, 100)
         self.start.setValue(1)

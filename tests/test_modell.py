@@ -73,9 +73,71 @@ class TestAderadresse(unittest.TestCase):
         self.assertEqual(adresse.anzeige(), str(adresse))
 
     def test_unlesbares_abgelehnt(self):
-        for text in ["", "3", "3 2c", "abc", "L 2a", "3 2a x"]:
+        for text in ["", "3", "3 2c", "abc", "3 2a x"]:
             with self.subTest(text=text), self.assertRaises(ModellFehler):
                 Aderadresse.parse(text)
+
+    def test_die_leiste_darf_ihr_buchstabe_sein(self):
+        """Wer Buchstaben eingestellt hat, tippt auch welche."""
+        self.assertEqual(Aderadresse.parse("C 2a"), Aderadresse(3, 2, "a"))
+        self.assertEqual(Aderadresse.parse("c-2a"), Aderadresse(3, 2, "a"))
+        # Ein einzelnes L ist die Leiste, kein Zierat - mit Nummer dahinter
+        # bleibt es der Zierat.
+        self.assertEqual(Aderadresse.parse("L 2a"), Aderadresse(12, 2, "a"))
+        self.assertEqual(Aderadresse.parse("L3 2a"), Aderadresse(3, 2, "a"))
+
+    def test_buchstaben_stehen_auch_in_der_anzeige(self):
+        from verteilerly.modell import LEISTEN_BUCHSTABEN
+
+        adresse = Aderadresse(3, 2, "a")
+        self.assertEqual(
+            adresse.anzeige(schreibweisen.MIT_L, LEISTEN_BUCHSTABEN), "LC 2a"
+        )
+        self.assertEqual(adresse.anzeige(None, LEISTEN_BUCHSTABEN), "C 2a")
+        # Gespeichert wird weiter die Nummer.
+        self.assertEqual(str(adresse), "3 2a")
+
+
+class TestLeistennamen(unittest.TestCase):
+    """Leisten heißen 1, 2, 3 - oder A, B, C."""
+
+    def test_aus_der_nummer_wird_ein_buchstabe(self):
+        from verteilerly.modell import LEISTEN_BUCHSTABEN, leistenname
+
+        namen = [leistenname(n, LEISTEN_BUCHSTABEN) for n in (1, 3, 26, 27, 28, 53)]
+        self.assertEqual(namen, ["A", "C", "Z", "AA", "AB", "BA"])
+        # Gezählt bleibt gezählt.
+        self.assertEqual(leistenname(3), "3")
+
+    def test_und_wieder_zurueck(self):
+        from verteilerly.modell import (
+            LEISTEN_BUCHSTABEN,
+            leistenname,
+            leistennummer,
+        )
+
+        for nummer in (1, 2, 26, 27, 100):
+            with self.subTest(nummer=nummer):
+                self.assertEqual(
+                    leistennummer(leistenname(nummer, LEISTEN_BUCHSTABEN)), nummer
+                )
+        self.assertEqual(leistennummer("12"), 12)
+        self.assertEqual(leistennummer("c"), 3)
+
+    def test_was_keine_leiste_ist_wird_abgewiesen(self):
+        from verteilerly.modell import leistennummer
+
+        for text in ("", "  ", "A1", "-", "Ä"):
+            with self.subTest(text=text), self.assertRaises(ModellFehler):
+                leistennummer(text)
+
+    def test_das_projekt_kennt_seine_schreibweise(self):
+        from verteilerly.modell import LEISTEN_BUCHSTABEN, Projekt
+
+        projekt = Projekt(verteiler=Verteiler.aus_geometrie(1, 2, 10))
+        self.assertEqual(projekt.leistenname(2), "2")
+        projekt.leisten_schreibweise = LEISTEN_BUCHSTABEN
+        self.assertEqual(projekt.leistenname(2), "B")
 
 
 class TestKabel(unittest.TestCase):

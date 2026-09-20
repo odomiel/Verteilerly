@@ -1729,6 +1729,38 @@ class TestMenuezustaende(unittest.TestCase):
         self.assertEqual(f.projekt.rangierung_schreibweise, "mit_strich")
         f.schreibweise_waehlen("einfach")
 
+    def test_leisten_heissen_auf_wunsch_mit_buchstaben(self):
+        """Die Wahl gilt für Wahlliste, Blatt, Rangierung und Projekt."""
+        from . import einstellung_bewahren
+
+        f = self.fenster
+        einstellung_bewahren(self, f.einstellungen, "leisten_schreibweise")
+        self.addCleanup(f.leistenweise_waehlen, "zahlen")
+        self._projekt()
+        f.leistenweise_waehlen("buchstaben")
+        self.assertEqual(f.leisten_schreibweise, "buchstaben")
+        self.assertEqual(f.projekt.leisten_schreibweise, "buchstaben")
+        self.assertEqual(
+            f.einstellungen.value("leisten_schreibweise"), "buchstaben"
+        )
+        self.assertEqual(f.leistenansicht.modell.leisten_schreibweise, "buchstaben")
+        self.assertTrue(f.leistenansicht.auswahl.itemText(0).startswith("Leiste A"))
+        angehakt = [e for e in f.leistenweisen_gruppe.actions() if e.isChecked()]
+        self.assertEqual([e.data() for e in angehakt], ["buchstaben"])
+
+        # Auch ein danach geöffnetes Projekt folgt der Wahl.
+        self._projekt()
+        self.assertEqual(f.projekt.leisten_schreibweise, "buchstaben")
+
+    def test_eine_unbekannte_leistenschreibweise_wird_gezaehlt(self):
+        """Eine Einstellung aus einer neueren Fassung hält nichts auf."""
+        from verteilerly.gui.hauptfenster import _leistenweise
+
+        self.assertEqual(_leistenweise("buchstaben"), "buchstaben")
+        for wert in ("roemisch", "", None):
+            with self.subTest(wert=wert):
+                self.assertEqual(_leistenweise(wert), "zahlen")
+
     def test_eine_fehlende_blattvorlage_haelt_das_fenster_nicht_auf(self):
         """Wer „beispiel" gewählt hatte, soll das Programm noch starten können."""
         from verteilerly.gui.hauptfenster import Hauptfenster
@@ -2172,6 +2204,7 @@ class TestMenuezustaende(unittest.TestCase):
              "Vorlagen und Einstellungen sichern…",
              "Vorlagen und Einstellungen einspielen…",
              "Sprache", "Schreibweise der Rangierungen",
+            "Leisten beschriften",
             "Freitext im Rangierfeld zulassen"],
         )
 
@@ -2187,6 +2220,17 @@ class TestMenuezustaende(unittest.TestCase):
         angehakt = [e for e in eintraege if e.isChecked()]
         self.assertEqual(len(angehakt), 1)
         self.assertEqual(angehakt[0].data(), self.fenster.schreibweise.id)
+
+    def test_beide_leistenschreibweisen_stehen_im_menue(self):
+        from verteilerly.gui.hauptfenster import LEISTENWEISEN
+
+        eintraege = self.fenster.leistenweisen_gruppe.actions()
+        self.assertEqual(
+            [e.text() for e in eintraege], [b for _k, b, _e in LEISTENWEISEN]
+        )
+        angehakt = [e for e in eintraege if e.isChecked()]
+        self.assertEqual(len(angehakt), 1)
+        self.assertEqual(angehakt[0].data(), self.fenster.leisten_schreibweise)
 
     def test_uebersicht_und_leistenansicht_lassen_sich_ausblenden(self):
         """Wie die Vorschau - F7 und F8, und gemerkt wird es auch."""

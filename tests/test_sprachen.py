@@ -130,6 +130,10 @@ class TestWortliste(unittest.TestCase):
         gebraucht |= set(BLATTART_BESCHRIFTUNG.values())
         gebraucht |= set(BLATTART_NAMEN.values())
         gebraucht |= {t for t in UEBERSCHRIFTEN if t}
+        # Wie die Leisten heißen, steht als Tabelle im Hauptfenster.
+        from verteilerly.gui.hauptfenster import LEISTENWEISEN
+
+        gebraucht |= {erklaerung for _k, _b, erklaerung in LEISTENWEISEN}
         # Der Blattvorlagen-Editor fuehrt seine Beschriftungen als Tabellen,
         # die eingebauten Erweiterungen Name und Beschreibung als Attribute.
         from verteilerly import erweiterungen

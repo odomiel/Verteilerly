@@ -55,6 +55,7 @@ from ..modell import (
     ANTEIL_VORGABE,
     AUSRICHTUNGEN,
     LEERER_STIL,
+    LEISTEN_ZAHLEN,
     TEILBARE_FELDER,
     UNGETEILT,
     LINKS,
@@ -66,6 +67,7 @@ from ..modell import (
     Verteiler,
     Zellenteilung,
     adressen_lesen,
+    leistenname,
 )
 from ..schreibweisen import Schreibweise
 from .thema import HELL, Farben
@@ -154,6 +156,8 @@ class LeistenModell(QAbstractTableModel):
         self.leiste_nr: int | None = None
         self.farben: Farben = HELL
         self.schreibweise: Schreibweise = schreibweisen.STANDARD
+        # Wie die Leisten heissen - Rangierungen zeigen auf dieselben.
+        self.leisten_schreibweise: str = LEISTEN_ZAHLEN
         # Freitext im Rangierfeld ist abschaltbar: wer nur Ziele
         # eintraegt, will einen Tippfehler als Fehler gemeldet bekommen
         # und nicht als Vermerk stehen haben.
@@ -169,6 +173,14 @@ class LeistenModell(QAbstractTableModel):
     def schreibweise_setzen(self, schreibweise: Schreibweise) -> None:
         """Wie Rangierungen in den beiden Feldern stehen."""
         self.schreibweise = schreibweise
+        self._rangierfelder_auffrischen()
+
+    def leisten_schreibweise_setzen(self, schreibweise: str) -> None:
+        """Wie die Leiste in einer Rangierung heisst: 3 oder C."""
+        self.leisten_schreibweise = schreibweise
+        self._rangierfelder_auffrischen()
+
+    def _rangierfelder_auffrischen(self) -> None:
         if self.rowCount():
             self.dataChanged.emit(
                 self.index(0, RANGIERSPALTEN[0]),
@@ -322,7 +334,8 @@ class LeistenModell(QAbstractTableModel):
                 return ader.bezeichnung
             if spalte in RANGIERSPALTEN:
                 eintraege = self.verteiler.rangiereintraege(
-                    self.adresse(zeile), self.schreibweise
+                    self.adresse(zeile), self.schreibweise,
+                    self.leisten_schreibweise,
                 )
                 stelle = RANGIERSPALTEN.index(spalte)
                 return eintraege[stelle] if stelle < len(eintraege) else ""
@@ -1157,26 +1170,44 @@ class LeistenAnsicht(QWidget):
     def schreibweise_setzen(self, schreibweise: Schreibweise) -> None:
         self.modell.schreibweise_setzen(schreibweise)
 
+    def leisten_schreibweise_setzen(self, schreibweise: str) -> None:
+        """Wie die Leisten heissen - in der Wahlliste wie im Rangierfeld."""
+        self.modell.leisten_schreibweise_setzen(schreibweise)
+        self._leistenliste_auffrischen()
+
     def freitext_erlauben(self, an: bool) -> None:
         self.modell.freitext_erlauben(an)
 
     def verteiler_setzen(self, verteiler: Verteiler | None) -> None:
         self.verteiler = verteiler
-        self.auswahl.blockSignals(True)
-        self.auswahl.clear()
-        if verteiler is not None:
-            for leiste in verteiler.alle_leisten:
-                self.auswahl.addItem(
-                    u("Leiste {0}  ({1} DA)").format(
-                        leiste.nummer, leiste.da_anzahl
-                    ),
-                    leiste.nummer
-                )
-        self.auswahl.blockSignals(False)
-        self.auswahl.setCurrentIndex(0 if self.auswahl.count() else -1)
+        self._leistenliste_auffrischen(erste=True)
         # Ohne Verteiler gibt es nichts zu wählen - dann bleibt das Feld aus.
         self.auswahl.setEnabled(bool(self.auswahl.count()))
         self._leiste_gewechselt()
+
+    def _leistenliste_auffrischen(self, erste: bool = False) -> None:
+        """Baut die Wahlliste neu - beim Verteiler wie beim Umbenennen.
+
+        Die gewaehlte Leiste bleibt: umgestellt wird ihr Name, nicht,
+        welche man gerade vor sich hat.
+        """
+        vorher = self.auswahl.currentData()
+        self.auswahl.blockSignals(True)
+        self.auswahl.clear()
+        if self.verteiler is not None:
+            for leiste in self.verteiler.alle_leisten:
+                self.auswahl.addItem(
+                    u("Leiste {0}  ({1} DA)").format(
+                        leistenname(leiste.nummer, self.modell.leisten_schreibweise),
+                        leiste.da_anzahl,
+                    ),
+                    leiste.nummer,
+                )
+        self.auswahl.blockSignals(False)
+        stelle = -1 if erste or vorher is None else self.auswahl.findData(vorher)
+        self.auswahl.setCurrentIndex(
+            stelle if stelle >= 0 else (0 if self.auswahl.count() else -1)
+        )
 
     def _schieben(self, richtung: int) -> None:
         """Eine Leiste weiter oder zurück - am Ende passiert nichts."""

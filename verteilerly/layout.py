@@ -551,7 +551,7 @@ def _eintraege(
     elif marke == "verteilernummer":
         wert = v.nummer
     elif marke == "leiste":
-        wert = "" if leiste is None else str(leiste)
+        wert = "" if leiste is None else projekt.leistenname(leiste)
     elif marke == "blatt":
         wert = blatt.titel
     elif marke in ("erstellt", "stand", "geprueft", "gezeichnet"):
@@ -658,7 +658,7 @@ def beispielschriftfeld(
     else:
         verteiler.append((
             _mit_doppelpunkt(projekt.beschriftung("leiste")),
-            "" if leiste is None else str(leiste),
+            "" if leiste is None else projekt.leistenname(leiste),
         ))
         verteiler += list(projekt.eigene_felder_hier(blattart).items())
 
@@ -1212,7 +1212,8 @@ def verteilerbelegung(
         # Beschriftung jeder Leiste auf derselben Fluchtlinie wie das
         # Schriftfeld darunter, gleich wie breit die Spalte gerade ist.
         blatt.text(
-            kx - label_b, ky, label_b - 2, zelle_h, f"Leiste {nummer}", schrift, LINKS
+            kx - label_b, ky, label_b - 2, zelle_h,
+            f"Leiste {projekt.leistenname(nummer)}", schrift, LINKS,
         )
         blatt.rechteck(kx, ky, da * zelle_b, zelle_h, staerke=0.4)
 
@@ -1324,7 +1325,8 @@ def zeilenwerte(
         "farbe": ader.farbe,
         "bezeichnung": ader.bezeichnung,
         "rangierung": v.rangierfeld(
-            _adresse(leiste_nr, stift_nr, seite), projekt.schreibweise
+            _adresse(leiste_nr, stift_nr, seite), projekt.schreibweise,
+            projekt.leisten_schreibweise,
         ),
         "bemerkung": ader.bemerkung,
         "kabel": "",
@@ -1368,7 +1370,7 @@ def leistenblatt(
 ) -> Blatt:
     v = projekt.verteiler
     leiste = v.leiste(leiste_nr)
-    blatt = Blatt(*A4_HOCH, titel=f"Leiste {leiste_nr}")
+    blatt = Blatt(*A4_HOCH, titel=f"Leiste {projekt.leistenname(leiste_nr)}")
     rand = vorlage.rand
     kopf_h = vorlage.kopfzeile_hoehe
 

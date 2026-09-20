@@ -356,6 +356,15 @@ Blatt untereinander, die Beschriftung nur an der ersten Zeile. So halten
 es die Mustertabellen, nach denen gearbeitet wurde — und so kommt es auch
 nach Excel.
 
+**Leisten heißen 1, 2, 3 — oder A, B, C.** *Einstellungen ▸ Leisten
+beschriften* stellt um; gezählt wird innen weiter ab 1, der Buchstabe ist nur
+ein anderer Name (die 27. heißt `AA`). Die Wahl gilt überall, wo eine Leiste
+genannt wird — Wahlliste, Blätter, Verteilerbelegung, PDF, Mappe, Datenlisten
+— und in den Rangierungen, denn die zeigen auf dieselben Leisten. Getippt
+werden darf beides: `C 2a` und `3 2a` meinen dieselbe Ader. In der
+Projektdatei steht immer die Nummer, wie bei der Schreibweise der
+Rangierungen auch.
+
 Wie das Blatt aussieht, sagt eine **Blattvorlage**; was darauf steht,
 kommt aus dem Projekt. **Drei liegen bei** — *Standard* mit allen Spalten,
 *Knapp* als reines Rangierblatt ohne Bezeichnung und Bemerkung und

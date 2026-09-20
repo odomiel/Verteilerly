@@ -63,10 +63,53 @@ class UeberlaufFehler(ModellFehler):
 # Adressierung
 # --------------------------------------------------------------------------
 
+#: Wie die Leisten heissen: gezaehlt (1, 2, 3) oder mit Buchstaben
+#: (A, B, C). Eine reine Anzeigesache - gerechnet und gespeichert wird
+#: immer mit der Nummer, wie bei den Rangierungen.
+LEISTEN_ZAHLEN, LEISTEN_BUCHSTABEN = "zahlen", "buchstaben"
+LEISTEN_SCHREIBWEISEN = (LEISTEN_ZAHLEN, LEISTEN_BUCHSTABEN)
+
+
+def leistenname(nummer: int, schreibweise: str = LEISTEN_ZAHLEN) -> str:
+    """Wie die Leiste heisst: "3" oder "C" - ab der 27. dann "AA", "AB".
+
+    Gezaehlt wird weiter ab 1; der Buchstabe ist nur ein anderer Name
+    fuer dieselbe Leiste.
+    """
+    if schreibweise != LEISTEN_BUCHSTABEN or nummer < 1:
+        return str(nummer)
+    name, rest = "", int(nummer)
+    while rest:
+        rest, ziffer = divmod(rest - 1, 26)
+        name = chr(ord("A") + ziffer) + name
+    return name
+
+
+def leistennummer(text: str) -> int:
+    """Die Nummer hinter einem Leistennamen - "3" wie "C" ergeben 3.
+
+    Gelesen wird beides, gleich welche Schreibweise eingestellt ist: wer
+    umstellt, muss seine Rangierungen nicht neu tippen.
+    """
+    text = str(text).strip()
+    if text.isdigit():
+        return int(text)
+    nummer = 0
+    for zeichen in text.upper():
+        if not "A" <= zeichen <= "Z":
+            raise ModellFehler(u("{0!r} ist keine Leiste").format(text))
+        nummer = nummer * 26 + (ord(zeichen) - ord("A") + 1)
+    if not nummer:
+        raise ModellFehler(u("{0!r} ist keine Leiste").format(text))
+    return nummer
+
+
 # Gelesen wird jede Schreibweise: "3 2a", "L3 2a" und "L3-2a"
 # meinen dieselbe Ader. Das L ist ein Zierat, der Strich ein Trenner wie
-# der Abstand.
-_ADRESSMUSTER = r"[Ll]?\s*(\d+)\s*(?:-|\s+)\s*(\d+)\s*([ab])"
+# der Abstand. Die Leiste darf auch ihr Buchstabe sein ("C 2a"); steht
+# dort ein einzelnes L, ist es die Leiste und kein Zierat - das regelt
+# der Rueckzug des Musters von selbst.
+_ADRESSMUSTER = r"[Ll]?\s*(\d+|[A-Za-z]+)\s*(?:-|\s+)\s*(\d+)\s*([ab])"
 _ADRESSE = re.compile(rf"^\s*{_ADRESSMUSTER}\s*$", re.IGNORECASE)
 _ADRESSE_IM_TEXT = re.compile(_ADRESSMUSTER, re.IGNORECASE)
 
@@ -100,15 +143,25 @@ class Aderadresse:
                 u("Rangierung {0!r} nicht lesbar - erwartet wird z.B. '3 2a', 'L3 2a' oder 'L3-2a'").format(text)
             )
         leiste, stift, seite = treffer.groups()
-        return cls(int(leiste), int(stift), seite.lower())
+        return cls(leistennummer(leiste), int(stift), seite.lower())
 
     def __str__(self) -> str:
         return f"{self.leiste} {self.stift}{self.seite}"
 
-    def anzeige(self, schreibweise: Schreibweise | None = None) -> str:
-        """Die Adresse in der eingestellten Schreibweise."""
+    def anzeige(
+        self,
+        schreibweise: Schreibweise | None = None,
+        leisten: str = LEISTEN_ZAHLEN,
+    ) -> str:
+        """Die Adresse in der eingestellten Schreibweise.
+
+        ``leisten`` sagt, wie die Leiste dabei heisst - eine Rangierung
+        zeigt auf dieselbe Leiste, die oben auf dem Blatt steht.
+        """
         weise = schreibweise or schreibweisen.STANDARD
-        return weise.schreiben(self.leiste, self.stift, self.seite)
+        return weise.schreiben(
+            leistenname(self.leiste, leisten), self.stift, self.seite
+        )
 
 
 # --------------------------------------------------------------------------
@@ -807,24 +860,34 @@ class Verteiler:
         ader.vermerk_zuerst = bool(text) and zuerst
 
     def rangiereintraege(
-        self, adresse: Aderadresse, schreibweise: Schreibweise | None = None
+        self,
+        adresse: Aderadresse,
+        schreibweise: Schreibweise | None = None,
+        leisten: str = LEISTEN_ZAHLEN,
     ) -> list[str]:
         """Was im Rangierfeld dieser Ader steht: Ziele und Vermerk.
 
         In der Folge, in der es eingetragen wurde - die Felder tauschen
         die Plaetze nicht.
         """
-        eintraege = [ziel.anzeige(schreibweise) for ziel in self.ziele_von(adresse)]
+        eintraege = [
+            ziel.anzeige(schreibweise, leisten) for ziel in self.ziele_von(adresse)
+        ]
         ader = self.ader(adresse)
         if ader.vermerk:
             eintraege.insert(0 if ader.vermerk_zuerst else len(eintraege), ader.vermerk)
         return eintraege
 
     def rangierfeld(
-        self, adresse: Aderadresse, schreibweise: Schreibweise | None = None
+        self,
+        adresse: Aderadresse,
+        schreibweise: Schreibweise | None = None,
+        leisten: str = LEISTEN_ZAHLEN,
     ) -> str:
         """Der ganze Inhalt des Rangierfeldes als eine Zeile."""
-        return RANGIERUNG_TRENNER.join(self.rangiereintraege(adresse, schreibweise))
+        return RANGIERUNG_TRENNER.join(
+            self.rangiereintraege(adresse, schreibweise, leisten)
+        )
 
 
 # --------------------------------------------------------------------------
@@ -850,7 +913,7 @@ def adressen_lesen(text: str) -> list[Aderadresse]:
     if rest:
         raise ModellFehler(u("In der Rangierung steht ueberzaehliger Text: {0!r}").format(rest))
     return [
-        Aderadresse(int(leiste), int(stift), seite.lower())
+        Aderadresse(leistennummer(leiste), int(stift), seite.lower())
         for leiste, stift, seite in treffer
     ]
 
@@ -870,10 +933,14 @@ def mehrzahl(zahl: int, eins: str, viele: str) -> str:
 
 
 def adressen_schreiben(
-    adressen: list[Aderadresse], schreibweise: Schreibweise | None = None
+    adressen: list[Aderadresse],
+    schreibweise: Schreibweise | None = None,
+    leisten: str = LEISTEN_ZAHLEN,
 ) -> str:
     """Stellt Rangierungen fuer die Anzeige zusammen."""
-    return RANGIERUNG_TRENNER.join(a.anzeige(schreibweise) for a in adressen)
+    return RANGIERUNG_TRENNER.join(
+        a.anzeige(schreibweise, leisten) for a in adressen
+    )
 
 
 # --------------------------------------------------------------------------
@@ -978,6 +1045,9 @@ class Projekt:
     # Wie Rangierungen geschrieben werden. Eine Anzeigesache: die
     # Projektdatei haelt Adressen immer in der Grundform fest.
     rangierung_schreibweise: str = schreibweisen.STANDARD.id
+    # Wie die Leisten heissen - gezaehlt oder mit Buchstaben. Ebenfalls
+    # eine Anzeigesache; im Modell traegt jede Leiste ihre Nummer.
+    leisten_schreibweise: str = LEISTEN_ZAHLEN
 
     def beschriftung(self, marke: str) -> str:
         """Wie eine Zeile des Schriftfeldes ueberschrieben ist."""
@@ -995,6 +1065,10 @@ class Projekt:
     @property
     def schreibweise(self) -> Schreibweise:
         return schreibweisen.holen(self.rangierung_schreibweise)
+
+    def leistenname(self, nummer: int) -> str:
+        """Wie diese Leiste in diesem Projekt heisst: "3" oder "C"."""
+        return leistenname(nummer, self.leisten_schreibweise)
 
     def feld(self, name: str, vorgabe: str = "") -> str:
         if name in self.briefkopf:

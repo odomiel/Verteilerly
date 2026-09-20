@@ -374,6 +374,46 @@ class TestEintragsausrichtung(unittest.TestCase):
         self.assertLess(beschriftung.x, self._wert(blatt).x)
 
 
+class TestLeistenmitBuchstaben(unittest.TestCase):
+    """Heißt die Leiste A, steht A auf dem Blatt."""
+
+    def setUp(self):
+        from verteilerly.modell import LEISTEN_BUCHSTABEN
+
+        self.projekt = Projekt(
+            verteiler=Verteiler.aus_geometrie(1, 3, 10, name="Probe"),
+            leisten_schreibweise=LEISTEN_BUCHSTABEN,
+        )
+
+    def test_die_blaetter_heissen_nach_der_leiste(self):
+        titel = [blatt.titel for blatt in blaetter(self.projekt)]
+        self.assertEqual(titel[2:], ["Leiste A", "Leiste B", "Leiste C"])
+
+    def test_die_verteilerbelegung_beschriftet_mit_buchstaben(self):
+        belegung = blaetter(self.projekt)[1]
+        beschriftungen = [
+            e.text for e in belegung.elemente
+            if isinstance(e, Text) and e.text.startswith("Leiste")
+        ]
+        self.assertEqual(beschriftungen, ["Leiste A", "Leiste B", "Leiste C"])
+
+    def test_im_schriftfeld_steht_der_buchstabe(self):
+        from verteilerly.layout import schriftfeldwerte
+
+        werte = dict(schriftfeldwerte(self.projekt, 2, blatttitel="Leiste B"))
+        self.assertEqual(werte["Leiste"], "B")
+
+    def test_eine_rangierung_zeigt_auf_dieselbe_leiste(self):
+        from verteilerly.layout import zeilenwerte
+        from verteilerly.modell import Aderadresse
+
+        self.projekt.verteiler.rangierung_anlegen(
+            Aderadresse(1, 1, "a"), Aderadresse(3, 2, "a")
+        )
+        werte = zeilenwerte(self.projekt, 1, 1, "a")
+        self.assertEqual(werte["rangierung"], "C 2a")
+
+
 class TestSchriftfeld(unittest.TestCase):
     """Je Blatt korrekt, nicht kopiert."""
 

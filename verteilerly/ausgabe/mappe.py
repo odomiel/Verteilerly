@@ -233,7 +233,7 @@ def _belegung(
         for leiste in bucht.leisten:
             beschriftung = blatt.cell(
                 row=zeile, column=spalte,
-                value=u("Leiste {0}").format(leiste.nummer),
+                value=u("Leiste {0}").format(projekt.leistenname(leiste.nummer)),
             )
             beschriftung.font = zeug.schrift(masse.schrift, False, "#555555")
             beschriftung.alignment = zeug.lage("links")
@@ -329,7 +329,7 @@ def _leistenblatt(
 ) -> object:
     v = projekt.verteiler
     leiste = v.leiste(leiste_nr)
-    blatt = mappe.create_sheet(f"Leiste {leiste_nr}")
+    blatt = mappe.create_sheet(_blatttitel(projekt, leiste_nr, "leisten"))
     spalten = vorlage.spalten
     breiten = vorlage.breiten(210.0 - 2 * vorlage.rand)
 
@@ -546,7 +546,8 @@ def _schriftfeld_spalten(
     """Die Bloecke nebeneinander, jeder mit Beschriftung und Wert."""
     bloecke = [
         block for block in schriftfeldspalten(
-            projekt, leiste_nr, vorlage, blattart, _blatttitel(leiste_nr, blattart)
+            projekt, leiste_nr, vorlage, blattart,
+            _blatttitel(projekt, leiste_nr, blattart),
         ) if block
     ]
     if not bloecke:
@@ -712,7 +713,10 @@ def _bis_zum_blattfuss(
     return zeile + zeilen
 
 
-def _blatttitel(leiste_nr: int | None, blattart: str) -> str:
+def _blatttitel(projekt: Projekt, leiste_nr: int | None, blattart: str) -> str:
+    """Wie das Blatt heisst - so wie das gezeichnete auch."""
     if blattart == "belegung":
         return "Verteilerbelegung"
-    return "" if leiste_nr is None else f"Leiste {leiste_nr}"
+    if leiste_nr is None:
+        return ""
+    return f"Leiste {projekt.leistenname(leiste_nr)}"

@@ -11,7 +11,7 @@ from PySide6.QtCore import QRect, QSize, Qt, Signal
 from PySide6.QtGui import QFont, QFontMetrics, QPainter, QPen
 from PySide6.QtWidgets import QWidget
 
-from ..modell import Kabel, Verteiler
+from ..modell import LEISTEN_ZAHLEN, Kabel, Verteiler, leistenname
 from .thema import HELL, Farben
 from ..sprachen import u
 
@@ -34,6 +34,9 @@ class Uebersicht(QWidget):
         super().__init__(parent)
         self.verteiler: Verteiler | None = None
         self.farben: Farben = HELL
+        # Wie die Leisten heissen - nur fuer die Hinweistexte; gezeichnet
+        # wird hier ohne Beschriftung.
+        self.leisten_schreibweise: str = LEISTEN_ZAHLEN
         self.auswahl: tuple[int, int] | None = None
         self._kaesten: dict[int, QRect] = {}
         self.setMouseTracking(True)
@@ -45,6 +48,10 @@ class Uebersicht(QWidget):
         self.verteiler = verteiler
         self.auswahl = None
         self._neu_vermessen()
+
+    def leisten_schreibweise_setzen(self, schreibweise: str) -> None:
+        """Wie die Leisten in den Hinweistexten heissen."""
+        self.leisten_schreibweise = schreibweise
 
     def farben_setzen(self, farben: Farben) -> None:
         self.farben = farben
@@ -126,10 +133,11 @@ class Uebersicht(QWidget):
         if stelle is None or self.verteiler is None:
             return ""
         leiste, da = stelle
+        name = leistenname(leiste, self.leisten_schreibweise)
         kabel = self.verteiler.kabel_an(leiste, da)
         if kabel is None:
-            return u("Leiste {0}, DA {1} — frei").format(leiste, da)
-        zeilen = [kabel.beschriftung, u("Leiste {0}, DA {1}").format(leiste, da)]
+            return u("Leiste {0}, DA {1} — frei").format(name, da)
+        zeilen = [kabel.beschriftung, u("Leiste {0}, DA {1}").format(name, da)]
         if kabel.kabeltyp:
             zeilen.append(kabel.kabeltyp)
         if kabel.gekuerzt:

@@ -14,6 +14,7 @@ from ..blattvorlagen import STANDARD, Blattvorlage
 from ..layout import zellentext
 from ..modell import (
     BRIEFKOPF_BESCHRIFTUNG,
+    LEISTEN_ZAHLEN,
     Aderadresse,
     Projekt,
 )
@@ -43,11 +44,24 @@ KABELSPALTEN = (
 TRENNER = ";"  # deutsches Excel oeffnet CSV so ohne Rueckfrage
 
 
+def leistenwert(projekt: Projekt, nummer: int) -> int | str:
+    """Die Leiste fuer eine Tabellenzelle: Zahl, wo gezaehlt wird.
+
+    Eine Zahl bleibt eine Zahl, damit Excel sie als solche sortiert;
+    Buchstaben sind Text und sortieren von selbst richtig.
+    """
+    if projekt.leisten_schreibweise == LEISTEN_ZAHLEN:
+        return nummer
+    return projekt.leistenname(nummer)
+
+
 def belegungszeilen(projekt: Projekt) -> list[list]:
     """Eine Zeile je Ader, in der Reihenfolge des Verteilers.
 
-    Bucht, Leiste und Stift bleiben Zahlen, damit in Excel richtig
-    sortiert wird und nicht 10 vor 2 steht.
+    Bucht und Stift bleiben Zahlen, damit in Excel richtig sortiert wird
+    und nicht 10 vor 2 steht - die Leiste auch, solange sie gezaehlt wird.
+    Traegt sie Buchstaben, steht ihr Name da; als Text sortiert Excel ihn
+    richtig.
     """
     v = projekt.verteiler
     zeilen: list[list] = []
@@ -61,13 +75,18 @@ def belegungszeilen(projekt: Projekt) -> list[list]:
                     zeilen.append(
                         [
                             bucht.nummer,
-                            leiste.nummer,
+                            leistenwert(projekt, leiste.nummer),
                             stift.nummer,
                             seite,
-                            adresse.anzeige(projekt.schreibweise),
+                            adresse.anzeige(
+                                projekt.schreibweise, projekt.leisten_schreibweise
+                            ),
                             ader.farbe,
                             zellentext(ader.bezeichnung, ader.teilung("bezeichnung")),
-                            v.rangierfeld(adresse, projekt.schreibweise),
+                            v.rangierfeld(
+                                adresse, projekt.schreibweise,
+                                projekt.leisten_schreibweise,
+                            ),
                             zellentext(ader.bemerkung, ader.teilung("bemerkung")),
                             kabel.beschriftung if kabel else "",
                             kabel.kabeltyp if kabel else "",
@@ -80,7 +99,8 @@ def kabelzeilen(projekt: Projekt) -> list[list]:
     zeilen = []
     for kabel in projekt.verteiler.kabel:
         abschnitte = ", ".join(
-            f"Leiste {a.leiste} DA {a.start_da}–{a.end_da}" for a in kabel.abschnitte
+            f"Leiste {projekt.leistenname(a.leiste)} DA {a.start_da}–{a.end_da}"
+            for a in kabel.abschnitte
         )
         zeilen.append(
             [
