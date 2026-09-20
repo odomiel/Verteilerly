@@ -297,6 +297,45 @@ class TestBlattfolge(unittest.TestCase):
                         self.assertLessEqual(rechts, blatt.breite - RAND + 0.01)
 
 
+class TestQuerstrich(unittest.TestCase):
+    """Ein Querstrich im Schriftfeld: eine Linie, kein Text."""
+
+    def _blatt(self, marken):
+        import dataclasses
+
+        from verteilerly.blattvorlagen import STANDARD
+        from verteilerly.layout import leistenblatt
+
+        vorlage = dataclasses.replace(STANDARD, schriftfeld=(marken,))
+        projekt = Projekt(
+            verteiler=Verteiler.aus_geometrie(1, 2, 10, name="Probe"),
+            briefkopf={"firma": "Musterfirma"},
+        )
+        return leistenblatt(projekt, 1, vorlage), vorlage, projekt
+
+    def test_aus_der_marke_wird_eine_linie(self):
+        from verteilerly.layout import STRICH, Linie
+
+        ohne, _, _ = self._blatt(("firma", "verteiler"))
+        mit, _, _ = self._blatt(("firma", "strich", "verteiler"))
+        linien = lambda blatt: [e for e in blatt.elemente if isinstance(e, Linie)]
+        self.assertEqual(len(linien(mit)), len(linien(ohne)) + 1)
+        strich = [e for e in linien(mit) if e not in linien(ohne)]
+        self.assertTrue(strich, "kein zusätzlicher Strich")
+        self.assertEqual(strich[0].y1, strich[0].y2, "der Strich liegt quer")
+        # Die Marke selbst steht nirgends als Text.
+        self.assertFalse([e for e in mit.elemente
+                          if isinstance(e, Text) and STRICH in e.text])
+
+    def test_in_tabellen_steht_kein_strich(self):
+        from verteilerly.layout import STRICH, schriftfeldwerte
+
+        _, vorlage, projekt = self._blatt(("firma", "strich", "verteiler"))
+        werte = schriftfeldwerte(projekt, 1, vorlage)
+        self.assertEqual([name for name, _ in werte if name == STRICH], [])
+        self.assertEqual(len(werte), 2)
+
+
 class TestSchriftfeld(unittest.TestCase):
     """Je Blatt korrekt, nicht kopiert."""
 

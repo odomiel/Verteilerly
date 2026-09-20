@@ -28,6 +28,7 @@ from ..layout import (
     deckblattzeilen,
     kabelfeld,
     kopfgruppen,
+    STRICH,
     schriftfeldspalten,
     schriftfeldwerte,
     schriftfeldzeilen,
@@ -493,6 +494,17 @@ def _block_rahmen(blatt, zeug, oben: int, unten: int, von: int, bis: int) -> Non
             )
 
 
+def _querstrich(blatt, zeug, zeile: int, von: int, bis: int) -> None:
+    """Ein Querstrich im Schriftfeld - in Excel der untere Rand der Zeile."""
+    for spalte in range(von, bis + 1):
+        feld = blatt.cell(row=zeile, column=spalte)
+        vorher = feld.border
+        feld.border = zeug.rahmen(
+            left=vorher.left, right=vorher.right, top=vorher.top,
+            bottom=zeug.strich(LINIE),
+        )
+
+
 def _beschriftet(blatt, zeug, zeile: int, spalte: int, text: str,
                  vorlage: Blattvorlage, ausrichtung: str = "links") -> None:
     """Eine Beschriftung des Schriftfeldes - klein und leise wie am Blatt."""
@@ -548,6 +560,9 @@ def _schriftfeld_spalten(
     von = 1
     for block, bis in zip(bloecke, grenzen):
         for i, (name, wert) in enumerate(block):
+            if name == STRICH:
+                _querstrich(blatt, zeug, zeile + i, von, bis)
+                continue
             if bis == von:
                 # Nur eine Spalte: Beschriftung und Wert in einer Zelle.
                 _wertfeld(

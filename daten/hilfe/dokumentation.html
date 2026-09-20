@@ -502,8 +502,12 @@ Liste von Marken; die Blöcke stehen nebeneinander:</p>
 <code>anlagennummer</code>, <code>kundennummer</code>, <code>verteiler</code>,
 <code>verteilernummer</code>, <code>leiste</code>, <code>blatt</code>,
 <code>erstellt</code>, <code>stand</code>, <code>geprueft</code>,
-<code>gezeichnet</code>, <code>dokumenttitel</code> und <code>eigene</code> —
-letzteres steht für alle selbst angelegten Felder. Abgewählte Projektdaten
+<code>gezeichnet</code>, <code>dokumenttitel</code>, <code>eigene</code> und
+<code>strich</code>. <code>eigene</code> steht für alle selbst angelegten
+Felder, <code>strich</code> für einen Querstrich quer durch den Block: keine
+Angabe, sondern eine Linie, die trennt, was darüber steht. Im PDF ist sie
+eine feine Linie, in der Excel-Mappe der untere Rand der Zeile; in den
+reinen Datenlisten kommt sie nicht vor. Abgewählte Projektdaten
 verschwinden mitsamt ihrer Beschriftung, und auf der Verteilerbelegung fällt
 <code>leiste</code> weg: dieses Blatt zeigt alle.</p>
 
@@ -795,16 +799,15 @@ Blattvorlage</i>. Ist kein Verteiler offen, trägt das Beispiel Projektdaten, da
 Schriftfeld auch Werte stehen.</p>
 
 <p>Der <b>Briefkopf</b> — das <b>Schriftfeld</b> am Blattfuß — hat eine eigene
-Gruppe: Bauart und Höhe, darunter die <b>Blöcke</b> nebeneinander wie auf dem
+Gruppe: die Höhe, darunter die <b>Blöcke</b> nebeneinander wie auf dem
 Blatt, jeder mit seinen Angaben untereinander (Firma, Kunde, Verteiler, Blatt,
 Erstellt, eigene Felder …). Einträge lassen sich zwischen den Blöcken ziehen;
-<b>+</b> fügt eine Angabe hinzu, <b>−</b> nimmt die gewählte weg,
-<i>Block hinzufügen</i> und <i>Letzten Block entfernen</i> ändern die Zahl der
-Blöcke. Mit <i>Breiten selbst festlegen</i> bekommt jeder Block seinen Anteil
-an der Breite, sonst teilt das Programm nach Augenmaß. Bei der Bauart <i>Mit
-Anschriften</i> ist die Aufteilung fest — links Matrix und Verteiler, rechts
-die Anschriften —; dort bleiben die Breiten der beiden Hälften, und die Blöcke
-warten, bis wieder auf <i>Standard</i> gestellt wird.</p>
+<b>+</b> fügt eine Angabe hinzu — darunter den <b>Querstrich</b>, der im Block
+eine Linie zieht —, <b>−</b> nimmt die gewählte Angabe weg und <b>✕</b>
+löscht genau diesen Block. <i>Block hinzufügen</i> und <i>Letzten Block
+entfernen</i> ändern die Zahl der Blöcke; einer bleibt immer stehen. Mit <i>Breiten selbst festlegen</i> bekommt jeder Block seinen Anteil
+an der Breite, sonst teilt das Programm nach Augenmaß. Der Editor baut immer ein Schriftfeld aus Blöcken; die feste Aufteilung der
+Mustertabellen (<code>schriftfeld_art: beispiel</code>) stellt er nicht ein.</p>
 
 <h3>11.2 &nbsp; Erweiterungen verwalten</h3>
 

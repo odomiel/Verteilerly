@@ -489,8 +489,11 @@ marks; the blocks stand side by side:</p>
 <code>kundennummer</code>, <code>verteiler</code>, <code>verteilernummer</code>,
 <code>leiste</code>, <code>blatt</code>, <code>erstellt</code>,
 <code>stand</code>, <code>geprueft</code>, <code>gezeichnet</code>,
-<code>dokumenttitel</code> and <code>eigene</code> — the last one stands for all
-fields of your own. Deselected project data disappear together with their label,
+<code>dokumenttitel</code>, <code>eigene</code> and <code>strich</code>.
+<code>eigene</code> stands for all fields of your own, <code>strich</code> for a
+horizontal rule across the block: not an entry but a line that separates what
+stands above it. In the PDF it is a fine line, in the Excel workbook the bottom
+border of the row; in the plain data lists it does not appear. Deselected project data disappear together with their label,
 and on the frame layout <code>leiste</code> falls away: that sheet shows all of
 them.</p>
 
@@ -778,16 +781,17 @@ other under <i>Settings ▸ Sheet template</i>. Where no frame is open, the exam
 block shows values as well.</p>
 
 <p>The <b>letterhead</b> — the <b>title block</b> at the foot of the sheet — has
-a group of its own: type and height, below them the <b>blocks</b> side by side
+a group of its own: the height, below it the <b>blocks</b> side by side
 as on the sheet, each with its entries one below the other (company, customer,
 frame, sheet, created, custom fields …). Entries can be dragged between the
-blocks; <b>+</b> adds an entry, <b>−</b> removes the chosen one, <i>Add
-block</i> and <i>Remove last block</i> change the number of blocks. With
+blocks; <b>+</b> adds an entry — among them the <b>horizontal rule</b>, which
+draws a line in the block —, <b>−</b> removes the chosen entry and <b>✕</b>
+deletes that very block. <i>Add block</i> and <i>Remove last block</i> change
+the number of blocks; one always remains. With
 <i>Set the widths myself</i> every block gets its share of the width,
-otherwise the program divides by eye. With the type <i>With addresses</i> the
-layout is fixed — matrix and frame on the left, the addresses on the right —;
-there the widths of the two halves remain, and the blocks wait until
-<i>Default</i> is set again.</p>
+otherwise the program divides by eye. The editor always builds a title block of blocks; the fixed
+layout of the sample tables (<code>schriftfeld_art: beispiel</code>) is not set
+there.</p>
 
 <h3>11.2 &nbsp; Managing extensions</h3>
 

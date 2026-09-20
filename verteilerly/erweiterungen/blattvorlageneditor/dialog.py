@@ -39,7 +39,6 @@ from ...blattvorlagen import (
     LINKS,
     MITTE,
     RECHTS,
-    SCHRIFTFELDARTEN,
     SPALTENFELDER,
     Blattvorlage,
     Spalte,
@@ -98,7 +97,6 @@ FELDNAMEN = {
     "kabel": "Kabel",
 }
 AUSRICHTUNGSNAMEN = {LINKS: "links", MITTE: "mittig", RECHTS: "rechts"}
-SCHRIFTFELDNAMEN = {"standard": "Standard", "beispiel": "Mit Anschriften"}
 VERZUG = 150  # ms - tippen, ohne dass das Blatt bei jeder Ziffer neu entsteht
 
 
@@ -156,10 +154,6 @@ class EditorDialog(PassenderDialog):
         self.basiswahl.currentIndexChanged.connect(self._basis_gewaehlt)
         self.beschreibung = QLineEdit()
         self.beschreibung.textChanged.connect(self._geaendert)
-        self.schriftfeldart = QComboBox()
-        for art in SCHRIFTFELDARTEN:
-            self.schriftfeldart.addItem(u(SCHRIFTFELDNAMEN.get(art, art)), art)
-        self.schriftfeldart.currentIndexChanged.connect(self._schriftfeldart_gewechselt)
         self.buchten = QSpinBox()
         self.buchten.setRange(1, 6)
         self.buchten.valueChanged.connect(self._geaendert)
@@ -276,7 +270,6 @@ class EditorDialog(PassenderDialog):
         hoehe.valueChanged.connect(self._geaendert)
         self.zahlen[feld] = hoehe
         formular = QFormLayout()
-        formular.addRow(u("Bauart:"), self.schriftfeldart)
         formular.addRow(u(beschriftung) + ":", hoehe)
 
         self.schriftfeld = SchriftfeldEditor()
@@ -286,10 +279,6 @@ class EditorDialog(PassenderDialog):
         aufbau.addLayout(formular)
         aufbau.addWidget(self.schriftfeld)
         return kasten
-
-    def _schriftfeldart_gewechselt(self, _index: int) -> None:
-        self.schriftfeld.art_setzen(self.schriftfeldart.currentData())
-        self._geaendert()
 
     # -- Spalten -------------------------------------------------------------
 
@@ -395,12 +384,11 @@ class EditorDialog(PassenderDialog):
     def basis_uebernehmen(self, vorlage: Blattvorlage) -> None:
         """Stellt alle Felder auf eine vorhandene Vorlage."""
         self.basis = vorlage
-        felder = [self.beschreibung, self.schriftfeldart, self.buchten,
+        felder = [self.beschreibung, self.buchten,
                   *self.zahlen.values(), *self.schalter.values()]
         for feld in felder:
             feld.blockSignals(True)
         self.beschreibung.setText(vorlage.beschreibung)
-        self.schriftfeldart.setCurrentIndex(max(self.schriftfeldart.findData(vorlage.schriftfeld_art), 0))
         self.buchten.setValue(vorlage.buchten_je_blatt)
         for feld, wert in self.zahlen.items():
             wert.setValue(getattr(vorlage, feld))
@@ -409,9 +397,7 @@ class EditorDialog(PassenderDialog):
         for feld in felder:
             feld.blockSignals(False)
         self._spalten_setzen(vorlage.spalten)
-        self.schriftfeld.setzen(
-            vorlage.schriftfeld_art, vorlage.schriftfeld, vorlage.schriftfeld_anteile
-        )
+        self.schriftfeld.setzen(vorlage.schriftfeld, vorlage.schriftfeld_anteile)
         self.geaendert = False
         self._neu_zeichnen()
 
@@ -432,10 +418,12 @@ class EditorDialog(PassenderDialog):
         return dataclasses.replace(
             self.basis,
             standard=False,
+            # Der Editor baut nur Schriftfelder in Bloecken - die feste
+            # Aufteilung der Mustertabellen stellt er nicht ein.
+            schriftfeld_art="standard",
             schriftfeld=schriftfeld,
             schriftfeld_anteile=anteile,
             beschreibung=self.beschreibung.text().strip(),
-            schriftfeld_art=self.schriftfeldart.currentData(),
             buchten_je_blatt=self.buchten.value(),
             spalten=tuple(self.spaltenliste()),
             **{feld: wert.value() for feld, wert in self.zahlen.items()},

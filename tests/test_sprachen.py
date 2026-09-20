@@ -143,8 +143,7 @@ class TestWortliste(unittest.TestCase):
         from verteilerly.erweiterungen.blattvorlageneditor.schriftfeld import MARKENNAMEN
 
         gebraucht |= set(MARKENNAMEN.values())
-        for tabelle in (editor.FELDNAMEN, editor.AUSRICHTUNGSNAMEN,
-                        editor.SCHRIFTFELDNAMEN):
+        for tabelle in (editor.FELDNAMEN, editor.AUSRICHTUNGSNAMEN):
             gebraucht |= set(tabelle.values())
         for fund in erweiterungen.finden():
             gebraucht |= {fund.name, fund.beschreibung}

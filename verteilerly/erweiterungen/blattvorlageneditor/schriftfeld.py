@@ -2,13 +2,12 @@
 
 Die Bloecke stehen nebeneinander wie auf dem Blatt, darin die Angaben
 untereinander. Eintraege lassen sich zwischen den Bloecken ziehen; ``+``
-und ``−`` fuegen hinzu und nehmen weg. Die Breiten sind Anteile: ohne
-Haken bei *Breiten selbst festlegen* teilt das Programm nach Augenmass.
+und ``−`` fuegen hinzu und nehmen weg, ``✕`` loescht den ganzen Block.
+Unter den Angaben steht auch der **Querstrich**: keine Angabe, sondern
+ein Strich quer durch den Block, der trennt, was darueber steht.
 
-Bei der Bauart ``beispiel`` (*Mit Anschriften*) ist die Aufteilung fest -
-links Matrix und Verteiler, rechts die beiden Anschriften. Dann bleiben
-nur die Breiten der beiden Haelften; die Bloecke werden aufgehoben, bis
-wieder auf ``standard`` umgestellt wird.
+Die Breiten sind Anteile: ohne Haken bei *Breiten selbst festlegen*
+teilt das Programm nach Augenmass.
 """
 
 from __future__ import annotations
@@ -35,7 +34,11 @@ from ...modell import BLATTBESCHRIFTUNG
 from ...sprachen import u
 
 #: Wie die Angaben im Editor heissen - wie auf dem Blatt, dazu "eigene".
-MARKENNAMEN = {**BLATTBESCHRIFTUNG, "eigene": "Eigene Felder"}
+MARKENNAMEN = {
+    **BLATTBESCHRIFTUNG,
+    "eigene": "Eigene Felder",
+    "strich": "Querstrich",
+}
 HOECHSTENS_BLOECKE = 6
 
 
@@ -46,7 +49,6 @@ class SchriftfeldEditor(QWidget):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.art = "standard"
         self._bloecke: list[list[str]] = [[]]
         self._breiten: list[float] = []
         self.listen: list[QListWidget] = []
@@ -57,15 +59,9 @@ class SchriftfeldEditor(QWidget):
             "zwischen den Blöcken ziehen."
         ))
         hinweis.setWordWrap(True)
-        self.fest = QLabel(u(
-            "Bei „Mit Anschriften“ ist die Aufteilung fest: links Matrix und "
-            "Verteiler, rechts die beiden Anschriften."
-        ))
-        self.fest.setWordWrap(True)
-        # Umbrechende Beschriftungen melden im Rollbereich nur eine Zeile
+        # Eine umbrechende Beschriftung meldet im Rollbereich nur eine Zeile
         # Hoehe an - die zweite laege sonst ueber den Bloecken.
-        for beschriftung, zeilen in ((hinweis, 2), (self.fest, 3)):
-            beschriftung.setMinimumHeight(beschriftung.fontMetrics().lineSpacing() * zeilen + 4)
+        hinweis.setMinimumHeight(hinweis.fontMetrics().lineSpacing() * 2 + 4)
         self.bloecke = QHBoxLayout()
 
         self.block_hinzu = QPushButton(u("Block hinzufügen"))
@@ -83,7 +79,6 @@ class SchriftfeldEditor(QWidget):
         aufbau = QVBoxLayout(self)
         aufbau.setContentsMargins(0, 0, 0, 0)
         aufbau.addWidget(hinweis)
-        aufbau.addWidget(self.fest)
         aufbau.addLayout(self.bloecke)
         aufbau.addLayout(knoepfe)
         aufbau.addWidget(self.eigene_breiten)
@@ -91,30 +86,19 @@ class SchriftfeldEditor(QWidget):
 
     # -- Zustand -------------------------------------------------------------
 
-    def setzen(self, art: str, schriftfeld, anteile) -> None:
-        """Uebernimmt Bauart, Bloecke und Breiten einer Vorlage - ohne Signal."""
-        self.art = art
+    def setzen(self, schriftfeld, anteile) -> None:
+        """Uebernimmt Bloecke und Breiten einer Vorlage - ohne Signal.
+
+        Breiten, die nicht zur Zahl der Bloecke passen, gelten als keine:
+        genau so liest das Programm sie aus einer Datei - es teilt dann
+        nach Augenmass.
+        """
         self._bloecke = [list(block) for block in schriftfeld] or [[]]
-        self._breiten = list(anteile)
+        self._breiten = list(anteile) if len(anteile) == len(self._bloecke) else []
         self.eigene_breiten.blockSignals(True)
         self.eigene_breiten.setChecked(bool(self._breiten))
         self.eigene_breiten.blockSignals(False)
         self._aufbauen()
-
-    def art_setzen(self, art: str) -> None:
-        if art == self.art:
-            return
-        self._bloecke = self._aus_listen()
-        self.art = art
-        # Die Breiten gehoeren zur Aufteilung - bei anderer Zahl von Teilen
-        # passen sie nicht mehr.
-        if len(self._breiten) != self._teile():
-            self._breiten = []
-            self.eigene_breiten.blockSignals(True)
-            self.eigene_breiten.setChecked(False)
-            self.eigene_breiten.blockSignals(False)
-        self._aufbauen()
-        self.geaendert.emit()
 
     def werte(self) -> tuple[tuple[tuple[str, ...], ...], tuple[float, ...]]:
         """(Bloecke, Breiten) - Breiten leer, wenn das Programm sie waehlt."""
@@ -150,21 +134,26 @@ class SchriftfeldEditor(QWidget):
 
     def block_entfernen(self) -> None:
         """Nimmt den letzten Block samt seinen Angaben weg - einer bleibt."""
+        self.block_loeschen(len(self._aus_listen()) - 1)
+
+    def block_loeschen(self, block: int) -> None:
+        """Loescht genau diesen Block samt seinen Angaben - einer bleibt."""
         self._bloecke = self._aus_listen()
-        if len(self._bloecke) <= 1:
+        if len(self._bloecke) <= 1 or not 0 <= block < len(self._bloecke):
             return
-        self._bloecke.pop()
-        self._breiten = self._breiten[: len(self._bloecke)]
+        del self._bloecke[block]
+        if len(self._breiten) > block:
+            del self._breiten[block]
         self._aufbauen()
         self.geaendert.emit()
 
     # -- Aufbau --------------------------------------------------------------
 
     def _teile(self) -> int:
-        return 2 if self.art == "beispiel" else len(self._bloecke)
+        return len(self._bloecke)
 
     def _aus_listen(self) -> list[list[str]]:
-        if self.art != "standard" or not self.listen:
+        if not self.listen:
             return [list(block) for block in self._bloecke]
         return [
             [liste.item(zeile).data(Qt.ItemDataRole.UserRole) for zeile in range(liste.count())]
@@ -186,21 +175,15 @@ class SchriftfeldEditor(QWidget):
 
     def _aufbauen(self) -> None:
         self._leeren()
-        standard = self.art == "standard"
         teile = self._teile()
         vorgabe = schriftfeldanteile(teile, tuple(self._breiten))
-        titel = (
-            [u("{0}. Block").format(i + 1) for i in range(teile)] if standard
-            else [u("Links"), u("Rechts")]
-        )
         for stelle in range(teile):
             spalte = QWidget()
             aufbau = QVBoxLayout(spalte)
             aufbau.setContentsMargins(0, 0, 0, 0)
-            aufbau.addWidget(QLabel(titel[stelle]))
-            if standard:
-                aufbau.addWidget(self._liste(stelle), 1)
-                aufbau.addLayout(self._listenknoepfe(stelle))
+            aufbau.addWidget(QLabel(u("{0}. Block").format(stelle + 1)))
+            aufbau.addWidget(self._liste(stelle), 1)
+            aufbau.addLayout(self._listenknoepfe(stelle))
             breite = QDoubleSpinBox()
             breite.setRange(0.05, 10.0)
             breite.setSingleStep(0.05)
@@ -212,10 +195,6 @@ class SchriftfeldEditor(QWidget):
             aufbau.addWidget(breite)
             self.breiten.append(breite)
             self.bloecke.addWidget(spalte, 1)
-        self.fest.setVisible(not standard)
-        self.hinweis.setVisible(standard)
-        self.block_hinzu.setVisible(standard)
-        self.block_weg.setVisible(standard)
         self.block_hinzu.setEnabled(len(self._bloecke) < HOECHSTENS_BLOECKE)
         self.block_weg.setEnabled(len(self._bloecke) > 1)
 
@@ -252,10 +231,16 @@ class SchriftfeldEditor(QWidget):
         weg.clicked.connect(
             lambda _an=False, b=block: self.marke_entfernen(b, self.listen[b].currentRow())
         )
+        block_weg = QToolButton()
+        block_weg.setText("✕")
+        block_weg.setToolTip(u("Diesen Block löschen"))
+        block_weg.setEnabled(len(self._bloecke) > 1)
+        block_weg.clicked.connect(lambda _an=False, b=block: self.block_loeschen(b))
         knoepfe = QHBoxLayout()
         knoepfe.addWidget(dazu)
         knoepfe.addWidget(weg)
         knoepfe.addStretch(1)
+        knoepfe.addWidget(block_weg)
         return knoepfe
 
     def _gezogen(self, *_args) -> None:

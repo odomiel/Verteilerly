@@ -29,6 +29,31 @@ def _projekt() -> Projekt:
     return Projekt(verteiler=v, briefkopf={"firma": "Musterfirma"})
 
 
+class TestQuerstrich(unittest.TestCase):
+    """In Excel ist der Querstrich der untere Rand einer Zeile."""
+
+    def test_aus_der_marke_wird_ein_rand(self):
+        import dataclasses
+
+        vorlage = dataclasses.replace(
+            STANDARD, schriftfeld=(("firma", "strich", "verteiler"),)
+        )
+        with tempfile.TemporaryDirectory() as ordner:
+            ziel = pathlib.Path(ordner) / "probe.xlsx"
+            xlsx_schreiben(_projekt(), ziel, vorlage)
+            blatt = load_workbook(ziel)["Leiste 1"]
+            texte = [
+                zelle.value for zeile in blatt.iter_rows() for zelle in zeile
+                if isinstance(zelle.value, str)
+            ]
+            self.assertFalse([t for t in texte if "\x00" in t])
+            mit_rand = [
+                zelle for zeile in blatt.iter_rows() for zelle in zeile
+                if zelle.border.bottom and zelle.border.bottom.style
+            ]
+            self.assertTrue(mit_rand, "keine Zeile mit unterem Rand")
+
+
 class TestMasse(unittest.TestCase):
     def test_millimeter_werden_umgerechnet(self):
         # 25.4 mm sind ein Zoll: 96 Bildpunkte, 72 Punkt.

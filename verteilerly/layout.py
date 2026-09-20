@@ -472,6 +472,11 @@ class Blatt:
 
 # -- Schriftfeld -----------------------------------------------------------
 
+#: Eine Zeile des Schriftfeldes, die nur ein Querstrich ist. Sie traegt
+#: dieses Zeichen als Beschriftung - kein Text eines Anwenders faengt so
+#: an, und so bleibt die Zeile eine gewoehnliche (Name, Wert)-Zeile.
+STRICH = "\x00strich"
+
 # Die Vorgabe steht im Modell; was hier gezeichnet wird, sagt das
 # Projekt - es darf jedes Wort ersetzen.
 BESCHRIFTUNG = BLATTBESCHRIFTUNG
@@ -529,6 +534,8 @@ def _eintraege(
     """Was hinter einer Marke des Schriftfeldes steht."""
     v = projekt.verteiler
     eigene = list(projekt.eigene_felder_hier(blattart).items())
+    if marke == "strich":
+        return [(STRICH, "")]
     if marke == "eigene":
         # Auf der Verteilerbelegung stehen sie am Platz der Leiste -
         # zweimal braucht sie niemand.
@@ -586,6 +593,8 @@ def schriftfeldwerte(
         for marken in vorlage.schriftfeld
         for marke in marken
         for eintrag in _eintraege(marke, projekt, traeger, leiste, blattart)
+        # Eine Tabelle hat keine Striche - dort zaehlen nur die Angaben.
+        if eintrag[0] != STRICH
     ]
 
 
@@ -701,6 +710,12 @@ def schriftfeld(
         label_b = 20.0
         for j, (name, wert) in enumerate(spalte):
             y = oben + j * zeilenhoehe
+            if name == STRICH:
+                mitte = y + zeilenhoehe / 2
+                blatt.linie(
+                    x + 2, mitte, x + spaltenbreite - 2, mitte, 0.2, LINIE_FEIN
+                )
+                continue
             blatt.text(
                 x + 2, y, label_b - 2, zeilenhoehe, name,
                 vorlage.schrift_klein, LINKS, False, TINTE_LEISE,

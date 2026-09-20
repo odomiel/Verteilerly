@@ -363,7 +363,6 @@ class TestBlattvorlagenEditor(unittest.TestCase):
         d = self.dialog
         d.basiswahl.setCurrentIndex(d.basiswahl.findData(BEISPIELVORLAGE.id))
         self.assertEqual(d.basis.id, BEISPIELVORLAGE.id)
-        self.assertEqual(d.schriftfeldart.currentData(), "beispiel")
         self.assertEqual(d.zahlen["schriftfeld_hoehe"].value(), 38.0)
         self.assertFalse(d.geaendert)
 
@@ -429,7 +428,7 @@ class TestSchriftfeldEditor(unittest.TestCase):
 
         self.editor = SchriftfeldEditor()
         self.addCleanup(self.editor.deleteLater)
-        self.editor.setzen("standard", STANDARDSCHRIFTFELD, ())
+        self.editor.setzen(STANDARDSCHRIFTFELD, ())
         self.gemeldet = []
         self.editor.geaendert.connect(lambda: self.gemeldet.append(True))
 
@@ -473,18 +472,36 @@ class TestSchriftfeldEditor(unittest.TestCase):
         e.eigene_breiten.setChecked(False)
         self.assertEqual(e.werte()[1], ())
 
-    def test_mit_anschriften_bleiben_zwei_breiten_und_die_bloecke(self):
-        from verteilerly.blattvorlagen import STANDARDSCHRIFTFELD
+    def test_ein_querstrich_ist_eine_angabe_wie_andere(self):
+        """Keine Angabe, sondern ein Strich quer durch den Block."""
+        from verteilerly.blattvorlagen import SCHRIFTFELDMARKEN
+        from verteilerly.erweiterungen.blattvorlageneditor.schriftfeld import MARKENNAMEN
 
+        self.assertIn("strich", SCHRIFTFELDMARKEN)
+        self.assertEqual(MARKENNAMEN["strich"], "Querstrich")
         e = self.editor
-        e.art_setzen("beispiel")
-        self.assertEqual(len(e.breiten), 2)
-        self.assertEqual(e.listen, [])
-        self.assertFalse(e.fest.isHidden())
-        self.assertTrue(e.block_hinzu.isHidden())
-        # Zurueck auf standard: die Bloecke sind noch da.
-        e.art_setzen("standard")
-        self.assertEqual(e.werte()[0], STANDARDSCHRIFTFELD)
+        e.marke_hinzufuegen(1, "strich")
+        self.assertEqual(e.werte()[0][1][-1], "strich")
+        self.assertEqual(e.listen[1].item(e.listen[1].count() - 1).text(), "Querstrich")
+
+    def test_jeder_block_laesst_sich_einzeln_loeschen(self):
+        e = self.editor
+        erster, dritter = e.werte()[0][0], e.werte()[0][2]
+        e.block_loeschen(1)
+        self.assertEqual(e.werte()[0], (erster, dritter))
+        # Der letzte Block bleibt, auch wenn man es versucht.
+        e.block_loeschen(0)
+        e.block_loeschen(0)
+        self.assertEqual(len(e.werte()[0]), 1)
+
+    def test_eigene_breiten_gehen_mit_dem_geloeschten_block(self):
+        e = self.editor
+        e.eigene_breiten.setChecked(True)
+        e.breiten[0].setValue(1.0)
+        e.breiten[1].setValue(2.0)
+        e.breiten[2].setValue(3.0)
+        e.block_loeschen(1)
+        self.assertEqual(e.werte()[1], (1.0, 3.0))
 
 
 class TestSchriftfeldImEditor(unittest.TestCase):
@@ -504,18 +521,18 @@ class TestSchriftfeldImEditor(unittest.TestCase):
     def test_die_ausgangsvorlage_stellt_das_schriftfeld_ein(self):
         d = self.dialog
         d.basiswahl.setCurrentIndex(d.basiswahl.findData(BEISPIELVORLAGE.id))
-        self.assertEqual(d.schriftfeld.art, "beispiel")
-        self.assertEqual(d.schriftfeld.werte(), (BEISPIELVORLAGE.schriftfeld,
-                                                 BEISPIELVORLAGE.schriftfeld_anteile))
-        self.assertEqual(d.vorlage().schriftfeld_anteile, (0.42, 0.58))
+        self.assertEqual(d.schriftfeld.werte()[0], BEISPIELVORLAGE.schriftfeld)
+        # Zwei Breiten zu drei Blöcken passen nicht - dann teilt das
+        # Programm nach Augenmaß, wie beim Lesen einer Datei.
+        self.assertEqual(d.schriftfeld.werte()[1], ())
+        self.assertEqual(d.vorlage().schriftfeld_anteile, ())
 
-    def test_die_bauart_schaltet_die_bloecke_um(self):
+    def test_der_editor_baut_nur_schriftfelder_in_bloecken(self):
+        """Die feste Aufteilung der Mustertabellen stellt er nicht ein."""
         d = self.dialog
-        d.schriftfeldart.setCurrentIndex(d.schriftfeldart.findData("beispiel"))
-        self.assertEqual(d.schriftfeld.art, "beispiel")
-        self.assertTrue(d.geaendert)
-        d._neu_zeichnen()
-        self.assertEqual(d.vorlage().schriftfeld_art, "beispiel")
+        d.basiswahl.setCurrentIndex(d.basiswahl.findData(BEISPIELVORLAGE.id))
+        self.assertEqual(BEISPIELVORLAGE.schriftfeld_art, "beispiel")
+        self.assertEqual(d.vorlage().schriftfeld_art, "standard")
 
     def test_der_briefkopf_wird_gespeichert_und_wieder_gelesen(self):
         import yaml
@@ -523,6 +540,7 @@ class TestSchriftfeldImEditor(unittest.TestCase):
         d = self.dialog
         d.schriftfeld.block_entfernen()
         d.schriftfeld.marke_hinzufuegen(0, "dokumenttitel")
+        d.schriftfeld.marke_hinzufuegen(0, "strich")
         d.schriftfeld.eigene_breiten.setChecked(True)
         d.schriftfeld.breiten[0].setValue(3.0)
         d.schriftfeld.breiten[1].setValue(1.0)
@@ -531,7 +549,7 @@ class TestSchriftfeldImEditor(unittest.TestCase):
         kennung = d.speichern("Eigener Briefkopf")
         inhalt = yaml.safe_load((self.ordner / f"{kennung}.yaml").read_text(encoding="utf-8"))
         self.assertEqual(len(inhalt["schriftfeld"]), 2)
-        self.assertEqual(inhalt["schriftfeld"][0][-1], "dokumenttitel")
+        self.assertEqual(inhalt["schriftfeld"][0][-2:], ["dokumenttitel", "strich"])
         self.assertEqual(inhalt["schriftfeld_anteile"], [3, 1])
         gelesen = blattvorlage_aus_yaml(inhalt)
         self.assertEqual(gelesen.schriftfeld, d.vorlage().schriftfeld)

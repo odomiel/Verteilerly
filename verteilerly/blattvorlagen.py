@@ -74,6 +74,9 @@ SCHRIFTFELDMARKEN = (
     "gezeichnet",
     "dokumenttitel",
     "eigene",
+    # Keine Angabe, sondern ein Strich quer durch den Block - er trennt,
+    # was darueber steht, von dem darunter.
+    "strich",
 )
 
 
