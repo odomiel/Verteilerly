@@ -4,5 +4,8 @@ reportlab>=4.2    # BSD    - PDF-Ausgabe
 openpyxl>=3.1     # MIT    - Excel-Ausgabe
 PyYAML>=6.0       # MIT    - Vorlagen und Kabeltypen
 
+# Nur fuer Tests - liest die erzeugten PDFs, wird nicht mit ausgeliefert
+pypdf>=4.0        # BSD
+
 # Verpacken
 pyinstaller>=6.10   # GPL mit Ausnahme fuer die erzeugten Programme
