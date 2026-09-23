@@ -146,6 +146,19 @@ class TestPaket(unittest.TestCase):
             list(self.wurzel.rglob("auch.yaml")) + list(self.wurzel.rglob("absolut.yaml"))
         self.assertEqual(entwischt, [])
 
+    def test_kaputter_merkzettel_meldet_sich(self):
+        """Ein ZIP mit unlesbarem oder falsch gebautem Merkzettel ist keines."""
+        for fall, merkzettel in (("kein JSON", "kaputt"), ("keine Tabelle", "[1]"),
+                                 ("Zahl", "7"), ("nicht UTF-8", b"\xff\xfe")):
+            with self.subTest(fall=fall):
+                seltsam = self.wurzel / "seltsam.zip"
+                with zipfile.ZipFile(seltsam, "w") as datei:
+                    datei.writestr(paket.MERKZETTEL, merkzettel)
+                with self.assertRaises(paket.PaketFehler):
+                    paket.inhalt(seltsam)
+                with self.assertRaises(paket.PaketFehler):
+                    paket.einspielen(seltsam, self.daten)
+
     def test_kaputte_datei_meldet_sich(self):
         kaputt = self.wurzel / "kaputt.zip"
         kaputt.write_text("kein ZIP", encoding="utf-8")

@@ -142,13 +142,17 @@ def inhalt(quelle: pathlib.Path) -> dict:
                 raise PaketFehler(
                     u("Das ist kein Verteilerly-Paket: der Merkzettel fehlt")
                 ) from None
+            except (ValueError, RecursionError):
+                raise PaketFehler(
+                    u("Das ist kein Verteilerly-Paket: der Merkzettel ist unlesbar")
+                ) from None
             namen = [n for n in paket.namelist() if _brauchbar(n)]
     except zipfile.BadZipFile as fehler:
         raise PaketFehler(u("Die Datei ist kein Paket: {0}").format(fehler)) from fehler
     except OSError as fehler:
         raise PaketFehler(str(fehler)) from fehler
 
-    if merkzettel.get("kennung") != KENNUNG:
+    if not isinstance(merkzettel, dict) or merkzettel.get("kennung") != KENNUNG:
         raise PaketFehler(u("Das ist kein Verteilerly-Paket"))
 
     bericht = {name: 0 for name in UNTERORDNER}
@@ -156,8 +160,8 @@ def inhalt(quelle: pathlib.Path) -> dict:
         if name != CONFNAME:
             bericht[name.split("/")[0]] += 1
     bericht[EINSTELLUNGEN] = int(CONFNAME in namen)
-    bericht["version"] = merkzettel.get("version", "")
-    bericht["erstellt"] = merkzettel.get("erstellt", "")
+    bericht["version"] = str(merkzettel.get("version", ""))
+    bericht["erstellt"] = str(merkzettel.get("erstellt", ""))
     return bericht
 
 

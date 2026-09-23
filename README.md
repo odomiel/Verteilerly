@@ -649,8 +649,11 @@ Fassung, statt sie auszuführen. *Erweiterungen verwalten* zeigt eine Spalte
 wird ja damit ausgeliefert), eine eigene zählt, wie sie will — oder gar nicht. Die Wahl steht in der `Verteilerly.conf` und gilt ab dem nächsten
 Start. Was sich nicht laden oder einrichten lässt, wird übergangen und beim
 Start genannt; ein Fehler in einem Menüaufruf wird angezeigt, statt das
-Programm anzuhalten. Verhindert eine eigene Erweiterung den Start, startet
-`--ohne-fremde-erweiterungen` ohne sie. Die Hilfe (Abschnitt 11) zeigt ein
+Programm anzuhalten. Der Haken *Nur mitgelieferte Erweiterungen laden* im
+selben Dialog hält alle eigenen dauerhaft aus, auch eingeschaltete; er ist von
+Haus aus gesetzt und muss für eigene Erweiterungen erst heraus. Verhindert
+eine eigene Erweiterung den Start, startet `--ohne-fremde-erweiterungen` ohne
+sie. Die Hilfe (Abschnitt 11) zeigt ein
 vollständiges Beispiel; ein Test lädt es.
 
 Die erste eingebaute ist der **Blattvorlagen-Editor**: links alle Werte einer
@@ -823,7 +826,10 @@ Beim Einspielen wird nichts blind ausgepackt: übernommen werden nur die
 bekannten Unterordner, nur `*.yaml` und die Einstellungsdatei, und nur
 Namen ohne Pfadanteil — ein Paket aus fremder Hand darf nichts außerhalb
 des Arbeitsordners anlegen. Gleichnamige Dateien werden ersetzt, alles
-andere bleibt stehen.
+andere bleibt stehen. Die Wahl der Erweiterungen (`erweiterungen_an`,
+`erweiterungen_aus`, `erweiterungen_nur_eingebaute`) bleibt beim Einspielen,
+wie sie ist: sonst könnte ein Paket eine eigene Erweiterung einschalten, die
+auf dem Rechner liegt.
 
 Gelesen wird darüber hinaus aus allen Orten, an denen Daten liegen
 können — ein Ordner `daten/` **neben der AppImage-Datei** geht dabei vor,

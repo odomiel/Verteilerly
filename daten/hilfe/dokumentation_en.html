@@ -783,7 +783,8 @@ settings into a ZIP file; <b>… restore…</b> brings them back. In both
 directions check marks choose what comes along, and the dialog shows beforehand
 what is in the package. On restoring, only the known subfolders and only YAML
 are taken over — a package from someone else cannot create anything outside the
-working folder.</p>
+working folder. Which extensions are switched on does not come with a package:
+each computer decides that for itself.</p>
 
 <h2><a name="erweiterungen"></a>11 &nbsp; Extensions</h2>
 
@@ -851,6 +852,11 @@ check mark, its <b>version</b>, its origin and description — or the reason why
 it could not be loaded. Built-in ones are switched on, your own ones only once
 you switch them on. The choice applies from the next start and is kept in the
 <code>Verteilerly.conf</code>.</p>
+
+<p>As long as the check mark <b>Load only bundled extensions</b> is set — and
+it is by default — all of your own extensions stay off, even switched-on ones.
+Their check marks in the list are greyed out but kept. To use your own
+extensions, remove this check mark and switch on the ones you want.</p>
 
 <p>A <b>built-in</b> extension is shipped with the program and therefore
 carries its version — the date of the release,

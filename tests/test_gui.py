@@ -1654,6 +1654,55 @@ class TestMenuezustaende(unittest.TestCase):
                 self.assertEqual(f.vorschau.blattvorlage.id, "knapp")
                 self.assertEqual(f.schreibweise.id, "mit_strich")
 
+    def test_paket_bringt_die_wahl_der_erweiterungen_nicht_mit(self):
+        """Ein Paket aus fremder Hand schaltet keine eigene Erweiterung ein."""
+        import tempfile
+        import zipfile
+        from pathlib import Path
+
+        from PySide6.QtCore import QSettings
+        from PySide6.QtWidgets import QFileDialog
+
+        from verteilerly import paket, pfade
+        from verteilerly.gui.dialoge import PaketDialog
+
+        f = self.fenster
+        with tempfile.TemporaryDirectory() as ordner:
+            conf = Path(ordner) / "Verteilerly.conf"
+            daten = Path(ordner) / "daten"
+            f.einstellungen = QSettings(str(conf), QSettings.Format.IniFormat)
+            f.einstellungen.setValue("erweiterungen_an", "meine")
+            f.einstellungen.setValue("erweiterungen_nur_eingebaute", True)
+            f.einstellungen.setValue("blattvorlage", "standard")
+            f.einstellungen.sync()
+
+            fremd = Path(ordner) / "fremd.zip"
+            with zipfile.ZipFile(fremd, "w") as datei:
+                datei.writestr(paket.MERKZETTEL, '{"kennung": "verteilerly-paket"}')
+                datei.writestr(paket.CONFNAME, (
+                    "[General]\nblattvorlage=knapp\n"
+                    "erweiterungen_an=boese\nerweiterungen_aus=blattvorlageneditor\n"
+                    "erweiterungen_nur_eingebaute=false\n"
+                ))
+
+            with mock.patch.object(pfade, "eigener_datenordner", return_value=daten), \
+                 mock.patch.object(
+                     QFileDialog, "getOpenFileName", return_value=(str(fremd), "")
+                 ), mock.patch.object(
+                     PaketDialog, "exec",
+                     lambda dialog: PaketDialog.DialogCode.Accepted,
+                 ):
+                f.paket_einspielen()
+
+            # Die übrigen Einstellungen kommen an …
+            self.assertEqual(f.einstellungen.value("blattvorlage"), "knapp")
+            # … die Wahl der Erweiterungen bleibt, wie sie war.
+            self.assertEqual(f.einstellungen.value("erweiterungen_an"), "meine")
+            self.assertFalse(f.einstellungen.contains("erweiterungen_aus"))
+            self.assertTrue(
+                f.einstellungen.value("erweiterungen_nur_eingebaute", type=bool)
+            )
+
     def test_auswahl_bietet_nur_an_was_es_gibt(self):
         """Ein Paket ohne Kabeltypen kann keine mitbringen."""
         from verteilerly.gui.dialoge import PaketDialog

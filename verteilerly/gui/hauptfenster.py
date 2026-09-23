@@ -114,6 +114,14 @@ PDFFILTER = "PDF (*.pdf)"
 XLSXFILTER = "Excel-Arbeitsmappe (*.xlsx)"
 CSVFILTER = "CSV, Semikolon getrennt (*.csv)"
 PAKETFILTER = "Verteilerly-Paket (*.zip)"
+#: Welche Erweiterungen laufen, entscheidet dieser Rechner. Ein Paket
+#: bringt diese Einstellungen darum nicht mit - sonst koennte eines aus
+#: fremder Hand eine eigene Erweiterung einschalten, die hier liegt.
+ERWEITERUNGSWAHL = (
+    "erweiterungen_an",
+    "erweiterungen_aus",
+    "erweiterungen_nur_eingebaute",
+)
 VORSCHAU_VERZUG = 250  # ms, damit das Tippen nicht stockt
 
 
@@ -987,9 +995,17 @@ class Hauptfenster(QMainWindow):
     def _einstellungen_uebernehmen(self, datei: pathlib.Path) -> None:
         """Traegt die Werte einer eingespielten Datei in die laufenden ein."""
         quelle = QSettings(str(datei), QSettings.Format.IniFormat)
+        behalten = {
+            schluessel: self.einstellungen.value(schluessel)
+            for schluessel in ERWEITERUNGSWAHL
+            if self.einstellungen.contains(schluessel)
+        }
         self.einstellungen.clear()
         for schluessel in quelle.allKeys():
-            self.einstellungen.setValue(schluessel, quelle.value(schluessel))
+            if schluessel not in ERWEITERUNGSWAHL:
+                self.einstellungen.setValue(schluessel, quelle.value(schluessel))
+        for schluessel, wert in behalten.items():
+            self.einstellungen.setValue(schluessel, wert)
         self.einstellungen.sync()
 
     def _nach_dem_einspielen(self) -> None:
@@ -1571,7 +1587,18 @@ class Hauptfenster(QMainWindow):
         )
 
     def _ohne_fremde(self) -> bool:
+        """Nur fuer diesen Lauf abgeschaltet - ``--ohne-fremde-erweiterungen``."""
         return bool(os.environ.get(erweiterungen.OHNE_FREMDE))
+
+    def _nur_eingebaute(self) -> bool:
+        """Auf Dauer abgeschaltet - der Haken in *Erweiterungen verwalten*.
+
+        Von Haus aus gesetzt: wer eigene Erweiterungen will, nimmt ihn
+        bewusst heraus.
+        """
+        return self.einstellungen.value(
+            "erweiterungen_nur_eingebaute", True, type=bool
+        )
 
     def _erweiterungen_einrichten(self) -> None:
         """Findet die Erweiterungen und laesst die eingeschalteten sich eintragen.
@@ -1590,7 +1617,7 @@ class Hauptfenster(QMainWindow):
         for fund in self.erweiterungen:
             if not erweiterungen.eingeschaltet(fund, an, aus):
                 continue
-            if not fund.eingebaut and self._ohne_fremde():
+            if not fund.eingebaut and (self._ohne_fremde() or self._nur_eingebaute()):
                 continue
             erweiterungen.laden(fund)
             if fund.erweiterung is not None and not fund.fehler:
@@ -1616,16 +1643,20 @@ class Hauptfenster(QMainWindow):
             ordner = pfade.erweiterungsordner()
         except OSError:
             ordner = None
+        nur_eingebaute = self._nur_eingebaute()
         dialog = ErweiterungenDialog(
-            self.erweiterungen, an, aus, ordner, self._ohne_fremde(), self
+            self.erweiterungen, an, aus, ordner, self._ohne_fremde(), self,
+            nur_eingebaute=nur_eingebaute,
         )
         if dialog.exec() != ErweiterungenDialog.DialogCode.Accepted:
             return
         neu_an, neu_aus = dialog.wahl()
-        if (neu_an, neu_aus) == (an, aus):
+        neu_nur_eingebaute = dialog.nur_eingebaute()
+        if (neu_an, neu_aus, neu_nur_eingebaute) == (an, aus, nur_eingebaute):
             return
         self.einstellungen.setValue("erweiterungen_an", erweiterungen.wahl_schreiben(neu_an))
         self.einstellungen.setValue("erweiterungen_aus", erweiterungen.wahl_schreiben(neu_aus))
+        self.einstellungen.setValue("erweiterungen_nur_eingebaute", neu_nur_eingebaute)
         self.statusBar().showMessage(
             u("Die Wahl der Erweiterungen gilt ab dem nächsten Start"), 8000
         )

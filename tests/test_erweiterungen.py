@@ -315,6 +315,73 @@ class TestImHauptfenster(unittest.TestCase):
         # Der Editor bleibt bis zum naechsten Start im Menue.
         self.assertTrue(any("Blattvorlagen" in a.text() for a in self._menue().actions()))
 
+    def test_nur_eingebaute_laedt_keine_eigene(self):
+        """Der Haken haelt auch eine eingeschaltete eigene Erweiterung aus."""
+        from verteilerly import pfade
+
+        from . import einstellung_bewahren
+
+        f = self.fenster
+        einstellung_bewahren(self, f.einstellungen, "erweiterungen_an")
+        einstellung_bewahren(self, f.einstellungen, "erweiterungen_nur_eingebaute")
+        f.einstellungen.setValue("erweiterungen_an", "hallo")
+
+        with tempfile.TemporaryDirectory() as ordner:
+            (pathlib.Path(ordner) / "hallo.py").write_text(
+                "from verteilerly.erweiterungen import Erweiterung\n"
+                "class Hallo(Erweiterung):\n"
+                "    kennung = 'hallo'\n"
+                "    def einrichten(self, programm):\n"
+                "        programm.menueeintrag('Hallo sagen', lambda: None)\n"
+                "erweiterung = Hallo()\n",
+                encoding="utf-8",
+            )
+            ohne_schalter = {
+                k: v for k, v in os.environ.items() if k != erweiterungen.OHNE_FREMDE
+            }
+            for nur_eingebaute, geladen in ((True, False), (False, True)):
+                with self.subTest(nur_eingebaute=nur_eingebaute):
+                    sys.modules.pop("verteilerly_erweiterung_hallo", None)
+                    f.einstellungen.setValue("erweiterungen_nur_eingebaute", nur_eingebaute)
+                    with mock.patch.dict(os.environ, ohne_schalter, clear=True), \
+                         mock.patch.object(
+                             pfade, "erweiterungsordner_alle",
+                             return_value=[pathlib.Path(ordner)],
+                         ):
+                        f._erweiterungen_einrichten()
+                    hallo = next(fund for fund in f.erweiterungen if fund.kennung == "hallo")
+                    self.assertEqual(hallo.erweiterung is not None, geladen)
+                    self.assertEqual(
+                        any(a.text() == "Hallo sagen" for a in self._menue().actions()),
+                        geladen,
+                    )
+        sys.modules.pop("verteilerly_erweiterung_hallo", None)
+
+    def test_nur_eingebaute_ist_die_vorgabe(self):
+        from . import einstellung_bewahren
+
+        f = self.fenster
+        einstellung_bewahren(self, f.einstellungen, "erweiterungen_nur_eingebaute")
+        f.einstellungen.remove("erweiterungen_nur_eingebaute")
+        self.assertTrue(f._nur_eingebaute())
+
+    def test_verwalten_merkt_nur_eingebaute(self):
+        from verteilerly.gui.erweiterungen import ErweiterungenDialog
+
+        from . import einstellung_bewahren
+
+        f = self.fenster
+        einstellung_bewahren(self, f.einstellungen, "erweiterungen_nur_eingebaute")
+        f.einstellungen.setValue("erweiterungen_nur_eingebaute", False)
+
+        def abschalten(dialog):
+            dialog.nur_eingebaute_haken.setChecked(True)
+            return ErweiterungenDialog.DialogCode.Accepted
+
+        with mock.patch.object(ErweiterungenDialog, "exec", abschalten):
+            f.erweiterungen_verwalten()
+        self.assertTrue(f._nur_eingebaute())
+
 
 class TestVerwaltenDialog(unittest.TestCase):
     def test_zeigt_herkunft_fehler_und_wahl(self):
@@ -352,6 +419,29 @@ class TestVerwaltenDialog(unittest.TestCase):
         hallo.setCheckState(0, Qt.CheckState.Checked)
         dialog.eintraege["blattvorlageneditor"].setCheckState(0, Qt.CheckState.Unchecked)
         self.assertEqual(dialog.wahl(), ({"hallo", "kaputt"}, {"blattvorlageneditor"}))
+
+    def test_nur_eingebaute_graut_die_eigenen_aus(self):
+        from PySide6.QtCore import Qt
+        from verteilerly.gui.erweiterungen import ErweiterungenDialog
+
+        funde = erweiterungen.finden([]) + [
+            Fund("hallo", "hallo", eingebaut=False, ort=pathlib.Path("/x/hallo.py")),
+        ]
+        dialog = ErweiterungenDialog(funde, {"hallo"}, set(), None, nur_eingebaute=True)
+        self.addCleanup(dialog.close)
+        hallo = dialog.eintraege["hallo"]
+        eingebaut = dialog.eintraege["blattvorlageneditor"]
+        self.assertTrue(dialog.nur_eingebaute())
+        self.assertTrue(hallo.isDisabled())
+        self.assertFalse(eingebaut.isDisabled())
+        # Der Haken der eigenen bleibt stehen - fuer den Tag, an dem der
+        # Schalter wieder fort ist.
+        self.assertEqual(hallo.checkState(0), Qt.CheckState.Checked)
+        self.assertEqual(dialog.wahl(), ({"hallo"}, set()))
+
+        dialog.nur_eingebaute_haken.setChecked(False)
+        self.assertFalse(dialog.nur_eingebaute())
+        self.assertFalse(hallo.isDisabled())
 
 
 class TestBlattvorlagenEditor(unittest.TestCase):

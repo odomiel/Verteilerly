@@ -130,6 +130,35 @@ class TestProjektdatei(unittest.TestCase):
         with self.assertRaises(ProjektdateiFehler):
             projektdatei.laden(self.pfad)
 
+    def test_falsch_gebaute_datei_ergibt_eine_meldung(self):
+        """Gueltiges JSON, aber kein Projekt - eine Meldung, kein Absturz."""
+        kopf = {"dateikennung": projektdatei.DATEIKENNUNG, "formatversion": 9}
+        faelle = {
+            "nummer fehlt": {"buchten": [{"leisten": []}]},
+            "bucht ist Text": {"buchten": ["x"]},
+            "leisten ist Zahl": {"buchten": [{"nummer": 1, "leisten": 5}]},
+            "kabel ohne abschnittsangaben": {"kabel": [{"abschnitte": [{}]}]},
+            "rangierung ist Text": {"rangierungen": ["x"]},
+            "verteiler ist Liste": [],
+        }
+        for fall, verteiler in faelle.items():
+            with self.subTest(fall=fall):
+                self.pfad.write_text(
+                    json.dumps({**kopf, "verteiler": verteiler}), encoding="utf-8"
+                )
+                with self.assertRaises(ProjektdateiFehler):
+                    projektdatei.laden(self.pfad)
+
+    def test_binaerdatei_abgelehnt(self):
+        self.pfad.write_bytes(b"\xff\xfe\x00kein Text")
+        with self.assertRaises(ProjektdateiFehler):
+            projektdatei.laden(self.pfad)
+
+    def test_zu_tief_verschachtelt_abgelehnt(self):
+        self.pfad.write_text("[" * 100_000, encoding="utf-8")
+        with self.assertRaises(ProjektdateiFehler):
+            projektdatei.laden(self.pfad)
+
     def test_kuenftige_formatversion_abgelehnt(self):
         daten = projektdatei.als_dict(beispielprojekt())
         daten["formatversion"] = 99

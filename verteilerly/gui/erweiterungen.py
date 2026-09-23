@@ -7,6 +7,7 @@ import pathlib
 from PySide6.QtCore import Qt, QUrl
 from PySide6.QtGui import QAction, QDesktopServices, QKeySequence
 from PySide6.QtWidgets import (
+    QCheckBox,
     QDialogButtonBox,
     QHBoxLayout,
     QLabel,
@@ -111,13 +112,18 @@ class ErweiterungenDialog(PassenderDialog):
     sie tut - oder warum sie nicht geladen werden konnte. Eine eingebaute
     traegt die Fassung des Programms, eine eigene zaehlt, wie sie will.
     Fremde laufen mit allen Rechten des Programms; eingeschaltet wird nur,
-    was man kennt. Wirksam wird die Wahl beim naechsten Start: Code laesst
-    sich laden, aber nicht sauber wieder entladen.
+    was man kennt. Solange der Haken *Nur mitgelieferte Erweiterungen
+    laden* gesetzt ist - und das ist er von Haus aus -, bleiben alle
+    eigenen aus, auch die eingeschalteten, und ihre Haken warten, bis er
+    fort ist.
+    Wirksam wird die Wahl beim naechsten Start: Code laesst sich laden,
+    aber nicht sauber wieder entladen.
     """
 
     def __init__(
         self, funde: list[Fund], an, aus, ordner: pathlib.Path | None,
         ohne_fremde: bool = False, parent: QWidget | None = None,
+        nur_eingebaute: bool = False,
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle(u("Erweiterungen verwalten"))
@@ -163,6 +169,15 @@ class ErweiterungenDialog(PassenderDialog):
         for spalte in range(4):
             self.liste.resizeColumnToContents(spalte)
 
+        self.nur_eingebaute_haken = QCheckBox(u("Nur mitgelieferte Erweiterungen laden"))
+        self.nur_eingebaute_haken.setToolTip(u(
+            "Eigene Erweiterungen werden dann bei keinem Start geladen, "
+            "auch eingeschaltete nicht."
+        ))
+        self.nur_eingebaute_haken.setChecked(nur_eingebaute)
+        self.nur_eingebaute_haken.toggled.connect(self._fremde_sperren)
+        self._fremde_sperren(nur_eingebaute)
+
         ortzeile = QHBoxLayout()
         ortzeile.addWidget(QLabel(u("Eigene Erweiterungen liegen in:")))
         pfad = QLabel(str(ordner) if ordner else u("(kein beschreibbarer Ordner)"))
@@ -183,6 +198,7 @@ class ErweiterungenDialog(PassenderDialog):
             still.setWordWrap(True)
             aufbau.addWidget(still)
         aufbau.addWidget(self.liste, 1)
+        aufbau.addWidget(self.nur_eingebaute_haken)
         aufbau.addLayout(ortzeile)
         knoepfe = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
@@ -191,6 +207,16 @@ class ErweiterungenDialog(PassenderDialog):
         knoepfe.rejected.connect(self.reject)
         aufbau.addWidget(knoepfe)
         self.resize(820, 360)
+
+    def _fremde_sperren(self, gesperrt: bool) -> None:
+        """Graut die eigenen Erweiterungen aus - ihre Haken bleiben stehen."""
+        for fund in self.funde:
+            if not fund.eingebaut:
+                self.eintraege[fund.kennung].setDisabled(gesperrt)
+
+    def nur_eingebaute(self) -> bool:
+        """Sollen eigene Erweiterungen gar nicht geladen werden?"""
+        return self.nur_eingebaute_haken.isChecked()
 
     def _ordner_oeffnen(self) -> None:
         if self.ordner is None:

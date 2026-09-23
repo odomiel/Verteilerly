@@ -263,13 +263,29 @@ def aus_dict(daten: dict[str, Any]) -> Projekt:
 
 
 def laden(pfad: pathlib.Path) -> Projekt:
+    """Liest eine Projektdatei.
+
+    Was an der Datei nicht stimmt, kommt als ``ProjektdateiFehler`` heraus -
+    auch dann, wenn sie gueltiges JSON ist, aber nicht so gebaut wie ein
+    Projekt: eine Datei aus fremder Hand soll eine Meldung ergeben, keinen
+    Absturz.
+    """
     pfad = pathlib.Path(pfad)
     try:
         daten = json.loads(pfad.read_text(encoding="utf-8"))
+    except UnicodeDecodeError:
+        raise ProjektdateiFehler(u("{0} ist keine Textdatei").format(pfad.name)) from None
     except json.JSONDecodeError as fehler:
         raise ProjektdateiFehler(u("{0} ist kein gueltiges JSON - {1}").format(pfad.name, fehler)) from None
-    except (KeyError, TypeError) as fehler:
-        raise ProjektdateiFehler(u("{0} ist unvollstaendig - {1}").format(pfad.name, fehler)) from None
+    except RecursionError:
+        raise ProjektdateiFehler(u("{0} ist zu tief verschachtelt").format(pfad.name)) from None
     if not isinstance(daten, dict):
         raise ProjektdateiFehler(u("{0} enthaelt kein Projekt").format(pfad.name))
-    return aus_dict(daten)
+    try:
+        return aus_dict(daten)
+    except ModellFehler:
+        raise
+    except (KeyError, TypeError, AttributeError, ValueError, IndexError, RecursionError) as fehler:
+        raise ProjektdateiFehler(
+            u("{0} ist unvollstaendig - {1}").format(pfad.name, f"{type(fehler).__name__}: {fehler}")
+        ) from None

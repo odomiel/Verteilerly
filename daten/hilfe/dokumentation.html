@@ -803,7 +803,9 @@ und die Einstellungen in eine ZIP-Datei; <b>… einspielen…</b> holt sie
 zurück. In beiden Richtungen wird mit Häkchen gewählt, was mitkommt, und der
 Dialog zeigt vorher, was im Paket steckt. Beim Einspielen werden nur die
 bekannten Unterordner und nur YAML übernommen — ein Paket aus fremder Hand
-kann nichts außerhalb des Arbeitsordners anlegen.</p>
+kann nichts außerhalb des Arbeitsordners anlegen. Welche Erweiterungen
+eingeschaltet sind, bringt ein Paket nicht mit: das entscheidet jeder Rechner
+selbst.</p>
 
 <h2><a name="erweiterungen"></a>11 &nbsp; Erweiterungen</h2>
 
@@ -870,6 +872,12 @@ Erweiterung mit Haken, <b>Version</b>, Herkunft und Beschreibung — oder mit de
 Grund, warum sie sich nicht laden ließ. Eingebaute sind eingeschaltet, eigene
 erst, wenn man sie einschaltet. Die Wahl gilt ab dem nächsten Start und steht
 in der <code>Verteilerly.conf</code>.</p>
+
+<p>Solange der Haken <b>Nur mitgelieferte Erweiterungen laden</b> gesetzt ist
+— und das ist er von Haus aus —, bleiben alle eigenen Erweiterungen aus, auch
+eingeschaltete. Ihre Haken in der Liste werden ausgegraut, bleiben aber stehen.
+Wer eigene Erweiterungen benutzen will, nimmt diesen Haken heraus und schaltet
+die gewünschten ein.</p>
 
 <p>Eine <b>eingebaute</b> Erweiterung wird mit dem Programm ausgeliefert und
 trägt darum dessen Version — das Datum des Releases,

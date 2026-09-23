@@ -408,6 +408,8 @@ Die Rangierung {0} - {1} besteht bereits: The jumper {0} - {1} already exists
 Das ist kein Verteilerly-Paket: This is not a Verteilerly package
 'Das ist kein Verteilerly-Paket: der Merkzettel fehlt': 'This is not a Verteilerly package: the note file
   is missing'
+'Das ist kein Verteilerly-Paket: der Merkzettel ist unlesbar': 'This is not a Verteilerly package: the note
+  file is unreadable'
 'Die Datei ist kein Paket: {0}': 'The file is not a package: {0}'
 Das ist keine Verteilerly-Projektdatei: This is not a Verteilerly project file
 'Formatversion {0} wird nicht unterstuetzt (lesbar: {1})': 'Format version {0} is not supported (readable:
@@ -415,6 +417,8 @@ Das ist keine Verteilerly-Projektdatei: This is not a Verteilerly project file
 '{0} enthaelt kein Projekt': '{0} contains no project'
 '{0} ist kein gueltiges JSON - {1}': '{0} is not valid JSON - {1}'
 '{0} ist unvollstaendig - {1}': '{0} is incomplete - {1}'
+'{0} ist keine Textdatei': '{0} is not a text file'
+'{0} ist zu tief verschachtelt': '{0} is nested too deeply'
 Eine Vorlage braucht einen Namen: A template needs a name
 Der Verteiler hat keine Buchten: The frame has no bays
 Es ist keine einzige Vorlage vorhanden: There is not a single template
@@ -606,6 +610,9 @@ Nach unten: Down
 'Name:': 'Name:'
 'Nicht geladen: {0}': 'Not loaded: {0}'
 Ordner öffnen: Open folder
+Nur mitgelieferte Erweiterungen laden: Load only bundled extensions
+Eigene Erweiterungen werden dann bei keinem Start geladen, auch eingeschaltete nicht.: Your own extensions are
+  then not loaded at any start, not even switched-on ones.
 Schalter: Switches
 Schreibt die Änderungen in die Datei der geladenen Vorlage: Writes the changes into the file of the loaded template
 Spalten des Leistenblatts: Columns of the strip sheet
