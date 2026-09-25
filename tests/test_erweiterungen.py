@@ -15,7 +15,7 @@ from PySide6.QtWidgets import QApplication  # noqa: E402
 
 ANWENDUNG = QApplication.instance() or QApplication([])
 
-from verteilerly import erweiterungen  # noqa: E402
+from verteilerly import erweiterungen, pfade  # noqa: E402
 from verteilerly.blattvorlagen import (  # noqa: E402
     STANDARD,
     Blattvorlagen,
@@ -275,10 +275,27 @@ class TestImHauptfenster(unittest.TestCase):
     def test_der_editor_steht_ueber_dem_verwalten(self):
         eintraege = [a for a in self._menue().actions()]
         texte = [a.text().replace("&", "") for a in eintraege if not a.isSeparator()]
-        self.assertEqual(texte, ["Blattvorlagen-Editor…", "Erweiterungen verwalten…"])
+        self.assertEqual(
+            texte,
+            ["Blattvorlagen-Editor…", "Protokoll…", "Erweiterungen verwalten…"],
+        )
         editor = next(a for a in eintraege if "Blattvorlagen" in a.text())
         self.assertEqual(editor.property("erweiterung"), "blattvorlageneditor")
         self.assertFalse(editor.property("fremd"))
+
+    def test_das_protokoll_hoert_die_statuszeile_mit(self):
+        """Was das Programm meldet, steht danach in der Datei."""
+        fund = next(
+            x for x in self.fenster.erweiterungen if x.kennung == "protokoll"
+        )
+        protokoll = fund.erweiterung
+        self.assertIsNotNone(protokoll)
+        # Sie liegt im Arbeitsordner der Testreihe, nicht im echten.
+        self.assertTrue(
+            str(protokoll.datei()).startswith(str(pfade.eigener_datenordner()))
+        )
+        self.fenster.statusBar().showMessage("Probe für das Protokoll")
+        self.assertIn("Probe für das Protokoll", protokoll.schreiber.lesen())
 
     def test_ein_fehler_im_aufruf_haelt_das_programm_nicht_an(self):
         from verteilerly.gui import erweiterungen as oberflaeche
@@ -617,6 +634,128 @@ class TestBlattvorlagenEditor(unittest.TestCase):
         with mock.patch.object(modul, "frage", return_value=Knopf.Discard):
             d.reject()
         self.assertFalse(d.isVisible())
+
+
+class TestProtokollschreiber(unittest.TestCase):
+    """Die Datei im Arbeitsordner - eine Zeile je Ereignis."""
+
+    def setUp(self):
+        from verteilerly.erweiterungen.protokoll.schreiber import Schreiber
+
+        self._ordner = tempfile.TemporaryDirectory()
+        self.addCleanup(self._ordner.cleanup)
+        self.datei = pathlib.Path(self._ordner.name) / "Verteilerly.log"
+        self.schreiber = Schreiber(self.datei)
+
+    def test_jede_zeile_traegt_zeitpunkt_und_art(self):
+        self.assertTrue(self.schreiber.schreiben("EREIGNIS", "Neuer Verteiler"))
+        zeile = self.schreiber.lesen().splitlines()[0]
+        self.assertRegex(zeile, r"^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d  EREIGNIS\s+Neuer Verteiler$")
+
+    def test_ein_bericht_steht_eingerueckt_darunter(self):
+        self.schreiber.schreiben("FEHLER", "RuntimeError: kaputt", "Zeile 1\nZeile 2")
+        zeilen = self.schreiber.lesen().splitlines()
+        self.assertIn("RuntimeError: kaputt", zeilen[0])
+        self.assertEqual(zeilen[1:], ["    Zeile 1", "    Zeile 2"])
+
+    def test_ein_ereignis_bleibt_eine_zeile(self):
+        """Ein Umbruch im Text würde die Spalten sprengen."""
+        self.schreiber.schreiben("EREIGNIS", "zwei\nZeilen   mit  Luft")
+        self.assertEqual(len(self.schreiber.lesen().splitlines()), 1)
+        self.assertIn("zwei Zeilen mit Luft", self.schreiber.lesen())
+
+    def test_die_datei_waechst_nicht_ueber_die_grenze(self):
+        from verteilerly.erweiterungen.protokoll.schreiber import Schreiber
+
+        schreiber = Schreiber(self.datei, hoechstens=2000)
+        for nummer in range(200):
+            schreiber.schreiben("EREIGNIS", f"Ereignis {nummer}")
+        inhalt = schreiber.lesen()
+        self.assertLessEqual(len(inhalt.encode("utf-8")), 2000)
+        # Das Neueste bleibt, das Älteste geht, und es steht dabei.
+        self.assertIn("Ereignis 199", inhalt)
+        self.assertNotIn("Ereignis 0 ", inhalt)
+        self.assertIn("gekürzt", inhalt.splitlines()[0])
+
+    def test_was_sich_nicht_schreiben_laesst_haelt_nichts_auf(self):
+        from verteilerly.erweiterungen.protokoll.schreiber import Schreiber
+
+        # Eine Datei als Ordner: das Anlegen muss scheitern.
+        sperre = pathlib.Path(self._ordner.name) / "sperre"
+        sperre.write_text("keine Ordner", encoding="utf-8")
+        schreiber = Schreiber(sperre / "tief" / "Verteilerly.log")
+        self.assertFalse(schreiber.schreiben("EREIGNIS", "geht nicht"))
+        self.assertTrue(schreiber.letzter_fehler)
+        self.assertEqual(schreiber.lesen(), "")
+
+    def test_leeren_faengt_von_vorn_an(self):
+        self.schreiber.schreiben("EREIGNIS", "alt")
+        self.assertTrue(self.schreiber.leeren())
+        self.assertEqual(self.schreiber.lesen(), "")
+
+
+class TestProtokollerweiterung(unittest.TestCase):
+    """Sie hängt sich an die Statuszeile und an sys.excepthook."""
+
+    def setUp(self):
+        from verteilerly.erweiterungen.protokoll import Protokoll
+        from verteilerly.erweiterungen.protokoll.schreiber import Schreiber
+
+        self._ordner = tempfile.TemporaryDirectory()
+        self.addCleanup(self._ordner.cleanup)
+        self.protokoll = Protokoll()
+        self.protokoll.schreiber = Schreiber(
+            pathlib.Path(self._ordner.name) / "Verteilerly.log"
+        )
+
+    def test_die_startzeile_nennt_fassung_python_und_qt(self):
+        from verteilerly.version import VERSION
+
+        zeile = self.protokoll._startzeile()
+        self.assertIn(VERSION, zeile)
+        self.assertIn("Python", zeile)
+        self.assertIn("Qt", zeile)
+
+    def test_ein_ereignis_landet_in_der_datei(self):
+        self.protokoll.ereignis("Neuer Verteiler: 40 DA")
+        self.protokoll.ereignis("   ")          # das Löschen der Statuszeile
+        zeilen = self.protokoll.schreiber.lesen().splitlines()
+        self.assertEqual(len(zeilen), 1)
+        self.assertIn("Neuer Verteiler: 40 DA", zeilen[0])
+
+    def test_ein_unerwarteter_fehler_kommt_ins_protokoll(self):
+        from PySide6.QtWidgets import QMessageBox
+
+        gerufen = []
+        self.protokoll._voriger_haken = lambda *args: gerufen.append(args[0])
+        try:
+            raise RuntimeError("etwas ging schief")
+        except RuntimeError:
+            with mock.patch.object(QMessageBox, "critical") as gezeigt:
+                self.protokoll.unerwartet(*sys.exc_info())
+        inhalt = self.protokoll.schreiber.lesen()
+        self.assertIn("FEHLER", inhalt)
+        self.assertIn("RuntimeError: etwas ging schief", inhalt)
+        self.assertIn("Traceback", inhalt)
+        # Gemeldet wird es auch, und der bisherige Haken läuft weiter:
+        # wer aus einem Terminal startet, sieht seinen Bericht wie immer.
+        self.assertTrue(gezeigt.called)
+        self.assertEqual(gerufen, [RuntimeError])
+
+    def test_strg_c_geht_unberuehrt_durch(self):
+        gerufen = []
+        self.protokoll._voriger_haken = lambda *args: gerufen.append(args[0])
+        try:
+            raise KeyboardInterrupt
+        except KeyboardInterrupt:
+            self.protokoll.unerwartet(*sys.exc_info())
+        self.assertEqual(self.protokoll.schreiber.lesen(), "")
+        self.assertEqual(gerufen, [KeyboardInterrupt])
+
+    def test_ohne_fenster_wird_nur_gemeldet_was_faellt(self):
+        """In der Testreihe und im Selbstbericht gibt es keine Statuszeile."""
+        self.protokoll._an_die_statuszeile(Programmattrappe())
+        self.assertEqual(self.protokoll.schreiber.lesen(), "")
 
 
 class TestSchriftfeldEditor(unittest.TestCase):

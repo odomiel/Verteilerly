@@ -845,7 +845,37 @@ otherwise the program divides by eye. The editor always builds a title block of 
 layout of the sample tables (<code>schriftfeld_art: beispiel</code>) is not set
 there.</p>
 
-<h3>11.2 &nbsp; Managing extensions</h3>
+<h3>11.2 &nbsp; The log</h3>
+
+<p><b>Extensions ▸ Log…</b> shows what the program reported last. Everything
+that otherwise only appears briefly in the status bar is lost when the program
+ends, and an <b>unexpected error</b> vanishes entirely in the Windows
+version: it has no console on which a report could appear. The built-in
+extension <i>Log</i> therefore writes both into the file
+<code>Verteilerly.log</code> in the working folder:</p>
+
+<ul>
+<li><b>Events</b> — every message of the status bar, with its time. Each run
+begins with a line of version, Python and Qt; whoever reads a report later
+knows at once which build produced it.</li>
+<li><b>Unexpected errors</b> — whatever no part of the program caught lands in
+the file together with its report. The user gets a window with the sentence and
+the path to the log; <b>the program keeps running</b>.</li>
+</ul>
+
+<p>The dialog shows the content with the newest at the bottom. <i>Refresh</i>
+reads the file again — it grows while the dialog is open —, <i>Open folder</i>
+shows it in the file manager, <i>Clear the log</i> throws away what has
+accumulated. The file stays small: beyond 200,000 characters the older half
+falls away, and a line says that it was cut.</p>
+
+<p>The log is an <b>addition, not a part of operation</b>: if it cannot be
+written — a full disk, missing rights —, the program carries on, and the reason
+stands in the dialog. It does not travel in a package (<i>Back up templates and
+settings</i>); it belongs to this machine. Whoever wants no log at all switches
+the extension off under <i>Manage extensions</i>.</p>
+
+<h3>11.3 &nbsp; Managing extensions</h3>
 
 <p><b>Extensions ▸ Manage extensions…</b> lists every extension found with a
 check mark, its <b>version</b>, its origin and description — or the reason why
@@ -865,7 +895,7 @@ for several builds on one day. One of <b>your own</b> counts however it likes:
 what stands in
 the column is its own statement. If it names none, a dash stands there.</p>
 
-<h3>11.3 &nbsp; Writing an extension of your own</h3>
+<h3>11.4 &nbsp; Writing an extension of your own</h3>
 
 <p>An extension is a Python file — or a folder with <code>__init__.py</code> —
 in the <code>erweiterungen</code> folder of the working folder; <i>Manage
@@ -966,7 +996,8 @@ extensions</i>.</p>
 <tr><td rowspan="3"><b>Tools</b></td><td>Check frame template…</td><td></td></tr>
 <tr><td>Check sheet template…</td><td></td></tr>
 <tr><td>Check cable types…</td><td></td></tr>
-<tr><td rowspan="2"><b>Extensions</b></td><td>Sheet template editor…</td><td></td></tr>
+<tr><td rowspan="3"><b>Extensions</b></td><td>Sheet template editor…</td><td></td></tr>
+<tr><td>Log…</td><td></td></tr>
 <tr><td>Manage extensions…</td><td></td></tr>
 <tr><td rowspan="2"><b>Help</b></td><td>Documentation</td><td>F1</td></tr>
 <tr><td>About Verteilerly</td><td></td></tr>

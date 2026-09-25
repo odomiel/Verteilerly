@@ -668,6 +668,20 @@ wie sie ist (`blattvorlage_speichern()` öffnet die Datei sonst exklusiv). In
 der Datei steht nur, was von der Vorgabe abweicht (`blattvorlage_als_yaml()`,
 die Umkehrung von `blattvorlage_aus_yaml()`).
 
+Die zweite ist das **Protokoll**. Das Programm meldet alles dem Anwender und
+nichts einer Datei: was in der Statuszeile steht, ist nach dem Beenden weg, und
+ein Fehler, den niemand gefangen hat, verschwindet in der Windows-Fassung ganz
+— sie hat keine Konsole. Die Erweiterung hängt sich darum an zwei Stellen: an
+die **Statuszeile**, deren Meldungen der Ereignisstrom des Programms sind, und
+an `sys.excepthook`, der den **unerwarteten Fehler** samt Bericht bekommt.
+Beides geht als Zeile nach `Verteilerly.log` im Arbeitsordner; der bisherige
+Haken läuft weiter, wer aus einem Terminal startet, sieht seinen Bericht also
+wie immer. Der Dialog *Erweiterungen ▸ Protokoll…* zeigt die Datei, frischt
+sie auf, öffnet den Ordner und leert sie. Sie bleibt klein (über 200 000
+Zeichen fällt die ältere Hälfte weg) und ist eine **Beigabe**: lässt sie sich
+nicht schreiben, arbeitet das Programm weiter, und der Grund steht im Dialog.
+In ein Sicherungspaket kommt sie nicht mit.
+
 ## Lizenz
 
 Verteilerly steht unter der **GNU General Public License, Version 3 oder

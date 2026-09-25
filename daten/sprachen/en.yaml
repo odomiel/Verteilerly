@@ -574,6 +574,34 @@ Beschreibung: Description
 Blattvorlage „{0}“ gespeichert ({1}) — zu wählen unter Einstellungen ▸ Blattvorlage: Sheet template “{0}” saved ({1}) — choose it under Settings ▸ Sheet template
 Blattvorlage „{0}“ gespeichert ({1}): Sheet template “{0}” saved ({1})
 Blattvorlagen-Editor: Sheet template editor
+Protokoll: Log
+'&Protokoll…': '&Log…'
+Zeigt, was das Programm zuletzt gemeldet hat: Shows what the program reported last
+Ereignisse und unerwartete Fehler in eine Datei im Arbeitsordner schreiben, damit sie sich später nachlesen lassen: Write events and unexpected errors into a file in the working folder, so that they can be read up on later
+Auffrischen: Refresh
+Protokoll leeren: Clear the log
+Noch nichts protokolliert.: Nothing logged yet.
+Das bisherige Protokoll wird weggeworfen. Fortfahren?: The log so far will be thrown away. Continue?
+'Zuletzt nicht geschrieben: {0}': 'Last write failed: {0}'
+Unerwarteter Fehler: Unexpected error
+? 'Etwas ist schiefgelaufen:
+
+
+  {0}
+
+
+  Das Programm läuft weiter. Was genau passiert ist, steht im Protokoll:
+
+  {1}'
+: 'Something went wrong:
+
+
+  {0}
+
+
+  The program keeps running. What exactly happened is in the log:
+
+  {1}'
 'Buchten je Blatt:': 'Bays per sheet:'
 Die Kennung {0!r} trägt schon eine eingebaute Erweiterung: The identifier {0!r} already belongs to a built-in extension
 Die Wahl der Erweiterungen gilt ab dem nächsten Start: The choice of extensions applies from the next start

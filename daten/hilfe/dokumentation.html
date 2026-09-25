@@ -865,7 +865,38 @@ entfernen</i> ändern die Zahl der Blöcke; einer bleibt immer stehen. Mit <i>Br
 an der Breite, sonst teilt das Programm nach Augenmaß. Der Editor baut immer ein Schriftfeld aus Blöcken; die feste Aufteilung der
 Mustertabellen (<code>schriftfeld_art: beispiel</code>) stellt er nicht ein.</p>
 
-<h3>11.2 &nbsp; Erweiterungen verwalten</h3>
+<h3>11.2 &nbsp; Das Protokoll</h3>
+
+<p><b>Erweiterungen ▸ Protokoll…</b> zeigt, was das Programm zuletzt gemeldet
+hat. Alles, was sonst nur kurz in der Statuszeile steht, ist nach dem Beenden
+verloren, und ein <b>unerwarteter Fehler</b> verschwindet in der Windows-Fassung
+ganz: sie hat keine Konsole, auf der ein Bericht erscheinen könnte. Die
+eingebaute Erweiterung <i>Protokoll</i> schreibt darum beides in die Datei
+<code>Verteilerly.log</code> im Arbeitsordner:</p>
+
+<ul>
+<li><b>Ereignisse</b> — jede Meldung der Statuszeile, mit Zeitpunkt. Jeder Lauf
+beginnt mit einer Zeile aus Fassung, Python und Qt; wer später einen Bericht
+liest, weiß damit sofort, welcher Stand ihn erzeugt hat.</li>
+<li><b>Unerwartete Fehler</b> — was kein Teil des Programms abgefangen hat,
+kommt samt Fehlerbericht in die Datei. Der Anwender bekommt ein Fenster mit dem
+Satz und dem Pfad zum Protokoll; <b>das Programm läuft weiter</b>.</li>
+</ul>
+
+<p>Der Dialog zeigt den Inhalt mit dem Neuesten unten. <i>Auffrischen</i> liest
+die Datei neu — sie wächst ja, während der Dialog offen ist —, <i>Ordner
+öffnen</i> zeigt sie im Dateiverwalter, <i>Protokoll leeren</i> wirft das
+Bisherige weg. Die Datei bleibt klein: überschreitet sie 200 000 Zeichen, fällt
+die ältere Hälfte weg, und eine Zeile sagt, dass gekürzt wurde.</p>
+
+<p>Das Protokoll ist eine <b>Beigabe, kein Bestandteil des Betriebs</b>: lässt
+es sich nicht schreiben — volle Platte, fehlende Rechte —, arbeitet das
+Programm weiter, und der Grund steht im Dialog. In ein Paket (<i>Vorlagen und
+Einstellungen sichern</i>) kommt es nicht mit; es gehört zu diesem Rechner. Wer
+gar kein Protokoll will, schaltet die Erweiterung unter <i>Erweiterungen
+verwalten</i> aus.</p>
+
+<h3>11.3 &nbsp; Erweiterungen verwalten</h3>
 
 <p><b>Erweiterungen ▸ Erweiterungen verwalten…</b> listet jede gefundene
 Erweiterung mit Haken, <b>Version</b>, Herkunft und Beschreibung — oder mit dem
@@ -886,7 +917,7 @@ trägt darum dessen Version — das Datum des Releases,
 will: was in der Spalte
 steht, ist ihre eigene Angabe. Nennt sie keine, steht dort ein Strich.</p>
 
-<h3>11.3 &nbsp; Eine eigene Erweiterung schreiben</h3>
+<h3>11.4 &nbsp; Eine eigene Erweiterung schreiben</h3>
 
 <p>Eine Erweiterung ist eine Python-Datei — oder ein Ordner mit
 <code>__init__.py</code> — im Ordner <code>erweiterungen</code> des
@@ -986,7 +1017,8 @@ und sie lässt sich unter <i>Erweiterungen verwalten</i> ausschalten.</p>
 <tr><td rowspan="3"><b>Tools</b></td><td>Verteilervorlage prüfen…</td><td></td></tr>
 <tr><td>Blattvorlage prüfen…</td><td></td></tr>
 <tr><td>Kabeltypen prüfen…</td><td></td></tr>
-<tr><td rowspan="2"><b>Erweiterungen</b></td><td>Blattvorlagen-Editor…</td><td></td></tr>
+<tr><td rowspan="3"><b>Erweiterungen</b></td><td>Blattvorlagen-Editor…</td><td></td></tr>
+<tr><td>Protokoll…</td><td></td></tr>
 <tr><td>Erweiterungen verwalten…</td><td></td></tr>
 <tr><td rowspan="2"><b>Hilfe</b></td><td>Dokumentation</td><td>F1</td></tr>
 <tr><td>Über Verteilerly</td><td></td></tr>
