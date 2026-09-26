@@ -356,7 +356,6 @@ Zelle in zwei Beschriftungsfelder teilen — auf dem Blatt ohne Trennstrich: Spl
   fields — without a dividing line on the sheet
 Wie breit das rechte Feld ist: How wide the right field is
 Je Ader ist ein Vermerk vorgesehen, nicht zwei: One note per wire is provided for, not two
-kein Kabel aufgelegt: no cable terminated
 '{0} (gekürzt)': '{0} (shortened)'
 '{0} — nochmals drücken: wie die Blattvorlage': '{0} — press again: as in the sheet template'
 ? 'Kein Verteiler geöffnet.
@@ -707,3 +706,30 @@ Verteiler-Nr.: Frame no.
 Höhe: Height
 Querstrich: Horizontal rule
 Diesen Block löschen: Delete this block
+'&Projektdateien mit Verteilerly öffnen…': '&Open project files with Verteilerly…'
+? 'Ein Doppelklick auf eine Projektdatei öffnet jetzt Verteilerly.
+
+
+  Geschrieben wurde:
+
+  {0}
+
+
+  Unter Linux merkt sich die Dateiverwaltung das mitunter erst nach dem nächsten Anmelden.'
+: 'A double click on a project file now opens Verteilerly.
+
+
+  Written was:
+
+  {0}
+
+
+  On Linux the file manager sometimes notices it only after the next login.'
+Für {0} kennt das Programm keinen Weg: For {0} the program knows no way
+Meldet Verteilerly bei der Dateiverwaltung an — danach öffnet ein Doppelklick die Projektdatei: Registers
+  Verteilerly with the file manager — after that a double click opens the project file
+Nicht angemeldet: Not registered
+Projektdateien: Project files
+Verteilerly ist bereits angemeldet. Erneut eintragen?: Verteilerly is already registered. Register again?
+Verteilerly öffnet jetzt seine Projektdateien selbst: Verteilerly now opens its project files itself
+'{0} liess sich nicht schreiben: {1}': '{0} could not be written: {1}'

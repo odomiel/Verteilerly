@@ -124,6 +124,47 @@ class TestTextknoepfe(unittest.TestCase):
         self.assertTrue(lage & int(Qt.AlignmentFlag.AlignRight))
 
 
+class TestSchmaleLeistenansicht(unittest.TestCase):
+    """Die Ansicht darf die Vorschau nicht aus dem Fenster schieben."""
+
+    def _ansicht(self, kabelnamen=()):
+        from verteilerly.gui.leistenansicht import LeistenAnsicht
+
+        ansicht = LeistenAnsicht()
+        self.addCleanup(ansicht.close)
+        verteiler = Verteiler.aus_geometrie(1, 4, 10, name="Probe")
+        for nummer, name in enumerate(kabelnamen, start=1):
+            verteiler.kabel_anlegen(name, 1, nummer, 1)
+        ansicht.verteiler_setzen(verteiler)
+        ansicht.show()
+        ANWENDUNG.processEvents()
+        return ansicht
+
+    def test_lange_kabelnamen_machen_sie_nicht_breiter(self):
+        """Genau das schob die Vorschau hinaus, bis nichts mehr zu sehen war."""
+        schmal = self._ansicht().minimumSizeHint().width()
+        breit = self._ansicht([
+            f"Musterleitung Obergeschoss Zimmer {i} vom Hauptverteiler im Keller"
+            for i in range(1, 9)
+        ]).minimumSizeHint().width()
+        self.assertEqual(breit, schmal)
+
+    def test_die_kopfleiste_bleibt_das_maß(self):
+        """Schmaler als ihre Knöpfe wird sie nicht - die Tabelle rollt."""
+        from verteilerly.gui.leistenansicht import SCHMALSTENS
+
+        ansicht = self._ansicht()
+        raender = ansicht.layout().contentsMargins()
+        noetig = (
+            ansicht.kopfleiste.minimumSize().width()
+            + raender.left() + raender.right()
+        )
+        self.assertGreaterEqual(
+            ansicht.minimumSizeHint().width(), min(noetig, SCHMALSTENS)
+        )
+        self.assertLessEqual(ansicht.minimumSizeHint().width(), max(noetig, SCHMALSTENS))
+
+
 class TestZelleTeilen(unittest.TestCase):
     """Knopf und Prozentfeld für zwei Beschriftungsfelder."""
 
@@ -486,6 +527,26 @@ class TestKabelDialog(unittest.TestCase):
             for i in range(form.rowCount())
             if form.itemAt(i, QFormLayout.ItemRole.LabelRole)
         ]
+
+    def test_der_dialog_faengt_mit_dem_haeufigsten_kabel_an(self):
+        """Zwei Doppeladern, J-Y(St)Y - das liegt im Bestand am häufigsten."""
+        from verteilerly.gui.dialoge import VORGABE_KABEL_DA, VORGABE_KABELTYP
+
+        dialog = self._dialog()
+        self.assertEqual(dialog.kabel_da.value(), VORGABE_KABEL_DA)
+        self.assertEqual(dialog.auflegen_da.value(), VORGABE_KABEL_DA)
+        self.assertEqual(dialog.kabeltyp.currentData(), VORGABE_KABELTYP)
+        angaben = dialog.angaben()
+        self.assertEqual(angaben["da_gesamt"], VORGABE_KABEL_DA)
+        self.assertEqual(angaben["kabeltyp"], VORGABE_KABELTYP)
+
+    def test_ohne_den_vorgabetyp_bleibt_es_bei_von_hand(self):
+        """Wer ihn weggeworfen hat, bekommt wieder „ohne“ zu sehen."""
+        from verteilerly.farbcodes import Kabeltypen
+
+        dialog = self.KabelDialog(self.verteiler, Kabeltypen({}, {}), 1, 1)
+        self.addCleanup(dialog.close)
+        self.assertIsNone(dialog.kabeltyp.currentData())
 
     def test_der_startpunkt_heisst_stift(self):
         beschriftungen = self._beschriftungen(self._dialog())
@@ -1403,7 +1464,7 @@ class TestMenuezustaende(unittest.TestCase):
 
         with mock.patch.object(
             KabelDialog, "exec",
-            lambda dialog: dialog.auflegen_da.setValue(8) or KabelDialog.DialogCode.Accepted,
+            lambda dialog: dialog.kabel_da.setValue(8) or KabelDialog.DialogCode.Accepted,
         ), mock.patch.object(UeberlaufDialog, "exec", fortsetzen):
             f.kabel_bearbeiten(kabel)
 
@@ -1425,7 +1486,7 @@ class TestMenuezustaende(unittest.TestCase):
 
         with mock.patch.object(
             KabelDialog, "exec",
-            lambda dialog: dialog.auflegen_da.setValue(8) or KabelDialog.DialogCode.Accepted,
+            lambda dialog: dialog.kabel_da.setValue(8) or KabelDialog.DialogCode.Accepted,
         ), mock.patch.object(UeberlaufDialog, "exec", verfallen):
             f.kabel_bearbeiten(kabel)
 
@@ -1445,7 +1506,7 @@ class TestMenuezustaende(unittest.TestCase):
         gemeldet = {}
         with mock.patch.object(
             KabelDialog, "exec",
-            lambda dialog: dialog.auflegen_da.setValue(8) or KabelDialog.DialogCode.Accepted,
+            lambda dialog: dialog.kabel_da.setValue(8) or KabelDialog.DialogCode.Accepted,
         ), mock.patch.object(
             QMessageBox, "warning",
             lambda eltern, titel, text: gemeldet.update(titel=titel, text=text),
@@ -1869,6 +1930,68 @@ class TestMenuezustaende(unittest.TestCase):
         for wert in ("roemisch", "", None):
             with self.subTest(wert=wert):
                 self.assertEqual(leistenweise(wert), "zahlen")
+
+    def test_die_vorschau_bleibt_neben_einem_vollen_verteiler(self):
+        """Ein Verteiler voller langer Kabelnamen schob sie sonst hinaus."""
+        f = self.fenster
+        f.resize(1280, 800)
+        vorher = f.hauptteiler.sizes()
+
+        verteiler = Verteiler.aus_geometrie(2, 6, 20, name="Voll")
+        for nummer in range(1, 13):
+            verteiler.kabel_anlegen(
+                f"Musterleitung Obergeschoss Zimmer {nummer} vom Hauptverteiler",
+                1, nummer, 1,
+            )
+        f._projekt_setzen(Projekt(verteiler=verteiler), None)
+        ANWENDUNG.processEvents()
+        self.assertEqual(f.hauptteiler.sizes(), vorher)
+
+        # Und wegziehen lässt sie sich auch nicht: dafür gibt es F9.
+        f.hauptteiler.setSizes([5000, 0])
+        ANWENDUNG.processEvents()
+        self.assertGreater(f.hauptteiler.sizes()[1], 0)
+        self.assertFalse(f.hauptteiler.childrenCollapsible())
+
+    def test_eine_datei_laesst_sich_ohne_dialog_oeffnen(self):
+        """So kommt der Doppelklick aus der Dateiverwaltung herein."""
+        import json
+
+        from verteilerly import projektdatei
+
+        f = self.fenster
+        with tempfile.TemporaryDirectory() as ordner:
+            pfad = pathlib.Path(ordner) / "Probe.vtly"
+            projektdatei.speichern(
+                Projekt(verteiler=Verteiler.aus_geometrie(1, 2, 10, name="Probe")),
+                pfad,
+            )
+            self.assertTrue(f.datei_oeffnen(pfad))
+            self.assertEqual(f.projekt.verteiler.name, "Probe")
+            self.assertEqual(f.pfad, pfad)
+
+            # Und eine kaputte Datei gibt eine Meldung, keinen Absturz.
+            kaputt = pathlib.Path(ordner) / "Kaputt.vtly"
+            kaputt.write_text("{kein JSON", encoding="utf-8")
+            with mock.patch.object(QMessageBox, "critical") as gezeigt:
+                self.assertFalse(f.datei_oeffnen(kaputt))
+            self.assertTrue(gezeigt.called)
+            self.assertEqual(f.projekt.verteiler.name, "Probe")
+
+    def test_der_menueeintrag_meldet_bei_der_dateiverwaltung_an(self):
+        from verteilerly import verknuepfung
+        from verteilerly.gui import hauptfenster as modul
+
+        f = self.fenster
+        self.assertEqual(f.aktion_verknuepfen.isEnabled(), verknuepfung.moeglich())
+        with mock.patch.object(
+            modul.verknuepfung, "anmelden", return_value=["/tmp/x.desktop"]
+        ) as angemeldet, mock.patch.object(
+            modul.verknuepfung, "angemeldet", return_value=False
+        ), mock.patch.object(QMessageBox, "information") as gezeigt:
+            f.verknuepfung_anmelden()
+        self.assertTrue(angemeldet.called)
+        self.assertIn("/tmp/x.desktop", gezeigt.call_args[0][2])
 
     def test_eine_fehlende_blattvorlage_haelt_das_fenster_nicht_auf(self):
         """Wer „beispiel" gewählt hatte, soll das Programm noch starten können."""
@@ -3403,12 +3526,24 @@ class TestToolsMenue(unittest.TestCase):
     def test_je_vorlagenart_ein_eintrag(self):
         from verteilerly.pruefung import ARTEN
 
-        eintraege = [a.text() for a in self._menue().actions()]
+        # Vor dem Trenner stehen die Prüfungen, dahinter das Anmelden
+        # bei der Dateiverwaltung.
+        eintraege = []
+        for handlung in self._menue().actions():
+            if handlung.isSeparator():
+                break
+            eintraege.append(handlung.text())
         self.assertEqual(len(eintraege), len(ARTEN))
         for eintrag, (_art, wie) in zip(eintraege, ARTEN):
             with self.subTest(eintrag=eintrag):
                 self.assertTrue(eintrag.startswith(wie), eintrag)
                 self.assertIn("prüfen", eintrag)
+
+    def test_dahinter_steht_das_anmelden_bei_der_dateiverwaltung(self):
+        texte = [
+            a.text().replace("&", "") for a in self._menue().actions() if a.text()
+        ]
+        self.assertEqual(texte[-1], "Projektdateien mit Verteilerly öffnen…")
 
     def _pruefen(self, stelle: int, datei: pathlib.Path):
         """Klickt einen Eintrag und fängt Dateidialog und Bericht ab."""

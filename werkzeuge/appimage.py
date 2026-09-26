@@ -41,6 +41,9 @@ import lizenztexte  # noqa: E402
 
 NAME = "verteilerly"
 ANZEIGENAME = "Verteilerly"
+# Der Dateityp der Projektdatei - dasselbe Wort wie in verknuepfung.py,
+# das sich im Programm selbst bei der Dateiverwaltung anmeldet.
+MIMETYP = "application/x-verteilerly-projekt"
 PYTHONFASSUNG = "3.14"
 BASIS_URL = (
     "https://github.com/niess/python-appimage/releases/download/python3.14/"
@@ -678,14 +681,19 @@ def huelle_schreiben() -> None:
 
     symbol_schreiben(APPDIR / f"{NAME}.png")
     shutil.copy2(APPDIR / f"{NAME}.png", APPDIR / ".DirIcon")
+    # %f und MimeType: wer das Abbild in seine Arbeitsflaeche einhaengt,
+    # kann damit eine Projektdatei per Doppelklick oeffnen. Angemeldet
+    # wird der Typ im Programm selbst (Tools), hier steht nur, dass es
+    # ihn oeffnen kann.
     (APPDIR / f"{NAME}.desktop").write_text(
         "[Desktop Entry]\n"
         "Type=Application\n"
         f"Name={ANZEIGENAME}\n"
         "Comment=Dokumentation für LSA+-Verteiler\n"
-        f"Exec={NAME}\n"
+        f"Exec={NAME} %f\n"
         f"Icon={NAME}\n"
         "Categories=Office;Engineering;\n"
+        f"MimeType={MIMETYP};\n"
         "Terminal=false\n",
         encoding="utf-8",
     )

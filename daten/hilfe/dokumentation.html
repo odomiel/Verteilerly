@@ -69,10 +69,24 @@ Vorgaben gemerkt ist, steht schon in den Feldern.</li>
 selbst oder später über <b>Bearbeiten ▸ Als Vorlage speichern…</b>. Sie wird
 eine YAML-Datei im Arbeitsordner und steht sofort im Menü.</p>
 
-<p>Gespeichert wird mit <b>Strg+S</b> als <code>.vtly.json</code> — lesbares
+<p>Gespeichert wird mit <b>Strg+S</b> als <code>.vtly</code> — lesbares
 JSON mit einer Formatversion, ältere Fassungen werden weiter gelesen. Beim
 Schließen mit ungesicherten Änderungen fragt das Programm nach; die Knöpfe
-heißen <i>Speichern</i>, <i>Verwerfen</i> und <i>Abbrechen</i>.</p>
+heißen <i>Speichern</i>, <i>Verwerfen</i> und <i>Abbrechen</i>. Ältere Dateien
+heißen <code>.vtly.json</code>; sie lassen sich weiter öffnen, und wer sie
+speichert, behält ihren Namen.</p>
+
+<p><b>Doppelklick in der Dateiverwaltung</b> — <b>Tools ▸ Projektdateien mit
+Verteilerly öffnen…</b> meldet das Programm einmalig als Öffner an; danach
+startet ein Doppelklick auf eine Projektdatei Verteilerly mit ihr. Unter Linux
+entstehen dafür ein Dateityp und ein Programmeintrag in
+<code>~/.local/share</code>, unter Windows zwei Einträge in der Registrierung
+des angemeldeten Benutzers — <b>keine Verwalterrechte</b> nötig, und nichts
+außerhalb des eigenen Benutzers. Angemeldet wird nur auf Knopfdruck: ein
+Programm, das sich ungefragt einträgt, ist ein schlechter Gast. Zieht das
+Programm um — anderer Ordner, neues AppImage —, meldet man es einmal neu an.
+Der Weg über die Kommandozeile tut dasselbe:
+<code>Verteilerly &lt;datei&gt;</code>.</p>
 
 <h2><a name="editor"></a>3 &nbsp; Der Editor</h2>
 
@@ -201,7 +215,10 @@ aus. Dasselbe tun <b>Ansicht ▸ Verteilerübersicht anzeigen</b> (F7) und
 <b>Ansicht ▸ Leistenansicht anzeigen</b> (F8) für die beiden anderen Bereiche:
 wer nur tippt, gibt der Leistenansicht die ganze Höhe, wer nur das Blatt sehen
 will, der Vorschau das ganze Fenster. Alle drei Schalter stehen nach einem
-Neustart so, wie sie verlassen wurden. <b>Ansicht ▸ Dunkles Erscheinungsbild</b>
+Neustart so, wie sie verlassen wurden. <b>Der Trenner zwischen Eingabe und
+Vorschau lässt keine Seite verschwinden</b>: er schiebt nur bis zur schmalsten
+Breite, die beide noch brauchen. Wer einen Bereich wirklich loswerden will,
+nimmt den Schalter dafür. <b>Ansicht ▸ Dunkles Erscheinungsbild</b>
 (Strg+D) schaltet den
 Farbsatz um. Das Blatt bleibt davon unberührt: Papier ist weiß. Die Pfeile in
 den Datei- und Exportdialogen — zurück, vor, eine Ebene höher — folgen dem
@@ -219,7 +236,9 @@ im Ausdruck.</p>
 
 <p><b>Auflegen</b> — <b>Bearbeiten ▸ Kabel auflegen…</b> (Strg+K) oder
 Doppelklick auf eine freie Doppelader. Anzugeben sind Beschriftung, Kabeltyp
-und Größe; <i>Leiste</i> und <i>Ab Stift</i> kommen aus der Auswahl. <i>Davon
+und Größe; <i>Leiste</i> und <i>Ab Stift</i> kommen aus der Auswahl.
+Vorbelegt sind <b>2 DA</b> und <b>J-Y(St)Y</b> — das häufigste Kabel im
+Bestand; beides ist im Dialog zu ändern. <i>Davon
 auflegen</i> folgt der Kabelgröße — der Regelfall ist, dass ein Kabel ganz
 aufgelegt wird; wer kürzen will, setzt die Zahl danach herunter, und ein
 Hinweis sagt, wie viele Doppeladern unaufgelegt bleiben.</p>
@@ -710,7 +729,7 @@ frei gezeichnet.</p>
 
 <table border="1" cellspacing="0" cellpadding="5">
 <tr><th>Was</th><th>Wo</th></tr>
-<tr><td>Projektdatei</td><td>wohin gespeichert wird, <code>.vtly.json</code></td></tr>
+<tr><td>Projektdatei</td><td>wohin gespeichert wird, <code>.vtly</code></td></tr>
 <tr><td>Arbeitsordner</td><td>Windows: <code>daten\</code> neben dem Programm.
 Linux: <code>~/.config/Verteilerly</code></td></tr>
 <tr><td>Einstellungen</td><td><code>Verteilerly.conf</code> — eine Datei, nie
@@ -1014,9 +1033,10 @@ und sie lässt sich unter <i>Erweiterungen verwalten</i> ausschalten.</p>
 <tr><td>Verteilerübersicht anzeigen</td><td>F7</td></tr>
 <tr><td>Leistenansicht anzeigen</td><td>F8</td></tr>
 <tr><td>Vorschau anzeigen</td><td>F9</td></tr>
-<tr><td rowspan="3"><b>Tools</b></td><td>Verteilervorlage prüfen…</td><td></td></tr>
+<tr><td rowspan="4"><b>Tools</b></td><td>Verteilervorlage prüfen…</td><td></td></tr>
 <tr><td>Blattvorlage prüfen…</td><td></td></tr>
 <tr><td>Kabeltypen prüfen…</td><td></td></tr>
+<tr><td>Projektdateien mit Verteilerly öffnen…</td><td></td></tr>
 <tr><td rowspan="3"><b>Erweiterungen</b></td><td>Blattvorlagen-Editor…</td><td></td></tr>
 <tr><td>Protokoll…</td><td></td></tr>
 <tr><td>Erweiterungen verwalten…</td><td></td></tr>

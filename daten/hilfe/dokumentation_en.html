@@ -68,10 +68,22 @@ kept in the defaults is already filled in.</li>
 dialog itself or later through <b>Edit ▸ Save as template…</b>. It becomes a
 YAML file in the working folder and appears in the menu at once.</p>
 
-<p>Saving is done with <b>Ctrl+S</b> as <code>.vtly.json</code> — readable JSON
+<p>Saving is done with <b>Ctrl+S</b> as <code>.vtly</code> — readable JSON
 with a format version; older versions are still read. When you close with
 unsaved changes the program asks; the buttons are <i>Save</i>, <i>Discard</i>
-and <i>Cancel</i>.</p>
+and <i>Cancel</i>. Older files are called <code>.vtly.json</code>; they can
+still be opened, and saving them keeps their name.</p>
+
+<p><b>Double click in the file manager</b> — <b>Tools ▸ Open project files
+with Verteilerly…</b> registers the program once as the opener; after that a
+double click on a project file starts Verteilerly with it. On Linux a file
+type and a program entry are created in <code>~/.local/share</code>, on
+Windows two entries in the registry of the logged-in user — <b>no
+administrator rights</b> needed, and nothing outside your own account. It is
+done on request only: a program that registers itself unasked is a bad guest.
+If the program moves — another folder, a new AppImage —, register it once
+again. The command line does the same:
+<code>Verteilerly &lt;file&gt;</code>.</p>
 
 <h2><a name="editor"></a>3 &nbsp; The editor</h2>
 
@@ -193,7 +205,10 @@ choice stays after a restart. F7, F8 and F9 switch independently of it.</p>
 Show frame overview</b> (F7) and <b>View ▸ Show strip view</b> (F8) do the same
 for the other two areas: whoever only types gives the strip view the full
 height, whoever only wants to see the sheet gives the preview the whole window.
-All three switches are after a restart as they were left. <b>View ▸ Dark
+All three switches are after a restart as they were left. <b>The splitter
+between input and preview lets no side disappear</b>: it moves only down to the
+narrowest width both still need. Whoever really wants to be rid of an area uses
+the switch made for it. <b>View ▸ Dark
 appearance</b> (Ctrl+D) switches the color set. The sheet stays untouched
 by it: paper is white. The arrows in the file and export dialogs — back,
 forward, one level up — follow the appearance as well; the program draws them
@@ -210,7 +225,9 @@ as well.</p>
 
 <p><b>Terminating</b> — <b>Edit ▸ Terminate cable…</b> (Ctrl+K) or a double
 click on a free pair. Label, cable type and size are to be given; <i>strip</i>
-and <i>from pin</i> come from the selection. <i>Of that, terminate</i> follows
+and <i>from pin</i> come from the selection. Preset are <b>2 pairs</b> and
+<b>J-Y(St)Y</b> — the most common cable in the field; both can be changed in
+the dialog. <i>Of that, terminate</i> follows
 the cable size — the normal case is that a cable is terminated completely;
 whoever wants to shorten it sets the number down afterwards, and a note says
 how many pairs stay unterminated.</p>
@@ -693,7 +710,7 @@ freely.</p>
 
 <table border="1" cellspacing="0" cellpadding="5">
 <tr><th>What</th><th>Where</th></tr>
-<tr><td>Project file</td><td>wherever you save it, <code>.vtly.json</code></td></tr>
+<tr><td>Project file</td><td>wherever you save it, <code>.vtly</code></td></tr>
 <tr><td>Working folder</td><td>Windows: <code>daten\</code> next to the
 program. Linux: <code>~/.config/Verteilerly</code></td></tr>
 <tr><td>Settings</td><td><code>Verteilerly.conf</code> — one file, never the
@@ -993,9 +1010,10 @@ extensions</i>.</p>
 <tr><td>Show frame overview</td><td>F7</td></tr>
 <tr><td>Show strip view</td><td>F8</td></tr>
 <tr><td>Show preview</td><td>F9</td></tr>
-<tr><td rowspan="3"><b>Tools</b></td><td>Check frame template…</td><td></td></tr>
+<tr><td rowspan="4"><b>Tools</b></td><td>Check frame template…</td><td></td></tr>
 <tr><td>Check sheet template…</td><td></td></tr>
 <tr><td>Check cable types…</td><td></td></tr>
+<tr><td>Open project files with Verteilerly…</td><td></td></tr>
 <tr><td rowspan="3"><b>Extensions</b></td><td>Sheet template editor…</td><td></td></tr>
 <tr><td>Log…</td><td></td></tr>
 <tr><td>Manage extensions…</td><td></td></tr>

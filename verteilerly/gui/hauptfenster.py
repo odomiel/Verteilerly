@@ -34,6 +34,7 @@ from .. import (
     schreibweisen,
     sprachen,
     suche,
+    verknuepfung,
 )
 from ..ausgabe import AusgabeFehler, csv_schreiben, pdf_schreiben, xlsx_schreiben
 from ..blattvorlagen import Blattvorlagen
@@ -109,7 +110,13 @@ EXPORTFORMATE = (
     ("csv", "CSV", "csv_ausgeben"),
 )
 
-DATEIFILTER = "Verteilerly-Projekt (*.vtly.json);;Alle Dateien (*)"
+#: Gespeichert wird als `.vtly` - eine einzige Endung, sonst haengt
+#: Windows die Datei an `.json` und damit an jedes andere Programm.
+#: Gelesen wird weiter auch die alte Schreibweise.
+DATEIENDUNG = ".vtly"
+DATEIFILTER = (
+    "Verteilerly-Projekt (*.vtly *.vtly.json);;Alle Dateien (*)"
+)
 PDFFILTER = "PDF (*.pdf)"
 XLSXFILTER = "Excel-Arbeitsmappe (*.xlsx)"
 CSVFILTER = "CSV, Semikolon getrennt (*.csv)"
@@ -228,6 +235,10 @@ class Hauptfenster(QMainWindow):
         self.hauptteiler.setStretchFactor(0, 3)
         self.hauptteiler.setStretchFactor(1, 2)
         self.hauptteiler.setSizes([760, 520])
+        # Keine Seite laesst sich ganz wegziehen: die Vorschau war sonst
+        # mit einem Griff verschwunden, ohne dass man wusste, wohin. Wer
+        # sie loswerden will, nimmt den Schalter dafuer (F9).
+        self.hauptteiler.setChildrenCollapsible(False)
 
         self.setCentralWidget(self.hauptteiler)
         self.statusBar().showMessage(u("Bereit"))
@@ -469,6 +480,16 @@ class Hauptfenster(QMainWindow):
                 hinweis=u("Eine Vorlagendatei lesen und sagen, was darin steht "
                           "— bevor sie in den Arbeitsordner kommt"),
             )
+
+        werkzeugmenue.addSeparator()
+        self.aktion_verknuepfen = aktion(
+            u("&Projektdateien mit Verteilerly öffnen…"),
+            self.verknuepfung_anmelden,
+            menue=werkzeugmenue,
+            hinweis=u("Meldet Verteilerly bei der Dateiverwaltung an — "
+                      "danach öffnet ein Doppelklick die Projektdatei"),
+        )
+        self.aktion_verknuepfen.setEnabled(verknuepfung.moeglich())
 
         # Erweiterungen tragen sich oberhalb des Trenners ein; darunter
         # steht, womit man sie ein- und ausschaltet. "E&rweiterungen":
@@ -1063,15 +1084,24 @@ class Hauptfenster(QMainWindow):
         if not self._darf_verwerfen():
             return
         name, _ = QFileDialog.getOpenFileName(self, u("Verteiler öffnen"), "", DATEIFILTER)
-        if not name:
-            return
+        if name:
+            self.datei_oeffnen(pathlib.Path(name))
+
+    def datei_oeffnen(self, pfad: pathlib.Path) -> bool:
+        """Oeffnet diese Datei - aus dem Dialog wie vom Doppelklick.
+
+        Der Weg ueber die Dateiverwaltung kommt ohne Dialog hierher; was
+        schiefgeht, wird darum hier gemeldet und nicht weitergereicht.
+        """
+        pfad = pathlib.Path(pfad)
         try:
-            projekt = projektdatei.laden(pathlib.Path(name))
+            projekt = projektdatei.laden(pfad)
         except (ModellFehler, OSError) as fehler:
             QMessageBox.critical(self, u("Öffnen fehlgeschlagen"), str(fehler))
-            return
-        self._projekt_setzen(projekt, pathlib.Path(name))
-        self.statusBar().showMessage(u("Geöffnet: {0}").format(name))
+            return False
+        self._projekt_setzen(projekt, pfad)
+        self.statusBar().showMessage(u("Geöffnet: {0}").format(pfad))
+        return True
 
     def speichern(self) -> bool:
         if self.projekt is None:
@@ -1094,7 +1124,7 @@ class Hauptfenster(QMainWindow):
             return False
         vorschlag = self.projekt.verteiler.name or "verteiler"
         name, _ = QFileDialog.getSaveFileName(
-            self, u("Verteiler speichern"), f"{vorschlag}.vtly.json", DATEIFILTER
+            self, u("Verteiler speichern"), f"{vorschlag}{DATEIENDUNG}", DATEIFILTER
         )
         if not name:
             return False
@@ -1635,6 +1665,43 @@ class Hauptfenster(QMainWindow):
                 u("Diese Erweiterungen wurden nicht geladen; das Programm läuft "
                   "ohne sie weiter.\n\n{0}").format("\n".join(uebergangen)),
             )
+
+    def verknuepfung_anmelden(self) -> None:
+        """Meldet das Programm als Oeffner seiner Projektdateien an.
+
+        Auf Wunsch, nicht beim Start: wer sich ungefragt in die
+        Dateiverwaltung eintraegt, ist ein schlechter Gast.
+        """
+        if not verknuepfung.moeglich():
+            return
+        if verknuepfung.angemeldet() and not frage(
+            self, u("Projektdateien"),
+            u("Verteilerly ist bereits angemeldet. Erneut eintragen?"),
+            Knopf.Yes | Knopf.No, Knopf.No,
+        ) == Knopf.Yes:
+            return
+        try:
+            geschrieben = verknuepfung.anmelden(self._symbol_schreiben)
+        except (ModellFehler, OSError) as fehler:
+            QMessageBox.critical(self, u("Nicht angemeldet"), str(fehler))
+            return
+        QMessageBox.information(
+            self, u("Projektdateien"),
+            u("Ein Doppelklick auf eine Projektdatei öffnet jetzt "
+              "Verteilerly.\n\nGeschrieben wurde:\n{0}\n\nUnter Linux "
+              "merkt sich die Dateiverwaltung das mitunter erst nach dem "
+              "nächsten Anmelden.").format("\n".join(geschrieben)),
+        )
+        self.statusBar().showMessage(
+            u("Verteilerly öffnet jetzt seine Projektdateien selbst"), 8000
+        )
+
+    @staticmethod
+    def _symbol_schreiben(ziel) -> None:
+        """Legt das Sinnbild fuer die Dateiverwaltung ab."""
+        from .symbol import symbol
+
+        symbol(256).save(str(ziel), "PNG")
 
     def erweiterungen_verwalten(self) -> None:
         """Erweiterungen ein- und ausschalten - wirksam ab dem naechsten Start."""

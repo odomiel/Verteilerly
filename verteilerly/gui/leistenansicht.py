@@ -15,6 +15,7 @@ from PySide6.QtCore import (
     QModelIndex,
     QPersistentModelIndex,
     QRect,
+    QSize,
     Qt,
     Signal,
 )
@@ -83,6 +84,11 @@ SPALTE_RANGIERUNG = 4
 SPALTE_RANGIERUNG_2 = 5
 SPALTE_BEMERKUNG = 6
 SPALTE_KABEL = 7
+
+#: Wie schmal sich die Leistenansicht ziehen laesst, wenn ihre
+#: Kopfleiste weniger braucht. Genug fuer Leistenwahl und Knoepfe; die
+#: Tabelle rollt, und die Vorschau behaelt ihren Platz.
+SCHMALSTENS = 480
 
 RANGIERSPALTEN = (SPALTE_RANGIERUNG, SPALTE_RANGIERUNG_2)
 
@@ -841,8 +847,6 @@ class LeistenAnsicht(QWidget):
         self.zurueck.clicked.connect(lambda: self._schieben(-1))
         self.vor.clicked.connect(lambda: self._schieben(1))
 
-        self.hinweis = QLabel("")
-
         self.modell = LeistenModell(self)
         self.modell.belegung_geaendert.connect(self.belegung_geaendert)
         self.modell.fehler_gemeldet.connect(self.fehler_gemeldet)
@@ -856,8 +860,11 @@ class LeistenAnsicht(QWidget):
         kopf.addSpacing(16)
         for knopf in self._textknoepfe():
             kopf.addWidget(knopf)
-        kopf.addSpacing(12)
-        kopf.addWidget(self.hinweis, 1)
+        # Was hier steht, ist Chrom und waechst nicht mit dem Verteiler:
+        # ein Text, der die Kabel der Leiste aufzaehlte, hat die Vorschau
+        # aus dem Fenster geschoben (siehe minimumSizeHint).
+        kopf.addStretch(1)
+        self.kopfleiste = kopf
 
         self.tabelle = QTableView()
         self.tabelle.setModel(self.modell)
@@ -911,6 +918,26 @@ class LeistenAnsicht(QWidget):
         aufbau.addWidget(self.tabelle)
 
         self._knoepfe_auffrischen()
+
+    def minimumSizeHint(self) -> QSize:  # noqa: N802 - Qt-Name
+        """Wie schmal sich die Ansicht ziehen laesst.
+
+        Von selbst nimmt Qt die Mindestbreite des breitesten Inhalts -
+        und die waechst mit dem Verteiler: lange Kabelnamen in der
+        Tabelle machten die Ansicht breiter als das Fenster, der Teiler
+        schob die **Vorschau hinaus**, bis nichts mehr von ihr zu sehen
+        war. Die Tabelle rollt aber ohnehin; noetig ist nur, was die
+        Kopfleiste an Knoepfen braucht - und das haengt am Programm,
+        nicht am Verteiler.
+        """
+        masse = super().minimumSizeHint()
+        raender = self.layout().contentsMargins()
+        noetig = (
+            self.kopfleiste.minimumSize().width()
+            + raender.left()
+            + raender.right()
+        )
+        return QSize(min(masse.width(), max(noetig, SCHMALSTENS)), masse.height())
 
     def _textknoepfe(self) -> list[QToolButton]:
         """Ausrichtung, fett und kursiv fuer die gewaehlte Zelle.
@@ -1240,12 +1267,10 @@ class LeistenAnsicht(QWidget):
 
     def aktualisieren(self) -> None:
         self.modell.setzen(self.verteiler, self.modell.leiste_nr)
-        self._hinweis_setzen()
 
     def _leiste_gewechselt(self) -> None:
         nummer = self.auswahl.currentData()
         self.modell.setzen(self.verteiler, nummer)
-        self._hinweis_setzen()
         self._pfeile_auffrischen()
         if nummer is not None:
             self.leiste_gewechselt.emit(nummer)
@@ -1256,19 +1281,3 @@ class LeistenAnsicht(QWidget):
         self.zurueck.setEnabled(stelle > 0)
         self.vor.setEnabled(0 <= stelle < self.auswahl.count() - 1)
 
-    def _hinweis_setzen(self) -> None:
-        nummer = self.auswahl.currentData()
-        if self.verteiler is None or nummer is None:
-            self.hinweis.setText("")
-            return
-        kabel = [
-            k
-            for k in self.verteiler.kabel
-            if any(a.leiste == nummer for a in k.abschnitte)
-        ]
-        if not kabel:
-            self.hinweis.setText(u("kein Kabel aufgelegt"))
-        else:
-            self.hinweis.setText(
-                "Kabel: " + ", ".join(k.beschriftung or "ohne Beschriftung" for k in kabel)
-            )

@@ -80,6 +80,12 @@ from ..sprachen import u
 # Die gebraeuchlichen Leistengroessen; alles andere wird eingetippt.
 DA_VORGABEN = (8, 10, 20)
 
+# Womit der Dialog *Kabel auflegen* anfaengt: das haeufigste Kabel im
+# Bestand ist ein zweipaariges J-Y(St)Y. Beides laesst sich im Dialog
+# aendern; wer haeufig anderes auflegt, tippt eben um.
+VORGABE_KABEL_DA = 2
+VORGABE_KABELTYP = "jystyv"
+
 # Felder, in denen eine Anschrift steht - die gehoert untereinander, so
 # wie in den Mustertabellen.
 ADRESSFELDER = ("firma", "kunde")
@@ -1017,19 +1023,29 @@ class KabelDialog(PassenderDialog):
 
         self.kabel_da = QSpinBox()
         self.kabel_da.setRange(1, 200)
-        self.kabel_da.setValue(4)
+        self.kabel_da.setValue(VORGABE_KABEL_DA)
         self.kabel_da.setSuffix(u(" DA"))
 
         self.auflegen_da = QSpinBox()
         self.auflegen_da.setRange(1, 200)
-        self.auflegen_da.setValue(4)
+        self.auflegen_da.setValue(VORGABE_KABEL_DA)
         self.auflegen_da.setSuffix(u(" DA"))
         self.kabel_da.valueChanged.connect(self._kabelgroesse_geaendert)
+        # Mehr auflegen als das Kabel hat, geht nicht - und das gilt von
+        # Anfang an, nicht erst, wenn jemand die Groesse anfasst. Wer ein
+        # liegendes Kabel wachsen lassen will, erhoeht die Groesse; das
+        # Aufgelegte zieht mit.
+        self.auflegen_da.setMaximum(self.kabel_da.value())
 
         self.kabeltyp = QComboBox()
         self.kabeltyp.addItem(u("— ohne, Farben von Hand —"), None)
         for typ in kabeltypen.alle:
             self.kabeltyp.addItem(typ.name, typ.id)
+        # Vorgewaehlt ist der haeufigste Typ - wer ihn weggeworfen hat,
+        # bekommt wieder „ohne“ und waehlt selbst.
+        stelle = self.kabeltyp.findData(VORGABE_KABELTYP)
+        if stelle >= 0:
+            self.kabeltyp.setCurrentIndex(stelle)
 
         self.kuerzungshinweis = QLabel()
         self.kuerzungshinweis.setWordWrap(True)

@@ -210,7 +210,8 @@ Aus einer geteilten Zelle geht es ebenso geradewegs nach unten, auch
 aus dem rechten Feld heraus — und ist die Zelle darunter ebenfalls geteilt,
 steht die Eingabemarke dort gleich wieder im rechten Feld, sodass sich eine
 Spalte von Nebenstellen ohne Klicken durchtippen lässt. Ein Doppelklick auf eine freie Doppelader legt ein Kabel
-auf, einer auf ein aufgelegtes Kabel **bearbeitet** es: Beschriftung,
+auf — vorbelegt mit **2 DA** und **J-Y(St)Y**, dem häufigsten Kabel im
+Bestand —, einer auf ein aufgelegtes Kabel **bearbeitet** es: Beschriftung,
 Kabeltyp, Kabelgröße und Länge lassen sich ändern, und der Dialog trägt auch
 den Knopf zum Entfernen. *Davon auflegen* folgt der Kabelgröße — ganz
 aufgelegt ist der Regelfall, gekürzt wird danach von Hand — und lässt sich
@@ -263,6 +264,18 @@ bekommen und nicht als Vermerk stehen haben. Ein Vermerk belegt eines
 der beiden Felder, bleibt darin stehen und wird **nicht gespiegelt** —
 er gehört der Ader und steht als deren Feld in der Projektdatei. Was
 sich als Ziel lesen lässt, bleibt auch dann ein Ziel.
+
+**Ein Doppelklick in der Dateiverwaltung** öffnet eine Projektdatei in
+Verteilerly, sobald man das Programm einmal dafür angemeldet hat — *Tools ▸
+Projektdateien mit Verteilerly öffnen…*. Unter Linux entstehen dafür ein
+Dateityp (`application/x-verteilerly-projekt`) und ein Programmeintrag in
+`~/.local/share`, unter Windows zwei Einträge unter `HKEY_CURRENT_USER`; beides
+ohne Verwalterrechte und ohne etwas außerhalb des eigenen Benutzers anzufassen.
+Angemeldet wird **nur auf Knopfdruck**: ein Programm, das sich ungefragt
+einträgt, ist ein schlechter Gast. Gespeichert wird darum als `.vtly` — eine
+einzige Endung, denn Windows verknüpft über die letzte, und `.json` gehört
+nicht uns; ältere Dateien (`.vtly.json`) lassen sich weiter öffnen. Denselben
+Weg geht die Kommandozeile: `Verteilerly <datei>`.
 
 Menüeinträge, die gerade nichts bewirken können, sind ausgegraut: ohne
 Verteiler die ganze Ausgabe, *Kabel entfernen* nur dort, wo wirklich ein

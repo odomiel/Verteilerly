@@ -48,6 +48,23 @@ def selbsttest(ziel: pathlib.Path | None = None) -> int:
     return 0 if "ergebnis=ok" in bericht else 1
 
 
+def zu_oeffnen(argumente) -> pathlib.Path | None:
+    """Die Projektdatei aus der Kommandozeile - oder None.
+
+    So kommt der **Doppelklick in der Dateiverwaltung** herein: sie ruft
+    das Programm mit dem Pfad auf. Schalter beginnen mit einem
+    Bindestrich und zaehlen nicht; genommen wird die erste Datei, die es
+    gibt.
+    """
+    for wert in argumente:
+        if wert.startswith("-"):
+            continue
+        pfad = pathlib.Path(wert)
+        if pfad.is_file():
+            return pfad
+    return None
+
+
 def main() -> int:
     if "--selbsttest" in sys.argv:
         stelle = sys.argv.index("--selbsttest")
@@ -90,6 +107,11 @@ def main() -> int:
 
     fenster = Hauptfenster()
     fenster.show()
+    datei = zu_oeffnen(sys.argv[1:])
+    if datei is not None:
+        # Erst zeigen, dann laden: eine Meldung ueber eine kaputte Datei
+        # braucht ein Fenster, hinter dem sie stehen kann.
+        fenster.datei_oeffnen(datei)
     return anwendung.exec()
 
 
