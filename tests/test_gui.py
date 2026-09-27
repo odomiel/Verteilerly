@@ -1993,6 +1993,34 @@ class TestMenuezustaende(unittest.TestCase):
         self.assertTrue(angemeldet.called)
         self.assertIn("/tmp/x.desktop", gezeigt.call_args[0][2])
 
+    def test_wer_schon_angemeldet_ist_wird_gefragt(self):
+        """Der zweite Druck lief ins Leere - die Rückfrage war kaputt."""
+        from PySide6.QtWidgets import QMessageBox
+
+        from verteilerly.gui import hauptfenster as modul
+
+        f = self.fenster
+        with mock.patch.object(modul.verknuepfung, "angemeldet", return_value=True), \
+             mock.patch.object(modul.verknuepfung, "anmelden") as angemeldet, \
+             mock.patch.object(QMessageBox, "information"), \
+             mock.patch.object(
+                 modul, "frage", return_value=QMessageBox.StandardButton.No
+             ) as gefragt:
+            f.verknuepfung_anmelden()
+        self.assertTrue(gefragt.called)
+        self.assertFalse(angemeldet.called)
+
+        with mock.patch.object(modul.verknuepfung, "angemeldet", return_value=True), \
+             mock.patch.object(
+                 modul.verknuepfung, "anmelden", return_value=["/tmp/x.desktop"]
+             ) as angemeldet, \
+             mock.patch.object(QMessageBox, "information"), \
+             mock.patch.object(
+                 modul, "frage", return_value=QMessageBox.StandardButton.Yes
+             ):
+            f.verknuepfung_anmelden()
+        self.assertTrue(angemeldet.called)
+
     def test_eine_fehlende_blattvorlage_haelt_das_fenster_nicht_auf(self):
         """Wer „beispiel" gewählt hatte, soll das Programm noch starten können."""
         from verteilerly.gui.hauptfenster import Hauptfenster

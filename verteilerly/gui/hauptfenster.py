@@ -1674,12 +1674,16 @@ class Hauptfenster(QMainWindow):
         """
         if not verknuepfung.moeglich():
             return
-        if verknuepfung.angemeldet() and not frage(
-            self, u("Projektdateien"),
-            u("Verteilerly ist bereits angemeldet. Erneut eintragen?"),
-            Knopf.Yes | Knopf.No, Knopf.No,
-        ) == Knopf.Yes:
-            return
+        if verknuepfung.angemeldet():
+            antwort = frage(
+                self,
+                u("Projektdateien"),
+                u("Verteilerly ist bereits angemeldet. Erneut eintragen?"),
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if antwort != QMessageBox.StandardButton.Yes:
+                return
         try:
             geschrieben = verknuepfung.anmelden(self._symbol_schreiben)
         except (ModellFehler, OSError) as fehler:
