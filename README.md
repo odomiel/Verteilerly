@@ -172,7 +172,11 @@ eigene bleiben unberührt.
 Der Editor zeigt links die Verteilerübersicht und rechts die Belegung der
 gewählten Leiste. Neben dem Aufklappmenü stehen zwei Pfeile, die Leiste
 für Leiste weiterschalten (Alt+← und Alt+→); am ersten und letzten
-Eintrag ist der jeweilige Pfeil aus. Neben der Leistenwahl stehen **Textoptionen** für die gewählte Zelle:
+Eintrag ist der jeweilige Pfeil aus. Daneben nehmen die Pfeile ↶ und ↷ die
+letzte Änderung am Verteiler zurück und holen sie wieder her — dasselbe tun
+*Bearbeiten ▸ Rückgängig* (Strg+Z) und *Wiederherstellen* (Strg+Y); gemerkt
+werden die letzten fünfzig Schritte, und mit einem anderen Projekt fängt die
+Reihe von vorn an. Neben der Leistenwahl stehen **Textoptionen** für die gewählte Zelle:
 linksbündig, mittig, rechtsbündig, **F** und *K*. Nochmaliges Drücken einer
 Ausrichtung nimmt sie zurück — dann gilt wieder, was die Blattvorlage für die
 Spalte hält. Gestaltbar sind Farbe, Bezeichnung, Rangierung und Bemerkung;

@@ -131,6 +131,10 @@ ERWEITERUNGSWAHL = (
 )
 VORSCHAU_VERZUG = 250  # ms, damit das Tippen nicht stockt
 
+#: Wie viele Schritte sich zurücknehmen lassen. Ein Stand ist das
+#: Projekt als Dict - klein genug, dass fünfzig davon nicht auffallen.
+RUECKGAENGIG_SCHRITTE = 50
+
 
 class Hauptfenster(QMainWindow):
     def __init__(self) -> None:
@@ -158,6 +162,11 @@ class Hauptfenster(QMainWindow):
         self.projekt: Projekt | None = None
         self.pfad: pathlib.Path | None = None
         self.veraendert = False
+        # Die Staende fuer das Zuruecknehmen: was war, was rueckgaengig
+        # gemacht wurde, und der Stand seit der letzten Aenderung.
+        self._rueckgaengig: list[dict] = []
+        self._wiederherstellen: list[dict] = []
+        self._stand: dict | None = None
         self.thema_name = str(self.einstellungen.value("thema", "hell"))
         # Wie Rangierungen geschrieben werden - eine Anzeigesache,
         # darum in der Einstellungsdatei und nicht in der Projektdatei.
@@ -179,6 +188,11 @@ class Hauptfenster(QMainWindow):
         self.setWindowIcon(symbol_icon())
         self._oberflaeche_bauen()
         self._aktionen_bauen()
+        # Erst jetzt gibt es beides: die Knoepfe in der Leistenansicht
+        # bekommen die Handlungen des Fensters.
+        self.leistenansicht.bearbeitungsaktionen_setzen(
+            self.aktion_rueckgaengig, self.aktion_wiederherstellen
+        )
         self.thema_anwenden(self.thema_name)
         self._projekt_setzen(None, None)
         if self.ausgelegt:
@@ -300,6 +314,16 @@ class Hauptfenster(QMainWindow):
         aktion(u("&Beenden"), self.close, "Ctrl+Q")
 
         bearbeiten = self.menuBar().addMenu(u("&Bearbeiten"))
+        self.aktion_rueckgaengig = aktion(
+            u("&Rückgängig"), self.rueckgaengig, "Ctrl+Z", False, bearbeiten,
+            hinweis=u("Nimmt die letzte Änderung am Verteiler zurück"),
+        )
+        self.aktion_wiederherstellen = aktion(
+            u("Wieder&herstellen"), self.wiederherstellen, "Ctrl+Y", False,
+            bearbeiten,
+            hinweis=u("Stellt wieder her, was zuletzt zurückgenommen wurde"),
+        )
+        bearbeiten.addSeparator()
         werkzeuge.addSeparator()
         self.aktion_kabel = aktion(
             u("&Kabel auflegen…"), self.kabel_auflegen, "Ctrl+K", True, bearbeiten,
@@ -649,9 +673,11 @@ class Hauptfenster(QMainWindow):
         self.leistenweise_vorgabe = kennung
         einstellungsspeicher.leistenweise_merken(self.einstellungen, kennung)
         if self.projekt is not None and self.projekt.leisten_schreibweise != kennung:
+            self._stand_merken()
             self.projekt.leisten_schreibweise = kennung
             self.veraendert = True
             self._titel_setzen()
+            self.aktionen_auffrischen()
         self._leistenweise_anwenden()
         beispiel = dict((k, b) for k, b, _e in LEISTENWEISEN)[kennung]
         self.statusBar().showMessage(
@@ -721,7 +747,61 @@ class Hauptfenster(QMainWindow):
             self.statusBar().showMessage(u("Leiste {0}, DA {1} — frei").format(
                 self._leistenname(leiste), da))
 
+    # -- Zurücknehmen ------------------------------------------------------
+
+    def _stand_merken(self) -> None:
+        """Legt den Stand *vor* dieser Änderung auf den Stapel.
+
+        Gehalten wird das Projekt als Dict - dieselbe Gestalt, in der es
+        auch in seiner Datei steht. Damit taugt ein Stand fuer alles, was
+        sich am Verteiler aendern laesst, ohne dass jede Aenderung ihr
+        eigenes Rueckwaerts braeuchte.
+        """
+        if self.projekt is None or self._stand is None:
+            return
+        self._rueckgaengig.append(self._stand)
+        del self._rueckgaengig[:-RUECKGAENGIG_SCHRITTE]
+        # Ein neuer Weg: was zurueckgenommen war, ist nicht mehr zu holen.
+        self._wiederherstellen.clear()
+        self._stand = projektdatei.als_dict(self.projekt)
+
+    def _stand_zeigen(self, stand: dict) -> None:
+        """Setzt das Projekt auf einen gemerkten Stand zurück.
+
+        Die gewaehlte Leiste bleibt, wo sie war: wer einen Tippfehler
+        zuruecknimmt, will nicht auf Leiste 1 landen.
+        """
+        leiste = self.leistenansicht.modell.leiste_nr
+        projekt = projektdatei.aus_dict(stand)
+        self._projekt_setzen(projekt, self.pfad, vorgeschichte=True)
+        self.veraendert = True
+        self._titel_setzen()
+        if leiste is not None:
+            self.leistenansicht.leiste_zeigen(leiste)
+
+    def rueckgaengig(self) -> None:
+        """Nimmt die letzte Änderung am Verteiler zurück."""
+        if self.projekt is None or not self._rueckgaengig:
+            return
+        self._wiederherstellen.append(projektdatei.als_dict(self.projekt))
+        self._stand_zeigen(self._rueckgaengig.pop())
+        self.statusBar().showMessage(
+            u("Rückgängig gemacht — noch {0} Schritte möglich").format(
+                len(self._rueckgaengig)
+            ),
+            6000,
+        )
+
+    def wiederherstellen(self) -> None:
+        """Stellt wieder her, was zuletzt zurückgenommen wurde."""
+        if self.projekt is None or not self._wiederherstellen:
+            return
+        self._rueckgaengig.append(projektdatei.als_dict(self.projekt))
+        self._stand_zeigen(self._wiederherstellen.pop())
+        self.statusBar().showMessage(u("Wiederhergestellt"), 6000)
+
     def _belegung_geaendert(self) -> None:
+        self._stand_merken()
         self.veraendert = True
         self.uebersicht.update()
         self._titel_setzen()
@@ -775,10 +855,28 @@ class Hauptfenster(QMainWindow):
 
     # -- Projekt -----------------------------------------------------------
 
-    def _projekt_setzen(self, projekt: Projekt | None, pfad: pathlib.Path | None) -> None:
+    def _projekt_setzen(
+        self,
+        projekt: Projekt | None,
+        pfad: pathlib.Path | None,
+        vorgeschichte: bool = False,
+    ) -> None:
+        """Zeigt ein Projekt - ein neues, ein geoeffnetes, ein zurueckgenommenes.
+
+        ``vorgeschichte`` behaelt die Staende zum Zuruecknehmen. Nur das
+        Zuruecknehmen selbst setzt es: ein anderes Projekt hat eine
+        andere Vorgeschichte, und ein Stand von vorhin gehoerte zu einem
+        anderen Verteiler.
+        """
         self.projekt = projekt
         self.pfad = pfad
         self.veraendert = False
+        if not vorgeschichte:
+            self._rueckgaengig.clear()
+            self._wiederherstellen.clear()
+        self._stand = (
+            projektdatei.als_dict(projekt) if projekt is not None else None
+        )
         verteiler = projekt.verteiler if projekt else None
         if projekt is not None:
             projekt.rangierung_schreibweise = self.schreibweise.id
@@ -801,6 +899,10 @@ class Hauptfenster(QMainWindow):
         sagt, was fehlt - er erscheint auch bei ausgegrauten Einträgen.
         """
         offen = self.projekt is not None
+        self.aktion_rueckgaengig.setEnabled(offen and bool(self._rueckgaengig))
+        self.aktion_wiederherstellen.setEnabled(
+            offen and bool(self._wiederherstellen)
+        )
         for handlung in (
             self.aktion_speichern_unter,
             self.aktion_pdf,

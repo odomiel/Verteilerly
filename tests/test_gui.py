@@ -3926,3 +3926,101 @@ class TestVerteilervorlagenDialog(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
+class TestRueckgaengig(unittest.TestCase):
+    """Die letzte Änderung am Verteiler zurücknehmen und wieder holen."""
+
+    def setUp(self):
+        from verteilerly.gui.hauptfenster import Hauptfenster
+
+        self.fenster = Hauptfenster()
+        self.addCleanup(self._schliessen)
+        self.verteiler = Verteiler.aus_geometrie(1, 3, 10, name="Probe")
+        self.kabel = self.verteiler.kabel_anlegen("Leitung", 1, 1, 4)
+        self.fenster._projekt_setzen(Projekt(verteiler=self.verteiler), None)
+
+    def _schliessen(self):
+        self.fenster.veraendert = False
+        self.fenster.close()
+
+    def _leiste_des_kabels(self):
+        kabel = self.fenster.projekt.verteiler.kabel[0]
+        return kabel.abschnitte[0].leiste
+
+    def _aendern(self):
+        """Eine Änderung, wie sie die Bedienung macht."""
+        self.fenster._kabel_umlegen(self.fenster.projekt.verteiler.kabel[0], 2, 5, False)
+
+    def test_am_anfang_gibt_es_nichts_zurueckzunehmen(self):
+        f = self.fenster
+        self.assertFalse(f.aktion_rueckgaengig.isEnabled())
+        self.assertFalse(f.aktion_wiederherstellen.isEnabled())
+
+    def test_eine_aenderung_laesst_sich_zuruecknehmen(self):
+        f = self.fenster
+        self._aendern()
+        self.assertEqual(self._leiste_des_kabels(), 2)
+        self.assertTrue(f.aktion_rueckgaengig.isEnabled())
+        f.rueckgaengig()
+        self.assertEqual(self._leiste_des_kabels(), 1)
+        self.assertFalse(f.aktion_rueckgaengig.isEnabled())
+        self.assertTrue(f.aktion_wiederherstellen.isEnabled())
+
+    def test_zurueckgenommenes_laesst_sich_wieder_holen(self):
+        f = self.fenster
+        self._aendern()
+        f.rueckgaengig()
+        f.wiederherstellen()
+        self.assertEqual(self._leiste_des_kabels(), 2)
+        self.assertTrue(f.aktion_rueckgaengig.isEnabled())
+        self.assertFalse(f.aktion_wiederherstellen.isEnabled())
+
+    def test_nach_einer_neuen_aenderung_ist_der_andere_weg_gegangen(self):
+        """Wer zurücknimmt und dann etwas anderes tut, holt nichts mehr."""
+        f = self.fenster
+        self._aendern()
+        f.rueckgaengig()
+        from . import einstellung_bewahren
+
+        einstellung_bewahren(self, f.einstellungen, "leisten_schreibweise")
+        f.leistenweise_waehlen("buchstaben")
+        self.assertFalse(f.aktion_wiederherstellen.isEnabled())
+
+    def test_die_leiste_bleibt_stehen(self):
+        f = self.fenster
+        f.leistenansicht.leiste_zeigen(3)
+        self._aendern()
+        f.rueckgaengig()
+        self.assertEqual(f.leistenansicht.modell.leiste_nr, 3)
+
+    def test_mehr_als_die_gemerkten_schritte_fallen_hinten_weg(self):
+        from verteilerly.gui import hauptfenster as hf
+
+        f = self.fenster
+        for nr in range(hf.RUECKGAENGIG_SCHRITTE + 5):
+            f.projekt.verteiler.kabel[0].beschriftung = f"Leitung {nr}"
+            f._belegung_geaendert()
+        self.assertEqual(len(f._rueckgaengig), hf.RUECKGAENGIG_SCHRITTE)
+
+    def test_ein_anderes_projekt_faengt_von_vorn_an(self):
+        f = self.fenster
+        self._aendern()
+        anderer = Verteiler.aus_geometrie(1, 2, 10, name="Zweiter")
+        f._projekt_setzen(Projekt(verteiler=anderer), None)
+        self.assertFalse(f.aktion_rueckgaengig.isEnabled())
+        self.assertFalse(f.aktion_wiederherstellen.isEnabled())
+
+    def test_die_knoepfe_der_leistenansicht_folgen_den_handlungen(self):
+        """Auf ihnen steht der Pfeil, im Hinweis der Satz samt Kürzel."""
+        f = self.fenster
+        zurueck = f.leistenansicht.rueckgaengig_knopf
+        self.assertEqual(zurueck.text(), "↶")
+        self.assertIn("Rückgängig", zurueck.toolTip())
+        self.assertFalse(zurueck.isEnabled())
+        self._aendern()
+        self.assertTrue(zurueck.isEnabled())
+        zurueck.click()
+        self.assertEqual(self._leiste_des_kabels(), 1)
+        self.assertTrue(f.leistenansicht.wiederherstellen_knopf.isEnabled())

@@ -213,6 +213,8 @@ Als &Excel-Mappe…: As &Excel workbook…
 Als &CSV…: As &CSV…
 '&Beenden': '&Quit'
 '&Bearbeiten': '&Edit'
+'&Rückgängig': '&Undo'
+Wieder&herstellen: '&Redo'
 '&Kabel auflegen…': '&Terminate cable…'
 Kabel &bearbeiten…: '&Edit cable…'
 Kabel &entfernen: R&emove cable
@@ -265,6 +267,8 @@ Eine gespeicherte Verteilerdatei öffnen: Open a saved frame file
 Den Verteiler speichern: Save the frame
 Den Verteiler unter einem anderen Namen speichern: Save the frame under a different name
 Deckblatt, Verteilerbelegung und Leistenblätter: Cover sheet, frame layout and strip sheets
+Nimmt die letzte Änderung am Verteiler zurück: Takes back the last change to the frame
+Stellt wieder her, was zuletzt zurückgenommen wurde: Restores what was taken back last
 Ein Kabel auf eine Leiste legen: Put a cable on a strip
 Beschriftung, Kabeltyp und Größe eines aufgelegten Kabels ändern: Change label, cable type and size of
   a terminated cable
@@ -339,6 +343,8 @@ mitgelieferte Vorlagen wiederhergestellt: supplied templates restored
   there'
 Leiste {0}, DA {1} — {2}: Strip {0}, pair {1} — {2}
 Leiste {0}, DA {1} — frei: Strip {0}, pair {1} — free
+'Rückgängig gemacht — noch {0} Schritte möglich': 'Undone — {0} more steps possible'
+Wiederhergestellt: Redone
 'Neuer Verteiler: {0} DA auf {1}': 'New frame: {0} pairs on {1}'
 Nicht eingespielt: Not restored
 ' umbenannt': ' renamed'

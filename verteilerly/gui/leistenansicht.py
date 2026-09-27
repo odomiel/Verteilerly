@@ -858,6 +858,20 @@ class LeistenAnsicht(QWidget):
         kopf.addWidget(self.zurueck)
         kopf.addWidget(self.vor)
         kopf.addSpacing(16)
+        # Zuruecknehmen steht bei den Bearbeitungsknoepfen, nicht nur im
+        # Menue: geaendert wird hier, also wird hier auch zurueckgenommen.
+        # Die Handlungen kommen vom Fenster - es weiss, was zurueckgeht.
+        self.rueckgaengig_knopf = QToolButton()
+        self.wiederherstellen_knopf = QToolButton()
+        for knopf, zeichen in (
+            (self.rueckgaengig_knopf, "↶"),
+            (self.wiederherstellen_knopf, "↷"),
+        ):
+            knopf.setText(zeichen)
+            knopf.setAutoRaise(True)
+            knopf.setEnabled(False)
+            kopf.addWidget(knopf)
+        kopf.addSpacing(16)
         for knopf in self._textknoepfe():
             kopf.addWidget(knopf)
         # Was hier steht, ist Chrom und waechst nicht mit dem Verteiler:
@@ -918,6 +932,31 @@ class LeistenAnsicht(QWidget):
         aufbau.addWidget(self.tabelle)
 
         self._knoepfe_auffrischen()
+
+    def bearbeitungsaktionen_setzen(self, rueckgaengig, wiederherstellen) -> None:
+        """Legt die Handlungen des Fensters auf die beiden Pfeilknoepfe.
+
+        Nicht ueber ``setDefaultAction``: das schriebe den Namen der
+        Handlung auf den Knopf, und dort soll der Pfeil stehen. Statt
+        dessen folgt der Knopf ihr von Hand - gedrueckt loest er sie aus,
+        ausgegraut ist er, wenn sie es ist.
+        """
+        for knopf, handlung in (
+            (self.rueckgaengig_knopf, rueckgaengig),
+            (self.wiederherstellen_knopf, wiederherstellen),
+        ):
+            knopf.clicked.connect(handlung.trigger)
+            knopf.setEnabled(handlung.isEnabled())
+            handlung.changed.connect(
+                lambda knopf=knopf, handlung=handlung: knopf.setEnabled(
+                    handlung.isEnabled()
+                )
+            )
+            kuerzel = handlung.shortcut().toString(
+                QKeySequence.SequenceFormat.NativeText
+            )
+            name = handlung.text().replace("&", "")
+            knopf.setToolTip(f"{name} ({kuerzel})" if kuerzel else name)
 
     def minimumSizeHint(self) -> QSize:  # noqa: N802 - Qt-Name
         """Wie schmal sich die Ansicht ziehen laesst.

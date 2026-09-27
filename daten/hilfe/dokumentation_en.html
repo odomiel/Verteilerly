@@ -119,6 +119,16 @@ data.</p>
 <i>remark</i> and <i>cable</i>. Color, designation, jumper, remark and the
 cable label can be changed; pin, wire and cable position are fixed.</p>
 
+<p><b>Undo</b> — the two arrows ↶ and ↷ next to the strip selector take back
+the last change to the frame and bring it back again; so do <b>Edit ▸ Undo</b>
+(Ctrl+Z) and <b>Redo</b> (Ctrl+Y). The last 50 steps are kept — every change to
+the frame, from a typed character through a terminated cable to the labelling of
+the strips. The chosen strip stays where it was. Settings of the program are not
+taken back: sheet template, theme and defaults do not belong to the project. Who
+changes something new after taking a step back can no longer bring it forward —
+the other path has been taken. And with a new or an opened project the row
+starts over.</p>
+
 <p><b>Text options</b> — next to the strip selector are five buttons: align
 left, center, align right, as well as <b>F</b> for bold and <i>K</i> for
 italic. They act on the <b>selected cell</b> and show what applies there.
@@ -1012,7 +1022,9 @@ extensions</i>.</p>
 <tr><td>As Excel workbook…</td><td></td></tr>
 <tr><td>As CSV…</td><td></td></tr>
 <tr><td>Quit</td><td>Ctrl+Q</td></tr>
-<tr><td rowspan="6"><b>Edit</b></td><td>Terminate cable…</td><td>Ctrl+K</td></tr>
+<tr><td rowspan="8"><b>Edit</b></td><td>Undo</td><td>Ctrl+Z</td></tr>
+<tr><td>Redo</td><td>Ctrl+Y</td></tr>
+<tr><td>Terminate cable…</td><td>Ctrl+K</td></tr>
 <tr><td>Edit cable…</td><td>Ctrl+Shift+E</td></tr>
 <tr><td>Remove cable</td><td>Ctrl+Shift+K</td></tr>
 <tr><td>Save as template…</td><td></td></tr>
