@@ -7,13 +7,17 @@ Mustertabellen. Buchten stehen nebeneinander.
 
 from __future__ import annotations
 
-from PySide6.QtCore import QRect, QSize, Qt, Signal
-from PySide6.QtGui import QFont, QFontMetrics, QPainter, QPen
-from PySide6.QtWidgets import QWidget
+from PySide6.QtCore import QMimeData, QPoint, QRect, QSize, Qt, Signal
+from PySide6.QtGui import QDrag, QFont, QFontMetrics, QPainter, QPen
+from PySide6.QtWidgets import QApplication, QWidget
 
 from ..modell import LEISTEN_ZAHLEN, Kabel, Verteiler, leistenname
 from .thema import HELL, Farben
 from ..sprachen import u
+
+#: Woran ein gezogenes Kabel zu erkennen ist. Ein eigener Typ: fremde
+#: Fracht soll hier nichts ausloesen.
+KABELFRACHT = "application/x-verteilerly-kabel"
 
 ZELLE_B = 27
 ZELLE_H = 32
@@ -29,6 +33,9 @@ class Uebersicht(QWidget):
     auswahl_geaendert = Signal(object)      # (leiste, da) oder None
     stelle_aktiviert = Signal(int, int)     # Doppelklick auf freie Stelle
     kabel_aktiviert = Signal(object)        # Doppelklick auf ein Kabel
+    #: Ein Kabel wurde woandershin gezogen: (Kabel, Leiste, Start-DA,
+    #: kopieren). Das Fenster fuehrt es aus - die Uebersicht zeigt nur.
+    kabel_umgelegt = Signal(object, int, int, bool)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -39,8 +46,16 @@ class Uebersicht(QWidget):
         self.leisten_schreibweise: str = LEISTEN_ZAHLEN
         self.auswahl: tuple[int, int] | None = None
         self._kaesten: dict[int, QRect] = {}
+        # Woher ein Ziehen kam: Druckpunkt, Kabel und an welcher seiner
+        # Doppeladern es angefasst wurde.
+        self._griff: tuple[QPoint, Kabel, int] | None = None
+        #: Wohin es gerade zeigt - (Leiste, Start-DA, passt) fuer die Vorschau.
+        self._ziel: tuple[int, int, bool] | None = None
+        #: Das Kabel, das gerade am Zeiger haengt.
+        self._gezogen: Kabel | None = None
         self.setMouseTracking(True)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.setAcceptDrops(True)
 
     # -- Zustand -----------------------------------------------------------
 
@@ -110,8 +125,27 @@ class Uebersicht(QWidget):
     def mousePressEvent(self, ereignis) -> None:
         stelle = self._zelle_bei(int(ereignis.position().x()), int(ereignis.position().y()))
         self.auswahl = stelle
+        self._griff = None
+        if stelle is not None and self.verteiler is not None:
+            kabel = self.verteiler.kabel_an(*stelle)
+            if kabel is not None and ereignis.button() == Qt.MouseButton.LeftButton:
+                # Gemerkt wird, an welcher Doppelader angefasst wurde: beim
+                # Fallenlassen soll genau sie unter dem Zeiger liegen.
+                self._griff = (
+                    ereignis.position().toPoint(),
+                    kabel,
+                    self._versatz_im_kabel(kabel, stelle),
+                )
         self.auswahl_geaendert.emit(stelle)
         self.update()
+
+    @staticmethod
+    def _versatz_im_kabel(kabel: Kabel, stelle: tuple[int, int]) -> int:
+        """Die wievielte Doppelader des Kabels angefasst wurde - ab 0."""
+        for versatz, (_kabel_da, leiste, da) in enumerate(kabel.positionen()):
+            if (leiste, da) == stelle:
+                return versatz
+        return 0
 
     def mouseDoubleClickEvent(self, ereignis) -> None:
         stelle = self._zelle_bei(int(ereignis.position().x()), int(ereignis.position().y()))
@@ -125,9 +159,112 @@ class Uebersicht(QWidget):
             self.stelle_aktiviert.emit(leiste, da)
 
     def mouseMoveEvent(self, ereignis) -> None:
-        """Der Kabelname steht im Kasten oft gekuerzt - hier ganz."""
+        """Der Kabelname steht im Kasten oft gekuerzt - hier ganz.
+
+        Und: wer ein Kabel weit genug zieht, nimmt es mit. Erst ab der
+        Strecke, die das Erscheinungsbild als Ziehen versteht - sonst
+        haette schon ein zittriger Klick das Kabel verschoben.
+        """
+        if self._griff is not None and (
+            ereignis.buttons() & Qt.MouseButton.LeftButton
+        ):
+            druckpunkt, kabel, versatz = self._griff
+            weite = (ereignis.position().toPoint() - druckpunkt).manhattanLength()
+            if weite >= QApplication.startDragDistance():
+                self._griff = None
+                self._ziehen(kabel, versatz)
+                return
         stelle = self._zelle_bei(int(ereignis.position().x()), int(ereignis.position().y()))
         self.setToolTip(self._hinweistext(stelle))
+
+    def mouseReleaseEvent(self, ereignis) -> None:
+        self._griff = None
+        super().mouseReleaseEvent(ereignis)
+
+    # -- Ziehen und Fallenlassen -------------------------------------------
+
+    def _ziehen(self, kabel: Kabel, versatz: int) -> None:
+        """Nimmt das Kabel an den Zeiger - verschieben, mit Strg kopieren."""
+        fracht = QMimeData()
+        fracht.setData(KABELFRACHT, str(versatz).encode("ascii"))
+        zug = QDrag(self)
+        zug.setMimeData(fracht)
+        zug.setPixmap(self._kabelbild(kabel))
+        # Das Kabel selbst reist nicht durch die Zwischenablage: fremde
+        # Anwendungen sollen damit nichts anfangen koennen. Es steht so
+        # lange hier.
+        self._gezogen = kabel
+        zug.exec(Qt.DropAction.MoveAction | Qt.DropAction.CopyAction,
+                 Qt.DropAction.MoveAction)
+        self._gezogen = None
+        self._ziel = None
+        self.update()
+
+    def _kabelbild(self, kabel: Kabel):
+        """Der Block des Kabels als Bild am Zeiger - so sieht man, was man traegt."""
+        plaetze = [(leiste, da) for _kd, leiste, da in kabel.positionen()]
+        erste = self._zellrechteck(*plaetze[0])
+        letzte = self._zellrechteck(*plaetze[-1])
+        return self.grab(erste.united(letzte))
+
+    def _fracht_taugt(self, ereignis) -> bool:
+        return (
+            ereignis.mimeData().hasFormat(KABELFRACHT)
+            and self._gezogen is not None
+            and self.verteiler is not None
+        )
+
+    def _zielstelle(self, ereignis) -> tuple[int, int, bool] | None:
+        """Wohin das Kabel fiele - und ob es dort ganz und frei liegt."""
+        stelle = self._zelle_bei(
+            int(ereignis.position().x()), int(ereignis.position().y())
+        )
+        if stelle is None:
+            return None
+        versatz = int(bytes(ereignis.mimeData().data(KABELFRACHT)).decode("ascii"))
+        leiste, da = stelle
+        start = da - versatz
+        passt = True
+        try:
+            self.verteiler._platz_verlangen(
+                leiste, start, self._gezogen.da_aufgelegt, ausser=self._gezogen
+            )
+        except Exception:      # noqa: BLE001 - hier wird nur gezeigt, nicht gehandelt
+            passt = False
+        return leiste, start, passt
+
+    def dragEnterEvent(self, ereignis) -> None:  # noqa: N802 - Qt-Name
+        if self._fracht_taugt(ereignis):
+            ereignis.acceptProposedAction()
+
+    def dragMoveEvent(self, ereignis) -> None:  # noqa: N802 - Qt-Name
+        if not self._fracht_taugt(ereignis):
+            return
+        ziel = self._zielstelle(ereignis)
+        if ziel != self._ziel:
+            self._ziel = ziel
+            self.update()
+        if ziel is not None and ziel[2]:
+            ereignis.acceptProposedAction()
+        else:
+            ereignis.ignore()
+
+    def dragLeaveEvent(self, ereignis) -> None:  # noqa: N802 - Qt-Name
+        self._ziel = None
+        self.update()
+
+    def dropEvent(self, ereignis) -> None:  # noqa: N802 - Qt-Name
+        if not self._fracht_taugt(ereignis):
+            return
+        ziel = self._zielstelle(ereignis)
+        self._ziel = None
+        if ziel is None or not ziel[2]:
+            ereignis.ignore()
+            return
+        leiste, start, _passt = ziel
+        kopieren = ereignis.proposedAction() == Qt.DropAction.CopyAction
+        ereignis.acceptProposedAction()
+        self.kabel_umgelegt.emit(self._gezogen, leiste, start, kopieren)
 
     def _hinweistext(self, stelle: tuple[int, int] | None) -> str:
         if stelle is None or self.verteiler is None:
@@ -163,6 +300,29 @@ class Uebersicht(QWidget):
         for kabel in self.verteiler.kabel:
             self._kabel_zeichnen(maler, kabel)
         self._auswahl_zeichnen(maler)
+        self._ziel_zeichnen(maler)
+
+    def _ziel_zeichnen(self, maler: QPainter) -> None:
+        """Zeigt beim Ziehen, wo das Kabel landen wuerde.
+
+        Nur der Umriss, damit darunter sichtbar bleibt, was dort liegt -
+        und in der Warnfarbe, wo es nicht hinpasst.
+        """
+        if self._ziel is None or self._gezogen is None:
+            return
+        leiste, start, passt = self._ziel
+        if leiste not in self._kaesten:
+            return
+        anzahl = self._gezogen.da_aufgelegt
+        kasten = self._kaesten[leiste]
+        links = kasten.left() + (start - 1) * ZELLE_B
+        umriss = QRect(links, kasten.top(), anzahl * ZELLE_B, ZELLE_H)
+        maler.setPen(QPen(
+            self.farben.q("akzent" if passt else "warnung"), 2,
+            Qt.PenStyle.SolidLine if passt else Qt.PenStyle.DashLine,
+        ))
+        maler.setBrush(Qt.BrushStyle.NoBrush)
+        maler.drawRect(umriss.adjusted(1, 1, -1, -1))
 
     def _hinweis_zeichnen(self, maler: QPainter) -> None:
         maler.setPen(self.farben.q("schrift_leise"))

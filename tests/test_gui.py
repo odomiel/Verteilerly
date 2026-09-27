@@ -1158,6 +1158,105 @@ class TestUebersicht(unittest.TestCase):
 
 
 @unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
+class TestKabelZiehen(unittest.TestCase):
+    """Ein Kabel in der Übersicht woandershin ziehen."""
+
+    def setUp(self):
+        from verteilerly.gui.uebersicht import Uebersicht
+
+        self.verteiler = Verteiler.aus_geometrie(1, 3, 10, name="Probe")
+        self.kabel = self.verteiler.kabel_anlegen("Leitung", 1, 2, 4)
+        self.uebersicht = Uebersicht()
+        self.addCleanup(self.uebersicht.close)
+        self.uebersicht.verteiler_setzen(self.verteiler)
+        self.uebersicht.resize(self.uebersicht.sizeHint())
+
+    class _Fracht:
+        """Eine Fallenlassen-Meldung, wie Qt sie schickt - nur das Nötige."""
+
+        def __init__(self, punkt, versatz, aktion=None):
+            from PySide6.QtCore import QMimeData, QPointF, Qt
+            from verteilerly.gui.uebersicht import KABELFRACHT
+
+            self._punkt = QPointF(*punkt)
+            self._fracht = QMimeData()
+            self._fracht.setData(KABELFRACHT, str(versatz).encode("ascii"))
+            self._aktion = aktion or Qt.DropAction.MoveAction
+            self.angenommen = False
+
+        def position(self):
+            return self._punkt
+
+        def mimeData(self):
+            return self._fracht
+
+        def proposedAction(self):
+            return self._aktion
+
+        def acceptProposedAction(self):
+            self.angenommen = True
+
+        def ignore(self):
+            self.angenommen = False
+
+    def _punkt(self, leiste, da):
+        """Die Mitte dieser Zelle."""
+        kasten = self.uebersicht._zellrechteck(leiste, da)
+        return kasten.center().x(), kasten.center().y()
+
+    def test_angefasst_wird_die_doppelader_unter_dem_zeiger(self):
+        self.assertEqual(
+            self.uebersicht._versatz_im_kabel(self.kabel, (1, 4)), 2
+        )
+        self.assertEqual(
+            self.uebersicht._versatz_im_kabel(self.kabel, (1, 2)), 0
+        )
+
+    def test_das_kabel_landet_so_wie_es_angefasst_wurde(self):
+        """Wer die dritte DA greift, legt sie unter den Zeiger."""
+        self.uebersicht._gezogen = self.kabel
+        ziel = self.uebersicht._zielstelle(self._Fracht(self._punkt(2, 7), 2))
+        self.assertEqual(ziel, (2, 5, True))
+
+    def test_wo_es_nicht_passt_wird_nichts_angenommen(self):
+        self.verteiler.kabel_anlegen("Nachbar", 2, 5, 2)
+        self.uebersicht._gezogen = self.kabel
+        meldung = self._Fracht(self._punkt(2, 5), 0)
+        self.uebersicht.dragMoveEvent(meldung)
+        self.assertFalse(meldung.angenommen)
+        self.assertEqual(self.uebersicht._ziel, (2, 5, False))
+
+        meldung = self._Fracht(self._punkt(3, 1), 0)
+        self.uebersicht.dragMoveEvent(meldung)
+        self.assertTrue(meldung.angenommen)
+
+    def test_das_fallenlassen_meldet_verschieben_oder_kopieren(self):
+        from PySide6.QtCore import Qt
+
+        self.uebersicht._gezogen = self.kabel
+        gemeldet = []
+        self.uebersicht.kabel_umgelegt.connect(
+            lambda *args: gemeldet.append(args)
+        )
+        self.uebersicht.dropEvent(self._Fracht(self._punkt(3, 3), 1))
+        self.uebersicht._gezogen = self.kabel
+        self.uebersicht.dropEvent(
+            self._Fracht(self._punkt(3, 3), 1, Qt.DropAction.CopyAction)
+        )
+        self.assertEqual(
+            [(x[1], x[2], x[3]) for x in gemeldet],
+            [(3, 2, False), (3, 2, True)],
+        )
+        self.assertIs(gemeldet[0][0], self.kabel)
+
+    def test_ohne_kabel_am_zeiger_geschieht_nichts(self):
+        """Fremde Fracht - ein Bild, eine Datei - löst hier nichts aus."""
+        gemeldet = []
+        self.uebersicht.kabel_umgelegt.connect(lambda *a: gemeldet.append(a))
+        self.uebersicht.dropEvent(self._Fracht(self._punkt(3, 3), 0))
+        self.assertEqual(gemeldet, [])
+
+
 class TestVorschau(unittest.TestCase):
     """Die Vorschau haelt sich an dieselbe Blattfolge wie das PDF."""
 
@@ -2020,6 +2119,31 @@ class TestMenuezustaende(unittest.TestCase):
              ):
             f.verknuepfung_anmelden()
         self.assertTrue(angemeldet.called)
+
+    def test_ein_gezogenes_kabel_wird_verschoben_oder_kopiert(self):
+        """Was die Übersicht meldet, führt das Fenster aus."""
+        f = self.fenster
+        verteiler = Verteiler.aus_geometrie(1, 3, 10, name="Probe")
+        kabel = verteiler.kabel_anlegen("Leitung", 1, 1, 4)
+        verteiler.leiste(1).stift(2).ader("a").bezeichnung = "Melder"
+        f._projekt_setzen(Projekt(verteiler=verteiler), None)
+
+        f._kabel_umlegen(kabel, 2, 5, False)
+        self.assertEqual(kabel.abschnitte[0].leiste, 2)
+        self.assertEqual(verteiler.leiste(2).stift(6).ader("a").bezeichnung, "Melder")
+        self.assertIn("verschoben", f.statusBar().currentMessage())
+        self.assertTrue(f.veraendert)
+
+        f._kabel_umlegen(kabel, 3, 1, True)
+        self.assertEqual(len(verteiler.kabel), 2)
+        self.assertEqual(verteiler.kabel[-1].beschriftung, "Leitung (Kopie)")
+        self.assertIn("kopiert", f.statusBar().currentMessage())
+
+        # Auf einen belegten Platz geht es nicht - und es gibt eine Meldung,
+        # kein Fenster: für eine Mausbewegung wäre das zu viel.
+        f._kabel_umlegen(kabel, 3, 1, False)
+        self.assertIn("belegt", f.statusBar().currentMessage())
+        self.assertEqual(kabel.abschnitte[0].leiste, 2)
 
     def test_eine_fehlende_blattvorlage_haelt_das_fenster_nicht_auf(self):
         """Wer „beispiel" gewählt hatte, soll das Programm noch starten können."""

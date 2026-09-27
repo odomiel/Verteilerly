@@ -272,6 +272,15 @@ der beiden Felder, bleibt darin stehen und wird **nicht gespiegelt** —
 er gehört der Ader und steht als deren Feld in der Projektdatei. Was
 sich als Ziel lesen lässt, bleibt auch dann ein Ziel.
 
+**Ein aufgelegtes Kabel lässt sich umlegen** — in der Verteilerübersicht mit
+der Maus an eine andere Stelle ziehen. Es nimmt mit, was daran hängt: die
+Adern samt Farben, Bezeichnungen, Bemerkungen, Vermerken und Textstilen, und
+die **Rangierungen** (`kabel_verschieben`) — die zeigen auf die Ader, nicht
+auf den Platz. Angefasst wird die Doppelader unter dem Zeiger; ein Rahmen
+zeigt, wo das Kabel landet, gestrichelt, wo kein Platz ist. Mit **Strg**
+entsteht stattdessen eine **Kopie** (`kabel_kopieren`): Typ, Größe und dieselben
+Adern, aber keine Rangierungen — eine Verbindung gibt es genau einmal.
+
 **Ein Doppelklick in der Dateiverwaltung** öffnet eine Projektdatei in
 Verteilerly, sobald man das Programm einmal dafür angemeldet hat — *Tools ▸
 Projektdateien mit Verteilerly öffnen…*. Unter Linux entstehen dafür ein

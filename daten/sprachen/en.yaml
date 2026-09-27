@@ -252,6 +252,12 @@ Verteiler öffnen: Open frame
 Verteiler speichern: Save frame
 Ausgeben nach: Write to
 Kabel entfernen?: Remove cable?
+Auf Leiste {0} ab DA {1} ist für {2} DA kein Platz: On strip {0} from pair {1} there is no room for {2}
+  pairs
+'Kabel kopiert: {0} nach {1}': 'Cable copied: {0} to {1}'
+'Kabel verschoben: {0} nach {1}': 'Cable moved: {0} to {1}'
+Leiste {0}, ab DA {1}: strip {0}, from pair {1}
+'{0} (Kopie)': '{0} (copy)'
 Über Verteilerly: About Verteilerly
 Einen Verteiler aus einer Vorlage oder eigenen Maßen anlegen: Create a frame from a template or from your
   own measurements

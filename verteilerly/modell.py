@@ -8,8 +8,9 @@ Verteiler, nicht an der einzelnen Ader.
 
 from __future__ import annotations
 
+import copy
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from . import schreibweisen
 from .schreibweisen import Schreibweise
@@ -739,6 +740,147 @@ class Verteiler:
 
     def kabel_entfernen(self, kabel: Kabel) -> None:
         self.kabel.remove(kabel)
+
+    # -- Umlegen und kopieren ----------------------------------------
+
+    def _platz_verlangen(
+        self, leiste: int, start_da: int, anzahl_da: int, ausser: Kabel | None = None
+    ) -> None:
+        """Wirft, wenn das Kabel dort nicht ganz und frei liegen kann.
+
+        ``ausser`` ist das Kabel, das gerade umzieht: seine eigenen
+        Doppeladern stehen ihm nicht im Weg.
+        """
+        if anzahl_da < 1:
+            raise ModellFehler(u("Ein Kabel muss mindestens eine Doppelader haben"))
+        ziel = self.leiste(leiste)
+        if not 1 <= start_da <= ziel.da_anzahl:
+            raise ModellFehler(
+                u("Start-DA {0} liegt ausserhalb von Leiste {1} ({2} DA)").format(start_da, leiste, ziel.da_anzahl)
+            )
+        if start_da + anzahl_da - 1 > ziel.da_anzahl:
+            raise ModellFehler(
+                u("Auf Leiste {0} ab DA {1} ist für {2} DA kein Platz").format(leiste, start_da, anzahl_da)
+            )
+        for versatz in range(anzahl_da):
+            da = start_da + versatz
+            belegt = self.kabel_an(leiste, da)
+            if belegt is not None and belegt is not ausser:
+                raise ModellFehler(
+                    u("Leiste {0} DA {1} ist bereits von einem Kabel belegt").format(leiste, da)
+                )
+
+    @staticmethod
+    def _plaetze(kabel: Kabel) -> list[tuple[int, int]]:
+        """Leiste und DA jeder aufgelegten Doppelader - in der Folge des Kabels."""
+        return [(leiste, da) for _kabel_da, leiste, da in kabel.positionen()]
+
+    def kabel_verschieben(self, kabel: Kabel, leiste: int, start_da: int) -> Kabel:
+        """Legt ein aufgelegtes Kabel an eine andere Stelle.
+
+        **Es zieht mit allem um, was daran haengt**: die Adern nehmen
+        Farbe, Bezeichnung, Bemerkung, Vermerk, Textstil und geteilte
+        Zellen mit, und die Rangierungen folgen - sie zeigen auf die
+        Ader, nicht auf den Platz. Was das Kabel verlaesst, ist danach
+        leer wie vor dem Auflegen.
+
+        Ein mehrteiliges Kabel wird dabei wieder zu einem Stueck: wer es
+        umlegt, sucht sich einen Platz, an dem es ganz liegt.
+        """
+        anzahl = kabel.da_aufgelegt
+        self._platz_verlangen(leiste, start_da, anzahl, ausser=kabel)
+        alt = self._plaetze(kabel)
+        kabel.abschnitte = [Kabelabschnitt(leiste, start_da, anzahl)]
+        self._adern_umziehen(alt, self._plaetze(kabel))
+        return kabel
+
+    def kabel_kopieren(
+        self, kabel: Kabel, leiste: int, start_da: int, beschriftung: str | None = None
+    ) -> Kabel:
+        """Legt ein zweites Kabel derselben Art an eine freie Stelle.
+
+        Kopiert werden Beschriftung, Typ, Groesse und die Adern samt
+        ihren Texten - **nicht die Rangierungen**: eine Rangierung ist
+        eine Verbindung, die es genau einmal gibt.
+        """
+        anzahl = kabel.da_aufgelegt
+        self._platz_verlangen(leiste, start_da, anzahl)
+        zwilling = self.kabel_anlegen_mehrteilig(
+            kabel.beschriftung if beschriftung is None else beschriftung,
+            [Kabelabschnitt(leiste, start_da, anzahl)],
+            kabeltyp=kabel.kabeltyp,
+            da_gesamt=kabel.da_gesamt,
+        )
+        self._adern_kopieren(self._plaetze(kabel), self._plaetze(zwilling))
+        return zwilling
+
+    def _adern_lesen(self, plaetze: list[tuple[int, int]]) -> list[tuple[Ader, Ader]]:
+        return [
+            (
+                copy.deepcopy(self.leiste(leiste).stift(da).a),
+                copy.deepcopy(self.leiste(leiste).stift(da).b),
+            )
+            for leiste, da in plaetze
+        ]
+
+    def _adern_setzen(
+        self, plaetze: list[tuple[int, int]], inhalt: list[tuple[Ader, Ader]]
+    ) -> None:
+        for (leiste, da), (a, b) in zip(plaetze, inhalt):
+            stift = self.leiste(leiste).stift(da)
+            stift.a, stift.b = a, b
+
+    def _adern_umziehen(
+        self, alt: list[tuple[int, int]], neu: list[tuple[int, int]]
+    ) -> None:
+        """Traegt die Adern von alten auf neue Plaetze um, samt Rangierungen.
+
+        Erst gelesen, dann geleert, dann gesetzt: alter und neuer Platz
+        duerfen sich ueberschneiden, wenn ein Kabel auf seiner Leiste
+        nur verrutscht.
+        """
+        inhalt = self._adern_lesen(alt)
+        for leiste, da in alt:
+            stift = self.leiste(leiste).stift(da)
+            stift.a, stift.b = Ader("a"), Ader("b")
+        self._adern_setzen(neu, inhalt)
+        self._rangierungen_umhaengen(alt, neu)
+
+    def _adern_kopieren(
+        self, quelle: list[tuple[int, int]], ziel: list[tuple[int, int]]
+    ) -> None:
+        """Legt die Adern noch einmal an - die Quelle bleibt, wie sie ist."""
+        self._adern_setzen(ziel, self._adern_lesen(quelle))
+
+    def _rangierungen_umhaengen(
+        self, alt: list[tuple[int, int]], neu: list[tuple[int, int]]
+    ) -> None:
+        """Laesst die Rangierungen der Adern folgen.
+
+        Eine Rangierung meint die Ader, nicht den Platz: zieht die Ader
+        um, zeigt die Verbindung danach auf den neuen Platz. Faellt dabei
+        eine Rangierung mit einer bestehenden zusammen, bleibt eine.
+        """
+        umzug = {
+            Aderadresse(alte_leiste, altes_da, seite):
+                Aderadresse(neue_leiste, neues_da, seite)
+            for (alte_leiste, altes_da), (neue_leiste, neues_da) in zip(alt, neu)
+            for seite in SEITEN
+        }
+        gesehen: set[frozenset] = set()
+        geblieben = []
+        for rangierung in self.rangierungen:
+            gewandert = replace(
+                rangierung,
+                von=umzug.get(rangierung.von, rangierung.von),
+                nach=umzug.get(rangierung.nach, rangierung.nach),
+            )
+            marke = frozenset((gewandert.von, gewandert.nach))
+            if len(marke) < 2 or marke in gesehen:
+                continue
+            gesehen.add(marke)
+            geblieben.append(gewandert)
+        self.rangierungen = geblieben
 
     # -- Rangierungen -------------------------------------
 

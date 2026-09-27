@@ -718,5 +718,96 @@ class TestUngleicheBuchten(unittest.TestCase):
             Verteiler.aus_buchten([(4, 0)])
 
 
+class TestKabelUmlegen(unittest.TestCase):
+    """Ein aufgelegtes Kabel woandershin - verschieben oder kopieren."""
+
+    def setUp(self):
+        self.v = Verteiler.aus_geometrie(1, 3, 10)
+        self.kabel = self.v.kabel_anlegen("Leitung", 1, 1, 4, kabeltyp="jystyv")
+        ader = self.v.leiste(1).stift(2).ader("a")
+        ader.bezeichnung = "Melder"
+        ader.farbe = "rt"
+        ader.bemerkung = "geprüft"
+
+    def _ader(self, leiste, da, seite="a"):
+        return self.v.leiste(leiste).stift(da).ader(seite)
+
+    def test_das_kabel_liegt_danach_woanders(self):
+        self.v.kabel_verschieben(self.kabel, 2, 5)
+        self.assertEqual(
+            [(a.leiste, a.start_da, a.anzahl_da) for a in self.kabel.abschnitte],
+            [(2, 5, 4)],
+        )
+        self.assertIs(self.v.kabel_an(2, 5), self.kabel)
+        self.assertIsNone(self.v.kabel_an(1, 1))
+
+    def test_die_adern_ziehen_mit_um(self):
+        """Was an der Ader steht, gehört dem Kabel - nicht dem Platz."""
+        self.v.kabel_verschieben(self.kabel, 2, 5)
+        gewandert = self._ader(2, 6)
+        self.assertEqual(gewandert.bezeichnung, "Melder")
+        self.assertEqual(gewandert.farbe, "rt")
+        self.assertEqual(gewandert.bemerkung, "geprüft")
+        # Und der alte Platz ist leer wie vor dem Auflegen.
+        self.assertEqual(self._ader(1, 2).bezeichnung, "")
+        self.assertEqual(self._ader(1, 2).farbe, "")
+
+    def test_die_rangierungen_folgen_der_ader(self):
+        self.v.rangierung_anlegen(Aderadresse(1, 2, "a"), Aderadresse(3, 9, "b"))
+        self.v.kabel_verschieben(self.kabel, 2, 5)
+        self.assertEqual(
+            [(str(r.von), str(r.nach)) for r in self.v.rangierungen],
+            [("2 6a", "3 9b")],
+        )
+
+    def test_auf_derselben_leiste_verrutschen(self):
+        """Alter und neuer Platz überschneiden sich - nichts darf verlorengehen."""
+        self.v.kabel_verschieben(self.kabel, 1, 3)
+        self.assertEqual(self._ader(1, 4).bezeichnung, "Melder")
+        self.assertIsNone(self.v.kabel_an(1, 1))
+        self.assertIs(self.v.kabel_an(1, 6), self.kabel)
+
+    def test_ein_mehrteiliges_kabel_wird_wieder_eines(self):
+        from verteilerly.modell import Kabelabschnitt
+
+        geteilt = self.v.kabel_anlegen_mehrteilig(
+            "Zweiteilig",
+            [Kabelabschnitt(1, 9, 2), Kabelabschnitt(2, 1, 2)],
+        )
+        self.v.kabel_verschieben(geteilt, 3, 1)
+        self.assertEqual(len(geteilt.abschnitte), 1)
+        self.assertEqual(geteilt.da_aufgelegt, 4)
+
+    def test_wo_kein_platz_ist_bleibt_es_liegen(self):
+        self.v.kabel_anlegen("Nachbar", 2, 5, 2)
+        for leiste, start in ((2, 4), (2, 9), (3, 0)):
+            with self.subTest(ziel=(leiste, start)):
+                with self.assertRaises(ModellFehler):
+                    self.v.kabel_verschieben(self.kabel, leiste, start)
+        # Unverändert an seinem Platz.
+        self.assertIs(self.v.kabel_an(1, 1), self.kabel)
+        self.assertEqual(self._ader(1, 2).bezeichnung, "Melder")
+
+    def test_kopieren_legt_ein_zweites_daneben(self):
+        zwilling = self.v.kabel_kopieren(self.kabel, 3, 1, "Leitung (Kopie)")
+        self.assertEqual(len(self.v.kabel), 2)
+        self.assertEqual(zwilling.kabeltyp, self.kabel.kabeltyp)
+        self.assertEqual(zwilling.da_gesamt, self.kabel.da_gesamt)
+        # Die Adern kommen mit, die Quelle bleibt.
+        self.assertEqual(self._ader(3, 2).bezeichnung, "Melder")
+        self.assertEqual(self._ader(1, 2).bezeichnung, "Melder")
+
+    def test_eine_rangierung_wird_nicht_mitkopiert(self):
+        """Eine Verbindung gibt es einmal - zwei Enden, nicht vier."""
+        self.v.rangierung_anlegen(Aderadresse(1, 2, "a"), Aderadresse(3, 9, "b"))
+        self.v.kabel_kopieren(self.kabel, 2, 1)
+        self.assertEqual(len(self.v.rangierungen), 1)
+
+    def test_kopieren_braucht_freien_platz(self):
+        with self.assertRaises(ModellFehler):
+            self.v.kabel_kopieren(self.kabel, 1, 3)
+        self.assertEqual(len(self.v.kabel), 1)
+
+
 if __name__ == "__main__":
     unittest.main()

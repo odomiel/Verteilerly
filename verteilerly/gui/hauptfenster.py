@@ -194,6 +194,7 @@ class Hauptfenster(QMainWindow):
         self.uebersicht.stelle_aktiviert.connect(self.kabel_auflegen)
         self.uebersicht.kabel_aktiviert.connect(self._kabel_angeklickt)
         self.uebersicht.auswahl_geaendert.connect(self._auswahl_gemeldet)
+        self.uebersicht.kabel_umgelegt.connect(self._kabel_umlegen)
 
         rollbereich = QScrollArea()
         rollbereich.setWidget(self.uebersicht)
@@ -1524,6 +1525,42 @@ class Hauptfenster(QMainWindow):
         )
         if antwort == QMessageBox.StandardButton.Yes:
             self._kabel_abnehmen(kabel)
+
+    def _kabel_umlegen(self, kabel, leiste: int, start_da: int, kopieren: bool) -> None:
+        """Ein Kabel wurde woandershin gezogen: verschieben oder kopieren.
+
+        Gezogen wird in der Verteileruebersicht; mit Strg wird kopiert.
+        Was nicht passt, sagt die Statuszeile - ein Fenster dafuer
+        aufzumachen waere fuer eine Mausbewegung zu viel.
+        """
+        if self.projekt is None:
+            return
+        verteiler = self.projekt.verteiler
+        name = kabel.beschriftung or u("ohne Beschriftung")
+        try:
+            if kopieren:
+                verteiler.kabel_kopieren(
+                    kabel, leiste, start_da,
+                    u("{0} (Kopie)").format(kabel.beschriftung)
+                    if kabel.beschriftung
+                    else "",
+                )
+            else:
+                verteiler.kabel_verschieben(kabel, leiste, start_da)
+        except ModellFehler as fehler:
+            self.statusBar().showMessage(str(fehler), 8000)
+            return
+        self._belegung_geaendert()
+        self.leistenansicht.aktualisieren()
+        self.aktionen_auffrischen()
+        wohin = u("Leiste {0}, ab DA {1}").format(
+            self._leistenname(leiste), start_da
+        )
+        self.statusBar().showMessage(
+            (u("Kabel kopiert: {0} nach {1}") if kopieren
+             else u("Kabel verschoben: {0} nach {1}")).format(name, wohin),
+            8000,
+        )
 
     def _kabel_abnehmen(self, kabel) -> None:
         # Die Farbfolge gehoert zum Kabel: ist es weg, gehoert sie nicht
