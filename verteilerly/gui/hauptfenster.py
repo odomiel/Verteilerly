@@ -139,15 +139,14 @@ RUECKGAENGIG_SCHRITTE = 50
 class Hauptfenster(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
+        # Was beim Lesen der Einstellungen und der Vorlagen auffiel, kommt
+        # hier zusammen und wird einmal gezeigt - nicht dreimal
+        # hintereinander.
+        self.hinweise: list[str] = []
         # Als Datei an einem bekannten Ort, nicht in der Registry:
         # unter Windows liegt sie neben dem Programm.
-        self.einstellungen = QSettings(
-            str(pfade.einstellungsdatei()), QSettings.Format.IniFormat
-        )
+        self.einstellungen = self._einstellungen_oeffnen()
         self._grundausstattung_sichern()
-        # Was beim Lesen der Vorlagen auffiel, kommt hier zusammen und
-        # wird einmal gezeigt - nicht dreimal hintereinander.
-        self.hinweise: list[str] = []
         self.vorlagen = self._vorlagen_laden(self.hinweise)
         self.blattvorlagen = self._blattvorlagen_laden(self.hinweise)
         try:
@@ -195,11 +194,69 @@ class Hauptfenster(QMainWindow):
         )
         self.thema_anwenden(self.thema_name)
         self._projekt_setzen(None, None)
+        if self.einstellungen_grund:
+            QMessageBox.warning(
+                self,
+                u("Einstellungen"),
+                u("Die Einstellungen in {0} ließen sich nicht lesen ({1}).\n\n"
+                  "Die Datei bleibt unberührt — was Sie in diesem Lauf "
+                  "einstellen, wird darum nicht gemerkt. Schließen Sie das "
+                  "Programm, sehen Sie sich die Datei an, und legen Sie sie "
+                  "notfalls beiseite: beim nächsten Start wird sie neu "
+                  "angelegt.").format(pfade.einstellungsdatei(), self.einstellungen_grund),
+            )
         if self.ausgelegt:
             self.statusBar().showMessage(
                 u("{0} Dateien nach {1} gelegt — dort sind sie änderbar").format(len(self.ausgelegt), pfade.eigener_datenordner()),
                 12000,
             )
+
+    # -- Einstellungen oeffnen ---------------------------------------------
+
+    def _einstellungen_oeffnen(self) -> QSettings:
+        """Die Verteilerly.conf - und was ist, wenn sie sich nicht lesen laesst.
+
+        Ein QSettings, das seine Datei nicht lesen kann, sagt das **nur**
+        in ``status()``: danach verhaelt es sich wie ein frisches
+        Programm, und das erste ``setValue`` schreibt die Vorgaben in die
+        Datei - die Einstellungen des Anwenders waeren weg, ohne dass
+        jemand etwas gemerkt haette. Liegt die Datei also da und gibt doch
+        nichts her, wird in eine wegwerfbare Datei geschrieben: lieber ein
+        Lauf ohne Gedaechtnis als eine ueberschriebene Conf. Gesagt wird
+        es dem Anwender mit den anderen Hinweisen des Starts.
+        """
+        datei = pfade.einstellungsdatei()
+        einstellungen = QSettings(str(datei), QSettings.Format.IniFormat)
+        self.einstellungen_grund = self._conf_grund(einstellungen, datei)
+        if not self.einstellungen_grund:
+            return einstellungen
+        ersatz = (
+            pathlib.Path(tempfile.gettempdir())
+            / f"Verteilerly-ungemerkt-{os.getpid()}.conf"
+        )
+        ersatz.unlink(missing_ok=True)
+        return QSettings(str(ersatz), QSettings.Format.IniFormat)
+
+    @staticmethod
+    def _conf_grund(einstellungen: QSettings, datei: pathlib.Path) -> str:
+        """Warum diese Conf nicht zu gebrauchen ist - oder ein leerer Satz.
+
+        Eine Datei, die es nicht gibt, ist kein Fehler: so faengt jeder
+        erste Start an. Verdaechtig ist eine Datei, die da ist und
+        trotzdem keinen einzigen Wert hergibt - dann hat Qt sie entweder
+        nicht gelesen oder nicht verstanden.
+        """
+        if einstellungen.status() == QSettings.Status.AccessError:
+            return u("kein Zugriff")
+        if einstellungen.status() == QSettings.Status.FormatError:
+            return u("die Datei ist nicht lesbar")
+        try:
+            vorhanden = datei.is_file() and datei.stat().st_size > 0
+        except OSError:
+            return u("kein Zugriff")
+        if vorhanden and not einstellungen.allKeys():
+            return u("kein Wert darin gelesen")
+        return ""
 
     # -- Aufbau ------------------------------------------------------------
 

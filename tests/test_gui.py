@@ -4024,3 +4024,65 @@ class TestRueckgaengig(unittest.TestCase):
         zurueck.click()
         self.assertEqual(self._leiste_des_kabels(), 1)
         self.assertTrue(f.leistenansicht.wiederherstellen_knopf.isEnabled())
+
+
+@unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
+class TestUnlesbareConf(unittest.TestCase):
+    """Eine Conf, die sich nicht lesen lässt, wird nicht überschrieben."""
+
+    def setUp(self):
+        self.ordner = tempfile.TemporaryDirectory()
+        self.addCleanup(self.ordner.cleanup)
+        self.datei = pathlib.Path(self.ordner.name) / "Verteilerly.conf"
+
+    def _grund(self):
+        from PySide6.QtCore import QSettings
+        from verteilerly.gui.hauptfenster import Hauptfenster
+
+        einstellungen = QSettings(str(self.datei), QSettings.Format.IniFormat)
+        return Hauptfenster._conf_grund(einstellungen, self.datei)
+
+    def test_eine_fehlende_datei_ist_kein_fehler(self):
+        """So fängt jeder erste Start an."""
+        self.assertEqual(self._grund(), "")
+
+    def test_eine_gelesene_datei_ist_kein_fehler(self):
+        self.datei.write_text("[General]\nthema=dunkel\n", encoding="utf-8")
+        self.assertEqual(self._grund(), "")
+
+    def test_eine_datei_ohne_werte_faellt_auf(self):
+        """Bytes, aber kein Wert - dann hat Qt sie nicht verstanden."""
+        self.datei.write_bytes(b"\x00\x01\x02 kein Ini\n[[[\nthema\n")
+        self.assertTrue(self._grund())
+
+    def test_das_fenster_schreibt_nicht_in_eine_unlesbare_datei(self):
+        from unittest import mock
+
+        from verteilerly import pfade
+        from verteilerly.gui import hauptfenster as hf
+
+        self.datei.write_bytes(b"\x00\x01\x02 kein Ini\n[[[\nthema\n")
+        vorher = self.datei.read_bytes()
+        gezeigt = []
+        with mock.patch.object(pfade, "einstellungsdatei", lambda: self.datei), \
+             mock.patch.object(hf.QMessageBox, "warning",
+                               lambda *a, **k: gezeigt.append(a)):
+            fenster = hf.Hauptfenster()
+            self.addCleanup(fenster.close)
+            self.assertTrue(fenster.einstellungen_grund)
+            self.assertNotEqual(
+                pathlib.Path(fenster.einstellungen.fileName()), self.datei
+            )
+            fenster.thema_anwenden("dunkel")
+            fenster.einstellungen.sync()
+        self.assertEqual(self.datei.read_bytes(), vorher)
+        self.assertTrue(gezeigt, "der Anwender erfährt davon")
+
+    def test_der_startvermerk_sagt_woher_der_lauf_seine_werte_nahm(self):
+        from verteilerly.erweiterungen.protokoll import Protokoll
+
+        zeilen = Protokoll()._startzeilen(None)
+        self.assertTrue(zeilen[0].startswith("Verteilerly "))
+        beisammen = "\n".join(zeilen)
+        for stueck in ("Programm:", "Einstellungen:", "Aufruf:", "Arbeitsverzeichnis"):
+            self.assertIn(stueck, beisammen)

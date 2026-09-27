@@ -848,6 +848,13 @@ die gemerkten Projektdaten und die Vorgabe, wie neue Verteiler ihre Leisten
 beschriften. Was den einzelnen Verteiler betrifft, steht
 dagegen in der Projektdatei.</p>
 
+<p><b>Lässt sich die Datei nicht lesen</b> — sie ist halb geschrieben, gesperrt
+oder liegt an einem Ort, an dem das Programm nicht lesen darf —, dann
+<b>bleibt sie unberührt</b>: das Programm sagt es beim Start und arbeitet für
+diesen Lauf mit wegwerfbaren Einstellungen. Es schreibt also keine Vorgaben
+über Ihre Werte. Sehen Sie sich die Datei dann an und legen Sie sie notfalls
+beiseite; beim nächsten Start wird sie neu angelegt.</p>
+
 <p><b>Sichern und Einspielen</b> — <b>Einstellungen ▸ Vorlagen und
 Einstellungen sichern…</b> packt Verteilervorlagen, Blattvorlagen, Kabeltypen
 und die Einstellungen in eine ZIP-Datei; <b>… einspielen…</b> holt sie
@@ -927,8 +934,13 @@ eingebaute Erweiterung <i>Protokoll</i> schreibt darum beides in die Datei
 
 <ul>
 <li><b>Ereignisse</b> — jede Meldung der Statuszeile, mit Zeitpunkt. Jeder Lauf
-beginnt mit einer Zeile aus Fassung, Python und Qt; wer später einen Bericht
-liest, weiß damit sofort, welcher Stand ihn erzeugt hat.</li>
+beginnt mit vier Zeilen: Fassung, Python und Qt; der Pfad des laufenden
+Programms; die benutzte <code>Verteilerly.conf</code> samt Zahl der Werte
+darin; und der Aufruf mit dem Arbeitsverzeichnis. Wer später einen Bericht
+liest, weiß damit nicht nur, welcher Stand ihn erzeugt hat, sondern auch,
+woher dieser Lauf seine Einstellungen nahm — zwei Starts auf verschiedenen
+Wegen (von Hand, per Doppelklick auf eine Projektdatei) lassen sich so
+vergleichen.</li>
 <li><b>Unerwartete Fehler</b> — was kein Teil des Programms abgefangen hat,
 kommt samt Fehlerbericht in die Datei. Der Anwender bekommt ein Fenster mit dem
 Satz und dem Pfad zum Protokoll; <b>das Programm läuft weiter</b>.</li>

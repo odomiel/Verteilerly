@@ -653,6 +653,16 @@ die Namen der mitgelieferten Vorlagen bleiben deutsch. Was auf dem Blatt steht,
 ist die Arbeit des Anwenders — die Wörter des Schriftfeldes sind ohnehin je
 Projekt änderbar.
 
+**Eine unlesbare `Verteilerly.conf` wird nicht überschrieben.** Ein
+QSettings, das seine Datei nicht lesen kann, meldet das nur in seinem
+Status und verhält sich danach wie ein frisches Programm — der erste
+gesetzte Wert schriebe die Vorgaben über die Einstellungen des Anwenders.
+Liegt die Datei also da und gibt doch keinen Wert her, sagt das Programm es
+beim Start und arbeitet für diesen Lauf mit einer wegwerfbaren Datei. Wo ein
+Lauf seine Werte hernahm, hält die Protokoll-Erweiterung in ihren
+Startzeilen fest: Programmpfad, benutzte Conf samt Zahl der Werte, Aufruf und
+Arbeitsverzeichnis — damit lassen sich zwei Startwege vergleichen.
+
 *Hilfe ▸ Über Verteilerly* führt jeden Baustein mit Fassung, Lizenz und
 Aufgabe auf — Python, PySide6, Qt, ReportLab, openpyxl, PyYAML —, dazu
 System, Arbeitsordner und Einstellungsdatei. Die Fassungen liest

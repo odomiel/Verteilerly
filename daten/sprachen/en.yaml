@@ -534,6 +534,12 @@ mitgelieferte Blattvorlagen wiederhergestellt: supplied sheet templates restored
 ' beanstandet': ' with remarks'
 ? "Was nicht stimmt, steht dahinter. Die übrigen Vorlagen stehen weiter zur Wahl.\n\n{0}"
 : "What is wrong with it stands behind it. The remaining templates are still available.\n\n{0}"
+Einstellungen: Settings
+? "Die Einstellungen in {0} ließen sich nicht lesen ({1}).\n\nDie Datei bleibt unberührt — was Sie in diesem Lauf einstellen, wird darum nicht gemerkt. Schließen Sie das Programm, sehen Sie sich die Datei an, und legen Sie sie notfalls beiseite: beim nächsten Start wird sie neu angelegt."
+: "The settings in {0} could not be read ({1}).\n\nThe file is left untouched — what you set in this run is therefore not remembered. Close the program, take a look at the file, and put it aside if need be: it will be created anew on the next start."
+kein Zugriff: no access
+die Datei ist nicht lesbar: the file cannot be read
+kein Wert darin gelesen: no value read from it
 '{0}: {1} kennt das Programm nicht{2} - Tippfehler oder neuere Fassung?': '{0}: the program does not know {1}{2} - a typo, or a newer version?'
 ' dazu': ' as well'
 ' in dieser Datei': ' in this file'

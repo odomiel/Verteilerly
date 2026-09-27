@@ -825,6 +825,12 @@ remembered project data and the default for how new frames label their
 strips. What concerns the single frame is in the project file
 instead.</p>
 
+<p><b>If the file cannot be read</b> — it is half written, locked, or lies in a
+place the program may not read —, then it <b>is left untouched</b>: the program
+says so at startup and works with throw-away settings for that run. So it does
+not write defaults over your values. Take a look at the file then and put it
+aside if need be; it will be created anew on the next start.</p>
+
 <p><b>Backup and restore</b> — <b>Settings ▸ Back up templates and
 settings…</b> packs frame templates, sheet templates, cable types and the
 settings into a ZIP file; <b>… restore…</b> brings them back. In both
@@ -904,8 +910,12 @@ extension <i>Log</i> therefore writes both into the file
 
 <ul>
 <li><b>Events</b> — every message of the status bar, with its time. Each run
-begins with a line of version, Python and Qt; whoever reads a report later
-knows at once which build produced it.</li>
+begins with four lines: version, Python and Qt; the path of the running
+program; the <code>Verteilerly.conf</code> in use together with the number of
+values in it; and the invocation with the working directory. Whoever reads a
+report later knows not only which build produced it, but also where this run
+took its settings from — two starts by different routes (by hand, by a double
+click on a project file) can be compared that way.</li>
 <li><b>Unexpected errors</b> — whatever no part of the program caught lands in
 the file together with its report. The user gets a window with the sentence and
 the path to the log; <b>the program keeps running</b>.</li>

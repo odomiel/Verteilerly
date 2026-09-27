@@ -708,13 +708,19 @@ class TestProtokollerweiterung(unittest.TestCase):
             pathlib.Path(self._ordner.name) / "Verteilerly.log"
         )
 
-    def test_die_startzeile_nennt_fassung_python_und_qt(self):
+    def test_die_startzeilen_nennen_fassung_python_und_qt(self):
         from verteilerly.version import VERSION
 
-        zeile = self.protokoll._startzeile()
+        zeile = self.protokoll._startzeilen()[0]
         self.assertIn(VERSION, zeile)
         self.assertIn("Python", zeile)
         self.assertIn("Qt", zeile)
+
+    def test_die_startzeilen_sagen_woher_die_einstellungen_kamen(self):
+        """Damit sich zwei Startwege am Protokoll vergleichen lassen."""
+        beisammen = "\n".join(self.protokoll._startzeilen())
+        for stueck in ("Programm:", "Einstellungen:", "Aufruf:", "Arbeitsverzeichnis"):
+            self.assertIn(stueck, beisammen)
 
     def test_ein_ereignis_landet_in_der_datei(self):
         self.protokoll.ereignis("Neuer Verteiler: 40 DA")

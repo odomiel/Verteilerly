@@ -19,6 +19,7 @@ Programm weiter, als gaebe es die Erweiterung nicht.
 
 from __future__ import annotations
 
+import pathlib
 import sys
 import traceback
 
@@ -51,7 +52,8 @@ class Protokoll(Erweiterung):
 
     def einrichten(self, programm) -> None:
         self.schreiber = Schreiber(self.datei())
-        self.schreiber.schreiben(START, self._startzeile())
+        for zeile in self._startzeilen(programm):
+            self.schreiber.schreiben(START, zeile)
         self._haken_setzen()
         self._an_die_statuszeile(programm)
         programm.menueeintrag(
@@ -60,11 +62,15 @@ class Protokoll(Erweiterung):
             hinweis=u("Zeigt, was das Programm zuletzt gemeldet hat"),
         )
 
-    def _startzeile(self) -> str:
-        """Womit jeder Lauf anfaengt: Fassung, Python und Qt.
+    def _startzeilen(self, programm=None) -> list[str]:
+        """Womit jeder Lauf anfaengt.
 
-        Wer spaeter einen Bericht liest, will zuerst wissen, welcher
-        Stand ihn erzeugt hat.
+        Wer spaeter einen Bericht liest, will zuerst wissen, welcher Stand
+        ihn erzeugt hat - und dann, woher dieser Lauf seine Einstellungen
+        nahm. Denn ein Programm laesst sich auf mehrere Weisen starten:
+        von Hand, aus der Dateiverwaltung, aus einem anderen Ordner. Wenn
+        zwei Starts verschiedene Orte oder verschieden viele Werte melden,
+        steht der Grund dafuer hier schwarz auf weiss.
         """
         teile = [f"Verteilerly {VERSION}", f"Python {sys.version.split()[0]}"]
         try:
@@ -73,7 +79,31 @@ class Protokoll(Erweiterung):
             teile.append(f"Qt {QtCore.qVersion()}")
         except Exception:      # noqa: BLE001 - ohne Qt eben ohne Qt
             pass
-        return " · ".join(teile)
+        zeilen = [" · ".join(teile)]
+        woher = "gepackt" if pfade.gepackt() else "aus dem Quelltext"
+        zeilen.append(f"Programm: {sys.executable} ({woher})")
+        zeilen.append(f"Einstellungen: {self._einstellungsvermerk(programm)}")
+        aufruf = " ".join(sys.argv[1:]) or "ohne Argumente"
+        zeilen.append(f"Aufruf: {aufruf} · Arbeitsverzeichnis {pathlib.Path.cwd()}")
+        return zeilen
+
+    @staticmethod
+    def _einstellungsvermerk(programm=None) -> str:
+        """Welche Conf gilt und wie viel darin stand.
+
+        Gefragt wird das Fenster: es hat die Datei geoeffnet und weiss
+        auch, wenn dabei etwas nicht stimmte. Ohne Fenster bleibt der Weg
+        ueber ``pfade``.
+        """
+        fenster = getattr(programm, "fenster", None)
+        einstellungen = getattr(fenster, "einstellungen", None)
+        if einstellungen is None:
+            return f"{pfade.einstellungsdatei()} — nicht geöffnet"
+        stueck = f"{einstellungen.fileName()} — {len(einstellungen.allKeys())} Werte"
+        grund = getattr(fenster, "einstellungen_grund", "")
+        if grund:
+            stueck += f"; die eigentliche Datei war nicht zu lesen ({grund})"
+        return stueck
 
     def datei(self):
         """Wohin geschrieben wird - in den Arbeitsordner, wie alles andere."""
