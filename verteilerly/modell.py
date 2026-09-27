@@ -964,6 +964,10 @@ BRIEFKOPF_FELDER = (
     "dokumenttitel",
 )
 
+#: Die Felder, in denen ein Datum steht - am Namen zu erkennen. Wer ein
+#: weiteres Datumsfeld einfuehrt, nennt es ebenso ``*_am``.
+DATUMSFELDER = tuple(name for name in BRIEFKOPF_FELDER if name.endswith("_am"))
+
 BRIEFKOPF_BESCHRIFTUNG = {
     "dokumenttitel": "Dokumenttitel",
     "firma": "Firma",

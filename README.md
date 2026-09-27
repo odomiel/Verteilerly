@@ -134,7 +134,14 @@ stehen schon in den Feldern und
 sind dort für diesen Verteiler zu ändern, samt Haken. Getipptes gilt, die
 Vorgabe ergänzt nur, was fehlt. Es sind dieselben Felder wie unter
 *Bearbeiten ▸ Projektdaten* — ein Bauteil für beide
-Dialoge, damit sie nicht auseinanderlaufen.
+Dialoge, damit sie nicht auseinanderlaufen. Neben jedem **Datumsfeld**
+(`DATUMSFELDER`, am Namen `*_am` erkennbar) steht ein Knopf **Heute**, der dort
+das heutige Datum einträgt und das Feld anhakt — je Feld einer, denn erstellt
+und geprüft sind selten derselbe Tag. In den *Vorgaben für neue Verteiler*
+fehlen sie (`mit_datumsknoepfen=False`): ein Datum, das dort stehen bleibt,
+wäre im nächsten Verteiler das von vorgestern. Geschrieben wird die deutsche
+Schreibweise, denn das Datum landet auf dem Blatt und das Blatt folgt nicht der
+Sprache der Oberfläche.
 
 Ein neuer Verteiler entsteht aus einer Vorlage oder aus eigenen Angaben;
 die DA je Leiste stehen dort als 8, 10 und 20 DA zur Wahl, alles andere

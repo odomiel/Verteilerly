@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import datetime as _datetime
+
 from PySide6.QtCore import QPoint, Qt
 from PySide6.QtGui import (
     QColor,
@@ -34,6 +36,7 @@ from PySide6.QtWidgets import (
     QSpinBox,
     QSplitter,
     QTableWidget,
+    QToolButton,
     QTableWidgetItem,
     QTextBrowser,
     QTextEdit,
@@ -56,6 +59,7 @@ from ..modell import (
     BLATTBESCHRIFTUNG,
     BRIEFKOPF_BESCHRIFTUNG,
     BRIEFKOPF_FELDER,
+    DATUMSFELDER,
     LEISTEN_BUCHSTABEN,
     LEISTEN_ZAHLEN,
     Kabel,
@@ -1576,6 +1580,11 @@ class SuchDialog(PassenderDialog):
         self.accept()
 
 
+def heutiges_datum() -> str:
+    """Heute in der Schreibweise, die auf dem Blatt steht."""
+    return _datetime.date.today().strftime("%d.%m.%Y")
+
+
 class ProjektdatenFelder(QGroupBox):
     """Die Projektdatenfelder mit ihren Haken - in beiden Dialogen dasselbe.
 
@@ -1591,6 +1600,7 @@ class ProjektdatenFelder(QGroupBox):
         titel: str = "Projektdaten — stehen auf jedem Blatt",
         parent: QWidget | None = None,
         inhalt_hakt_an: bool = True,
+        mit_datumsknoepfen: bool = True,
     ) -> None:
         super().__init__(u(titel), parent)
         briefkopf = briefkopf or {}
@@ -1599,9 +1609,15 @@ class ProjektdatenFelder(QGroupBox):
         # meint es auch. Abwaehlen bleibt moeglich - der Haken
         # folgt dem Tippen, nicht dem Loeschen.
         self.inhalt_hakt_an = inhalt_hakt_an
+        # In den Vorgaben fuer neue Verteiler haben sie nichts zu suchen:
+        # ein Datum, das dort stehen bleibt, waere in jedem naechsten
+        # Verteiler das von vorgestern.
+        self.mit_datumsknoepfen = mit_datumsknoepfen
 
         self.felder: dict[str, QWidget] = {}
         self.haken: dict[str, QCheckBox] = {}
+        #: Je Datumsfeld ein Knopf, der das heutige Datum einsetzt.
+        self.datumsknoepfe: dict[str, QToolButton] = {}
         form = QFormLayout()
         for name in BRIEFKOPF_FELDER:
             feld = self._feld_bauen(name, briefkopf.get(name, ""))
@@ -1618,7 +1634,12 @@ class ProjektdatenFelder(QGroupBox):
                 self._mithaken(feld, haken)
             self.felder[name] = feld
             self.haken[name] = haken
-            form.addRow(haken, feld)
+            form.addRow(
+                haken,
+                self._mit_datumsknopf(name, feld)
+                if mit_datumsknoepfen and name in DATUMSFELDER
+                else feld,
+            )
 
         alle_an = QPushButton(u("Alle"))
         alle_an.clicked.connect(lambda: self.alle_haken(True))
@@ -1679,6 +1700,45 @@ class ProjektdatenFelder(QGroupBox):
     def alle_haken(self, an: bool) -> None:
         for haken in self.haken.values():
             haken.setChecked(an)
+
+    def datum_einsetzen(self, feld: str, datum: str = "") -> str:
+        """Traegt in *dieses* Datumsfeld ein Datum ein - heute, wenn keines kommt.
+
+        Geschrieben wird die deutsche Schreibweise: das Datum landet auf
+        dem Blatt, und das Blatt ist das Dokument des Anwenders - es
+        folgt nicht der Sprache der Oberflaeche. Der Haken geht mit an:
+        ein ausgefuelltes Feld soll auch erscheinen.
+        """
+        datum = datum or heutiges_datum()
+        eingabe = self.felder.get(feld)
+        if eingabe is None:
+            return datum
+        eingabe.setText(datum)
+        # setText meldet keine Eingabe - der Haken folgt hier von Hand.
+        self.haken[feld].setChecked(True)
+        return datum
+
+    def _mit_datumsknopf(self, name: str, feld: QWidget) -> QWidget:
+        """Legt einen Knopf neben das Feld, der das heutige Datum einsetzt.
+
+        Je Feld einer: *Erstellt* und *Geprueft* liegen selten am selben
+        Tag, und wer nur eines braucht, soll nicht die anderen aufraeumen
+        muessen.
+        """
+        knopf = QToolButton()
+        knopf.setText(u("Heute"))
+        knopf.setToolTip(u("Trägt hier das heutige Datum ein"))
+        knopf.clicked.connect(
+            lambda _an=False, feldname=name: self.datum_einsetzen(feldname)
+        )
+        self.datumsknoepfe[name] = knopf
+        huelle = QWidget()
+        lage = QHBoxLayout(huelle)
+        lage.setContentsMargins(0, 0, 0, 0)
+        lage.setSpacing(4)
+        lage.addWidget(feld, 1)
+        lage.addWidget(knopf)
+        return huelle
 
     def werte(self) -> dict[str, str]:
         """Die ausgefuellten Felder - leere bleiben weg."""
@@ -1836,6 +1896,7 @@ class ProjektdatenDialog(PassenderDialog):
         projektdaten = ProjektdatenFelder(
             projekt.briefkopf,
             {name for name in BRIEFKOPF_FELDER if not projekt.sichtbar(name)},
+            mit_datumsknoepfen=not vorgaben,
         )
         self.projektdaten = projektdaten
         # Die Tests und der Rest des Dialogs greifen weiter direkt zu.

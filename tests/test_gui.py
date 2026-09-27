@@ -2563,6 +2563,69 @@ class TestMenuezustaende(unittest.TestCase):
 
 
 @unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
+class TestDatumEinsetzen(unittest.TestCase):
+    """Das heutige Datum in alle Datumsfelder auf einmal."""
+
+    def setUp(self):
+        from verteilerly.gui.dialoge import ProjektdatenFelder
+
+        self.felder = ProjektdatenFelder({"firma": "Musterfirma"})
+        self.addCleanup(self.felder.deleteLater)
+
+    def test_nur_dieses_feld_und_sein_haken(self):
+        import datetime
+
+        from verteilerly.modell import DATUMSFELDER
+
+        heute = self.felder.datum_einsetzen("stand_am")
+        self.assertEqual(heute, datetime.date.today().strftime("%d.%m.%Y"))
+        werte = self.felder.werte()
+        self.assertEqual(werte["stand_am"], heute)
+        self.assertTrue(self.felder.haken["stand_am"].isChecked())
+        for name in DATUMSFELDER:
+            if name != "stand_am":
+                with self.subTest(feld=name):
+                    self.assertNotIn(name, werte)
+        self.assertEqual(werte["firma"], "Musterfirma")
+
+    def test_nur_datumsfelder_tragen_einen_knopf(self):
+        from verteilerly.modell import DATUMSFELDER
+
+        self.assertEqual(sorted(self.felder.datumsknoepfe), sorted(DATUMSFELDER))
+        for name, knopf in self.felder.datumsknoepfe.items():
+            with self.subTest(feld=name):
+                self.assertEqual(knopf.text(), "Heute")
+
+    def test_in_den_vorgaben_gibt_es_sie_nicht(self):
+        """Ein Datum in den Vorgaben wäre im nächsten Verteiler von vorgestern."""
+        from verteilerly.gui.dialoge import ProjektdatenDialog
+        from verteilerly.modell import Projekt, Verteiler
+
+        projekt = Projekt(verteiler=Verteiler.aus_geometrie(1, 2, 10))
+        fuer_vorgaben = ProjektdatenDialog(projekt, vorgaben=True)
+        self.addCleanup(fuer_vorgaben.done, 0)
+        self.assertEqual(fuer_vorgaben.projektdaten.datumsknoepfe, {})
+        # Im Projektdatendialog dagegen schon.
+        fuer_projekt = ProjektdatenDialog(projekt)
+        self.addCleanup(fuer_projekt.done, 0)
+        self.assertTrue(fuer_projekt.projektdaten.datumsknoepfe)
+
+    def test_ein_gegebenes_datum_wird_genommen(self):
+        """So lässt sich die Probe aufs Exempel ohne Blick auf die Uhr machen."""
+        self.felder.datum_einsetzen("stand_am", "01.01.2000")
+        self.assertEqual(self.felder.werte()["stand_am"], "01.01.2000")
+
+    def test_die_deutsche_schreibweise_steht_auf_dem_blatt(self):
+        """Das Datum gehört dem Dokument, nicht der Sprache der Oberfläche."""
+        from verteilerly import sprachen
+
+        vorher = sprachen.sprache()
+        self.addCleanup(sprachen.sprache_setzen, vorher)
+        sprachen.sprache_setzen("en")
+        datum = self.felder.datum_einsetzen("erstellt_am")
+        self.assertRegex(datum, r"^\d\d\.\d\d\.\d{4}$")
+
+
 class TestProjektdatenDialog(unittest.TestCase):
     """Felder an- und abwählen, ohne sie zu löschen."""
 
@@ -2936,6 +2999,27 @@ class TestNeuerVerteilerDialog(unittest.TestCase):
             self.vorlagen, None, pathlib.Path(self.ordner.name)
         )
         self.dialog.eigen.setChecked(True)
+
+    def test_je_datumsfeld_ein_heute_knopf(self):
+        """Jedes Datum für sich: erstellt und geprüft sind selten derselbe Tag."""
+        import datetime
+
+        from verteilerly.modell import DATUMSFELDER
+
+        d = self.dialog
+        self.assertEqual(sorted(d.projektdaten.datumsknoepfe), sorted(DATUMSFELDER))
+
+        d.projektdaten.datumsknoepfe["erstellt_am"].click()
+        heute = datetime.date.today().strftime("%d.%m.%Y")
+        briefkopf = d.projekt().briefkopf
+        self.assertEqual(briefkopf.get("erstellt_am"), heute)
+        # Ausgefüllt heißt angehakt - sonst stünde es auf keinem Blatt.
+        self.assertNotIn("erstellt_am", d.projekt().ausgeblendet)
+        # Die anderen Datumsfelder bleiben leer, bis man sie selbst drückt.
+        for name in DATUMSFELDER:
+            if name != "erstellt_am":
+                with self.subTest(feld=name):
+                    self.assertNotIn(name, briefkopf)
 
     def test_buchstaben_statt_zahlen_steht_im_dialog(self):
         """Der Haken gilt für beide Wege - Vorlage wie eigene Geometrie."""
