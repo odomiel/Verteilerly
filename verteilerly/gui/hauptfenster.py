@@ -1933,6 +1933,23 @@ class Hauptfenster(QMainWindow):
         except (ModellFehler, OSError) as fehler:
             QMessageBox.critical(self, u("Nicht angemeldet"), str(fehler))
             return
+        if not verknuepfung.angemeldet():
+            # Windows schuetzt die Wahl des Anwenders („Öffnen mit ▸
+            # Immer") mit einer Pruefsumme - kein Programm kann sie setzen.
+            # Also sagen, wo sie umzustellen ist, statt es zu versuchen.
+            QMessageBox.information(
+                self, u("Projektdateien"),
+                u("Eingetragen ist Verteilerly jetzt — geöffnet wird aber "
+                  "weiter ein anderes Programm, denn die Wahl im "
+                  "Dateimanager geht vor. Stellen Sie sie dort um: "
+                  "Rechtsklick auf eine Projektdatei ▸ Öffnen mit ▸ Andere "
+                  "App ▸ Immer diese App.\n\nGeschrieben wurde:\n{0}").format(
+                      "\n".join(geschrieben)),
+            )
+            self.statusBar().showMessage(
+                u("Eingetragen — die Wahl im Dateimanager geht noch vor"), 8000
+            )
+            return
         QMessageBox.information(
             self, u("Projektdateien"),
             u("Ein Doppelklick auf eine Projektdatei öffnet jetzt "

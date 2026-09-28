@@ -741,5 +741,9 @@ Verteilerly ist bereits angemeldet. Erneut eintragen?: Verteilerly is already re
 : "A double click on a project file currently opens {0} — switch over under Tools"
 ? "Ein Doppelklick auf eine Projektdatei öffnet Verteilerly nicht mehr — unter Tools wieder anmelden"
 : "A double click on a project file no longer opens Verteilerly — register again under Tools"
+? "Eingetragen ist Verteilerly jetzt — geöffnet wird aber weiter ein anderes Programm, denn die Wahl im Dateimanager geht vor. Stellen Sie sie dort um: Rechtsklick auf eine Projektdatei ▸ Öffnen mit ▸ Andere App ▸ Immer diese App.\n\nGeschrieben wurde:\n{0}"
+: "Verteilerly is registered now — but a different program still opens the files, because the choice in the file manager comes first. Change it there: right-click a project file ▸ Open with ▸ Choose another app ▸ Always use this app.\n\nWritten was:\n{0}"
+Eingetragen — die Wahl im Dateimanager geht noch vor: Registered — the choice in the file manager still
+  comes first
 Verteilerly öffnet jetzt seine Projektdateien selbst: Verteilerly now opens its project files itself
 '{0} liess sich nicht schreiben: {1}': '{0} could not be written: {1}'

@@ -2085,13 +2085,13 @@ class TestMenuezustaende(unittest.TestCase):
         self.assertEqual(f.aktion_verknuepfen.isEnabled(), verknuepfung.moeglich())
         with mock.patch.object(
             modul.verknuepfung, "anmelden", return_value=["/tmp/x.desktop"]
-        ) as angemeldet, mock.patch.object(
-            modul.verknuepfung, "angemeldet", return_value=False
+        ) as geschrieben, mock.patch.object(
+            modul.verknuepfung, "angemeldet", side_effect=[False, True]
         ), mock.patch.object(
             modul.verknuepfung, "anderes_programm", return_value=""
         ), mock.patch.object(QMessageBox, "information") as gezeigt:
             f.verknuepfung_anmelden()
-        self.assertTrue(angemeldet.called)
+        self.assertTrue(geschrieben.called)
         self.assertIn("/tmp/x.desktop", gezeigt.call_args[0][2])
         # Und der Hinweis auf die Ausgabe mit Starter steht dabei.
         self.assertIn("PortableApps", gezeigt.call_args[0][2])
@@ -2159,6 +2159,22 @@ class TestMenuezustaende(unittest.TestCase):
                                return_value="/stick/VerteilerlyPortable.exe"):
             f._zuordnung_pruefen()
         self.assertIn("VerteilerlyPortable.exe", f.statusBar().currentMessage())
+
+    def test_wenn_die_wahl_des_anwenders_vorgeht_wird_es_gesagt(self):
+        """Windows schützt »Öffnen mit ▸ Immer« - das kann kein Programm setzen."""
+        from verteilerly.gui import hauptfenster as modul
+
+        f = self.fenster
+        with mock.patch.object(
+            modul.verknuepfung, "anmelden", return_value=["HKCU\\…"]
+        ), mock.patch.object(
+            modul.verknuepfung, "angemeldet", return_value=False
+        ), mock.patch.object(
+            modul.verknuepfung, "anderes_programm", return_value=""
+        ), mock.patch.object(QMessageBox, "information") as gezeigt:
+            f.verknuepfung_anmelden()
+        self.assertIn("Dateimanager", gezeigt.call_args[0][2])
+        self.assertIn("Immer diese App", gezeigt.call_args[0][2])
 
     def test_der_start_sagt_es_wenn_die_zuordnung_aufgehoben_wurde(self):
         """Von außen weggenommen - unsere Einträge stehen noch da."""

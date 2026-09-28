@@ -310,7 +310,11 @@ nicht was wir geschrieben haben: unter Windows zählt zuerst
 `FileExts\.vtly\UserChoice` (das setzt „Öffnen mit ▸ Immer"), unter Linux die
 `mimeapps.list` samt `[Removed Associations]`. Hebt jemand die Zuordnung von
 außen auf, liegen unsere Einträge weiter da — `aufgehoben()` erkennt genau
-diesen Fall, und der Start sagt es in der Statuszeile. **Nicht** taugt der Weg
+diesen Fall, und der Start sagt es in der Statuszeile. Unter Linux schreibt
+`anmelden()` die Wahl in die `mimeapps.list` und nimmt einen Widerruf zurück —
+sonst liefe „wieder anmelden" ins Leere. Unter Windows lässt sich die
+`UserChoice` nicht setzen (Windows sichert sie mit einer Prüfsumme); bleibt sie
+bestehen, sagt der Dialog, wo sie umzustellen ist. **Nicht** taugt der Weg
 für eine Ausgabe mit Starter:
 die PortableApps-Fassung lässt `VerteilerlyPortable.exe` erst einrichten und
 dann `App\Verteilerly\Verteilerly.exe` laufen — eingetragen würde die innere

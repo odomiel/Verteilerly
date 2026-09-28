@@ -42,17 +42,29 @@ class TestLinuxAnmelden(unittest.TestCase):
         self._ordner = tempfile.TemporaryDirectory()
         self.addCleanup(self._ordner.cleanup)
         self.ordner = pathlib.Path(self._ordner.name)
-        stelle = mock.patch.dict(os.environ, {"XDG_DATA_HOME": str(self.ordner)})
+        stelle = mock.patch.dict(
+            os.environ,
+            {
+                "XDG_DATA_HOME": str(self.ordner),
+                "XDG_CONFIG_HOME": str(self.ordner / "conf"),
+            },
+        )
         stelle.start()
         self.addCleanup(stelle.stop)
 
-    def test_beide_dateien_entstehen(self):
+    def test_die_drei_dateien_entstehen(self):
+        """Dateityp, Programmeintrag - und die Wahl in der mimeapps.list."""
         geschrieben = verknuepfung.anmelden()
         mime = self.ordner / "mime" / "packages" / "verteilerly.xml"
         desktop = self.ordner / "applications" / "verteilerly.desktop"
+        mimeapps = self.ordner / "conf" / "mimeapps.list"
         self.assertTrue(mime.is_file())
         self.assertTrue(desktop.is_file())
-        self.assertEqual(geschrieben, [str(mime), str(desktop)])
+        self.assertEqual(geschrieben, [str(mime), str(desktop), str(mimeapps)])
+        self.assertIn(
+            f"{verknuepfung.MIMETYP}={verknuepfung.DESKTOPDATEI}",
+            mimeapps.read_text(encoding="utf-8"),
+        )
 
     def test_der_dateityp_kennt_beide_endungen(self):
         """Gespeichert wird `.vtly`, gelesen auch die alte Schreibweise."""
@@ -95,7 +107,7 @@ class TestLinuxAnmelden(unittest.TestCase):
             raise RuntimeError("kein Bild")
 
         geschrieben = verknuepfung.anmelden(kaputt)
-        self.assertEqual(len(geschrieben), 2)
+        self.assertEqual(len(geschrieben), 3)
         self.assertTrue(verknuepfung.angemeldet())
 
     def test_was_sich_nicht_schreiben_laesst_wird_gemeldet(self):
@@ -232,6 +244,32 @@ class TestVonAussenAufgehoben(unittest.TestCase):
         )
         self.assertTrue(verknuepfung.angemeldet())
         self.assertFalse(verknuepfung.aufgehoben())
+
+    def test_wieder_anmelden_hebt_den_widerruf_auf(self):
+        """Sonst liefe der Rat »unter Tools wieder anmelden« ins Leere."""
+        self._mimeapps(
+            "[Removed Associations]\n"
+            f"{verknuepfung.MIMETYP}={verknuepfung.DESKTOPDATEI}\n"
+        )
+        self.assertTrue(verknuepfung.aufgehoben())
+        verknuepfung.anmelden()
+        self.assertTrue(verknuepfung.angemeldet())
+        self.assertFalse(verknuepfung.aufgehoben())
+
+    def test_wieder_anmelden_holt_die_vorgabe_zurueck(self):
+        """Auch wenn ein anderes Programm als Vorgabe eingetragen war."""
+        self._mimeapps(
+            "[Default Applications]\n"
+            f"{verknuepfung.MIMETYP}=texteditor.desktop\n"
+            "text/plain=texteditor.desktop\n"
+        )
+        verknuepfung.anmelden()
+        self.assertTrue(verknuepfung.angemeldet())
+        # Was anderen Typen gehört, bleibt unberührt.
+        inhalt = (self.ordner / "conf" / "mimeapps.list").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("text/plain=texteditor.desktop", inhalt)
 
     def test_ohne_eigene_eintraege_ist_nichts_aufgehoben(self):
         """Der erste Start hat nie angemeldet - da fehlt nichts."""

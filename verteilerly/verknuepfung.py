@@ -134,6 +134,13 @@ def _linux_anmelden(symbol_schreiben=None) -> list[str]:
             ) from None
         getan.append(str(ziel))
     desktop.chmod(0o755)
+    # Die Wahl des Anwenders geht der Anmeldung vor - also wird sie
+    # mitgeschrieben. Ohne das liefe „wieder anmelden" ins Leere: ein
+    # weggenommener Eintrag (`[Removed Associations]`) gewinnt weiter, und
+    # das Programm oeffnete seine Dateien trotz neuer Anmeldung nicht.
+    gesetzt = _linux_vorgabe_setzen()
+    if gesetzt:
+        getan.append(str(gesetzt))
 
     # Das Sinnbild zeichnet die Oberflaeche - dieses Modul kennt kein Qt.
     # Ohne Sinnbild ist der Eintrag trotzdem gueltig, nur grau.
@@ -162,6 +169,66 @@ def _linux_anmelden(symbol_schreiben=None) -> list[str]:
         except (OSError, subprocess.SubprocessError):
             continue
     return getan
+
+
+def _linux_vorgabe_setzen():
+    """Traegt uns in die ``mimeapps.list`` ein - und nimmt den Widerruf weg.
+
+    Geschrieben wird die Datei im Konfigurationsordner; das ist die, die
+    zuerst gilt. Unter ``[Default Applications]`` steht danach unser
+    Desktop-Eintrag, und aus ``[Removed Associations]`` ist er entfernt.
+    Zurueck kommt die Datei oder ``None``, wenn sich nichts schreiben
+    liess - eine Anmeldung soll daran nicht scheitern.
+    """
+    datei = _mimeapps_dateien()[0]
+    try:
+        zeilen = (
+            datei.read_text(encoding="utf-8", errors="replace").splitlines()
+            if datei.is_file()
+            else []
+        )
+    except OSError:
+        zeilen = []
+    neu: list[str] = []
+    abschnitt = ""
+    eingetragen = False
+    for zeile in zeilen:
+        blank = zeile.strip()
+        if blank.startswith("[") and blank.endswith("]"):
+            abschnitt = blank
+            neu.append(zeile)
+            continue
+        if blank.startswith(MIMETYP) and "=" in blank:
+            typ, wert = blank.split("=", 1)
+            if typ.strip() == MIMETYP:
+                if abschnitt == "[Removed Associations]":
+                    # Der Widerruf gilt nicht mehr - wir sind ja gefragt.
+                    rest = [
+                        s
+                        for s in wert.replace(";", " ").split()
+                        if s and s != DESKTOPDATEI
+                    ]
+                    if rest:
+                        neu.append(f"{MIMETYP}={';'.join(rest)};")
+                    continue
+                if abschnitt == "[Default Applications]":
+                    neu.append(f"{MIMETYP}={DESKTOPDATEI}")
+                    eingetragen = True
+                    continue
+        neu.append(zeile)
+    if not eingetragen:
+        if "[Default Applications]" not in [z.strip() for z in neu]:
+            if neu and neu[-1].strip():
+                neu.append("")
+            neu.append("[Default Applications]")
+        stelle = [z.strip() for z in neu].index("[Default Applications]") + 1
+        neu.insert(stelle, f"{MIMETYP}={DESKTOPDATEI}")
+    try:
+        datei.parent.mkdir(parents=True, exist_ok=True)
+        datei.write_text("\n".join(neu).rstrip("\n") + "\n", encoding="utf-8")
+    except OSError:
+        return None
+    return datei
 
 
 def _linux_angemeldet() -> bool:
