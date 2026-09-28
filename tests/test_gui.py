@@ -2160,8 +2160,37 @@ class TestMenuezustaende(unittest.TestCase):
             f._zuordnung_pruefen()
         self.assertIn("VerteilerlyPortable.exe", f.statusBar().currentMessage())
 
-    def test_wenn_die_wahl_des_anwenders_vorgeht_wird_es_gesagt(self):
-        """Windows schützt »Öffnen mit ▸ Immer« - das kann kein Programm setzen."""
+    def test_die_vorgehende_wahl_wird_auf_wunsch_aufgehoben(self):
+        """»Öffnen mit ▸ Immer« geht vor - aufheben darf das Programm."""
+        from PySide6.QtWidgets import QMessageBox
+
+        from verteilerly.gui import hauptfenster as modul
+
+        f = self.fenster
+        with mock.patch.object(
+            modul.verknuepfung, "anmelden", return_value=["HKCU\\…"]
+        ), mock.patch.object(
+            modul.verknuepfung, "angemeldet", side_effect=[False, False, True]
+        ), mock.patch.object(
+            modul.verknuepfung, "anderes_programm", return_value=""
+        ), mock.patch.object(
+            modul.verknuepfung, "angemeldeter_aufruf",
+            return_value="C:\\Windows\\notepad.exe",
+        ), mock.patch.object(
+            modul.verknuepfung, "wahl_aufheben", return_value=["UserChoice"]
+        ) as aufgehoben, mock.patch.object(
+            modul, "frage", return_value=QMessageBox.StandardButton.Yes
+        ) as gefragt, mock.patch.object(QMessageBox, "information") as gezeigt:
+            f.verknuepfung_anmelden()
+        self.assertIn("notepad.exe", gefragt.call_args[0][2])
+        self.assertTrue(aufgehoben.called)
+        gemeldet = gezeigt.call_args[0][2]
+        self.assertIn("PortableApps", gemeldet)
+        self.assertNotIn("Immer diese App", gemeldet, "es klappte ja")
+
+    def test_wer_die_wahl_behalten_will_bekommt_den_weg_gesagt(self):
+        from PySide6.QtWidgets import QMessageBox
+
         from verteilerly.gui import hauptfenster as modul
 
         f = self.fenster
@@ -2171,10 +2200,21 @@ class TestMenuezustaende(unittest.TestCase):
             modul.verknuepfung, "angemeldet", return_value=False
         ), mock.patch.object(
             modul.verknuepfung, "anderes_programm", return_value=""
+        ), mock.patch.object(
+            modul.verknuepfung, "angemeldeter_aufruf",
+            return_value="C:\\Windows\\notepad.exe",
+        ), mock.patch.object(
+            modul.verknuepfung, "wahl_aufheben"
+        ) as aufgehoben, mock.patch.object(
+            modul, "frage", return_value=QMessageBox.StandardButton.No
         ), mock.patch.object(QMessageBox, "information") as gezeigt:
             f.verknuepfung_anmelden()
-        self.assertIn("Dateimanager", gezeigt.call_args[0][2])
-        self.assertIn("Immer diese App", gezeigt.call_args[0][2])
+        self.assertFalse(aufgehoben.called)
+        gemeldet = gezeigt.call_args[0][2]
+        self.assertIn("notepad.exe", gemeldet)
+        self.assertIn("Immer diese App", gemeldet)
+        # Und der Hinweis auf die Ausgabe mit Starter steht trotzdem da.
+        self.assertIn("PortableApps", gemeldet)
 
     def test_der_start_sagt_es_wenn_die_zuordnung_aufgehoben_wurde(self):
         """Von außen weggenommen - unsere Einträge stehen noch da."""

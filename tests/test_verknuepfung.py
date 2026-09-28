@@ -279,6 +279,170 @@ class TestVonAussenAufgehoben(unittest.TestCase):
         self.assertFalse(verknuepfung.aufgehoben())
 
 
+class _Winreg:
+    """Eine Registrierung aus einem Dict - damit Windows hier pruefbar ist.
+
+    Der Windows-Weg laesst sich sonst nur auf Windows probieren, und dann
+    erst beim Anwender. Nachgebaut ist nur, was ``verknuepfung`` braucht:
+    Schluessel oeffnen und einen Wert lesen.
+    """
+
+    HKEY_CURRENT_USER = "HKCU"
+    HKEY_LOCAL_MACHINE = "HKLM"
+    HKEY_CLASSES_ROOT = "HKCR"
+
+    def __init__(self, inhalt: dict, verweigert: bool = False):
+        #: {(wurzel, schluessel): {name: wert}}
+        self.inhalt = inhalt
+        #: Ob das Loeschen abgewiesen wird - so verhaelt sich ein
+        #: geschuetzter Schluessel.
+        self.verweigert = verweigert
+
+    class _Offen:
+        def __init__(self, werte):
+            self.werte = werte
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return False
+
+    def OpenKey(self, wurzel, schluessel):        # noqa: N802 - winreg-Name
+        for (w, s), werte in self.inhalt.items():
+            if w == wurzel and s.lower() == schluessel.lower():
+                return self._Offen(werte)
+        raise OSError("nicht da")
+
+    def QueryValueEx(self, offen, name):          # noqa: N802 - winreg-Name
+        if name not in offen.werte:
+            raise OSError("kein Wert")
+        return offen.werte[name], 1
+
+    def DeleteKey(self, wurzel, schluessel):      # noqa: N802 - winreg-Name
+        for platz in list(self.inhalt):
+            w, s = platz
+            if w == wurzel and s.lower() == schluessel.lower():
+                if self.verweigert:
+                    raise PermissionError("nicht erlaubt")
+                del self.inhalt[platz]
+                return
+        raise FileNotFoundError("nicht da")
+
+
+class TestWindowsZuordnung(unittest.TestCase):
+    """Was die Registrierung sagt - nachgestellt, ohne Windows."""
+
+    BEFEHL = r'"C:\Portable\Verteilerly.exe" "%1"'
+    EIGEN = r'"C:\Portable\Verteilerly.exe"'
+
+    def _mit(self, inhalt, verweigert=False):
+        gefaelscht = _Winreg(inhalt, verweigert)
+        self.registrierung = gefaelscht
+        stelle = mock.patch.dict(sys.modules, {"winreg": gefaelscht})
+        stelle.start()
+        self.addCleanup(stelle.stop)
+        plattform = mock.patch.object(sys, "platform", "win32")
+        plattform.start()
+        self.addCleanup(plattform.stop)
+        ruf = mock.patch.object(verknuepfung, "aufruf", lambda: self.EIGEN)
+        ruf.start()
+        self.addCleanup(ruf.stop)
+
+    #: Unsere Schluessel, wie ``_windows_anmelden`` sie schreibt.
+    def _unsere(self):
+        kennung = verknuepfung.PROGRAMMKENNUNG
+        return {
+            ("HKCU", r"Software\Classes\.vtly"): {"": kennung},
+            ("HKCU", rf"Software\Classes\{kennung}\shell\open\command"): {
+                "": self.BEFEHL
+            },
+        }
+
+    def test_ohne_wahl_gilt_unsere_zuordnung(self):
+        self._mit(self._unsere())
+        self.assertEqual(verknuepfung.angemeldeter_aufruf(), self.EIGEN)
+        self.assertTrue(verknuepfung.angemeldet())
+        self.assertTrue(verknuepfung.eigene_eintraege())
+        self.assertFalse(verknuepfung.aufgehoben())
+        self.assertEqual(verknuepfung.anderes_programm(), "")
+
+    def test_ohne_alles_ist_nichts_eingetragen(self):
+        self._mit({})
+        self.assertEqual(verknuepfung.angemeldeter_aufruf(), "")
+        self.assertFalse(verknuepfung.angemeldet())
+        self.assertFalse(verknuepfung.eigene_eintraege())
+        self.assertFalse(verknuepfung.aufgehoben())
+
+    def test_die_wahl_des_anwenders_geht_vor(self):
+        """»Öffnen mit ▸ Immer« - unsere Schlüssel stehen unberührt da."""
+        inhalt = self._unsere()
+        inhalt[
+            ("HKCU", r"Software\Microsoft\Windows\CurrentVersion\Explorer"
+                     r"\FileExts\.vtly\UserChoice")
+        ] = {"ProgId": "Applications\\notepad.exe"}
+        inhalt[
+            ("HKCU", r"Software\Classes\Applications\notepad.exe\shell\open\command")
+        ] = {"": r'"C:\Windows\notepad.exe" "%1"'}
+        self._mit(inhalt)
+        self.assertEqual(
+            verknuepfung.angemeldeter_aufruf(), r'"C:\Windows\notepad.exe"'
+        )
+        self.assertFalse(verknuepfung.angemeldet())
+        self.assertTrue(verknuepfung.eigene_eintraege())
+        self.assertTrue(verknuepfung.aufgehoben())
+        self.assertIn("notepad", verknuepfung.anderes_programm())
+
+    def test_zeigt_die_wahl_auf_uns_ist_alles_gut(self):
+        inhalt = self._unsere()
+        inhalt[
+            ("HKCU", r"Software\Microsoft\Windows\CurrentVersion\Explorer"
+                     r"\FileExts\.vtly\UserChoice")
+        ] = {"ProgId": verknuepfung.PROGRAMMKENNUNG}
+        self._mit(inhalt)
+        self.assertTrue(verknuepfung.angemeldet())
+        self.assertFalse(verknuepfung.aufgehoben())
+
+    USERCHOICE = (
+        r"Software\Microsoft\Windows\CurrentVersion\Explorer"
+        r"\FileExts\.vtly\UserChoice"
+    )
+
+    def test_die_vorgehende_wahl_laesst_sich_aufheben(self):
+        """Setzen darf man sie nicht, löschen schon - danach gelten wir."""
+        inhalt = self._unsere()
+        inhalt[("HKCU", self.USERCHOICE)] = {"ProgId": "Applications\\notepad.exe"}
+        self._mit(inhalt)
+        self.assertFalse(verknuepfung.angemeldet())
+        getan = verknuepfung.wahl_aufheben()
+        self.assertEqual(len(getan), 1)
+        self.assertIn("UserChoice", getan[0])
+        self.assertTrue(verknuepfung.angemeldet())
+        self.assertFalse(verknuepfung.aufgehoben())
+
+    def test_ohne_wahl_gibt_es_nichts_aufzuheben(self):
+        self._mit(self._unsere())
+        self.assertEqual(verknuepfung.wahl_aufheben(), [])
+
+    def test_ein_geschuetzter_schluessel_wird_gemeldet(self):
+        inhalt = self._unsere()
+        inhalt[("HKCU", self.USERCHOICE)] = {"ProgId": "Applications\\notepad.exe"}
+        self._mit(inhalt, verweigert=True)
+        with self.assertRaises(VerknuepfungFehler):
+            verknuepfung.wahl_aufheben()
+
+    def test_eine_andere_ausgabe_desselben_programms_faellt_auf(self):
+        """Die Registrierung zeigt auf eine ältere .exe."""
+        inhalt = self._unsere()
+        inhalt[
+            ("HKCU", rf"Software\Classes\{verknuepfung.PROGRAMMKENNUNG}"
+                     r"\shell\open\command")
+        ] = {"": r'"C:\Alt\Verteilerly_2026.09.27b5.exe" "%1"'}
+        self._mit(inhalt)
+        self.assertFalse(verknuepfung.angemeldet())
+        self.assertIn("2026.09.27b5", verknuepfung.anderes_programm())
+
+
 class TestFremdesSystem(unittest.TestCase):
     def test_was_das_programm_nicht_kennt_sagt_es(self):
         with mock.patch.object(sys, "platform", "sunos5"):

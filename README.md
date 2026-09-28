@@ -313,8 +313,11 @@ außen auf, liegen unsere Einträge weiter da — `aufgehoben()` erkennt genau
 diesen Fall, und der Start sagt es in der Statuszeile. Unter Linux schreibt
 `anmelden()` die Wahl in die `mimeapps.list` und nimmt einen Widerruf zurück —
 sonst liefe „wieder anmelden" ins Leere. Unter Windows lässt sich die
-`UserChoice` nicht setzen (Windows sichert sie mit einer Prüfsumme); bleibt sie
-bestehen, sagt der Dialog, wo sie umzustellen ist. **Nicht** taugt der Weg
+`UserChoice` nicht **setzen** (Windows sichert sie mit einer Prüfsumme) — wohl
+aber **löschen**: greift die Anmeldung nicht, fragt das Programm, ob die
+vorgehende Wahl aufgehoben werden soll (`verknuepfung.wahl_aufheben()`), und
+danach gilt wieder die Zuordnung. Wer sie behalten will, bekommt den Weg über
+den Explorer gesagt. **Nicht** taugt der Weg
 für eine Ausgabe mit Starter:
 die PortableApps-Fassung lässt `VerteilerlyPortable.exe` erst einrichten und
 dann `App\Verteilerly\Verteilerly.exe` laufen — eingetragen würde die innere

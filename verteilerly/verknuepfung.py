@@ -497,6 +497,50 @@ def _windows_eigene_eintraege() -> bool:
     )
 
 
+def _windows_wahl_aufheben() -> list[str]:
+    """Loescht die ``UserChoice`` fuer unsere Endung.
+
+    **Setzen** laesst sich dieser Schluessel nicht: Windows sichert ihn mit
+    einer Pruefsumme, damit kein Programm sich heimlich vordraengt.
+    **Loeschen** darf der Benutzer - und genau das will er, wenn er
+    „Projektdateien mit Verteilerly oeffnen" waehlt. Danach gilt wieder,
+    was die Endung unter ``Software\\Classes`` sagt, also unsere Anmeldung.
+    """
+    import winreg
+
+    schluessel = (
+        r"Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts"
+        rf"\{ENDUNGEN[0]}\UserChoice"
+    )
+    try:
+        winreg.DeleteKey(winreg.HKEY_CURRENT_USER, schluessel)
+    except FileNotFoundError:
+        return []
+    except OSError as fehler:
+        raise VerknuepfungFehler(
+            u("Die Wahl im Dateimanager liess sich nicht aufheben: {0}").format(
+                fehler
+            )
+        ) from None
+    _windows_bescheid_sagen()
+    return [f"HKCU\\{schluessel} (aufgehoben)"]
+
+
+def wahl_aufheben() -> list[str]:
+    """Nimmt die Wahl zurueck, die unserer Anmeldung vorgeht.
+
+    Unter Windows ist das die ``UserChoice`` der Endung, unter Linux der
+    Eintrag in der ``mimeapps.list``. Zurueck kommt, was dabei angefasst
+    wurde - leer, wenn es nichts aufzuheben gab.
+    """
+    if sys.platform.startswith("win"):
+        return _windows_wahl_aufheben()
+    if sys.platform.startswith("linux"):
+        datei = _linux_vorgabe_setzen()
+        return [str(datei)] if datei else []
+    return []
+
+
 def eigene_eintraege() -> bool:
     """Liegen unsere Dateien bzw. Schluessel noch da?
 

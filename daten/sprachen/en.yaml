@@ -735,14 +735,19 @@ Meldet Verteilerly bei der Dateiverwaltung an — danach öffnet ein Doppelklick
 Nicht angemeldet: Not registered
 Projektdateien: Project files
 Verteilerly ist bereits angemeldet. Erneut eintragen?: Verteilerly is already registered. Register again?
-? "Ein Doppelklick öffnet zurzeit ein anderes Verteilerly:\n\n{0}\n\nDas hat seine eigenen Einstellungen. Auf dieses Programm umstellen?\n\n{1}"
-: "A double click currently opens a different Verteilerly:\n\n{0}\n\nThat one has its own settings. Switch over to this program?\n\n{1}"
+? "Ein Doppelklick öffnet zurzeit:\n\n{0}\n\nAuf dieses Programm umstellen?\n\n{1}"
+: "A double click currently opens:\n\n{0}\n\nSwitch over to this program?\n\n{1}"
+? "Geöffnet wird zurzeit:\n\n{0}\n\nDiese Wahl im Dateimanager geht der Anmeldung vor. Soll sie aufgehoben werden, damit Verteilerly öffnet?"
+: "Currently opened by:\n\n{0}\n\nThis choice in the file manager comes before the registration. Should it be lifted, so that Verteilerly opens?"
+'Die Wahl im Dateimanager liess sich nicht aufheben: {0}': 'The choice in the file manager could not be
+  lifted: {0}'
 ? "Ein Doppelklick auf eine Projektdatei öffnet zurzeit {0} — umstellen unter Tools"
 : "A double click on a project file currently opens {0} — switch over under Tools"
 ? "Ein Doppelklick auf eine Projektdatei öffnet Verteilerly nicht mehr — unter Tools wieder anmelden"
 : "A double click on a project file no longer opens Verteilerly — register again under Tools"
-? "Eingetragen ist Verteilerly jetzt — geöffnet wird aber weiter ein anderes Programm, denn die Wahl im Dateimanager geht vor. Stellen Sie sie dort um: Rechtsklick auf eine Projektdatei ▸ Öffnen mit ▸ Andere App ▸ Immer diese App.\n\nGeschrieben wurde:\n{0}"
-: "Verteilerly is registered now — but a different program still opens the files, because the choice in the file manager comes first. Change it there: right-click a project file ▸ Open with ▸ Choose another app ▸ Always use this app.\n\nWritten was:\n{0}"
+? "Geöffnet wird trotzdem weiter {0} — die Wahl im Dateimanager geht vor, und die kann kein Programm umstellen. Tun Sie es dort: Rechtsklick auf eine Projektdatei ▸ Öffnen mit ▸ Andere App ▸ Immer diese App."
+: "{0} still opens the files — the choice in the file manager comes first, and no program can change it. Do it there: right-click a project file ▸ Open with ▸ Choose another app ▸ Always use this app."
+ein anderes Programm: another program
 Eingetragen — die Wahl im Dateimanager geht noch vor: Registered — the choice in the file manager still
   comes first
 Verteilerly öffnet jetzt seine Projektdateien selbst: Verteilerly now opens its project files itself

@@ -109,11 +109,14 @@ click no longer arrives. What counts is therefore not what <i>was</i>
 registered but what the file manager <b>does</b>: on Windows the user's own
 choice comes first (<code>FileExts\.vtly\UserChoice</code>), on Linux the
 <code>mimeapps.list</code>. Registering again from the Tools menu brings the
-files back. On Windows the program <b>cannot</b> change that choice
-itself — Windows protects it with a checksum; the dialog then says it has to be
-changed in Explorer (right-click ▸ <i>Open with</i> ▸ <i>Choose another app</i>
-▸ <i>Always use this app</i>). On Linux registering writes the choice along and
-takes back a revocation.</p>
+files back: it then <b>asks whether the overriding choice should be
+lifted</b>, and lifts it if you want. A program may not <i>set</i> that choice —
+Windows protects it with a checksum so that nobody pushes in unasked — but it
+may <i>lift</i> it; after that the registration applies again. On Linux
+registering writes the choice along anyway and takes back a revocation. If you
+would rather keep the choice, say no: the dialog then names the program that
+opens the files and the way through Explorer (right-click ▸ <i>Open with</i> ▸
+<i>Choose another app</i> ▸ <i>Always use this app</i>).</p>
 
 <p><b>Not with the PortableApps edition</b> — there the
 <code>VerteilerlyPortable.exe</code> sets up folders and environment and then
