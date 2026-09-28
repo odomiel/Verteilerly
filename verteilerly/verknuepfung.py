@@ -167,6 +167,19 @@ def _linux_angemeldet() -> bool:
     return aufruf() in desktop.read_text(encoding="utf-8", errors="replace")
 
 
+def _linux_angemeldeter_aufruf() -> str:
+    """Womit die Dateiverwaltung gerade oeffnet - laut Desktop-Eintrag."""
+    _mime, desktop = _linux_orte()
+    try:
+        zeilen = desktop.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return ""
+    for zeile in zeilen:
+        if zeile.startswith("Exec="):
+            return _ohne_platzhalter(zeile[len("Exec="):])
+    return ""
+
+
 # -- Windows ---------------------------------------------------------------
 
 
@@ -206,6 +219,11 @@ def _windows_bescheid_sagen() -> None:
 
 
 def _windows_angemeldet() -> bool:
+    return aufruf() in _windows_angemeldeter_aufruf()
+
+
+def _windows_angemeldeter_aufruf() -> str:
+    """Womit die Dateiverwaltung gerade oeffnet - laut Registrierung."""
     import winreg
 
     try:
@@ -215,8 +233,8 @@ def _windows_angemeldet() -> bool:
         ) as offen:
             wert, _art = winreg.QueryValueEx(offen, "")
     except OSError:
-        return False
-    return aufruf() in str(wert)
+        return ""
+    return _ohne_platzhalter(str(wert))
 
 
 # -- Nach aussen -----------------------------------------------------------
@@ -225,6 +243,53 @@ def _windows_angemeldet() -> bool:
 def moeglich() -> bool:
     """Kennt dieses Betriebssystem einen Weg, den wir gehen koennen?"""
     return sys.platform.startswith(("linux", "win"))
+
+
+def _ohne_platzhalter(befehl: str) -> str:
+    """Der Befehl ohne die Stelle, an der die Datei eingesetzt wird.
+
+    Windows schreibt ``"%1"``, ein Desktop-Eintrag ``%f`` oder ``%u`` -
+    fuer den Vergleich mit ``aufruf()`` stoert das nur.
+    """
+    text = befehl.strip()
+    for platzhalter in ('"%1"', "%1", "%f", "%F", "%u", "%U"):
+        if text.endswith(platzhalter):
+            text = text[: -len(platzhalter)].strip()
+    return text
+
+
+def angemeldeter_aufruf() -> str:
+    """Womit die Dateiverwaltung eine Projektdatei gerade oeffnet.
+
+    Leer, wenn nichts angemeldet ist. Geworfen wird nicht: die Auskunft
+    ist eine Nebensache, sie darf keinen Start aufhalten.
+    """
+    try:
+        if sys.platform.startswith("win"):
+            return _windows_angemeldeter_aufruf()
+        if sys.platform.startswith("linux"):
+            return _linux_angemeldeter_aufruf()
+    except Exception:      # noqa: BLE001 - eine Auskunft, kein Betrieb
+        return ""
+    return ""
+
+
+def anderes_programm() -> str:
+    """Der eingetragene Aufruf, wenn er ein **anderes** Verteilerly meint.
+
+    Eine portable Ausgabe kann unter jedem Namen an jedem Ort liegen -
+    ``VerteilerlyPortable.exe`` auf einem Stick neben einer aelteren
+    ``Verteilerly.exe`` im Download-Ordner. Der Doppelklick nimmt, was
+    eingetragen ist, und das ist nach einem Umzug oder einem Wechsel der
+    Ausgabe nicht mehr das laufende Programm: es liest dann seine
+    Einstellungen woanders, und der Anwender haelt seine fuer verloren.
+    Damit das auffaellt, sagt diese Funktion, worauf die Zuordnung zeigt -
+    und die Oberflaeche sagt es weiter.
+    """
+    eingetragen = angemeldeter_aufruf()
+    if not eingetragen or aufruf() in eingetragen:
+        return ""
+    return eingetragen
 
 
 def angemeldet() -> bool:

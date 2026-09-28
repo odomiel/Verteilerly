@@ -105,6 +105,72 @@ class TestLinuxAnmelden(unittest.TestCase):
             verknuepfung.anmelden()
 
 
+class TestAbgeschottet(unittest.TestCase):
+    """Die Testreihe sieht die Anmeldung des Benutzers nicht."""
+
+    def test_der_desktop_eintrag_liegt_im_ordner_der_testreihe(self):
+        """Sonst liest ein Test die echte Zuordnung - und hing an ihr."""
+        eigen = pathlib.Path.home() / ".local" / "share"
+        for ort in verknuepfung._linux_orte():
+            self.assertNotIn(eigen, ort.parents, str(ort))
+        self.assertIn(
+            pathlib.Path(os.environ["XDG_DATA_HOME"]),
+            verknuepfung._linux_orte()[1].parents,
+        )
+
+
+class TestWerGeradeOeffnet(unittest.TestCase):
+    """Worauf die Zuordnung zeigt - und ob das dieses Programm ist."""
+
+    def setUp(self):
+        self._ordner = tempfile.TemporaryDirectory()
+        self.addCleanup(self._ordner.cleanup)
+        self.ordner = pathlib.Path(self._ordner.name)
+        stelle = mock.patch.dict(os.environ, {"XDG_DATA_HOME": str(self.ordner)})
+        stelle.start()
+        self.addCleanup(stelle.stop)
+
+    def _desktop(self):
+        return self.ordner / "applications" / "verteilerly.desktop"
+
+    def test_ohne_anmeldung_ist_nichts_eingetragen(self):
+        self.assertEqual(verknuepfung.angemeldeter_aufruf(), "")
+        self.assertEqual(verknuepfung.anderes_programm(), "")
+
+    def test_nach_der_anmeldung_steht_der_eigene_aufruf_da(self):
+        verknuepfung.anmelden()
+        self.assertEqual(verknuepfung.angemeldeter_aufruf(), verknuepfung.aufruf())
+        self.assertEqual(verknuepfung.anderes_programm(), "")
+
+    def test_ein_fremder_eintrag_wird_als_solcher_gemeldet(self):
+        """Der Fall einer portablen Ausgabe: eingetragen ist eine andere Datei."""
+        verknuepfung.anmelden()
+        datei = self._desktop()
+        datei.write_text(
+            datei.read_text(encoding="utf-8").replace(
+                f"Exec={verknuepfung.aufruf()} %f",
+                "Exec=/stick/VerteilerlyPortable.exe %f",
+            ),
+            encoding="utf-8",
+        )
+        self.assertEqual(
+            verknuepfung.angemeldeter_aufruf(), "/stick/VerteilerlyPortable.exe"
+        )
+        self.assertEqual(
+            verknuepfung.anderes_programm(), "/stick/VerteilerlyPortable.exe"
+        )
+        self.assertFalse(verknuepfung.angemeldet())
+
+    def test_der_platzhalter_gehoert_nicht_zum_befehl(self):
+        for befehl, erwartet in (
+            ('"C:\\Verteilerly.exe" "%1"', '"C:\\Verteilerly.exe"'),
+            ("/stick/Verteilerly %f", "/stick/Verteilerly"),
+            ("/stick/Verteilerly %U", "/stick/Verteilerly"),
+            ("/stick/Verteilerly", "/stick/Verteilerly"),
+        ):
+            self.assertEqual(verknuepfung._ohne_platzhalter(befehl), erwartet)
+
+
 class TestFremdesSystem(unittest.TestCase):
     def test_was_das_programm_nicht_kennt_sagt_es(self):
         with mock.patch.object(sys, "platform", "sunos5"):

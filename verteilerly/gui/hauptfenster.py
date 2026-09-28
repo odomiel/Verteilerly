@@ -210,6 +210,28 @@ class Hauptfenster(QMainWindow):
                 u("{0} Dateien nach {1} gelegt — dort sind sie änderbar").format(len(self.ausgelegt), pfade.eigener_datenordner()),
                 12000,
             )
+        self._zuordnung_pruefen()
+
+    def _zuordnung_pruefen(self) -> None:
+        """Sagt es, wenn der Doppelklick ein anderes Verteilerly oeffnet.
+
+        Eine portable Ausgabe liegt, wo der Anwender sie hinlegt, und
+        heisst, wie sie heisst. Zieht sie um oder tritt eine andere Ausgabe
+        daneben, oeffnet der Doppelklick weiter die eingetragene Datei -
+        mit deren eigener Conf. Das sah bisher aus wie verlorene
+        Einstellungen. Gefragt wird nur im **gepackten** Programm: aus dem
+        Quellbaum wechselt der Aufruf mit jedem Python, das waere Laerm.
+        Und nur gesagt, nicht getan - angemeldet wird auf Wunsch.
+        """
+        if not pfade.gepackt():
+            return
+        fremd = verknuepfung.anderes_programm()
+        if fremd:
+            self.statusBar().showMessage(
+                u("Ein Doppelklick auf eine Projektdatei öffnet zurzeit {0} — "
+                  "umstellen unter Tools").format(fremd),
+                15000,
+            )
 
     # -- Einstellungen oeffnen ---------------------------------------------
 
@@ -1870,6 +1892,7 @@ class Hauptfenster(QMainWindow):
         """
         if not verknuepfung.moeglich():
             return
+        fremd = verknuepfung.anderes_programm()
         if verknuepfung.angemeldet():
             antwort = frage(
                 self,
@@ -1877,6 +1900,23 @@ class Hauptfenster(QMainWindow):
                 u("Verteilerly ist bereits angemeldet. Erneut eintragen?"),
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 QMessageBox.StandardButton.No,
+            )
+            if antwort != QMessageBox.StandardButton.Yes:
+                return
+        elif fremd:
+            # Der haeufige Fall bei einer portablen Ausgabe: eingetragen
+            # ist eine andere Datei, und die bringt ihre eigenen
+            # Einstellungen mit.
+            antwort = frage(
+                self,
+                u("Projektdateien"),
+                u("Ein Doppelklick öffnet zurzeit ein anderes Verteilerly:"
+                  "\n\n{0}\n\nDas hat seine eigenen Einstellungen. Auf "
+                  "dieses Programm umstellen?\n\n{1}").format(
+                      fremd, verknuepfung.aufruf()
+                  ),
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.Yes,
             )
             if antwort != QMessageBox.StandardButton.Yes:
                 return

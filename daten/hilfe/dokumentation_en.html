@@ -91,6 +91,17 @@ If the program moves — another folder, a new AppImage —, register it once
 again. The command line does the same:
 <code>Verteilerly &lt;file&gt;</code>.</p>
 
+<p><b>What gets registered is always the program you register from</b> — the
+running file, with its path and name. That matters for a <b>portable
+edition</b>: if an older <code>Verteilerly.exe</code> sits next to the
+<code>VerteilerlyPortable.exe</code>, or the portable one has moved, then a
+double click keeps opening the registered file — and that one has its
+<b>own settings</b> lying next to it. It looks as if the program had forgotten
+your settings. Verteilerly therefore says so in the status bar at startup when
+the association points at a different Verteilerly, and the menu entry names the
+registered file and asks whether to switch over. Registering once from the
+edition you want is enough.</p>
+
 <h2><a name="editor"></a>3 &nbsp; The editor</h2>
 
 <p>On the left the <b>frame overview</b>: every strip a box of pair cells, bays

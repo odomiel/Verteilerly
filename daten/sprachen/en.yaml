@@ -751,5 +751,9 @@ Meldet Verteilerly bei der Dateiverwaltung an — danach öffnet ein Doppelklick
 Nicht angemeldet: Not registered
 Projektdateien: Project files
 Verteilerly ist bereits angemeldet. Erneut eintragen?: Verteilerly is already registered. Register again?
+? "Ein Doppelklick öffnet zurzeit ein anderes Verteilerly:\n\n{0}\n\nDas hat seine eigenen Einstellungen. Auf dieses Programm umstellen?\n\n{1}"
+: "A double click currently opens a different Verteilerly:\n\n{0}\n\nThat one has its own settings. Switch over to this program?\n\n{1}"
+? "Ein Doppelklick auf eine Projektdatei öffnet zurzeit {0} — umstellen unter Tools"
+: "A double click on a project file currently opens {0} — switch over under Tools"
 Verteilerly öffnet jetzt seine Projektdateien selbst: Verteilerly now opens its project files itself
 '{0} liess sich nicht schreiben: {1}': '{0} could not be written: {1}'

@@ -297,6 +297,16 @@ einzige Endung, denn Windows verknüpft über die letzte, und `.json` gehört
 nicht uns; ältere Dateien (`.vtly.json`) lassen sich weiter öffnen. Denselben
 Weg geht die Kommandozeile: `Verteilerly <datei>`.
 
+Eingetragen wird immer **die laufende Datei** (`verknuepfung.aufruf()`) — bei
+einer tragbaren Ausgabe also genau die .exe, aus der angemeldet wurde. Liegt
+daneben eine zweite, oder ist die tragbare umgezogen, öffnet der Doppelklick
+weiter die eingetragene: sie liest ihre Einstellungen neben sich und wirkt wie
+ein Programm, das alles vergessen hat. `verknuepfung.anderes_programm()` sagt
+darum, worauf die Zuordnung zeigt, wenn das nicht das laufende Programm ist;
+das gepackte Programm meldet es beim Start in der Statuszeile — und damit auch
+im Protokoll —, und der Menüeintrag nennt die eingetragene Datei und fragt, ob
+umgestellt werden soll.
+
 Menüeinträge, die gerade nichts bewirken können, sind ausgegraut: ohne
 Verteiler die ganze Ausgabe, *Kabel entfernen* nur dort, wo wirklich ein
 Kabel liegt, *Speichern* nur, wenn es etwas zu speichern gibt. Jeder

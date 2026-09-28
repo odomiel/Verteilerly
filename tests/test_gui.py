@@ -2087,6 +2087,8 @@ class TestMenuezustaende(unittest.TestCase):
             modul.verknuepfung, "anmelden", return_value=["/tmp/x.desktop"]
         ) as angemeldet, mock.patch.object(
             modul.verknuepfung, "angemeldet", return_value=False
+        ), mock.patch.object(
+            modul.verknuepfung, "anderes_programm", return_value=""
         ), mock.patch.object(QMessageBox, "information") as gezeigt:
             f.verknuepfung_anmelden()
         self.assertTrue(angemeldet.called)
@@ -2119,6 +2121,42 @@ class TestMenuezustaende(unittest.TestCase):
              ):
             f.verknuepfung_anmelden()
         self.assertTrue(angemeldet.called)
+
+    def test_ein_fremder_eintrag_wird_beim_anmelden_genannt(self):
+        """Der Fall der portablen Ausgabe: eingetragen ist eine andere Datei."""
+        from PySide6.QtWidgets import QMessageBox
+
+        from verteilerly.gui import hauptfenster as modul
+
+        f = self.fenster
+        with mock.patch.object(modul.verknuepfung, "angemeldet", return_value=False), \
+             mock.patch.object(modul.verknuepfung, "anderes_programm",
+                               return_value="/stick/VerteilerlyPortable.exe"), \
+             mock.patch.object(modul.verknuepfung, "anmelden",
+                               return_value=["/tmp/x.desktop"]) as angemeldet, \
+             mock.patch.object(QMessageBox, "information"), \
+             mock.patch.object(modul, "frage",
+                               return_value=QMessageBox.StandardButton.No) as gefragt:
+            f.verknuepfung_anmelden()
+        self.assertTrue(gefragt.called)
+        self.assertIn("/stick/VerteilerlyPortable.exe", gefragt.call_args[0][2])
+        self.assertFalse(angemeldet.called, "ein Nein trägt nichts ein")
+
+    def test_der_start_sagt_es_wenn_ein_anderes_programm_eingetragen_ist(self):
+        from verteilerly.gui import hauptfenster as modul
+
+        f = self.fenster
+        # Aus dem Quellbaum wird nicht gefragt - das waere Laerm.
+        with mock.patch.object(modul.pfade, "gepackt", return_value=False), \
+             mock.patch.object(modul.verknuepfung, "anderes_programm") as gefragt:
+            f._zuordnung_pruefen()
+        self.assertFalse(gefragt.called)
+
+        with mock.patch.object(modul.pfade, "gepackt", return_value=True), \
+             mock.patch.object(modul.verknuepfung, "anderes_programm",
+                               return_value="/stick/VerteilerlyPortable.exe"):
+            f._zuordnung_pruefen()
+        self.assertIn("VerteilerlyPortable.exe", f.statusBar().currentMessage())
 
     def test_ein_gezogenes_kabel_wird_verschoben_oder_kopiert(self):
         """Was die Übersicht meldet, führt das Fenster aus."""

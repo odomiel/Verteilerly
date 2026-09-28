@@ -2,6 +2,7 @@
 
 import atexit
 import os
+import pathlib
 import shutil
 import tempfile
 
@@ -13,6 +14,11 @@ import tempfile
 # Gesetzt wird das hier, vor jedem Import aus verteilerly.
 _TESTHEIM = tempfile.mkdtemp(prefix="verteilerly-tests-")
 os.environ["XDG_CONFIG_HOME"] = _TESTHEIM
+# Und XDG_DATA_HOME dazu: daran haengen Dateityp und Desktop-Eintrag der
+# Verknuepfung. Ohne das liest die Testreihe die **echte** Anmeldung des
+# Benutzers - zeigte die auf ein anderes Verteilerly, lief ein GUI-Test in
+# eine ungepatchte Rueckfrage und die ganze Reihe blieb an dem Dialog stehen.
+os.environ["XDG_DATA_HOME"] = str(pathlib.Path(_TESTHEIM) / "share")
 atexit.register(shutil.rmtree, _TESTHEIM, True)
 
 # Eigene Erweiterungen haben in der Testreihe nichts zu suchen - geprueft
