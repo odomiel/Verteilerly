@@ -727,24 +727,8 @@ Höhe: Height
 Querstrich: Horizontal rule
 Diesen Block löschen: Delete this block
 '&Projektdateien mit Verteilerly öffnen…': '&Open project files with Verteilerly…'
-? 'Ein Doppelklick auf eine Projektdatei öffnet jetzt Verteilerly.
-
-
-  Geschrieben wurde:
-
-  {0}
-
-
-  Unter Linux merkt sich die Dateiverwaltung das mitunter erst nach dem nächsten Anmelden.'
-: 'A double click on a project file now opens Verteilerly.
-
-
-  Written was:
-
-  {0}
-
-
-  On Linux the file manager sometimes notices it only after the next login.'
+? "Ein Doppelklick auf eine Projektdatei öffnet jetzt Verteilerly.\n\nGeschrieben wurde:\n{0}\n\nUnter Linux merkt sich die Dateiverwaltung das mitunter erst nach dem nächsten Anmelden.\n\nFunktioniert nicht mit der PortableApps-Ausgabe: dort startet die VerteilerlyPortable.exe erst das eigentliche Programm. Verknüpfen Sie die VerteilerlyPortable.exe in diesem Fall von Hand."
+: "A double click on a project file now opens Verteilerly.\n\nWritten was:\n{0}\n\nOn Linux the file manager sometimes notices it only after the next login.\n\nDoes not work with the PortableApps edition: there the VerteilerlyPortable.exe starts the actual program first. In that case link the VerteilerlyPortable.exe by hand."
 Für {0} kennt das Programm keinen Weg: For {0} the program knows no way
 Meldet Verteilerly bei der Dateiverwaltung an — danach öffnet ein Doppelklick die Projektdatei: Registers
   Verteilerly with the file manager — after that a double click opens the project file
@@ -755,5 +739,7 @@ Verteilerly ist bereits angemeldet. Erneut eintragen?: Verteilerly is already re
 : "A double click currently opens a different Verteilerly:\n\n{0}\n\nThat one has its own settings. Switch over to this program?\n\n{1}"
 ? "Ein Doppelklick auf eine Projektdatei öffnet zurzeit {0} — umstellen unter Tools"
 : "A double click on a project file currently opens {0} — switch over under Tools"
+? "Ein Doppelklick auf eine Projektdatei öffnet Verteilerly nicht mehr — unter Tools wieder anmelden"
+: "A double click on a project file no longer opens Verteilerly — register again under Tools"
 Verteilerly öffnet jetzt seine Projektdateien selbst: Verteilerly now opens its project files itself
 '{0} liess sich nicht schreiben: {1}': '{0} could not be written: {1}'

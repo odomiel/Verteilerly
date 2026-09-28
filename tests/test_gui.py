@@ -2093,6 +2093,8 @@ class TestMenuezustaende(unittest.TestCase):
             f.verknuepfung_anmelden()
         self.assertTrue(angemeldet.called)
         self.assertIn("/tmp/x.desktop", gezeigt.call_args[0][2])
+        # Und der Hinweis auf die Ausgabe mit Starter steht dabei.
+        self.assertIn("PortableApps", gezeigt.call_args[0][2])
 
     def test_wer_schon_angemeldet_ist_wird_gefragt(self):
         """Der zweite Druck lief ins Leere - die Rückfrage war kaputt."""
@@ -2157,6 +2159,30 @@ class TestMenuezustaende(unittest.TestCase):
                                return_value="/stick/VerteilerlyPortable.exe"):
             f._zuordnung_pruefen()
         self.assertIn("VerteilerlyPortable.exe", f.statusBar().currentMessage())
+
+    def test_der_start_sagt_es_wenn_die_zuordnung_aufgehoben_wurde(self):
+        """Von außen weggenommen - unsere Einträge stehen noch da."""
+        from verteilerly.gui import hauptfenster as modul
+
+        f = self.fenster
+        with mock.patch.object(modul.pfade, "gepackt", return_value=True), \
+             mock.patch.object(modul.verknuepfung, "anderes_programm",
+                               return_value=""), \
+             mock.patch.object(modul.verknuepfung, "aufgehoben",
+                               return_value=True):
+            f.statusBar().clearMessage()
+            f._zuordnung_pruefen()
+        self.assertIn("nicht mehr", f.statusBar().currentMessage())
+
+        # Und ohne Anmeldung sagt der Start nichts - da fehlt nichts.
+        with mock.patch.object(modul.pfade, "gepackt", return_value=True), \
+             mock.patch.object(modul.verknuepfung, "anderes_programm",
+                               return_value=""), \
+             mock.patch.object(modul.verknuepfung, "aufgehoben",
+                               return_value=False):
+            f.statusBar().clearMessage()
+            f._zuordnung_pruefen()
+        self.assertEqual(f.statusBar().currentMessage(), "")
 
     def test_ein_gezogenes_kabel_wird_verschoben_oder_kopiert(self):
         """Was die Übersicht meldet, führt das Fenster aus."""

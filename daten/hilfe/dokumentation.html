@@ -105,6 +105,23 @@ der Statuszeile, wenn die Zuordnung auf ein anderes Verteilerly zeigt, und der
 Menüeintrag nennt die eingetragene Datei und fragt, ob umgestellt werden
 soll. Einmal aus der gewünschten Ausgabe anmelden genügt.</p>
 
+<p><b>Wird die Zuordnung von außen aufgehoben</b> — „Öffnen mit ▸ Immer" setzt
+ein anderes Programm, oder die Zuordnung wird weggenommen —, dann sagt
+Verteilerly das beim Start in der Statuszeile: unsere Einträge liegen ja noch
+da, aber der Doppelklick kommt nicht mehr an. Gefragt wird darum nicht, was
+eingetragen <i>wurde</i>, sondern was die Dateiverwaltung <b>tut</b>: unter
+Windows zählt zuerst die Wahl des Anwenders
+(<code>FileExts\.vtly\UserChoice</code>), unter Linux die
+<code>mimeapps.list</code>. Ein neues Anmelden über das Tools-Menü holt die
+Dateien zurück.</p>
+
+<p><b>Nicht mit der PortableApps-Ausgabe</b> — dort richtet die
+<code>VerteilerlyPortable.exe</code> Ordner und Umgebung ein und startet dann
+das eigentliche Programm in <code>App\Verteilerly</code>. Dieses sieht nur
+sich selbst, und eingetragen wird darum die innere Datei, die ohne den Starter
+läuft. Verknüpfen Sie in diesem Fall die <code>VerteilerlyPortable.exe</code>
+von Hand — der Dialog sagt es auch.</p>
+
 <h2><a name="editor"></a>3 &nbsp; Der Editor</h2>
 
 <p>Links die <b>Verteilerübersicht</b>: jede Leiste ein Kasten aus

@@ -305,7 +305,16 @@ ein Programm, das alles vergessen hat. `verknuepfung.anderes_programm()` sagt
 darum, worauf die Zuordnung zeigt, wenn das nicht das laufende Programm ist;
 das gepackte Programm meldet es beim Start in der Statuszeile — und damit auch
 im Protokoll —, und der Menüeintrag nennt die eingetragene Datei und fragt, ob
-umgestellt werden soll.
+umgestellt werden soll. Gefragt wird dabei, was die Dateiverwaltung **tut**,
+nicht was wir geschrieben haben: unter Windows zählt zuerst
+`FileExts\.vtly\UserChoice` (das setzt „Öffnen mit ▸ Immer"), unter Linux die
+`mimeapps.list` samt `[Removed Associations]`. Hebt jemand die Zuordnung von
+außen auf, liegen unsere Einträge weiter da — `aufgehoben()` erkennt genau
+diesen Fall, und der Start sagt es in der Statuszeile. **Nicht** taugt der Weg
+für eine Ausgabe mit Starter:
+die PortableApps-Fassung lässt `VerteilerlyPortable.exe` erst einrichten und
+dann `App\Verteilerly\Verteilerly.exe` laufen — eingetragen würde die innere
+Datei. Der Dialog sagt das und bittet, den Starter von Hand zu verknüpfen.
 
 Menüeinträge, die gerade nichts bewirken können, sind ausgegraut: ohne
 Verteiler die ganze Ausgabe, *Kabel entfernen* nur dort, wo wirklich ein

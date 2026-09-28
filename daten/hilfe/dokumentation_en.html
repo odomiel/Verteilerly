@@ -102,6 +102,22 @@ the association points at a different Verteilerly, and the menu entry names the
 registered file and asks whether to switch over. Registering once from the
 edition you want is enough.</p>
 
+<p><b>If the association is revoked from outside</b> — „Open with ▸ Always"
+sets a different program, or the association is taken away —, Verteilerly says
+so in the status bar at startup: our entries are still there, but the double
+click no longer arrives. What counts is therefore not what <i>was</i>
+registered but what the file manager <b>does</b>: on Windows the user's own
+choice comes first (<code>FileExts\.vtly\UserChoice</code>), on Linux the
+<code>mimeapps.list</code>. Registering again from the Tools menu brings the
+files back.</p>
+
+<p><b>Not with the PortableApps edition</b> — there the
+<code>VerteilerlyPortable.exe</code> sets up folders and environment and then
+starts the actual program in <code>App\Verteilerly</code>. That one only sees
+itself, so what gets registered is the inner file, which runs without the
+launcher. In that case link the <code>VerteilerlyPortable.exe</code> by hand —
+the dialog says so too.</p>
+
 <h2><a name="editor"></a>3 &nbsp; The editor</h2>
 
 <p>On the left the <b>frame overview</b>: every strip a box of pair cells, bays

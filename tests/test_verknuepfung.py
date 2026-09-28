@@ -171,6 +171,76 @@ class TestWerGeradeOeffnet(unittest.TestCase):
             self.assertEqual(verknuepfung._ohne_platzhalter(befehl), erwartet)
 
 
+class TestVonAussenAufgehoben(unittest.TestCase):
+    """Die Dateiverwaltung nimmt ein anderes Programm - wir merken es."""
+
+    def setUp(self):
+        self._ordner = tempfile.TemporaryDirectory()
+        self.addCleanup(self._ordner.cleanup)
+        self.ordner = pathlib.Path(self._ordner.name)
+        stelle = mock.patch.dict(
+            os.environ,
+            {
+                "XDG_DATA_HOME": str(self.ordner / "share"),
+                "XDG_CONFIG_HOME": str(self.ordner / "conf"),
+            },
+        )
+        stelle.start()
+        self.addCleanup(stelle.stop)
+        verknuepfung.anmelden()
+
+    def _mimeapps(self, inhalt: str) -> None:
+        datei = self.ordner / "conf" / "mimeapps.list"
+        datei.parent.mkdir(parents=True, exist_ok=True)
+        datei.write_text(inhalt, encoding="utf-8")
+
+    def test_frisch_angemeldet_ist_alles_in_ordnung(self):
+        self.assertTrue(verknuepfung.angemeldet())
+        self.assertTrue(verknuepfung.eigene_eintraege())
+        self.assertFalse(verknuepfung.aufgehoben())
+
+    def test_ein_anderes_programm_als_vorgabe_faellt_auf(self):
+        """Der Fall »Öffnen mit ▸ Immer« - unsere Dateien liegen noch da."""
+        self._mimeapps(
+            "[Default Applications]\n"
+            f"{verknuepfung.MIMETYP}=texteditor.desktop\n"
+        )
+        self.assertFalse(verknuepfung.angemeldet())
+        self.assertTrue(verknuepfung.eigene_eintraege())
+        self.assertTrue(verknuepfung.aufgehoben())
+        self.assertEqual(verknuepfung.anderes_programm(), "texteditor.desktop")
+
+    def test_eine_weggenommene_zuordnung_faellt_auf(self):
+        self._mimeapps(
+            "[Removed Associations]\n"
+            f"{verknuepfung.MIMETYP}={verknuepfung.DESKTOPDATEI}\n"
+        )
+        self.assertFalse(verknuepfung.angemeldet())
+        self.assertTrue(verknuepfung.aufgehoben())
+        # Ein fremdes Programm ist es nicht - es öffnet einfach nichts.
+        self.assertEqual(verknuepfung.anderes_programm(), "")
+
+    def test_wieder_angemeldet_ist_wieder_gut(self):
+        self._mimeapps(
+            "[Default Applications]\n"
+            f"{verknuepfung.MIMETYP}=texteditor.desktop\n"
+        )
+        self.assertTrue(verknuepfung.aufgehoben())
+        self._mimeapps(
+            "[Default Applications]\n"
+            f"{verknuepfung.MIMETYP}={verknuepfung.DESKTOPDATEI}\n"
+        )
+        self.assertTrue(verknuepfung.angemeldet())
+        self.assertFalse(verknuepfung.aufgehoben())
+
+    def test_ohne_eigene_eintraege_ist_nichts_aufgehoben(self):
+        """Der erste Start hat nie angemeldet - da fehlt nichts."""
+        for datei in verknuepfung._linux_orte():
+            datei.unlink()
+        self.assertFalse(verknuepfung.eigene_eintraege())
+        self.assertFalse(verknuepfung.aufgehoben())
+
+
 class TestFremdesSystem(unittest.TestCase):
     def test_was_das_programm_nicht_kennt_sagt_es(self):
         with mock.patch.object(sys, "platform", "sunos5"):

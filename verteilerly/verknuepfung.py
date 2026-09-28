@@ -42,6 +42,10 @@ ENDUNGEN = (".vtly", ".vtly.json")
 #: Wie die Dateien heissen, die unter Linux angelegt werden.
 DESKTOPDATEI = "verteilerly.desktop"
 MIMEDATEI = "verteilerly.xml"
+#: Steht fuer „ausdruecklich nichts": der Anwender hat die Zuordnung von
+#: aussen aufgehoben. Unsere Dateien liegen dann noch da und taeuschen eine
+#: Anmeldung vor - gefragt ist aber, was die Dateiverwaltung wirklich tut.
+KEINE = "-"
 
 
 class VerknuepfungFehler(ModellFehler):
@@ -161,23 +165,106 @@ def _linux_anmelden(symbol_schreiben=None) -> list[str]:
 
 
 def _linux_angemeldet() -> bool:
-    mime, desktop = _linux_orte()
-    if not (mime.is_file() and desktop.is_file()):
+    mime, _desktop = _linux_orte()
+    if not mime.is_file():
         return False
-    return aufruf() in desktop.read_text(encoding="utf-8", errors="replace")
+    eingetragen = _linux_angemeldeter_aufruf()
+    return bool(eingetragen) and eingetragen != KEINE and aufruf() in eingetragen
 
 
 def _linux_angemeldeter_aufruf() -> str:
-    """Womit die Dateiverwaltung gerade oeffnet - laut Desktop-Eintrag."""
+    """Womit die Dateiverwaltung gerade oeffnet.
+
+    Zuerst die **Wahl des Anwenders**: steht der Dateityp in einer
+    ``mimeapps.list``, gilt der dort genannte Desktop-Eintrag - auch wenn
+    das ein anderes Programm ist oder unser Eintrag noch daliegt. Erst
+    ohne solche Wahl gilt unser eigener Eintrag ueber ``MimeType=``.
+    """
+    gewaehlt = _linux_gewaehlte_desktopdatei()
+    if gewaehlt and gewaehlt != DESKTOPDATEI:
+        return _linux_exec(_linux_desktopdatei_finden(gewaehlt)) or gewaehlt
+    if gewaehlt == "":
+        # Keine Wahl getroffen - dann oeffnet, wer den Typ anmeldet.
+        pass
     _mime, desktop = _linux_orte()
+    return _linux_exec(desktop)
+
+
+def _linux_exec(datei) -> str:
+    """Die Exec-Zeile eines Desktop-Eintrags, ohne Platzhalter."""
+    if datei is None:
+        return ""
     try:
-        zeilen = desktop.read_text(encoding="utf-8", errors="replace").splitlines()
+        zeilen = datei.read_text(encoding="utf-8", errors="replace").splitlines()
     except OSError:
         return ""
     for zeile in zeilen:
         if zeile.startswith("Exec="):
             return _ohne_platzhalter(zeile[len("Exec="):])
     return ""
+
+
+def _mimeapps_dateien() -> list[pathlib.Path]:
+    """Wo die Wahl des Anwenders stehen kann - das Wichtigste zuerst."""
+    conf = pathlib.Path(
+        os.environ.get("XDG_CONFIG_HOME") or pathlib.Path.home() / ".config"
+    )
+    daten = pathlib.Path(
+        os.environ.get("XDG_DATA_HOME") or pathlib.Path.home() / ".local" / "share"
+    )
+    return [conf / "mimeapps.list", daten / "applications" / "mimeapps.list"]
+
+
+def _linux_gewaehlte_desktopdatei() -> str:
+    """Welcher Desktop-Eintrag fuer unseren Dateityp gewaehlt ist.
+
+    Leer, wenn niemand gewaehlt hat; ``KEINE``, wenn die Wahl ausdruecklich
+    weggenommen wurde (``[Removed Associations]``) - dann oeffnet uns die
+    Dateiverwaltung **nicht** mehr, obwohl unsere Dateien noch daliegen.
+    """
+    for datei in _mimeapps_dateien():
+        try:
+            zeilen = datei.read_text(encoding="utf-8", errors="replace").splitlines()
+        except OSError:
+            continue
+        abschnitt = ""
+        for zeile in zeilen:
+            blank = zeile.strip()
+            if blank.startswith("[") and blank.endswith("]"):
+                abschnitt = blank
+                continue
+            if "=" not in blank or not blank.startswith(MIMETYP):
+                continue
+            typ, wert = blank.split("=", 1)
+            if typ.strip() != MIMETYP:
+                continue
+            eintraege = [s for s in wert.replace(";", " ").split() if s]
+            if abschnitt == "[Removed Associations]":
+                if DESKTOPDATEI in eintraege:
+                    return KEINE
+                continue
+            if eintraege:
+                return eintraege[0]
+    return ""
+
+
+def _linux_desktopdatei_finden(name: str):
+    """Die Desktop-Datei dieses Namens - in den ueblichen Ordnern."""
+    orte = [
+        pathlib.Path(
+            os.environ.get("XDG_DATA_HOME")
+            or pathlib.Path.home() / ".local" / "share"
+        )
+        / "applications"
+    ]
+    for grund in (os.environ.get("XDG_DATA_DIRS") or "/usr/local/share:/usr/share").split(":"):
+        if grund:
+            orte.append(pathlib.Path(grund) / "applications")
+    for ort in orte:
+        datei = ort / name
+        if datei.is_file():
+            return datei
+    return None
 
 
 # -- Windows ---------------------------------------------------------------
@@ -219,22 +306,60 @@ def _windows_bescheid_sagen() -> None:
 
 
 def _windows_angemeldet() -> bool:
-    return aufruf() in _windows_angemeldeter_aufruf()
+    eingetragen = _windows_angemeldeter_aufruf()
+    return bool(eingetragen) and eingetragen != KEINE and aufruf() in eingetragen
 
 
 def _windows_angemeldeter_aufruf() -> str:
-    """Womit die Dateiverwaltung gerade oeffnet - laut Registrierung."""
+    """Womit die Dateiverwaltung gerade oeffnet - laut Registrierung.
+
+    Die **Wahl des Anwenders** geht vor: was „Öffnen mit ▸ Immer" setzt,
+    steht unter ``FileExts\\.vtly\\UserChoice`` und schlaegt unsere
+    Zuordnung, auch wenn unsere Schluessel unberuehrt daliegen. Erst ohne
+    solche Wahl gilt, was ``.vtly`` unter ``Software\\Classes`` sagt.
+    """
+    kennung = _windows_wert(
+        rf"Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts"
+        rf"\{ENDUNGEN[0]}\UserChoice",
+        "ProgId",
+    )
+    if not kennung:
+        kennung = _windows_wert(rf"Software\Classes\{ENDUNGEN[0]}", "")
+    if not kennung:
+        return ""
+    if _windows_gesperrt(kennung):
+        return KEINE
+    befehl = _windows_wert(rf"Software\Classes\{kennung}\shell\open\command", "")
+    if not befehl:
+        befehl = _windows_wert(
+            rf"{kennung}\shell\open\command", "", wurzel="klassen"
+        )
+    return _ohne_platzhalter(befehl) if befehl else kennung
+
+
+def _windows_gesperrt(kennung: str) -> bool:
+    """Eine Kennung, die ausdruecklich nichts oeffnet."""
+    return kennung.strip().lower() in ("", "applications\\", "unknown")
+
+
+def _windows_wert(schluessel: str, name: str, wurzel: str = "benutzer") -> str:
+    """Ein Wert aus der Registrierung - leer, wenn es ihn nicht gibt."""
     import winreg
 
-    try:
-        with winreg.OpenKey(
-            winreg.HKEY_CURRENT_USER,
-            rf"Software\Classes\{PROGRAMMKENNUNG}\shell\open\command",
-        ) as offen:
-            wert, _art = winreg.QueryValueEx(offen, "")
-    except OSError:
-        return ""
-    return _ohne_platzhalter(str(wert))
+    orte = (
+        [winreg.HKEY_CLASSES_ROOT]
+        if wurzel == "klassen"
+        else [winreg.HKEY_CURRENT_USER, winreg.HKEY_LOCAL_MACHINE]
+    )
+    for ort in orte:
+        try:
+            with winreg.OpenKey(ort, schluessel) as offen:
+                wert, _art = winreg.QueryValueEx(offen, name)
+        except OSError:
+            continue
+        if wert:
+            return str(wert)
+    return ""
 
 
 # -- Nach aussen -----------------------------------------------------------
@@ -287,13 +412,60 @@ def anderes_programm() -> str:
     und die Oberflaeche sagt es weiter.
     """
     eingetragen = angemeldeter_aufruf()
-    if not eingetragen or aufruf() in eingetragen:
+    if not eingetragen or eingetragen == KEINE or aufruf() in eingetragen:
         return ""
     return eingetragen
 
 
+def _linux_eigene_eintraege() -> bool:
+    mime, desktop = _linux_orte()
+    return mime.is_file() and desktop.is_file()
+
+
+def _windows_eigene_eintraege() -> bool:
+    return bool(
+        _windows_wert(
+            rf"Software\Classes\{PROGRAMMKENNUNG}\shell\open\command", ""
+        )
+    )
+
+
+def eigene_eintraege() -> bool:
+    """Liegen unsere Dateien bzw. Schluessel noch da?
+
+    Das ist nicht dasselbe wie ``angemeldet()``: unsere Eintraege koennen
+    unberuehrt sein, waehrend die Dateiverwaltung laengst ein anderes
+    Programm nimmt.
+    """
+    try:
+        if sys.platform.startswith("win"):
+            return _windows_eigene_eintraege()
+        if sys.platform.startswith("linux"):
+            return _linux_eigene_eintraege()
+    except Exception:      # noqa: BLE001 - eine Auskunft, kein Betrieb
+        return False
+    return False
+
+
+def aufgehoben() -> bool:
+    """Wurde die Zuordnung **von aussen** aufgehoben?
+
+    Wir haben angemeldet - unsere Eintraege liegen da -, aber der
+    Doppelklick kommt nicht mehr bei uns an: „Öffnen mit ▸ Immer" hat
+    etwas anderes gesetzt, die Wahl wurde weggenommen
+    (``[Removed Associations]``), oder die Endung zeigt woandershin. Das
+    merkte das Programm bisher nicht, weil es nur seine eigenen Eintraege
+    ansah - und die stehen ja noch.
+    """
+    return eigene_eintraege() and not angemeldet()
+
+
 def angemeldet() -> bool:
-    """Steht Verteilerly schon als Programm fuer seine Dateien?"""
+    """Steht Verteilerly schon als Programm fuer seine Dateien?
+
+    Gefragt ist, was die Dateiverwaltung **tut**, nicht was wir
+    geschrieben haben.
+    """
     if sys.platform.startswith("win"):
         return _windows_angemeldet()
     if sys.platform.startswith("linux"):

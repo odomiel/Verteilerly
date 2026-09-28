@@ -232,6 +232,14 @@ class Hauptfenster(QMainWindow):
                   "umstellen unter Tools").format(fremd),
                 15000,
             )
+        elif verknuepfung.aufgehoben():
+            # Angemeldet waren wir, aber der Doppelklick kommt nicht mehr
+            # bei uns an - das sagt sonst niemand.
+            self.statusBar().showMessage(
+                u("Ein Doppelklick auf eine Projektdatei öffnet Verteilerly "
+                  "nicht mehr — unter Tools wieder anmelden"),
+                15000,
+            )
 
     # -- Einstellungen oeffnen ---------------------------------------------
 
@@ -1930,7 +1938,11 @@ class Hauptfenster(QMainWindow):
             u("Ein Doppelklick auf eine Projektdatei öffnet jetzt "
               "Verteilerly.\n\nGeschrieben wurde:\n{0}\n\nUnter Linux "
               "merkt sich die Dateiverwaltung das mitunter erst nach dem "
-              "nächsten Anmelden.").format("\n".join(geschrieben)),
+              "nächsten Anmelden.\n\nFunktioniert nicht mit der "
+              "PortableApps-Ausgabe: dort startet die VerteilerlyPortable.exe "
+              "erst das eigentliche Programm. Verknüpfen Sie die "
+              "VerteilerlyPortable.exe in diesem Fall von Hand.").format(
+                  "\n".join(geschrieben)),
         )
         self.statusBar().showMessage(
             u("Verteilerly öffnet jetzt seine Projektdateien selbst"), 8000
