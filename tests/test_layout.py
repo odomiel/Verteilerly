@@ -323,6 +323,13 @@ class TestQuerstrich(unittest.TestCase):
         strich = [e for e in linien(mit) if e not in linien(ohne)]
         self.assertTrue(strich, "kein zusätzlicher Strich")
         self.assertEqual(strich[0].y1, strich[0].y2, "der Strich liegt quer")
+        # Er schliesst mit der Umrandung ab, statt Luft zu lassen.
+        from verteilerly.blattvorlagen import STANDARD
+
+        self.assertAlmostEqual(strich[0].x1, STANDARD.rand, places=6)
+        self.assertAlmostEqual(
+            strich[0].x2, mit.breite - STANDARD.rand, places=6
+        )
         # Die Marke selbst steht nirgends als Text.
         self.assertFalse([e for e in mit.elemente
                           if isinstance(e, Text) and STRICH in e.text])

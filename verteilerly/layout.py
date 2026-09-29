@@ -714,9 +714,12 @@ def schriftfeld(
         for j, (name, wert, ausrichtung) in enumerate(spalte):
             y = oben + j * zeilenhoehe
             if name == STRICH:
+                # Von Kante zu Kante: der Strich schliesst mit der
+                # Umrandung ab - links und rechts Luft zu lassen sieht aus
+                # wie ein vergessener Rest, nicht wie eine Trennung.
                 mitte = y + zeilenhoehe / 2
                 blatt.linie(
-                    x + 2, mitte, x + spaltenbreite - 2, mitte, 0.2, LINIE_FEIN
+                    x, mitte, x + spaltenbreite, mitte, 0.2, LINIE_FEIN
                 )
                 continue
             blatt.text(
