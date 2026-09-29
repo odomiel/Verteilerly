@@ -2077,72 +2077,68 @@ class TestMenuezustaende(unittest.TestCase):
             self.assertTrue(gezeigt.called)
             self.assertEqual(f.projekt.verteiler.name, "Probe")
 
-    def test_der_menueeintrag_meldet_bei_der_dateiverwaltung_an(self):
+    def test_der_dialog_sagt_welche_datei_zu_verknuepfen_ist(self):
+        """Er trägt nichts mehr ein - er gibt Auskunft."""
         from verteilerly import verknuepfung
         from verteilerly.gui import hauptfenster as modul
 
         f = self.fenster
         self.assertEqual(f.aktion_verknuepfen.isEnabled(), verknuepfung.moeglich())
         with mock.patch.object(
-            modul.verknuepfung, "anmelden", return_value=["/tmp/x.desktop"]
-        ) as geschrieben, mock.patch.object(
-            modul.verknuepfung, "angemeldet", side_effect=[False, True]
+            modul.verknuepfung, "zu_verknuepfen",
+            return_value=pathlib.Path("/stick/VerteilerlyPortable.exe"),
         ), mock.patch.object(
-            modul.verknuepfung, "anderes_programm", return_value=""
+            modul.verknuepfung, "angemeldeter_aufruf", return_value=""
+        ), mock.patch.object(
+            modul.verknuepfung, "angemeldet", return_value=False
         ), mock.patch.object(QMessageBox, "information") as gezeigt:
-            f.verknuepfung_anmelden()
-        self.assertTrue(geschrieben.called)
-        self.assertIn("/tmp/x.desktop", gezeigt.call_args[0][2])
-        # Und der Hinweis auf die Ausgabe mit Starter steht dabei.
-        self.assertIn("PortableApps", gezeigt.call_args[0][2])
+            f.verknuepfung_zeigen()
+        gemeldet = gezeigt.call_args[0][2]
+        self.assertIn("/stick/VerteilerlyPortable.exe", gemeldet)
+        self.assertIn("nichts eingetragen", gemeldet)
+        self.assertIn("PortableApps", gemeldet)
+        self.assertIn("Öffnen mit", gemeldet, "der Weg dorthin steht dabei")
 
-    def test_wer_schon_angemeldet_ist_wird_gefragt(self):
-        """Der zweite Druck lief ins Leere - die Rückfrage war kaputt."""
-        from PySide6.QtWidgets import QMessageBox
-
+    def test_der_dialog_sagt_wenn_verknuepft_ist(self):
         from verteilerly.gui import hauptfenster as modul
 
         f = self.fenster
-        with mock.patch.object(modul.verknuepfung, "angemeldet", return_value=True), \
-             mock.patch.object(modul.verknuepfung, "anmelden") as angemeldet, \
-             mock.patch.object(QMessageBox, "information"), \
-             mock.patch.object(
-                 modul, "frage", return_value=QMessageBox.StandardButton.No
-             ) as gefragt:
-            f.verknuepfung_anmelden()
-        self.assertTrue(gefragt.called)
-        self.assertFalse(angemeldet.called)
+        with mock.patch.object(
+            modul.verknuepfung, "angemeldet", return_value=True
+        ), mock.patch.object(
+            modul.verknuepfung, "angemeldeter_aufruf",
+            return_value="/stick/Verteilerly.AppImage",
+        ):
+            text = f._verknuepfungstext()
+        self.assertIn("Verknüpft: ja", text)
 
-        with mock.patch.object(modul.verknuepfung, "angemeldet", return_value=True), \
-             mock.patch.object(
-                 modul.verknuepfung, "anmelden", return_value=["/tmp/x.desktop"]
-             ) as angemeldet, \
-             mock.patch.object(QMessageBox, "information"), \
-             mock.patch.object(
-                 modul, "frage", return_value=QMessageBox.StandardButton.Yes
-             ):
-            f.verknuepfung_anmelden()
-        self.assertTrue(angemeldet.called)
-
-    def test_ein_fremder_eintrag_wird_beim_anmelden_genannt(self):
-        """Der Fall der portablen Ausgabe: eingetragen ist eine andere Datei."""
-        from PySide6.QtWidgets import QMessageBox
-
+    def test_der_dialog_nennt_das_programm_das_stattdessen_oeffnet(self):
         from verteilerly.gui import hauptfenster as modul
 
         f = self.fenster
-        with mock.patch.object(modul.verknuepfung, "angemeldet", return_value=False), \
-             mock.patch.object(modul.verknuepfung, "anderes_programm",
-                               return_value="/stick/VerteilerlyPortable.exe"), \
-             mock.patch.object(modul.verknuepfung, "anmelden",
-                               return_value=["/tmp/x.desktop"]) as angemeldet, \
-             mock.patch.object(QMessageBox, "information"), \
-             mock.patch.object(modul, "frage",
-                               return_value=QMessageBox.StandardButton.No) as gefragt:
-            f.verknuepfung_anmelden()
-        self.assertTrue(gefragt.called)
-        self.assertIn("/stick/VerteilerlyPortable.exe", gefragt.call_args[0][2])
-        self.assertFalse(angemeldet.called, "ein Nein trägt nichts ein")
+        with mock.patch.object(
+            modul.verknuepfung, "angemeldet", return_value=False
+        ), mock.patch.object(
+            modul.verknuepfung, "angemeldeter_aufruf",
+            return_value="C:\\Windows\\notepad.exe",
+        ):
+            text = f._verknuepfungstext()
+        self.assertIn("Verknüpft: nein", text)
+        self.assertIn("notepad.exe", text)
+
+    def test_eine_weggenommene_zuordnung_steht_als_solche_da(self):
+        from verteilerly import verknuepfung
+        from verteilerly.gui import hauptfenster as modul
+
+        f = self.fenster
+        with mock.patch.object(
+            modul.verknuepfung, "angemeldet", return_value=False
+        ), mock.patch.object(
+            modul.verknuepfung, "angemeldeter_aufruf",
+            return_value=verknuepfung.KEINE,
+        ):
+            text = f._verknuepfungstext()
+        self.assertIn("weggenommen", text)
 
     def test_der_start_sagt_es_wenn_ein_anderes_programm_eingetragen_ist(self):
         from verteilerly.gui import hauptfenster as modul
@@ -2159,62 +2155,6 @@ class TestMenuezustaende(unittest.TestCase):
                                return_value="/stick/VerteilerlyPortable.exe"):
             f._zuordnung_pruefen()
         self.assertIn("VerteilerlyPortable.exe", f.statusBar().currentMessage())
-
-    def test_die_vorgehende_wahl_wird_auf_wunsch_aufgehoben(self):
-        """»Öffnen mit ▸ Immer« geht vor - aufheben darf das Programm."""
-        from PySide6.QtWidgets import QMessageBox
-
-        from verteilerly.gui import hauptfenster as modul
-
-        f = self.fenster
-        with mock.patch.object(
-            modul.verknuepfung, "anmelden", return_value=["HKCU\\…"]
-        ), mock.patch.object(
-            modul.verknuepfung, "angemeldet", side_effect=[False, False, True]
-        ), mock.patch.object(
-            modul.verknuepfung, "anderes_programm", return_value=""
-        ), mock.patch.object(
-            modul.verknuepfung, "angemeldeter_aufruf",
-            return_value="C:\\Windows\\notepad.exe",
-        ), mock.patch.object(
-            modul.verknuepfung, "wahl_aufheben", return_value=["UserChoice"]
-        ) as aufgehoben, mock.patch.object(
-            modul, "frage", return_value=QMessageBox.StandardButton.Yes
-        ) as gefragt, mock.patch.object(QMessageBox, "information") as gezeigt:
-            f.verknuepfung_anmelden()
-        self.assertIn("notepad.exe", gefragt.call_args[0][2])
-        self.assertTrue(aufgehoben.called)
-        gemeldet = gezeigt.call_args[0][2]
-        self.assertIn("PortableApps", gemeldet)
-        self.assertNotIn("Immer diese App", gemeldet, "es klappte ja")
-
-    def test_wer_die_wahl_behalten_will_bekommt_den_weg_gesagt(self):
-        from PySide6.QtWidgets import QMessageBox
-
-        from verteilerly.gui import hauptfenster as modul
-
-        f = self.fenster
-        with mock.patch.object(
-            modul.verknuepfung, "anmelden", return_value=["HKCU\\…"]
-        ), mock.patch.object(
-            modul.verknuepfung, "angemeldet", return_value=False
-        ), mock.patch.object(
-            modul.verknuepfung, "anderes_programm", return_value=""
-        ), mock.patch.object(
-            modul.verknuepfung, "angemeldeter_aufruf",
-            return_value="C:\\Windows\\notepad.exe",
-        ), mock.patch.object(
-            modul.verknuepfung, "wahl_aufheben"
-        ) as aufgehoben, mock.patch.object(
-            modul, "frage", return_value=QMessageBox.StandardButton.No
-        ), mock.patch.object(QMessageBox, "information") as gezeigt:
-            f.verknuepfung_anmelden()
-        self.assertFalse(aufgehoben.called)
-        gemeldet = gezeigt.call_args[0][2]
-        self.assertIn("notepad.exe", gemeldet)
-        self.assertIn("Immer diese App", gemeldet)
-        # Und der Hinweis auf die Ausgabe mit Starter steht trotzdem da.
-        self.assertIn("PortableApps", gemeldet)
 
     def test_der_start_sagt_es_wenn_die_zuordnung_aufgehoben_wurde(self):
         """Von außen weggenommen - unsere Einträge stehen noch da."""
@@ -3895,11 +3835,11 @@ class TestToolsMenue(unittest.TestCase):
                 self.assertTrue(eintrag.startswith(wie), eintrag)
                 self.assertIn("prüfen", eintrag)
 
-    def test_dahinter_steht_das_anmelden_bei_der_dateiverwaltung(self):
+    def test_dahinter_steht_die_auskunft_zur_dateiverknuepfung(self):
         texte = [
             a.text().replace("&", "") for a in self._menue().actions() if a.text()
         ]
-        self.assertEqual(texte[-1], "Projektdateien mit Verteilerly öffnen…")
+        self.assertEqual(texte[-1], "Projektdateien verknüpfen…")
 
     def _pruefen(self, stelle: int, datei: pathlib.Path):
         """Klickt einen Eintrag und fängt Dateidialog und Bericht ab."""

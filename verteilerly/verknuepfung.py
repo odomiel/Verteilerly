@@ -1,21 +1,24 @@
-"""Verteilerly als Programm fuer Projektdateien anmelden.
+"""Auskunft darueber, wer die Projektdateien oeffnet.
 
-Ein Doppelklick auf eine Projektdatei soll das Programm oeffnen. Wie das
-geht, sagt das Betriebssystem:
+Ein Doppelklick auf eine Projektdatei soll Verteilerly oeffnen. Dieses
+Modul **schreibt das nicht ein** - es sagt nur, wie es steht:
 
-* **Linux** fuehrt Dateitypen (shared-mime-info): eine XML sagt, dass
-  ``*.vtly`` ein ``application/x-verteilerly-projekt`` ist, ein
-  Desktop-Eintrag sagt, wer diesen Typ oeffnet. Beides liegt unter
-  ``~/.local/share``, danach werden die Datenbanken aufgefrischt.
-* **Windows** fuehrt Endungen in der Registrierung: ``.vtly`` zeigt auf
-  eine Programmkennung, und die traegt den Aufrufbefehl. Geschrieben
-  wird nur unter ``HKEY_CURRENT_USER`` - das braucht keine
-  Verwalterrechte und gilt fuer den angemeldeten Benutzer.
+* welche ausfuehrbare Datei zu verknuepfen ist (``zu_verknuepfen()``) -
+  bei einer Ausgabe mit Starter der **Starter**, nicht das Programm
+  dahinter, sonst laeuft der Doppelklick daran vorbei;
+* womit die Dateiverwaltung gerade oeffnet (``angemeldeter_aufruf()``)
+  und ob das wir sind (``angemeldet()``).
 
-Angemeldet wird **auf Wunsch**, nicht beim Start: ein Programm, das sich
-ungefragt in die Dateiverwaltung eintraegt, ist ein schlechter Gast. Und
-es wird **nichts geraten**: laeuft das Programm aus dem Quellbaum, steht
-der Aufruf mit demselben Python da, mit dem es gerade laeuft.
+**Verknuepft wird von Hand**, in der Dateiverwaltung: unter Windows ueber
+*Öffnen mit ▸ Andere App ▸ Immer diese App*, unter Linux ueber
+*Öffnen mit ▸ Andere Anwendung*. Das Programm hat das eine Weile selbst
+geschrieben; verlaesslich war es nicht, weil die Wahl des Anwenders jeder
+Anmeldung vorgeht und eine Ausgabe mit Starter sich ohnehin nicht selbst
+eintragen kann.
+
+Gefragt ist darum immer, was die Dateiverwaltung **tut**, nicht was
+irgendwo eingetragen steht: unter Windows zaehlt zuerst
+``FileExts\\.vtly\\UserChoice``, unter Linux die ``mimeapps.list``.
 
 Dieses Modul kennt kein Qt; die Oberflaeche zeigt nur, was es meldet.
 """
@@ -24,12 +27,8 @@ from __future__ import annotations
 
 import os
 import pathlib
-import shutil
-import subprocess
 import sys
 
-from .modell import ModellFehler
-from .sprachen import u
 
 #: Der Dateityp, unter dem Linux die Projektdatei fuehrt.
 MIMETYP = "application/x-verteilerly-projekt"
@@ -42,14 +41,12 @@ ENDUNGEN = (".vtly", ".vtly.json")
 #: Wie die Dateien heissen, die unter Linux angelegt werden.
 DESKTOPDATEI = "verteilerly.desktop"
 MIMEDATEI = "verteilerly.xml"
-#: Steht fuer „ausdruecklich nichts": der Anwender hat die Zuordnung von
-#: aussen aufgehoben. Unsere Dateien liegen dann noch da und taeuschen eine
-#: Anmeldung vor - gefragt ist aber, was die Dateiverwaltung wirklich tut.
+#: Woran ein Starter zu erkennen ist - PortableApps benennt ihn so.
+STARTERMUSTER = "*Portable.exe"
+#: Steht fuer „ausdruecklich nichts": die Zuordnung ist weggenommen
+#: (``[Removed Associations]``, eine gesperrte Kennung). Dann oeffnet
+#: **niemand** die Datei - das ist etwas anderes als „nicht eingetragen".
 KEINE = "-"
-
-
-class VerknuepfungFehler(ModellFehler):
-    """Die Anmeldung liess sich nicht schreiben."""
 
 
 def aufruf() -> str:
@@ -66,6 +63,45 @@ def aufruf() -> str:
     return f'{_gequotet(pathlib.Path(sys.executable).resolve())} -m verteilerly'
 
 
+def starter() -> pathlib.Path | None:
+    """Der Starter, der dieses Programm gestartet hat - falls es einen gibt.
+
+    Eine PortableApps-Ausgabe legt ``<Ordner>\\VerteilerlyPortable.exe`` vor
+    ``<Ordner>\\App\\Verteilerly\\Verteilerly.exe``: der Starter richtet
+    Ordner und Umgebung ein und ruft dann das Programm. Das Programm sieht
+    nur sich selbst - verknuepft gehoert der Starter, sonst laeuft der
+    Doppelklick an ihm vorbei.
+    """
+    if not getattr(sys, "frozen", False) or not sys.platform.startswith("win"):
+        return None
+    hier = pathlib.Path(sys.executable).resolve().parent
+    for ordner in [hier, *list(hier.parents)[:3]]:
+        for kandidat in sorted(ordner.glob(STARTERMUSTER)):
+            if kandidat.resolve() != pathlib.Path(sys.executable).resolve():
+                return kandidat
+    return None
+
+
+def zu_verknuepfen() -> pathlib.Path | None:
+    """Die ausfuehrbare Datei, mit der die Projektdateien zu verknuepfen sind.
+
+    Als AppImage die Abbilddatei selbst (nicht der Einhaengepunkt unter
+    ``/tmp``, der beim Beenden verschwindet), unter Windows der Starter,
+    wenn es einen gibt, sonst die laufende ``.exe``. Aus dem Quellbaum
+    ``None``: dort startet ein Python mit ``-m verteilerly``, da ist
+    nichts zu verknuepfen.
+    """
+    abbild = os.environ.get("APPIMAGE")
+    if abbild:
+        return pathlib.Path(abbild).resolve()
+    los = starter()
+    if los is not None:
+        return los
+    if getattr(sys, "frozen", False):
+        return pathlib.Path(sys.executable).resolve()
+    return None
+
+
 def _gequotet(pfad: pathlib.Path) -> str:
     """Ein Pfad mit Leerzeichen braucht Anfuehrungszeichen."""
     text = str(pfad)
@@ -80,155 +116,6 @@ def _linux_orte() -> tuple[pathlib.Path, pathlib.Path]:
         os.environ.get("XDG_DATA_HOME") or pathlib.Path.home() / ".local" / "share"
     )
     return grund / "mime" / "packages" / MIMEDATEI, grund / "applications" / DESKTOPDATEI
-
-
-def _mime_xml() -> str:
-    muster = "\n".join(
-        f'    <glob pattern="*{endung}" weight="60"/>' for endung in ENDUNGEN
-    )
-    return (
-        '<?xml version="1.0" encoding="UTF-8"?>\n'
-        '<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">\n'
-        f'  <mime-type type="{MIMETYP}">\n'
-        "    <comment>Verteilerly-Projekt</comment>\n"
-        "    <comment xml:lang=\"en\">Verteilerly project</comment>\n"
-        '    <sub-class-of type="application/json"/>\n'
-        f"{muster}\n"
-        "  </mime-type>\n"
-        "</mime-info>\n"
-    )
-
-
-def _desktop_eintrag() -> str:
-    return (
-        "[Desktop Entry]\n"
-        "Type=Application\n"
-        "Name=Verteilerly\n"
-        "Comment=Dokumentation für LSA+-Verteiler\n"
-        f"Exec={aufruf()} %f\n"
-        "Icon=verteilerly\n"
-        "Terminal=false\n"
-        "Categories=Office;Engineering;\n"
-        f"MimeType={MIMETYP};\n"
-    )
-
-
-def symbolort() -> pathlib.Path:
-    """Wohin das Sinnbild gehoert, damit die Dateiverwaltung es findet."""
-    grund = pathlib.Path(
-        os.environ.get("XDG_DATA_HOME") or pathlib.Path.home() / ".local" / "share"
-    )
-    return grund / "icons" / "hicolor" / "256x256" / "apps" / "verteilerly.png"
-
-
-def _linux_anmelden(symbol_schreiben=None) -> list[str]:
-    mime, desktop = _linux_orte()
-    getan = []
-    for ziel, inhalt in ((mime, _mime_xml()), (desktop, _desktop_eintrag())):
-        try:
-            ziel.parent.mkdir(parents=True, exist_ok=True)
-            ziel.write_text(inhalt, encoding="utf-8")
-        except OSError as fehler:
-            raise VerknuepfungFehler(
-                u("{0} liess sich nicht schreiben: {1}").format(ziel, fehler)
-            ) from None
-        getan.append(str(ziel))
-    desktop.chmod(0o755)
-    # Die Wahl des Anwenders geht der Anmeldung vor - also wird sie
-    # mitgeschrieben. Ohne das liefe „wieder anmelden" ins Leere: ein
-    # weggenommener Eintrag (`[Removed Associations]`) gewinnt weiter, und
-    # das Programm oeffnete seine Dateien trotz neuer Anmeldung nicht.
-    gesetzt = _linux_vorgabe_setzen()
-    if gesetzt:
-        getan.append(str(gesetzt))
-
-    # Das Sinnbild zeichnet die Oberflaeche - dieses Modul kennt kein Qt.
-    # Ohne Sinnbild ist der Eintrag trotzdem gueltig, nur grau.
-    if symbol_schreiben is not None:
-        ziel = symbolort()
-        try:
-            ziel.parent.mkdir(parents=True, exist_ok=True)
-            symbol_schreiben(ziel)
-            getan.append(str(ziel))
-        except Exception:      # noqa: BLE001 - eine Zugabe, kein Grund zum Abbruch
-            pass
-
-    # Die Datenbanken merken die neuen Dateien nicht von selbst. Fehlt
-    # ein Werkzeug, ist das kein Grund zum Abbruch: viele Arbeitsplaetze
-    # lesen die Dateien beim naechsten Anmelden ohnehin neu ein.
-    for befehl in (
-        ["update-mime-database", str(mime.parent.parent)],
-        ["update-desktop-database", str(desktop.parent)],
-        ["xdg-mime", "default", DESKTOPDATEI, MIMETYP],
-        ["gtk-update-icon-cache", "-f", "-t", str(symbolort().parents[2])],
-    ):
-        if shutil.which(befehl[0]) is None:
-            continue
-        try:
-            subprocess.run(befehl, check=False, capture_output=True, timeout=30)
-        except (OSError, subprocess.SubprocessError):
-            continue
-    return getan
-
-
-def _linux_vorgabe_setzen():
-    """Traegt uns in die ``mimeapps.list`` ein - und nimmt den Widerruf weg.
-
-    Geschrieben wird die Datei im Konfigurationsordner; das ist die, die
-    zuerst gilt. Unter ``[Default Applications]`` steht danach unser
-    Desktop-Eintrag, und aus ``[Removed Associations]`` ist er entfernt.
-    Zurueck kommt die Datei oder ``None``, wenn sich nichts schreiben
-    liess - eine Anmeldung soll daran nicht scheitern.
-    """
-    datei = _mimeapps_dateien()[0]
-    try:
-        zeilen = (
-            datei.read_text(encoding="utf-8", errors="replace").splitlines()
-            if datei.is_file()
-            else []
-        )
-    except OSError:
-        zeilen = []
-    neu: list[str] = []
-    abschnitt = ""
-    eingetragen = False
-    for zeile in zeilen:
-        blank = zeile.strip()
-        if blank.startswith("[") and blank.endswith("]"):
-            abschnitt = blank
-            neu.append(zeile)
-            continue
-        if blank.startswith(MIMETYP) and "=" in blank:
-            typ, wert = blank.split("=", 1)
-            if typ.strip() == MIMETYP:
-                if abschnitt == "[Removed Associations]":
-                    # Der Widerruf gilt nicht mehr - wir sind ja gefragt.
-                    rest = [
-                        s
-                        for s in wert.replace(";", " ").split()
-                        if s and s != DESKTOPDATEI
-                    ]
-                    if rest:
-                        neu.append(f"{MIMETYP}={';'.join(rest)};")
-                    continue
-                if abschnitt == "[Default Applications]":
-                    neu.append(f"{MIMETYP}={DESKTOPDATEI}")
-                    eingetragen = True
-                    continue
-        neu.append(zeile)
-    if not eingetragen:
-        if "[Default Applications]" not in [z.strip() for z in neu]:
-            if neu and neu[-1].strip():
-                neu.append("")
-            neu.append("[Default Applications]")
-        stelle = [z.strip() for z in neu].index("[Default Applications]") + 1
-        neu.insert(stelle, f"{MIMETYP}={DESKTOPDATEI}")
-    try:
-        datei.parent.mkdir(parents=True, exist_ok=True)
-        datei.write_text("\n".join(neu).rstrip("\n") + "\n", encoding="utf-8")
-    except OSError:
-        return None
-    return datei
 
 
 def _linux_angemeldet() -> bool:
@@ -335,41 +222,6 @@ def _linux_desktopdatei_finden(name: str):
 
 
 # -- Windows ---------------------------------------------------------------
-
-
-def _windows_anmelden() -> list[str]:
-    import winreg
-
-    befehl = f'{aufruf()} "%1"'
-    eintraege = (
-        (rf"Software\Classes\{ENDUNGEN[0]}", "", PROGRAMMKENNUNG),
-        (rf"Software\Classes\{PROGRAMMKENNUNG}", "", "Verteilerly-Projekt"),
-        (rf"Software\Classes\{PROGRAMMKENNUNG}\DefaultIcon", "", f"{aufruf()},0"),
-        (rf"Software\Classes\{PROGRAMMKENNUNG}\shell\open\command", "", befehl),
-    )
-    getan = []
-    for schluessel, name, wert in eintraege:
-        try:
-            with winreg.CreateKey(winreg.HKEY_CURRENT_USER, schluessel) as offen:
-                winreg.SetValueEx(offen, name, 0, winreg.REG_SZ, wert)
-        except OSError as fehler:
-            raise VerknuepfungFehler(
-                u("{0} liess sich nicht schreiben: {1}").format(schluessel, fehler)
-            ) from None
-        getan.append(f"HKCU\\{schluessel}")
-    _windows_bescheid_sagen()
-    return getan
-
-
-def _windows_bescheid_sagen() -> None:
-    """Sagt der Oberflaeche, dass sich eine Verknuepfung geaendert hat."""
-    try:
-        import ctypes
-
-        # SHCNE_ASSOCCHANGED, SHCNF_IDLIST
-        ctypes.windll.shell32.SHChangeNotify(0x08000000, 0x0000, None, None)
-    except Exception:      # noqa: BLE001 - ohne Bescheid wirkt es spaeter
-        pass
 
 
 def _windows_angemeldet() -> bool:
@@ -497,50 +349,6 @@ def _windows_eigene_eintraege() -> bool:
     )
 
 
-def _windows_wahl_aufheben() -> list[str]:
-    """Loescht die ``UserChoice`` fuer unsere Endung.
-
-    **Setzen** laesst sich dieser Schluessel nicht: Windows sichert ihn mit
-    einer Pruefsumme, damit kein Programm sich heimlich vordraengt.
-    **Loeschen** darf der Benutzer - und genau das will er, wenn er
-    „Projektdateien mit Verteilerly oeffnen" waehlt. Danach gilt wieder,
-    was die Endung unter ``Software\\Classes`` sagt, also unsere Anmeldung.
-    """
-    import winreg
-
-    schluessel = (
-        r"Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts"
-        rf"\{ENDUNGEN[0]}\UserChoice"
-    )
-    try:
-        winreg.DeleteKey(winreg.HKEY_CURRENT_USER, schluessel)
-    except FileNotFoundError:
-        return []
-    except OSError as fehler:
-        raise VerknuepfungFehler(
-            u("Die Wahl im Dateimanager liess sich nicht aufheben: {0}").format(
-                fehler
-            )
-        ) from None
-    _windows_bescheid_sagen()
-    return [f"HKCU\\{schluessel} (aufgehoben)"]
-
-
-def wahl_aufheben() -> list[str]:
-    """Nimmt die Wahl zurueck, die unserer Anmeldung vorgeht.
-
-    Unter Windows ist das die ``UserChoice`` der Endung, unter Linux der
-    Eintrag in der ``mimeapps.list``. Zurueck kommt, was dabei angefasst
-    wurde - leer, wenn es nichts aufzuheben gab.
-    """
-    if sys.platform.startswith("win"):
-        return _windows_wahl_aufheben()
-    if sys.platform.startswith("linux"):
-        datei = _linux_vorgabe_setzen()
-        return [str(datei)] if datei else []
-    return []
-
-
 def eigene_eintraege() -> bool:
     """Liegen unsere Dateien bzw. Schluessel noch da?
 
@@ -584,17 +392,3 @@ def angemeldet() -> bool:
     return False
 
 
-def anmelden(symbol_schreiben=None) -> list[str]:
-    """Meldet Verteilerly an und sagt, was dabei geschrieben wurde.
-
-    ``symbol_schreiben`` legt das Sinnbild ab, wenn eines gebraucht wird
-    - unter Linux. Dieses Modul zeichnet es nicht selbst: es kennt kein
-    Qt, und die Anmeldung soll auch ohne Oberflaeche laufen.
-    """
-    if sys.platform.startswith("win"):
-        return _windows_anmelden()
-    if sys.platform.startswith("linux"):
-        return _linux_anmelden(symbol_schreiben)
-    raise VerknuepfungFehler(
-        u("Für {0} kennt das Programm keinen Weg").format(sys.platform)
-    )

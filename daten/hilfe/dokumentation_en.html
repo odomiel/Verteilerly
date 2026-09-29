@@ -80,50 +80,37 @@ unsaved changes the program asks; the buttons are <i>Save</i>, <i>Discard</i>
 and <i>Cancel</i>. Older files are called <code>.vtly.json</code>; they can
 still be opened, and saving them keeps their name.</p>
 
-<p><b>Double click in the file manager</b> — <b>Tools ▸ Open project files
-with Verteilerly…</b> registers the program once as the opener; after that a
-double click on a project file starts Verteilerly with it. On Linux a file
-type and a program entry are created in <code>~/.local/share</code>, on
-Windows two entries in the registry of the logged-in user — <b>no
-administrator rights</b> needed, and nothing outside your own account. It is
-done on request only: a program that registers itself unasked is a bad guest.
-If the program moves — another folder, a new AppImage —, register it once
-again. The command line does the same:
+<p><b>Double click in the file manager</b> — a project file
+(<code>.vtly</code>) opens Verteilerly as soon as it is linked with the right
+executable in the file manager. <b>Linking is done by hand</b>, where that
+choice belongs: right-click a project file ▸ <i>Open with</i> ▸ <i>Choose
+another app</i> ▸ <i>Always use this app</i> (Windows), or ▸ <i>Open with</i> ▸
+<i>Other application</i> (Linux). The command line works too:
 <code>Verteilerly &lt;file&gt;</code>.</p>
 
-<p><b>What gets registered is always the program you register from</b> — the
-running file, with its path and name. That matters for a <b>portable
-edition</b>: if an older <code>Verteilerly.exe</code> sits next to the
-<code>VerteilerlyPortable.exe</code>, or the portable one has moved, then a
-double click keeps opening the registered file — and that one has its
-<b>own settings</b> lying next to it. It looks as if the program had forgotten
-your settings. Verteilerly therefore says so in the status bar at startup when
-the association points at a different Verteilerly, and the menu entry names the
-registered file and asks whether to switch over. Registering once from the
-edition you want is enough.</p>
+<p><b>Tools ▸ Link project files…</b> tells you everything you need for that
+and changes nothing itself:</p>
 
-<p><b>If the association is revoked from outside</b> — „Open with ▸ Always"
-sets a different program, or the association is taken away —, Verteilerly says
-so in the status bar at startup: our entries are still there, but the double
-click no longer arrives. What counts is therefore not what <i>was</i>
-registered but what the file manager <b>does</b>: on Windows the user's own
-choice comes first (<code>FileExts\.vtly\UserChoice</code>), on Linux the
-<code>mimeapps.list</code>. Registering again from the Tools menu brings the
-files back: it then <b>asks whether the overriding choice should be
-lifted</b>, and lifts it if you want. A program may not <i>set</i> that choice —
-Windows protects it with a checksum so that nobody pushes in unasked — but it
-may <i>lift</i> it; after that the registration applies again. On Linux
-registering writes the choice along anyway and takes back a revocation. If you
-would rather keep the choice, say no: the dialog then names the program that
-opens the files and the way through Explorer (right-click ▸ <i>Open with</i> ▸
-<i>Choose another app</i> ▸ <i>Always use this app</i>).</p>
+<ul>
+<li><b>which file</b> is to be linked — with the <b>PortableApps edition</b>
+the <code>VerteilerlyPortable.exe</code>, not the program in
+<code>App\Verteilerly</code>: the launcher sets up folders and environment and
+only then calls the program. As an <b>AppImage</b> the image file itself, not
+the mount point under <code>/tmp</code>, which disappears when the program
+ends;</li>
+<li><b>whether they are linked</b> — and if not, which program currently opens
+the project files. What counts is what the file manager <b>does</b>: on Windows
+the user's own choice comes first (<code>FileExts\.vtly\UserChoice</code>, set
+by „Open with ▸ Always"), on Linux the <code>mimeapps.list</code> including
+removed associations;</li>
+<li><b>how</b> to set it.</li>
+</ul>
 
-<p><b>Not with the PortableApps edition</b> — there the
-<code>VerteilerlyPortable.exe</code> sets up folders and environment and then
-starts the actual program in <code>App\Verteilerly</code>. That one only sees
-itself, so what gets registered is the inner file, which runs without the
-launcher. In that case link the <code>VerteilerlyPortable.exe</code> by hand —
-the dialog says so too.</p>
+<p>The program used to register this itself. It was not dependable: the user's
+own choice comes before any registration, and an edition with a launcher cannot
+register itself at all — what would be registered is the inner file. Hence the
+information instead of the intervention. If the association points at another
+program, Verteilerly also says so in the status bar at startup.</p>
 
 <h2><a name="editor"></a>3 &nbsp; The editor</h2>
 
@@ -1090,7 +1077,7 @@ extensions</i>.</p>
 <tr><td rowspan="4"><b>Tools</b></td><td>Check frame template…</td><td></td></tr>
 <tr><td>Check sheet template…</td><td></td></tr>
 <tr><td>Check cable types…</td><td></td></tr>
-<tr><td>Open project files with Verteilerly…</td><td></td></tr>
+<tr><td>Link project files…</td><td></td></tr>
 <tr><td rowspan="3"><b>Extensions</b></td><td>Sheet template editor…</td><td></td></tr>
 <tr><td>Log…</td><td></td></tr>
 <tr><td>Manage extensions…</td><td></td></tr>

@@ -286,42 +286,29 @@ entsteht stattdessen eine **Kopie** (`kabel_kopieren`): Typ, Größe und dieselb
 Adern, aber keine Rangierungen — eine Verbindung gibt es genau einmal.
 
 **Ein Doppelklick in der Dateiverwaltung** öffnet eine Projektdatei in
-Verteilerly, sobald man das Programm einmal dafür angemeldet hat — *Tools ▸
-Projektdateien mit Verteilerly öffnen…*. Unter Linux entstehen dafür ein
-Dateityp (`application/x-verteilerly-projekt`) und ein Programmeintrag in
-`~/.local/share`, unter Windows zwei Einträge unter `HKEY_CURRENT_USER`; beides
-ohne Verwalterrechte und ohne etwas außerhalb des eigenen Benutzers anzufassen.
-Angemeldet wird **nur auf Knopfdruck**: ein Programm, das sich ungefragt
-einträgt, ist ein schlechter Gast. Gespeichert wird darum als `.vtly` — eine
-einzige Endung, denn Windows verknüpft über die letzte, und `.json` gehört
-nicht uns; ältere Dateien (`.vtly.json`) lassen sich weiter öffnen. Denselben
-Weg geht die Kommandozeile: `Verteilerly <datei>`.
+Verteilerly, sobald sie dort mit der richtigen ausführbaren Datei verknüpft ist.
+Gespeichert wird als `.vtly` — eine einzige Endung, denn Windows verknüpft über
+die letzte, und `.json` gehört nicht uns; ältere Dateien (`.vtly.json`) lassen
+sich weiter öffnen. Denselben Weg geht die Kommandozeile:
+`Verteilerly <datei>`.
 
-Eingetragen wird immer **die laufende Datei** (`verknuepfung.aufruf()`) — bei
-einer tragbaren Ausgabe also genau die .exe, aus der angemeldet wurde. Liegt
-daneben eine zweite, oder ist die tragbare umgezogen, öffnet der Doppelklick
-weiter die eingetragene: sie liest ihre Einstellungen neben sich und wirkt wie
-ein Programm, das alles vergessen hat. `verknuepfung.anderes_programm()` sagt
-darum, worauf die Zuordnung zeigt, wenn das nicht das laufende Programm ist;
-das gepackte Programm meldet es beim Start in der Statuszeile — und damit auch
-im Protokoll —, und der Menüeintrag nennt die eingetragene Datei und fragt, ob
-umgestellt werden soll. Gefragt wird dabei, was die Dateiverwaltung **tut**,
-nicht was wir geschrieben haben: unter Windows zählt zuerst
-`FileExts\.vtly\UserChoice` (das setzt „Öffnen mit ▸ Immer"), unter Linux die
-`mimeapps.list` samt `[Removed Associations]`. Hebt jemand die Zuordnung von
-außen auf, liegen unsere Einträge weiter da — `aufgehoben()` erkennt genau
-diesen Fall, und der Start sagt es in der Statuszeile. Unter Linux schreibt
-`anmelden()` die Wahl in die `mimeapps.list` und nimmt einen Widerruf zurück —
-sonst liefe „wieder anmelden" ins Leere. Unter Windows lässt sich die
-`UserChoice` nicht **setzen** (Windows sichert sie mit einer Prüfsumme) — wohl
-aber **löschen**: greift die Anmeldung nicht, fragt das Programm, ob die
-vorgehende Wahl aufgehoben werden soll (`verknuepfung.wahl_aufheben()`), und
-danach gilt wieder die Zuordnung. Wer sie behalten will, bekommt den Weg über
-den Explorer gesagt. **Nicht** taugt der Weg
-für eine Ausgabe mit Starter:
-die PortableApps-Fassung lässt `VerteilerlyPortable.exe` erst einrichten und
-dann `App\Verteilerly\Verteilerly.exe` laufen — eingetragen würde die innere
-Datei. Der Dialog sagt das und bittet, den Starter von Hand zu verknüpfen.
+**Verknüpft wird von Hand**, in der Dateiverwaltung — das Programm trägt nichts
+ein. `verknuepfung.py` (ohne Qt) gibt nur Auskunft, und *Tools ▸ Projektdateien
+verknüpfen…* zeigt sie: welche Datei zu verknüpfen ist (`zu_verknuepfen()` —
+beim AppImage die Abbilddatei, unter Windows der **Starter**, den `starter()`
+neben der laufenden .exe sucht, denn die PortableApps-Fassung lässt
+`VerteilerlyPortable.exe` erst einrichten und dann
+`App\Verteilerly\Verteilerly.exe` laufen), ob verknüpft ist (`angemeldet()`)
+und, wenn nicht, welches Programm gerade öffnet (`anderes_programm()`). Gefragt
+wird immer, was die Dateiverwaltung **tut**, nicht was irgendwo eingetragen
+steht: unter Windows zählt zuerst `FileExts\.vtly\UserChoice` (das setzt
+„Öffnen mit ▸ Immer"), unter Linux die `mimeapps.list` samt
+`[Removed Associations]` — dafür steht die Marke `KEINE`. Das gepackte Programm
+sagt es auch beim Start in der Statuszeile, wenn ein anderes Programm öffnet.
+
+Das Eintragen hat das Programm eine Weile selbst gemacht und ist wieder
+ausgebaut: die Wahl des Anwenders geht jeder Eintragung vor, und eine Ausgabe
+mit Starter kann sich nicht selbst verknüpfen.
 
 Menüeinträge, die gerade nichts bewirken können, sind ausgegraut: ohne
 Verteiler die ganze Ausgabe, *Kabel entfernen* nur dort, wo wirklich ein

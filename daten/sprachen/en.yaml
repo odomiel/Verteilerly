@@ -1,12 +1,3 @@
-# Verteilerly - English wording of the interface
-#
-# Der deutsche Satz ist der Schluessel, die englische Zeile die Anzeige.
-# Platzhalter ({0}, {1}, …) muessen erhalten bleiben; ihre Reihenfolge
-# darf sich aendern. Fehlt eine Zeile, erscheint der deutsche Satz.
-#
-# Die Blaetter selbst werden nicht uebersetzt: was dort steht, ist das
-# Dokument des Anwenders - die Woerter des Schriftfeldes sind je Projekt
-# aenderbar.
 '{0}: kein einziges Feld im Leistenblatt': '{0}: not a single column on the strip sheet'
 '{0}: leeres Schriftfeld': '{0}: empty title block'
 '{0}: schriftfeld_art {1!r} gibt es nicht (bekannt: {2})': '{0}: there is no schriftfeld_art {1!r} (known:
@@ -545,6 +536,28 @@ kein Wert darin gelesen: no value read from it
 ' in dieser Datei': ' in this file'
 ' je Blatt': ' per sheet'
 '&Tools': '&Tools'
+"&Projektdateien verknüpfen…": "&Link project files…"
+Projektdateien verknüpfen: Link project files
+Sagt, mit welcher Datei die Projektdateien zu verknüpfen sind und ob sie es sind: Says which file the project
+  files are to be linked with, and whether they are
+? "Ein Doppelklick auf eine Projektdatei ({0}) öffnet Verteilerly, sobald die Dateiverwaltung sie mit der richtigen Datei verknüpft hat."
+: "A double click on a project file ({0}) opens Verteilerly as soon as the file manager has linked it with the right file."
+"Zu verknüpfen ist:\n{0}": "To be linked:\n{0}"
+? "Zu verknüpfen ist: nichts — dieses Verteilerly läuft aus dem Quelltext, nicht als fertiges Programm."
+: "To be linked: nothing — this Verteilerly runs from the source, not as a finished program."
+? "Bei der PortableApps-Ausgabe ist das die VerteilerlyPortable.exe, nicht das Programm in App\\Verteilerly; als AppImage die Abbilddatei selbst."
+: "With the PortableApps edition that is the VerteilerlyPortable.exe, not the program in App\\Verteilerly; as an AppImage the image file itself."
+"Verknüpft: ja — Projektdateien öffnen Verteilerly.": "Linked: yes — project files open Verteilerly."
+? "Verknüpft: nein — die Zuordnung ist ausdrücklich weggenommen, es öffnet niemand."
+: "Linked: no — the association has been taken away explicitly, nothing opens them."
+"Verknüpft: nein — geöffnet wird zurzeit:\n{0}": "Linked: no — currently opened by:\n{0}"
+"Verknüpft: nein — es ist nichts eingetragen.": "Linked: no — nothing is registered."
+? "So wird verknüpft: Rechtsklick auf eine Projektdatei ▸ Öffnen mit ▸ Andere App ▸ Immer diese App (Windows) oder ▸ Öffnen mit ▸ Andere Anwendung (Linux) — und dort die Datei von oben wählen."
+: "This is how to link them: right-click a project file ▸ Open with ▸ Choose another app ▸ Always use this app (Windows), or ▸ Open with ▸ Other application (Linux) — and pick the file named above."
+? "Ein Doppelklick auf eine Projektdatei öffnet zurzeit {0} — nachsehen unter Tools"
+: "A double click on a project file currently opens {0} — see under Tools"
+? "Ein Doppelklick auf eine Projektdatei öffnet Verteilerly nicht mehr — nachsehen unter Tools"
+: "A double click on a project file no longer opens Verteilerly — see under Tools"
 ', ': ', '
 Anmerkungen: Remarks
 'Aufbau: {0} × {1} Leisten zu {2} DA': 'Layout: {0} × {1} strips of {2} pairs'
@@ -726,29 +739,3 @@ Verteiler-Nr.: Frame no.
 Höhe: Height
 Querstrich: Horizontal rule
 Diesen Block löschen: Delete this block
-'&Projektdateien mit Verteilerly öffnen…': '&Open project files with Verteilerly…'
-? "Ein Doppelklick auf eine Projektdatei öffnet jetzt Verteilerly.\n\nGeschrieben wurde:\n{0}\n\nUnter Linux merkt sich die Dateiverwaltung das mitunter erst nach dem nächsten Anmelden.\n\nFunktioniert nicht mit der PortableApps-Ausgabe: dort startet die VerteilerlyPortable.exe erst das eigentliche Programm. Verknüpfen Sie die VerteilerlyPortable.exe in diesem Fall von Hand."
-: "A double click on a project file now opens Verteilerly.\n\nWritten was:\n{0}\n\nOn Linux the file manager sometimes notices it only after the next login.\n\nDoes not work with the PortableApps edition: there the VerteilerlyPortable.exe starts the actual program first. In that case link the VerteilerlyPortable.exe by hand."
-Für {0} kennt das Programm keinen Weg: For {0} the program knows no way
-Meldet Verteilerly bei der Dateiverwaltung an — danach öffnet ein Doppelklick die Projektdatei: Registers
-  Verteilerly with the file manager — after that a double click opens the project file
-Nicht angemeldet: Not registered
-Projektdateien: Project files
-Verteilerly ist bereits angemeldet. Erneut eintragen?: Verteilerly is already registered. Register again?
-? "Ein Doppelklick öffnet zurzeit:\n\n{0}\n\nAuf dieses Programm umstellen?\n\n{1}"
-: "A double click currently opens:\n\n{0}\n\nSwitch over to this program?\n\n{1}"
-? "Geöffnet wird zurzeit:\n\n{0}\n\nDiese Wahl im Dateimanager geht der Anmeldung vor. Soll sie aufgehoben werden, damit Verteilerly öffnet?"
-: "Currently opened by:\n\n{0}\n\nThis choice in the file manager comes before the registration. Should it be lifted, so that Verteilerly opens?"
-'Die Wahl im Dateimanager liess sich nicht aufheben: {0}': 'The choice in the file manager could not be
-  lifted: {0}'
-? "Ein Doppelklick auf eine Projektdatei öffnet zurzeit {0} — umstellen unter Tools"
-: "A double click on a project file currently opens {0} — switch over under Tools"
-? "Ein Doppelklick auf eine Projektdatei öffnet Verteilerly nicht mehr — unter Tools wieder anmelden"
-: "A double click on a project file no longer opens Verteilerly — register again under Tools"
-? "Geöffnet wird trotzdem weiter {0} — die Wahl im Dateimanager geht vor, und die kann kein Programm umstellen. Tun Sie es dort: Rechtsklick auf eine Projektdatei ▸ Öffnen mit ▸ Andere App ▸ Immer diese App."
-: "{0} still opens the files — the choice in the file manager comes first, and no program can change it. Do it there: right-click a project file ▸ Open with ▸ Choose another app ▸ Always use this app."
-ein anderes Programm: another program
-Eingetragen — die Wahl im Dateimanager geht noch vor: Registered — the choice in the file manager still
-  comes first
-Verteilerly öffnet jetzt seine Projektdateien selbst: Verteilerly now opens its project files itself
-'{0} liess sich nicht schreiben: {1}': '{0} could not be written: {1}'

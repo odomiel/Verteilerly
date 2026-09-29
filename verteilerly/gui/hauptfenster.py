@@ -229,7 +229,7 @@ class Hauptfenster(QMainWindow):
         if fremd:
             self.statusBar().showMessage(
                 u("Ein Doppelklick auf eine Projektdatei öffnet zurzeit {0} — "
-                  "umstellen unter Tools").format(fremd),
+                  "nachsehen unter Tools").format(fremd),
                 15000,
             )
         elif verknuepfung.aufgehoben():
@@ -237,7 +237,7 @@ class Hauptfenster(QMainWindow):
             # bei uns an - das sagt sonst niemand.
             self.statusBar().showMessage(
                 u("Ein Doppelklick auf eine Projektdatei öffnet Verteilerly "
-                  "nicht mehr — unter Tools wieder anmelden"),
+                  "nicht mehr — nachsehen unter Tools"),
                 15000,
             )
 
@@ -595,11 +595,11 @@ class Hauptfenster(QMainWindow):
 
         werkzeugmenue.addSeparator()
         self.aktion_verknuepfen = aktion(
-            u("&Projektdateien mit Verteilerly öffnen…"),
-            self.verknuepfung_anmelden,
+            u("&Projektdateien verknüpfen…"),
+            self.verknuepfung_zeigen,
             menue=werkzeugmenue,
-            hinweis=u("Meldet Verteilerly bei der Dateiverwaltung an — "
-                      "danach öffnet ein Doppelklick die Projektdatei"),
+            hinweis=u("Sagt, mit welcher Datei die Projektdateien zu "
+                      "verknüpfen sind und ob sie es sind"),
         )
         self.aktion_verknuepfen.setEnabled(verknuepfung.moeglich())
 
@@ -1892,117 +1892,62 @@ class Hauptfenster(QMainWindow):
                   "ohne sie weiter.\n\n{0}").format("\n".join(uebergangen)),
             )
 
-    def verknuepfung_anmelden(self) -> None:
-        """Meldet das Programm als Oeffner seiner Projektdateien an.
+    def verknuepfung_zeigen(self) -> None:
+        """Sagt, welche Datei zu verknuepfen ist und wer gerade oeffnet.
 
-        Auf Wunsch, nicht beim Start: wer sich ungefragt in die
-        Dateiverwaltung eintraegt, ist ein schlechter Gast.
+        Eingetragen wird **nichts**: die Wahl des Anwenders geht jeder
+        Anmeldung vor, und eine Ausgabe mit Starter kann sich ohnehin nicht
+        selbst eintragen. Also die Auskunft, die man braucht, um es in der
+        Dateiverwaltung selbst zu tun - und der Weg dorthin.
         """
         if not verknuepfung.moeglich():
             return
-        fremd = verknuepfung.anderes_programm()
+        QMessageBox.information(
+            self, u("Projektdateien verknüpfen"), self._verknuepfungstext()
+        )
+
+    def _verknuepfungstext(self) -> str:
+        """Der ganze Auskunftstext - Datei, Zustand und der Weg dorthin."""
+        ziel = verknuepfung.zu_verknuepfen()
+        eingetragen = verknuepfung.angemeldeter_aufruf()
+        teile = [
+            u("Ein Doppelklick auf eine Projektdatei ({0}) öffnet Verteilerly, "
+              "sobald die Dateiverwaltung sie mit der richtigen Datei "
+              "verknüpft hat.").format(DATEIENDUNG)
+        ]
+        teile.append(
+            u("Zu verknüpfen ist:\n{0}").format(ziel)
+            if ziel is not None
+            else u("Zu verknüpfen ist: nichts — dieses Verteilerly läuft aus "
+                   "dem Quelltext, nicht als fertiges Programm.")
+        )
+        teile.append(
+            u("Bei der PortableApps-Ausgabe ist das die "
+              "VerteilerlyPortable.exe, nicht das Programm in "
+              "App\\Verteilerly; als AppImage die Abbilddatei selbst.")
+        )
         if verknuepfung.angemeldet():
-            antwort = frage(
-                self,
-                u("Projektdateien"),
-                u("Verteilerly ist bereits angemeldet. Erneut eintragen?"),
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No,
+            teile.append(u("Verknüpft: ja — Projektdateien öffnen Verteilerly."))
+        elif eingetragen == verknuepfung.KEINE:
+            teile.append(
+                u("Verknüpft: nein — die Zuordnung ist ausdrücklich "
+                  "weggenommen, es öffnet niemand.")
             )
-            if antwort != QMessageBox.StandardButton.Yes:
-                return
-        elif fremd:
-            # Der haeufige Fall bei einer portablen Ausgabe: eingetragen
-            # ist eine andere Datei, und die bringt ihre eigenen
-            # Einstellungen mit.
-            antwort = frage(
-                self,
-                u("Projektdateien"),
-                u("Ein Doppelklick öffnet zurzeit:\n\n{0}\n\nAuf dieses "
-                  "Programm umstellen?\n\n{1}").format(
-                      fremd, verknuepfung.aufruf()
-                  ),
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.Yes,
+        elif eingetragen:
+            teile.append(
+                u("Verknüpft: nein — geöffnet wird zurzeit:\n{0}").format(
+                    eingetragen
+                )
             )
-            if antwort != QMessageBox.StandardButton.Yes:
-                return
-        try:
-            geschrieben = verknuepfung.anmelden(self._symbol_schreiben)
-        except (ModellFehler, OSError) as fehler:
-            QMessageBox.critical(self, u("Nicht angemeldet"), str(fehler))
-            return
-        # Der Hinweis gehoert in **jeden** Fall in die Meldung: er sagt,
-        # was das Programm nicht leisten kann. Ein Vorbehalt kommt
-        # dahinter, er ersetzt sie nicht.
-        text = u("Ein Doppelklick auf eine Projektdatei öffnet jetzt "
-                 "Verteilerly.\n\nGeschrieben wurde:\n{0}\n\nUnter Linux "
-                 "merkt sich die Dateiverwaltung das mitunter erst nach dem "
-                 "nächsten Anmelden.\n\nFunktioniert nicht mit der "
-                 "PortableApps-Ausgabe: dort startet die "
-                 "VerteilerlyPortable.exe erst das eigentliche Programm. "
-                 "Verknüpfen Sie die VerteilerlyPortable.exe in diesem Fall "
-                 "von Hand.").format("\n".join(geschrieben))
-        # Geht der Anmeldung eine Wahl vor, wird sie auf Wunsch aufgehoben -
-        # danach noch einmal nachgesehen, ob es nun greift.
-        vorgeht = not verknuepfung.angemeldet()
-        if vorgeht:
-            geschrieben += self._vorgehende_wahl_aufheben()
-            vorgeht = not verknuepfung.angemeldet()
-        if vorgeht:
-            # Windows schuetzt die Wahl des Anwenders („Öffnen mit ▸
-            # Immer") mit einer Pruefsumme - kein Programm kann sie setzen.
-            # Also sagen, wo sie umzustellen ist, statt es zu versuchen.
-            text += "\n\n" + u(
-                "Geöffnet wird trotzdem weiter {0} — die Wahl im Dateimanager "
-                "geht vor, und die kann kein Programm umstellen. Tun Sie es "
-                "dort: Rechtsklick auf eine Projektdatei ▸ Öffnen mit ▸ Andere "
-                "App ▸ Immer diese App."
-            ).format(
-                verknuepfung.angemeldeter_aufruf() or u("ein anderes Programm")
-            )
-        QMessageBox.information(self, u("Projektdateien"), text)
-        self.statusBar().showMessage(
-            u("Eingetragen — die Wahl im Dateimanager geht noch vor")
-            if vorgeht
-            else u("Verteilerly öffnet jetzt seine Projektdateien selbst"),
-            8000,
+        else:
+            teile.append(u("Verknüpft: nein — es ist nichts eingetragen."))
+        teile.append(
+            u("So wird verknüpft: Rechtsklick auf eine Projektdatei ▸ Öffnen "
+              "mit ▸ Andere App ▸ Immer diese App (Windows) oder ▸ Öffnen mit "
+              "▸ Andere Anwendung (Linux) — und dort die Datei von oben "
+              "wählen.")
         )
-
-    def _vorgehende_wahl_aufheben(self) -> list[str]:
-        """Fragt, ob die Wahl im Dateimanager weichen soll - und tut es.
-
-        Unsere Anmeldung steht, greift aber nicht: dem Dateityp ist einmal
-        ein anderes Programm zugewiesen worden („Öffnen mit ▸ Immer"), und
-        das geht vor. **Setzen** darf ein Programm diese Wahl nicht -
-        aufheben schon, und danach gilt wieder die Anmeldung. Gefragt wird
-        trotzdem: es ist die Einstellung des Anwenders.
-        """
-        antwort = frage(
-            self,
-            u("Projektdateien"),
-            u("Geöffnet wird zurzeit:\n\n{0}\n\nDiese Wahl im Dateimanager "
-              "geht der Anmeldung vor. Soll sie aufgehoben werden, damit "
-              "Verteilerly öffnet?").format(
-                  verknuepfung.angemeldeter_aufruf() or u("ein anderes Programm")
-              ),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.Yes,
-        )
-        if antwort != QMessageBox.StandardButton.Yes:
-            return []
-        try:
-            return verknuepfung.wahl_aufheben()
-        except (ModellFehler, OSError) as fehler:
-            QMessageBox.critical(self, u("Nicht angemeldet"), str(fehler))
-            return []
-
-    @staticmethod
-    def _symbol_schreiben(ziel) -> None:
-        """Legt das Sinnbild fuer die Dateiverwaltung ab."""
-        from .symbol import symbol
-
-        symbol(256).save(str(ziel), "PNG")
+        return "\n\n".join(teile)
 
     def erweiterungen_verwalten(self) -> None:
         """Erweiterungen ein- und ausschalten - wirksam ab dem naechsten Start."""

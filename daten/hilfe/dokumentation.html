@@ -82,52 +82,36 @@ heißen <i>Speichern</i>, <i>Verwerfen</i> und <i>Abbrechen</i>. Ältere Dateien
 heißen <code>.vtly.json</code>; sie lassen sich weiter öffnen, und wer sie
 speichert, behält ihren Namen.</p>
 
-<p><b>Doppelklick in der Dateiverwaltung</b> — <b>Tools ▸ Projektdateien mit
-Verteilerly öffnen…</b> meldet das Programm einmalig als Öffner an; danach
-startet ein Doppelklick auf eine Projektdatei Verteilerly mit ihr. Unter Linux
-entstehen dafür ein Dateityp und ein Programmeintrag in
-<code>~/.local/share</code>, unter Windows zwei Einträge in der Registrierung
-des angemeldeten Benutzers — <b>keine Verwalterrechte</b> nötig, und nichts
-außerhalb des eigenen Benutzers. Angemeldet wird nur auf Knopfdruck: ein
-Programm, das sich ungefragt einträgt, ist ein schlechter Gast. Zieht das
-Programm um — anderer Ordner, neues AppImage —, meldet man es einmal neu an.
-Der Weg über die Kommandozeile tut dasselbe:
-<code>Verteilerly &lt;datei&gt;</code>.</p>
+<p><b>Doppelklick in der Dateiverwaltung</b> — eine Projektdatei
+(<code>.vtly</code>) öffnet Verteilerly, sobald sie in der Dateiverwaltung mit
+der richtigen ausführbaren Datei verknüpft ist. <b>Verknüpft wird von Hand</b>,
+dort, wo die Wahl hingehört: Rechtsklick auf eine Projektdatei ▸ <i>Öffnen
+mit</i> ▸ <i>Andere App</i> ▸ <i>Immer diese App</i> (Windows) oder ▸ <i>Öffnen
+mit</i> ▸ <i>Andere Anwendung</i> (Linux). Den Weg über die Kommandozeile gibt
+es auch: <code>Verteilerly &lt;datei&gt;</code>.</p>
 
-<p><b>Eingetragen ist immer das Programm, aus dem Sie anmelden</b> — die
-laufende Datei, mit Pfad und Namen. Das ist bei einer <b>tragbaren Ausgabe</b>
-wichtig: liegt neben der <code>VerteilerlyPortable.exe</code> noch eine
-ältere <code>Verteilerly.exe</code>, oder ist die tragbare umgezogen, dann
-öffnet der Doppelklick weiter die eingetragene Datei — und die hat ihre
-<b>eigenen Einstellungen</b> neben sich liegen. Das sieht aus, als hätte das
-Programm die Einstellungen vergessen. Verteilerly sagt es darum beim Start in
-der Statuszeile, wenn die Zuordnung auf ein anderes Verteilerly zeigt, und der
-Menüeintrag nennt die eingetragene Datei und fragt, ob umgestellt werden
-soll. Einmal aus der gewünschten Ausgabe anmelden genügt.</p>
+<p><b>Tools ▸ Projektdateien verknüpfen…</b> sagt Ihnen dafür alles, was Sie
+wissen müssen, und ändert selbst nichts:</p>
 
-<p><b>Wird die Zuordnung von außen aufgehoben</b> — „Öffnen mit ▸ Immer" setzt
-ein anderes Programm, oder die Zuordnung wird weggenommen —, dann sagt
-Verteilerly das beim Start in der Statuszeile: unsere Einträge liegen ja noch
-da, aber der Doppelklick kommt nicht mehr an. Gefragt wird darum nicht, was
-eingetragen <i>wurde</i>, sondern was die Dateiverwaltung <b>tut</b>: unter
-Windows zählt zuerst die Wahl des Anwenders
-(<code>FileExts\.vtly\UserChoice</code>), unter Linux die
-<code>mimeapps.list</code>. Ein neues Anmelden über das Tools-Menü holt die
-Dateien zurück: es <b>fragt dann, ob die vorgehende Wahl aufgehoben werden
-soll</b>, und hebt sie auf Wunsch auf. <i>Setzen</i> darf ein Programm diese
-Wahl nicht — Windows sichert sie mit einer Prüfsumme, damit sich niemand
-heimlich vordrängt —, <i>aufheben</i> schon; danach gilt wieder die Anmeldung.
-Unter Linux schreibt das Anmelden die Wahl ohnehin mit und nimmt einen Widerruf
-zurück. Wer die Wahl behalten will, sagt Nein: dann nennt der Dialog das
-Programm, das öffnet, und den Weg im Explorer (Rechtsklick ▸ <i>Öffnen mit</i>
-▸ <i>Andere App</i> ▸ <i>Immer diese App</i>).</p>
+<ul>
+<li><b>welche Datei</b> zu verknüpfen ist — bei der <b>PortableApps-Ausgabe</b>
+die <code>VerteilerlyPortable.exe</code>, nicht das Programm in
+<code>App\Verteilerly</code>: der Starter richtet Ordner und Umgebung ein und
+ruft das Programm erst danach. Als <b>AppImage</b> die Abbilddatei selbst, nicht
+der Einhängepunkt unter <code>/tmp</code>, der beim Beenden verschwindet;</li>
+<li><b>ob verknüpft ist</b> — und wenn nicht, welches Programm die
+Projektdateien zurzeit öffnet. Gefragt wird, was die Dateiverwaltung
+<b>tut</b>: unter Windows zählt zuerst die Wahl des Anwenders
+(<code>FileExts\.vtly\UserChoice</code>, gesetzt von „Öffnen mit ▸ Immer"),
+unter Linux die <code>mimeapps.list</code> samt weggenommenen Zuordnungen;</li>
+<li><b>wie</b> es einzustellen ist.</li>
+</ul>
 
-<p><b>Nicht mit der PortableApps-Ausgabe</b> — dort richtet die
-<code>VerteilerlyPortable.exe</code> Ordner und Umgebung ein und startet dann
-das eigentliche Programm in <code>App\Verteilerly</code>. Dieses sieht nur
-sich selbst, und eingetragen wird darum die innere Datei, die ohne den Starter
-läuft. Verknüpfen Sie in diesem Fall die <code>VerteilerlyPortable.exe</code>
-von Hand — der Dialog sagt es auch.</p>
+<p>Das Programm hat das eine Weile selbst eingetragen. Verlässlich war es
+nicht: die Wahl des Anwenders geht jeder Eintragung vor, und eine Ausgabe mit
+Starter kann sich ohnehin nicht selbst verknüpfen — eingetragen würde die innere
+Datei. Darum jetzt die Auskunft statt des Eingriffs. Zeigt die Zuordnung auf ein
+anderes Programm, sagt Verteilerly das beim Start auch in der Statuszeile.</p>
 
 <h2><a name="editor"></a>3 &nbsp; Der Editor</h2>
 
@@ -1117,7 +1101,7 @@ und sie lässt sich unter <i>Erweiterungen verwalten</i> ausschalten.</p>
 <tr><td rowspan="4"><b>Tools</b></td><td>Verteilervorlage prüfen…</td><td></td></tr>
 <tr><td>Blattvorlage prüfen…</td><td></td></tr>
 <tr><td>Kabeltypen prüfen…</td><td></td></tr>
-<tr><td>Projektdateien mit Verteilerly öffnen…</td><td></td></tr>
+<tr><td>Projektdateien verknüpfen…</td><td></td></tr>
 <tr><td rowspan="3"><b>Erweiterungen</b></td><td>Blattvorlagen-Editor…</td><td></td></tr>
 <tr><td>Protokoll…</td><td></td></tr>
 <tr><td>Erweiterungen verwalten…</td><td></td></tr>
