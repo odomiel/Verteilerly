@@ -888,6 +888,110 @@ class TestSchriftfeldEditor(unittest.TestCase):
         self.assertEqual(e.werte()[1], (1.0, 3.0))
 
 
+class TestEigeneFelderImEditor(unittest.TestCase):
+    """Die Namen der eigenen Felder gehören der Blattvorlage."""
+
+    def setUp(self):
+        from verteilerly.erweiterungen.blattvorlageneditor.dialog import EditorDialog
+
+        self._ordner = tempfile.TemporaryDirectory()
+        self.addCleanup(self._ordner.cleanup)
+        self.ordner = pathlib.Path(self._ordner.name)
+        self.dialog = EditorDialog(Programmattrappe(self.ordner))
+        self.addCleanup(self.dialog.done, 0)
+
+    def _setzen(self, *namen):
+        self.dialog.eigene.clear()
+        for name in namen:
+            self.dialog.eigene.addItem(name)
+
+    def test_die_standardvorlage_hat_keine(self):
+        self.assertEqual(self.dialog.eigenefelder(), ())
+        self.assertTrue(
+            all(h.isChecked() for h in self.dialog.eigene_auf.values()),
+            "gezeigt würden sie auf jeder Blattart",
+        )
+
+    def test_angelegte_namen_stehen_in_der_vorlage(self):
+        self._setzen("Auftrag", "Monteur")
+        self.assertEqual(
+            self.dialog.vorlage().eigene_felder, ("Auftrag", "Monteur")
+        )
+
+    def test_leere_und_doppelte_namen_fallen_weg(self):
+        self._setzen("Auftrag", "", "Auftrag", "  ")
+        self.assertEqual(self.dialog.vorlage().eigene_felder, ("Auftrag",))
+
+    def test_die_reihenfolge_laesst_sich_schieben(self):
+        self._setzen("Auftrag", "Monteur")
+        self.dialog.eigene.setCurrentRow(1)
+        self.dialog._eigenes_schieben(-1)
+        self.assertEqual(
+            self.dialog.vorlage().eigene_felder, ("Monteur", "Auftrag")
+        )
+
+    def test_am_rand_schiebt_nichts_hinaus(self):
+        self._setzen("Auftrag", "Monteur")
+        self.dialog.eigene.setCurrentRow(0)
+        self.dialog._eigenes_schieben(-1)
+        self.dialog.eigene.setCurrentRow(1)
+        self.dialog._eigenes_schieben(1)
+        self.assertEqual(
+            self.dialog.vorlage().eigene_felder, ("Auftrag", "Monteur")
+        )
+
+    def test_entfernen_nimmt_die_markierte_zeile(self):
+        self._setzen("Auftrag", "Monteur")
+        self.dialog.eigene.setCurrentRow(0)
+        self.dialog._eigenes_weg()
+        self.assertEqual(self.dialog.vorlage().eigene_felder, ("Monteur",))
+
+    def test_die_blattarten_stehen_in_der_vorlage(self):
+        self._setzen("Auftrag")
+        self.dialog.eigene_auf["deckblatt"].setChecked(False)
+        self.assertEqual(
+            self.dialog.vorlage().eigene_felder_auf, ("belegung", "leisten")
+        )
+
+    def test_sie_ueberleben_den_rundlauf_durch_die_datei(self):
+        from verteilerly.blattvorlagen import (
+            blattvorlage_als_yaml,
+            blattvorlage_aus_yaml,
+        )
+
+        self._setzen("Auftrag", "Monteur")
+        self.dialog.eigene_auf["belegung"].setChecked(False)
+        vorlage = self.dialog.vorlage()
+        zurueck = blattvorlage_aus_yaml(blattvorlage_als_yaml(vorlage), "probe")
+        self.assertEqual(zurueck.eigene_felder, ("Auftrag", "Monteur"))
+        self.assertEqual(zurueck.eigene_felder_auf, ("deckblatt", "leisten"))
+
+    def test_eine_geladene_vorlage_fuellt_die_liste(self):
+        import dataclasses
+
+        vorlage = dataclasses.replace(
+            STANDARD,
+            id="mit_feldern",
+            name="Mit Feldern",
+            eigene_felder=("Auftrag",),
+            eigene_felder_auf=("leisten",),
+        )
+        self.dialog.basis_uebernehmen(vorlage)
+        self.assertEqual(self.dialog.eigenefelder(), ("Auftrag",))
+        self.assertTrue(self.dialog.eigene_auf["leisten"].isChecked())
+        self.assertFalse(self.dialog.eigene_auf["deckblatt"].isChecked())
+
+    def test_ein_neues_feld_steht_gleich_auf_dem_blatt(self):
+        from verteilerly.layout import Text, leistenblatt
+
+        self._setzen("Auftrag")
+        self.dialog.projekt.eigene_felder["Auftrag"] = "A-42"
+        blatt = leistenblatt(self.dialog.projekt, 1, self.dialog.vorlage())
+        texte = [e.text for e in blatt.elemente if isinstance(e, Text)]
+        self.assertIn("Auftrag", texte)
+        self.assertIn("A-42", texte)
+
+
 class TestSchriftfeldImEditor(unittest.TestCase):
     def setUp(self):
         from verteilerly.erweiterungen.blattvorlageneditor.dialog import EditorDialog

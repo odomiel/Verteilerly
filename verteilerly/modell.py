@@ -1178,13 +1178,14 @@ class Projekt:
 
     verteiler: Verteiler = field(default_factory=Verteiler)
     briefkopf: dict[str, str] = field(default_factory=dict)
+    # Die Inhalte der eigenen Felder. **Welche** es gibt und auf welchen
+    # Blattarten sie stehen, sagt die Blattvorlage - hier steht nur, was
+    # darin steht. Ein Wert zu einem Namen, den keine Vorlage mehr kennt,
+    # bleibt erhalten: eine andere Vorlage kann ihn wieder brauchen.
     eigene_felder: dict[str, str] = field(default_factory=dict)
     # Felder, die auf den Blaettern nicht erscheinen sollen. Der Inhalt
     # bleibt erhalten - abwaehlen ist kein Loeschen.
     ausgeblendet: set[str] = field(default_factory=set)
-    # Auf welchen Blaettern die eigenen Felder erscheinen. Ohne
-    # Angabe auf allen - wer eines nicht will, nimmt es heraus.
-    eigene_felder_auf: set[str] = field(default_factory=lambda: set(BLATTARTEN))
     # Eigene Woerter fuer die Zeilen des Schriftfeldes. Nur was
     # abweicht, steht drin - der Rest kommt aus BLATTBESCHRIFTUNG.
     beschriftungen: dict[str, str] = field(default_factory=dict)
@@ -1242,8 +1243,22 @@ class Projekt:
             if self.sichtbar(name)
         }
 
-    def eigene_felder_hier(self, blattart: str) -> dict[str, str]:
-        """Die eigenen Felder, sofern sie auf dieses Blatt gehoeren."""
-        if blattart not in self.eigene_felder_auf:
-            return {}
-        return self.sichtbare_eigene_felder()
+    def eigene_felder_hier(
+        self, blattart: str, vorlage=None
+    ) -> list[tuple[str, str]]:
+        """Die eigenen Felder dieses Blattes - Namen aus der Blattvorlage.
+
+        Die Vorlage sagt, welche Zeilen es gibt und in welcher Reihenfolge;
+        gezeigt wird auch eine **leere** Zeile, denn ein Schriftfeld darf
+        zum Ausfuellen von Hand danebenstehen. Ohne Vorlage - etwa in einer
+        Datenliste, die kein Blatt zeichnet - steht, was das Projekt hat.
+        """
+        if vorlage is None:
+            return list(self.sichtbare_eigene_felder().items())
+        if blattart not in tuple(vorlage.eigene_felder_auf):
+            return []
+        return [
+            (name, self.eigene_felder.get(name, ""))
+            for name in vorlage.eigene_felder
+            if self.sichtbar(name)
+        ]

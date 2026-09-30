@@ -398,35 +398,71 @@ class TestFeldauswahl(unittest.TestCase):
 
 
 class TestEigeneFelderJeBlattart(unittest.TestCase):
-    """Eigene Felder nur auf den gewählten Blattarten."""
+    """Welche eigenen Felder ein Blatt zeigt, sagt die Blattvorlage."""
 
     def setUp(self):
+        import dataclasses
+
+        from verteilerly.blattvorlagen import STANDARD
         from verteilerly.modell import Projekt
 
         self.projekt = Projekt(eigene_felder={"Standort": "Keller"})
+        self.vorlage = dataclasses.replace(STANDARD, eigene_felder=("Standort",))
 
-    def test_zunaechst_auf_jeder_blattart(self):
+    def _ersetzen(self, **felder):
+        import dataclasses
+
+        return dataclasses.replace(self.vorlage, **felder)
+
+    def test_auf_jeder_blattart_der_vorlage(self):
         from verteilerly.modell import BLATTARTEN
 
         for art in BLATTARTEN:
             with self.subTest(art=art):
                 self.assertEqual(
-                    self.projekt.eigene_felder_hier(art), {"Standort": "Keller"}
+                    self.projekt.eigene_felder_hier(art, self.vorlage),
+                    [("Standort", "Keller")],
                 )
 
-    def test_abgewaehlte_blattart_bleibt_leer(self):
-        self.projekt.eigene_felder_auf = {"belegung"}
-        self.assertEqual(self.projekt.eigene_felder_hier("belegung"), {"Standort": "Keller"})
-        self.assertEqual(self.projekt.eigene_felder_hier("deckblatt"), {})
-        self.assertEqual(self.projekt.eigene_felder_hier("leisten"), {})
+    def test_eine_abgewaehlte_blattart_bleibt_leer(self):
+        vorlage = self._ersetzen(eigene_felder_auf=("belegung",))
+        self.assertEqual(
+            self.projekt.eigene_felder_hier("belegung", vorlage),
+            [("Standort", "Keller")],
+        )
+        self.assertEqual(self.projekt.eigene_felder_hier("deckblatt", vorlage), [])
+        self.assertEqual(self.projekt.eigene_felder_hier("leisten", vorlage), [])
 
-    def test_der_inhalt_bleibt_erhalten(self):
-        self.projekt.eigene_felder_auf = set()
+    def test_was_die_vorlage_nicht_kennt_steht_nicht_auf_dem_blatt(self):
+        """Der Inhalt bleibt trotzdem erhalten - eine andere Vorlage zeigt ihn."""
+        vorlage = self._ersetzen(eigene_felder=())
+        self.assertEqual(self.projekt.eigene_felder_hier("leisten", vorlage), [])
         self.assertEqual(self.projekt.eigene_felder, {"Standort": "Keller"})
+
+    def test_ein_feld_ohne_inhalt_steht_als_leere_zeile_da(self):
+        """Ein Schriftfeld darf zum Ausfüllen von Hand danebenstehen."""
+        vorlage = self._ersetzen(eigene_felder=("Standort", "Monteur"))
+        self.assertEqual(
+            self.projekt.eigene_felder_hier("leisten", vorlage),
+            [("Standort", "Keller"), ("Monteur", "")],
+        )
+
+    def test_die_reihenfolge_ist_die_der_vorlage(self):
+        vorlage = self._ersetzen(eigene_felder=("Monteur", "Standort"))
+        self.assertEqual(
+            [name for name, _ in self.projekt.eigene_felder_hier("leisten", vorlage)],
+            ["Monteur", "Standort"],
+        )
 
     def test_abgewaehltes_feld_kommt_auch_hier_nicht(self):
         self.projekt.sichtbarkeit_setzen("Standort", False)
-        self.assertEqual(self.projekt.eigene_felder_hier("belegung"), {})
+        self.assertEqual(self.projekt.eigene_felder_hier("belegung", self.vorlage), [])
+
+    def test_ohne_vorlage_steht_was_das_projekt_hat(self):
+        """Eine Datenliste zeichnet kein Blatt - sie nimmt den Bestand."""
+        self.assertEqual(
+            self.projekt.eigene_felder_hier("leisten"), [("Standort", "Keller")]
+        )
 
 
 class TestBeschriftungen(unittest.TestCase):

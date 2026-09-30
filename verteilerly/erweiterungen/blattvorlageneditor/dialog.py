@@ -29,6 +29,8 @@ from PySide6.QtWidgets import (
     QInputDialog,
     QLabel,
     QLineEdit,
+    QListWidget,
+    QListWidgetItem,
     QMessageBox,
     QPushButton,
     QScrollArea,
@@ -52,7 +54,7 @@ from ...gui.passform import PassenderDialog
 from ...gui.sprache import Knopf, frage
 from ...gui.vorschau import Blattflaeche
 from ...layout import blaetter
-from ...modell import Projekt, Verteiler
+from ...modell import BLATTART_BESCHRIFTUNG, BLATTARTEN, Projekt, Verteiler
 from ...sprachen import u
 from .schriftfeld import AUSRICHTUNGSNAMEN, SchriftfeldEditor
 
@@ -199,6 +201,7 @@ class EditorDialog(PassenderDialog):
 
         linksaufbau.addWidget(self._spaltenkasten())
         linksaufbau.addWidget(self._schriftfeldkasten())
+        linksaufbau.addWidget(self._eigenefelderkasten())
         linksaufbau.addStretch(1)
 
         rollbereich = QScrollArea()
@@ -288,6 +291,107 @@ class EditorDialog(PassenderDialog):
         aufbau.addLayout(formular)
         aufbau.addWidget(self.schriftfeld)
         return kasten
+
+    # -- Eigene Felder -------------------------------------------------------
+
+    def _eigenefelderkasten(self) -> QGroupBox:
+        """Die Namen der eigenen Felder - und auf welchen Blattarten sie stehen.
+
+        Hier entstehen die Zeilen, die hinter der Marke *eigene* im
+        Schriftfeld erscheinen; **gefuellt** werden sie am Verteiler
+        (Bearbeiten ▸ Projektdaten). Die Vorlage sagt, welche Zeilen ein
+        Blatt hat, das Projekt, was darin steht.
+        """
+        self.eigene = QListWidget()
+        self.eigene.setMinimumHeight(120)
+        self.eigene.setToolTip(
+            u("Namen der eigenen Zeilen des Schriftfeldes. Gefüllt werden sie "
+              "je Verteiler unter Bearbeiten ▸ Projektdaten.")
+        )
+        self.eigene.itemChanged.connect(self._geaendert)
+        knoepfe = QHBoxLayout()
+        for text, ruf in (
+            (u("Hinzufügen"), self._eigenes_hinzu),
+            (u("Entfernen"), self._eigenes_weg),
+            (u("Nach oben"), lambda: self._eigenes_schieben(-1)),
+            (u("Nach unten"), lambda: self._eigenes_schieben(1)),
+        ):
+            knopf = QPushButton(text)
+            knopf.clicked.connect(ruf)
+            knoepfe.addWidget(knopf)
+
+        self.eigene_auf: dict[str, QCheckBox] = {}
+        blattzeile = QHBoxLayout()
+        blattzeile.addWidget(QLabel(u("Anzeigen auf:")))
+        for art in BLATTARTEN:
+            haken = QCheckBox(u(BLATTART_BESCHRIFTUNG[art]))
+            haken.setToolTip(
+                u("Ohne Haken erscheinen die eigenen Felder auf dieser "
+                  "Blattart nicht.")
+            )
+            haken.toggled.connect(self._geaendert)
+            self.eigene_auf[art] = haken
+            blattzeile.addWidget(haken)
+        blattzeile.addStretch(1)
+
+        hinweis = QLabel(
+            u("Sichtbar werden sie über die Marke „eigene“ im Schriftfeld.")
+        )
+        hinweis.setWordWrap(True)
+
+        kasten = QGroupBox(u("Eigene Felder"))
+        aufbau = QVBoxLayout(kasten)
+        aufbau.addWidget(self.eigene)
+        aufbau.addLayout(knoepfe)
+        aufbau.addLayout(blattzeile)
+        aufbau.addWidget(hinweis)
+        return kasten
+
+    def _eigenes_hinzu(self) -> None:
+        eintrag = QListWidgetItem(u("Neues Feld"))
+        eintrag.setFlags(eintrag.flags() | Qt.ItemFlag.ItemIsEditable)
+        self.eigene.addItem(eintrag)
+        self.eigene.setCurrentItem(eintrag)
+        self.eigene.editItem(eintrag)
+        self._geaendert()
+
+    def _eigenes_weg(self) -> None:
+        zeile = self.eigene.currentRow()
+        if zeile >= 0:
+            self.eigene.takeItem(zeile)
+            self._geaendert()
+
+    def _eigenes_schieben(self, richtung: int) -> None:
+        zeile = self.eigene.currentRow()
+        ziel = zeile + richtung
+        if zeile < 0 or not 0 <= ziel < self.eigene.count():
+            return
+        eintrag = self.eigene.takeItem(zeile)
+        self.eigene.insertItem(ziel, eintrag)
+        self.eigene.setCurrentRow(ziel)
+        self._geaendert()
+
+    def eigenefelder(self) -> tuple[str, ...]:
+        """Die Namen, wie sie in der Liste stehen - ohne Leere und Doppelte."""
+        namen: list[str] = []
+        for zeile in range(self.eigene.count()):
+            name = self.eigene.item(zeile).text().strip()
+            if name and name not in namen:
+                namen.append(name)
+        return tuple(namen)
+
+    def _eigenefelder_setzen(self, namen, blattarten) -> None:
+        self.eigene.blockSignals(True)
+        self.eigene.clear()
+        for name in namen:
+            eintrag = QListWidgetItem(name)
+            eintrag.setFlags(eintrag.flags() | Qt.ItemFlag.ItemIsEditable)
+            self.eigene.addItem(eintrag)
+        self.eigene.blockSignals(False)
+        for art, haken in self.eigene_auf.items():
+            haken.blockSignals(True)
+            haken.setChecked(art in tuple(blattarten))
+            haken.blockSignals(False)
 
     # -- Spalten -------------------------------------------------------------
 
@@ -408,6 +512,7 @@ class EditorDialog(PassenderDialog):
             feld.blockSignals(False)
         self._spalten_setzen(vorlage.spalten)
         self.schriftfeld.setzen(vorlage.schriftfeld, vorlage.schriftfeld_anteile)
+        self._eigenefelder_setzen(vorlage.eigene_felder, vorlage.eigene_felder_auf)
         self.geaendert = False
         self._neu_zeichnen()
 
@@ -437,6 +542,10 @@ class EditorDialog(PassenderDialog):
             beschreibung=self.beschreibung.text().strip(),
             buchten_je_blatt=self.buchten.value(),
             spalten=tuple(self.spaltenliste()),
+            eigene_felder=self.eigenefelder(),
+            eigene_felder_auf=tuple(
+                art for art, haken in self.eigene_auf.items() if haken.isChecked()
+            ),
             **{feld: wert.value() for feld, wert in self.zahlen.items()},
             **{feld: haken.isChecked() for feld, haken in self.schalter.items()},
         )

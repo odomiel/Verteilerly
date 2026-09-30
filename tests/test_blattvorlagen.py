@@ -113,6 +113,59 @@ class TestAusYaml(unittest.TestCase):
             )
 
 
+class TestEigeneFelderImFormat(unittest.TestCase):
+    """Die Namen der eigenen Felder und ihre Blattarten in der Datei."""
+
+    def _lesen(self, inhalt, hinweise=None):
+        from verteilerly.blattvorlagen import blattvorlage_aus_yaml
+
+        return blattvorlage_aus_yaml(
+            {"id": "x", "name": "X", **inhalt}, "probe.yaml", hinweise
+        )
+
+    def test_die_namen_behalten_ihre_reihenfolge(self):
+        vorlage = self._lesen({"eigene_felder": ["Monteur", "Auftrag"]})
+        self.assertEqual(vorlage.eigene_felder, ("Monteur", "Auftrag"))
+
+    def test_leere_namen_fallen_weg(self):
+        vorlage = self._lesen({"eigene_felder": ["Auftrag", "", "  "]})
+        self.assertEqual(vorlage.eigene_felder, ("Auftrag",))
+
+    def test_ein_doppelter_name_wird_gemeldet(self):
+        hinweise = []
+        vorlage = self._lesen(
+            {"eigene_felder": ["Auftrag", "Auftrag"]}, hinweise
+        )
+        self.assertEqual(vorlage.eigene_felder, ("Auftrag",))
+        self.assertTrue(any("zweimal" in h for h in hinweise))
+
+    def test_ohne_angabe_stehen_sie_auf_jeder_blattart(self):
+        from verteilerly.modell import BLATTARTEN
+
+        vorlage = self._lesen({"eigene_felder": ["Auftrag"]})
+        self.assertEqual(vorlage.eigene_felder_auf, BLATTARTEN)
+
+    def test_eine_leere_liste_heisst_auf_keiner(self):
+        vorlage = self._lesen({"eigene_felder_auf": []})
+        self.assertEqual(vorlage.eigene_felder_auf, ())
+
+    def test_eine_unbekannte_blattart_wird_gemeldet(self):
+        hinweise = []
+        vorlage = self._lesen(
+            {"eigene_felder_auf": ["leisten", "vorderseite"]}, hinweise
+        )
+        self.assertEqual(vorlage.eigene_felder_auf, ("leisten",))
+        self.assertTrue(any("vorderseite" in h for h in hinweise))
+
+    def test_kein_wort_statt_einer_liste(self):
+        from verteilerly.modell import ModellFehler
+
+        with self.assertRaises(ModellFehler):
+            self._lesen({"eigene_felder": "Auftrag"})
+        with self.assertRaises(ModellFehler):
+            self._lesen({"eigene_felder_auf": "leisten"})
+
+
 class TestAlsYaml(unittest.TestCase):
     """Die Umkehrung des Lesens - fuer den Blattvorlagen-Editor."""
 
@@ -142,6 +195,8 @@ class TestAlsYaml(unittest.TestCase):
             STANDARD, id="probe", name="Probe", standard=False, rand=17.5,
             schrift_klein=6.0, spalten=STANDARD.spalten[:3], da_nummern=True,
             fuellgrad_kabel=0.5, zelle_hoehe=7.25, buchten_je_blatt=3,
+            eigene_felder=("Auftrag", "Monteur"),
+            eigene_felder_auf=("deckblatt", "leisten"),
             schriftfeld=(
                 (Schriftfeldeintrag("firma"),
                  Schriftfeldeintrag("strich"),
@@ -158,6 +213,31 @@ class TestAlsYaml(unittest.TestCase):
             with self.subTest(vorlage=vorlage.id):
                 inhalt = yaml.safe_load(yaml.safe_dump(blattvorlage_als_yaml(vorlage)))
                 self.assertEqual(blattvorlage_aus_yaml(inhalt), vorlage)
+
+    def test_eigene_felder_kommen_als_liste_zurueck(self):
+        import dataclasses
+
+        from verteilerly.blattvorlagen import STANDARD, blattvorlage_als_yaml
+
+        inhalt = blattvorlage_als_yaml(
+            dataclasses.replace(
+                STANDARD, id="x", name="X", eigene_felder=("Auftrag",),
+                eigene_felder_auf=("leisten",),
+            )
+        )
+        self.assertEqual(inhalt["eigene_felder"], ["Auftrag"])
+        self.assertEqual(inhalt["eigene_felder_auf"], ["leisten"])
+
+    def test_ohne_eigene_felder_steht_nichts_in_der_datei(self):
+        import dataclasses
+
+        from verteilerly.blattvorlagen import STANDARD, blattvorlage_als_yaml
+
+        inhalt = blattvorlage_als_yaml(
+            dataclasses.replace(STANDARD, id="x", name="X", standard=False)
+        )
+        self.assertNotIn("eigene_felder", inhalt)
+        self.assertNotIn("eigene_felder_auf", inhalt)
 
     def test_ganze_zahlen_stehen_ohne_komma(self):
         import dataclasses

@@ -113,11 +113,20 @@ Trägt hier das heutige Datum ein: Enters today's date here
 Auf Vorgabe zurücksetzen: Reset to default
 Schreibt in jedes Feld wieder das Wort der Vorgabe.: Writes the default word back into every field.
 Verteiler — steht im Schriftfeld jedes Blattes: Frame — appears in the title block of every sheet
-Das Häkchen am Feldnamen entscheidet, ob das Feld auf den Blättern erscheint.: The check mark at the field
-  name decides whether the field appears on the sheets.
-Feld hinzufügen: Add field
-Feld entfernen: Remove field
 Eigene Felder: Own fields
+Neues Feld: New field
+? "Namen der eigenen Zeilen des Schriftfeldes. Gefüllt werden sie je Verteiler unter Bearbeiten ▸ Projektdaten."
+: "Names of the own rows of the title block. They are filled per frame under Edit ▸ Project data."
+Ohne Haken erscheinen die eigenen Felder auf dieser Blattart nicht.: Without a tick the own fields do not
+  appear on this kind of sheet.
+Sichtbar werden sie über die Marke „eigene“ im Schriftfeld.: They become visible through the mark „eigene“
+  in the title block.
+? "Welche eigenen Felder es gibt, steht in der Blattvorlage — anzulegen im Blattvorlagen-Editor."
+: "Which own fields exist is set in the sheet template — to be created in the sheet template editor."
+? "Diese Blattvorlage hat keine eigenen Felder. Anlegen lassen sie sich im Blattvorlagen-Editor."
+: "This sheet template has no own fields. They can be created in the sheet template editor."
+? "Das Häkchen am Feldnamen entscheidet, ob das Feld auf den Blättern erscheint. Die Namen stehen in der Blattvorlage."
+: "The tick at the field name decides whether the field appears on the sheets. The names are set in the sheet template."
 Nicht als Vorlage geeignet: Not suitable as a template
 Vorlage nicht gespeichert: Template not saved
 ? '{0}
@@ -151,8 +160,6 @@ Vorgaben für neue Verteiler: Defaults for new frames
 Projektdaten: Project data
 Feldname: Field name
 'Anzeigen auf:': 'Show on:'
-Ohne Haken erscheinen die eigenen Felder auf dieser Blattart nicht; ihr Inhalt bleibt erhalten.: Without
-  the check mark the own fields do not appear on this kind of sheet; their content is kept.
 Diese Angaben stehen beim Anlegen eines neuen Verteilers schon in den Feldern. Was hier leer bleibt, ist dort abgewählt.: These
   entries are already filled in when a new frame is created. What is left empty here is deselected there.
 Es gibt schon eine Vorlage „{0}“. Soll sie ersetzt werden?: There already is a template „{0}“. Should
@@ -522,6 +529,11 @@ Holt die mitgelieferten Blattvorlagen zurück, so wie sie ausgeliefert wurden. E
 mitgelieferte Blattvorlagen wiederhergestellt: supplied sheet templates restored
 '{0}: fuellgrad_kabel liegt zwischen 0,1 und 1': '{0}: fuellgrad_kabel is between 0.1 and 1'
 '{0}: polster_kabel darf nicht negativ sein': '{0}: polster_kabel must not be negative'
+'{0}: eigene_felder ist eine Liste von Feldnamen': '{0}: eigene_felder is a list of field names'
+'{0}: eigene_felder_auf ist eine Liste von Blattarten': '{0}: eigene_felder_auf is a list of sheet kinds'
+'{0}: das eigene Feld {1} steht zweimal - einmal genügt': '{0}: the own field {1} appears twice - once
+  is enough'
+'{0}: {1} ist keine Blattart - bekannt sind {2}': '{0}: {1} is not a kind of sheet - known are {2}'
 ' beanstandet': ' with remarks'
 ? "Was nicht stimmt, steht dahinter. Die übrigen Vorlagen stehen weiter zur Wahl.\n\n{0}"
 : "What is wrong with it stands behind it. The remaining templates are still available.\n\n{0}"

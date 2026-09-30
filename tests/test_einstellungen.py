@@ -41,14 +41,19 @@ class TestProjektdatenMerken(unittest.TestCase):
         inhalt = self.datei.read_text(encoding="utf-8")
         self.assertIn("[briefkopf]", inhalt)
         self.assertIn("firma=Musterfirma", inhalt)
-        self.assertIn("[eigene_felder]", inhalt)
         self.assertIn("felder_ausgeblendet=kuerzel", inhalt)
+
+    def test_die_eigenen_felder_werden_nicht_gemerkt(self):
+        """Ihre Namen stehen in der Blattvorlage, ihr Inhalt im Projekt."""
+        sp.briefkopf_sichern(self.einstellungen, self._projekt())
+        inhalt = self.datei.read_text(encoding="utf-8")
+        self.assertNotIn("[eigene_felder]", inhalt)
+        self.assertNotIn("Standort", inhalt)
 
     def test_gelesen_wird_dasselbe(self):
         sp.briefkopf_sichern(self.einstellungen, self._projekt())
-        briefkopf, eigene, ausgeblendet = sp.briefkopf_laden(self.einstellungen)
+        briefkopf, ausgeblendet = sp.briefkopf_laden(self.einstellungen)
         self.assertEqual(briefkopf, {"firma": "Musterfirma", "kuerzel": "MI"})
-        self.assertEqual(eigene, {"Standort": "Keller"})
         self.assertEqual(ausgeblendet, {"kuerzel"})
 
     def test_eigene_beschriftungen_werden_gemerkt(self):
@@ -84,7 +89,7 @@ class TestProjektdatenMerken(unittest.TestCase):
             self.einstellungen, Projekt(verteiler=Verteiler.aus_geometrie(1, 2, 20))
         )
         self.assertEqual(neu.briefkopf["firma"], "Musterfirma")
-        self.assertEqual(neu.eigene_felder["Standort"], "Keller")
+        self.assertEqual(neu.eigene_felder, {}, "eigene Felder erbt niemand")
         self.assertFalse(neu.sichtbar("kuerzel"))
 
     def test_die_vorgabe_ueberschreibt_keine_eingabe(self):
@@ -104,17 +109,15 @@ class TestProjektdatenMerken(unittest.TestCase):
         sp.briefkopf_sichern(self.einstellungen, self._projekt())
         weniger = Projekt(briefkopf={"firma": "Musterfirma"})
         sp.briefkopf_sichern(self.einstellungen, weniger)
-        briefkopf, eigene, _ = sp.briefkopf_laden(self.einstellungen)
+        briefkopf, _ = sp.briefkopf_laden(self.einstellungen)
         self.assertEqual(briefkopf, {"firma": "Musterfirma"})
-        self.assertEqual(eigene, {})
 
     def test_feldnamen_mit_komma_und_leerzeichen(self):
         """QSettings trennt Listen mit Komma - der Name darf eins enthalten."""
         projekt = Projekt(eigene_felder={"Standort, Raum": "Keller"})
         projekt.sichtbarkeit_setzen("Standort, Raum", False)
         sp.briefkopf_sichern(self.einstellungen, projekt)
-        _, eigene, ausgeblendet = sp.briefkopf_laden(self.einstellungen)
-        self.assertEqual(eigene, {"Standort, Raum": "Keller"})
+        _, ausgeblendet = sp.briefkopf_laden(self.einstellungen)
         self.assertEqual(ausgeblendet, {"Standort, Raum"})
 
     def test_hauptfenster_reicht_die_vorgaben_durch(self):
@@ -171,7 +174,7 @@ class TestVorgaben(unittest.TestCase):
 
     def test_vorgaben_landen_in_der_conf(self):
         self._vorgaben_setzen(firma="Musterfirma", kuerzel="JD")
-        briefkopf, _, _ = sp.briefkopf_laden(self.fenster.einstellungen)
+        briefkopf, _ = sp.briefkopf_laden(self.fenster.einstellungen)
         self.assertEqual(briefkopf, {"firma": "Musterfirma", "kuerzel": "JD"})
 
     def test_im_neuen_verteiler_ist_nur_angehakt_was_es_gibt(self):

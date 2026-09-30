@@ -126,9 +126,23 @@ class TestPdf(unittest.TestCase):
         from pypdf import PdfReader
 
         text = "\n".join(s.extract_text() for s in PdfReader(str(self.ziel)).pages)
-        for erwartet in ["Musterfirma", "Leiste 1", "Magnetkontakt", "3 2a", "Keller"]:
+        for erwartet in ["Musterfirma", "Leiste 1", "Magnetkontakt", "3 2a"]:
             with self.subTest(text=erwartet):
                 self.assertIn(erwartet, text)
+
+    def test_ein_eigenes_feld_der_blattvorlage_steht_im_pdf(self):
+        """Welche eigenen Felder ein Blatt zeigt, sagt die Blattvorlage."""
+        import dataclasses
+
+        from pypdf import PdfReader
+
+        from verteilerly.blattvorlagen import STANDARD
+
+        vorlage = dataclasses.replace(STANDARD, eigene_felder=("Standort",))
+        pdf_schreiben(_projekt(), self.ziel, vorlage)
+        text = "\n".join(s.extract_text() for s in PdfReader(str(self.ziel)).pages)
+        self.assertIn("Standort", text)
+        self.assertIn("Keller", text)
 
     def test_umlaute_bleiben_erhalten(self):
         projekt = _projekt()

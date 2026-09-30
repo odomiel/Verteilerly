@@ -17,7 +17,14 @@ from dataclasses import dataclass, field, replace
 
 import yaml
 
-from .modell import LINKS, MITTE, RECHTS, ModellFehler, unbekannte_schluessel
+from .modell import (
+    BLATTARTEN,
+    LINKS,
+    MITTE,
+    RECHTS,
+    ModellFehler,
+    unbekannte_schluessel,
+)
 from .sprachen import u
 
 __all_ausrichtungen__ = (LINKS, MITTE, RECHTS)
@@ -36,7 +43,8 @@ BLATTSCHLUESSEL = (
     "rand", "schriftfeld_hoehe", "kopfzeile_hoehe",
     "zeilenhoehe_max", "zeilenhoehe_min",
     "schrift", "spalten", "schriftfeld", "schriftfeld_art",
-    "schriftfeld_anteile", "buchten_je_blatt", "da_nummern",
+    "schriftfeld_anteile", "eigene_felder", "eigene_felder_auf",
+    "buchten_je_blatt", "da_nummern",
     "kabel_gedreht", "belegung",
 )
 SCHRIFTSCHLUESSEL = ("gross", "mittel", "normal", "klein")
@@ -167,6 +175,14 @@ class Blattvorlage:
     # Wie breit die Bloecke des Schriftfeldes sind. Leer heisst: nach
     # Augenmass verteilt, Namen brauchen mehr Platz als Nummern.
     schriftfeld_anteile: tuple[float, ...] = ()
+
+    # Die eigenen Felder des Schriftfeldes: **nur die Namen**, in dieser
+    # Reihenfolge. Die Inhalte gehoeren dem Projekt (Bearbeiten ▸
+    # Projektdaten) - die Vorlage sagt, welche Zeilen es gibt, nicht was
+    # darin steht. Hinter der Marke „eigene" stehen genau diese.
+    eigene_felder: tuple[str, ...] = ()
+    # Auf welchen Blattarten sie erscheinen. Leer heisst: auf keiner.
+    eigene_felder_auf: tuple[str, ...] = BLATTARTEN
 
     buchten_je_blatt: int = 2
     da_nummern: bool = False
@@ -343,6 +359,10 @@ def blattvorlage_aus_yaml(
             if inhalt.get("schriftfeld")
             else STANDARD.schriftfeld
         ),
+        eigene_felder=_eigene_aus_yaml(inhalt.get("eigene_felder"), wo, hinweise),
+        eigene_felder_auf=_blattarten_aus_yaml(
+            inhalt.get("eigene_felder_auf"), wo, hinweise
+        ),
         schriftfeld_anteile=tuple(
             float(teil) for teil in inhalt.get("schriftfeld_anteile") or ()
         ),
@@ -401,6 +421,66 @@ def _abweichung(ziel: dict, schluessel: str, wert, vorgabe) -> None:
         ziel[schluessel] = _zahlwert(wert)
 
 
+def _eigene_aus_yaml(inhalt, wo: str, hinweise: list[str] | None) -> tuple[str, ...]:
+    """Die Namen der eigenen Felder - eine Liste von Woertern.
+
+    Leere Namen und Doppelte fallen weg: eine Zeile ohne Beschriftung
+    waere keine, und zweimal derselbe Name liesse nicht erkennen, welcher
+    Wert wohin gehoert.
+    """
+    if not inhalt:
+        return ()
+    if isinstance(inhalt, str) or not isinstance(inhalt, (list, tuple)):
+        raise ModellFehler(
+            u("{0}: eigene_felder ist eine Liste von Feldnamen").format(wo)
+        )
+    namen: list[str] = []
+    for eintrag in inhalt:
+        name = str(eintrag).strip()
+        if not name:
+            continue
+        if name in namen:
+            if hinweise is not None:
+                hinweise.append(
+                    u("{0}: das eigene Feld {1} steht zweimal - einmal genügt")
+                    .format(wo, name)
+                )
+            continue
+        namen.append(name)
+    return tuple(namen)
+
+
+def _blattarten_aus_yaml(
+    inhalt, wo: str, hinweise: list[str] | None
+) -> tuple[str, ...]:
+    """Auf welchen Blattarten die eigenen Felder stehen.
+
+    Fehlt die Angabe, stehen sie auf allen - so war es, bevor die Wahl in
+    die Blattvorlage kam. Eine leere Liste heisst dagegen ausdruecklich:
+    auf keiner.
+    """
+    if inhalt is None:
+        return STANDARD.eigene_felder_auf
+    if isinstance(inhalt, str) or not isinstance(inhalt, (list, tuple)):
+        raise ModellFehler(
+            u("{0}: eigene_felder_auf ist eine Liste von Blattarten").format(wo)
+        )
+    arten: list[str] = []
+    for eintrag in inhalt:
+        art = str(eintrag).strip()
+        if art not in BLATTARTEN:
+            if hinweise is not None:
+                hinweise.append(
+                    u("{0}: {1} ist keine Blattart - bekannt sind {2}").format(
+                        wo, art, ", ".join(BLATTARTEN)
+                    )
+                )
+            continue
+        if art not in arten:
+            arten.append(art)
+    return tuple(arten)
+
+
 def blattvorlage_als_yaml(vorlage: Blattvorlage) -> dict:
     """Die Vorlage als Inhalt einer Datei - nur, was vom Standard abweicht.
 
@@ -440,6 +520,10 @@ def blattvorlage_als_yaml(vorlage: Blattvorlage) -> dict:
     _abweichung(inhalt, "schriftfeld_art", vorlage.schriftfeld_art, STANDARD.schriftfeld_art)
     if vorlage.schriftfeld_anteile:
         inhalt["schriftfeld_anteile"] = [_zahlwert(a) for a in vorlage.schriftfeld_anteile]
+    if vorlage.eigene_felder:
+        inhalt["eigene_felder"] = list(vorlage.eigene_felder)
+    if vorlage.eigene_felder_auf != STANDARD.eigene_felder_auf:
+        inhalt["eigene_felder_auf"] = list(vorlage.eigene_felder_auf)
     for feld in ("buchten_je_blatt", "da_nummern", "kabel_gedreht"):
         _abweichung(inhalt, feld, getattr(vorlage, feld), getattr(STANDARD, feld))
     belegung: dict = {}

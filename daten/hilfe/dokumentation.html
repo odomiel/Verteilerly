@@ -407,15 +407,16 @@ Geprüft von,<br>Gezeichnet am, Gezeichnet von</td>
 sind mehrzeilig, Name, Straße und Ort stehen auf dem Blatt untereinander, die
 Beschriftung nur an der ersten Zeile.</p>
 
-<p><b>Eigene Felder</b> sind frei benannte Paare wie <i>Standort: Keller</i>.
-<i>Feld hinzufügen</i> hängt eine Zeile an, <i>Feld entfernen</i> nimmt die
-gewählte heraus; <i>Feldname</i> und <i>Inhalt</i> werden in der Liste selbst
-getippt.
-Die Häkchenzeile <i>Anzeigen auf</i> sagt, auf welchen Blattarten sie
-erscheinen — Deckblatt, Verteilerbelegung, Leistenblättern. Eine abgewählte
-Blattart lässt den Inhalt unberührt, sie zeigt ihn nur nicht. Auf der
-Verteilerbelegung stehen sie am Platz der Leiste: dieses Blatt zeigt alle
-Leisten, also keine einzelne.</p>
+<p><b>Eigene Felder</b> sind frei benannte Zeilen wie <i>Standort: Keller</i>.
+<b>Welche es gibt, sagt die Blattvorlage</b> — angelegt und benannt werden sie
+im Blattvorlagen-Editor, hier werden sie
+<b>gefüllt</b>: der Name steht fest, der Inhalt gehört dem Verteiler. Das
+Häkchen davor entscheidet wie bei den übrigen Feldern, ob die Zeile auf den
+Blättern erscheint; der Inhalt bleibt dabei erhalten. Ein Feld der Vorlage ohne
+Inhalt steht als leere Zeile auf dem Blatt — zum Ausfüllen von Hand. Auf der
+Verteilerbelegung stehen die eigenen Felder am Platz der Leiste: dieses Blatt
+zeigt alle Leisten, also keine einzelne. Trägt eine andere Blattvorlage ein
+Feld nicht, bleibt sein Inhalt gespeichert und kommt mit ihr wieder.</p>
 
 <p><b>Beschriftungen ändern</b> — der Schalter <i>Erweitert: Beschriftungen
 auf dem Blatt ändern</i> in der Auswahlzeile klappt neben den Feldern eine
@@ -619,6 +620,19 @@ daran.</p>
     - {marke: verteilernummer, ausrichtung: rechts}
     - strich
     - {marke: blatt, ausrichtung: mitte}</pre>
+
+<p><code>eigene_felder</code> ist die Liste der eigenen Zeilen —
+<b>nur die Namen</b>, in dieser Reihenfolge; hinter der Marke
+<code>eigene</code> stehen genau sie. Gefüllt werden sie je Verteiler unter
+<b>Bearbeiten ▸ Projektdaten</b>. <code>eigene_felder_auf</code> sagt, auf
+welchen Blattarten sie erscheinen (<code>deckblatt</code>,
+<code>belegung</code>, <code>leisten</code>); ohne Angabe auf allen, eine leere
+Liste heißt: auf keiner.</p>
+
+<pre>eigene_felder:
+    - Auftrag
+    - Monteur
+eigene_felder_auf: [leisten]</pre>
 
 <p><code>schriftfeld_anteile</code> gibt die Breiten der Blöcke als Verhältnis
 (<code>[0.42, 0.58]</code>); ohne Angabe teilt das Programm nach Augenmaß.
@@ -943,6 +957,15 @@ nichts auszurichten. <i>Block hinzufügen</i> und <i>Letzten Block
 entfernen</i> ändern die Zahl der Blöcke; einer bleibt immer stehen. Mit <i>Breiten selbst festlegen</i> bekommt jeder Block seinen Anteil
 an der Breite, sonst teilt das Programm nach Augenmaß. Der Editor baut immer ein Schriftfeld aus Blöcken; die feste Aufteilung der
 Mustertabellen (<code>schriftfeld_art: beispiel</code>) stellt er nicht ein.</p>
+
+<p>Die Gruppe <b>Eigene Felder</b> darunter legt die <b>frei benannten
+Zeilen</b> des Schriftfeldes an: <i>Hinzufügen</i> setzt eine neue in die Liste
+(der Name wird gleich getippt), <i>Entfernen</i> nimmt die gewählte heraus,
+<i>Nach oben</i> und <i>Nach unten</i> ordnen sie. Sichtbar werden sie über die
+Marke <code>eigene</code> im Schriftfeld, und die Häkchenzeile <i>Anzeigen
+auf</i> sagt, auf welchen Blattarten das gilt. Hier stehen nur die
+<b>Namen</b> — <b>gefüllt</b> werden die Zeilen je Verteiler unter
+<b>Bearbeiten ▸ Projektdaten</b>.</p>
 
 <h3>11.2 &nbsp; Das Protokoll</h3>
 

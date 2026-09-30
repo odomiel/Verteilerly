@@ -2823,7 +2823,15 @@ class TestProjektdatenDialog(unittest.TestCase):
         )
         self.projekt.sichtbarkeit_setzen("kundennummer", False)
         self.projekt.sichtbarkeit_setzen("Vertrag", False)
-        self.dialog = ProjektdatenDialog(self.projekt)
+        # Welche eigenen Felder es gibt, sagt die Blattvorlage.
+        import dataclasses
+
+        from verteilerly.blattvorlagen import STANDARD
+
+        self.vorlage = dataclasses.replace(
+            STANDARD, eigene_felder=("Standort", "Vertrag")
+        )
+        self.dialog = ProjektdatenDialog(self.projekt, vorlage=self.vorlage)
 
     def _zeile(self, name):
         for i in range(self.dialog.eigene.rowCount()):
@@ -2926,16 +2934,43 @@ class TestProjektdatenDialog(unittest.TestCase):
         self.dialog._alle_haken(True)
         self.assertTrue(all(h.isChecked() for h in self.dialog.haken.values()))
 
-    def test_neues_feld_ist_zunaechst_angewaehlt(self):
-        self.dialog._zeile_anhaengen("Neu", "Wert")
-        self.assertEqual(self._zeile("Neu").checkState(), Qt.CheckState.Checked)
+    def test_die_namen_kommen_aus_der_blattvorlage(self):
+        """Angelegt werden sie im Editor - hier nur gefüllt."""
+        namen = [
+            self.dialog.eigene.item(i, 0).text()
+            for i in range(self.dialog.eigene.rowCount())
+        ]
+        self.assertEqual(namen, ["Standort", "Vertrag"])
 
-    def test_blattarten_der_eigenen_felder(self):
-        """Die Wahl der Blätter kommt ins Projekt."""
-        self.assertTrue(all(h.isChecked() for h in self.dialog.blattarten.values()))
-        self.dialog.blattarten["deckblatt"].setChecked(False)
-        self.dialog.uebernehmen()
-        self.assertEqual(self.projekt.eigene_felder_auf, {"belegung", "leisten"})
+    def test_der_feldname_ist_hier_nicht_zu_tippen(self):
+        from PySide6.QtCore import Qt as QtFlags
+
+        eintrag = self._zeile("Standort")
+        self.assertFalse(eintrag.flags() & QtFlags.ItemFlag.ItemIsEditable)
+
+    def test_ein_feld_der_vorlage_ohne_inhalt_steht_leer_da(self):
+        import dataclasses
+
+        from verteilerly.gui.dialoge import ProjektdatenDialog
+
+        vorlage = dataclasses.replace(self.vorlage, eigene_felder=("Standort", "Neu"))
+        dialog = ProjektdatenDialog(self.projekt, vorlage=vorlage)
+        werte = {
+            dialog.eigene.item(i, 0).text(): dialog.eigene.item(i, 1).text()
+            for i in range(dialog.eigene.rowCount())
+        }
+        self.assertEqual(werte, {"Standort": "Keller", "Neu": ""})
+
+    def test_ein_inhalt_zu_einem_fremden_namen_bleibt_stehen(self):
+        """Eine andere Blattvorlage kann ihn wieder brauchen."""
+        import dataclasses
+
+        from verteilerly.gui.dialoge import ProjektdatenDialog
+
+        vorlage = dataclasses.replace(self.vorlage, eigene_felder=("Standort",))
+        dialog = ProjektdatenDialog(self.projekt, vorlage=vorlage)
+        dialog.uebernehmen()
+        self.assertEqual(self.projekt.eigene_felder["Vertrag"], "bis 2028")
 
     def test_beschriftungen_stehen_hinter_dem_schalter(self):
         """Die Vorgabe taugt für die meisten - erst der Schalter zeigt sie."""
@@ -2985,18 +3020,19 @@ class TestProjektdatenDialog(unittest.TestCase):
         from verteilerly.gui.dialoge import ProjektdatenDialog
 
         self.projekt.beschriftungen = {"kunde": "Auftraggeber"}
-        dialog = ProjektdatenDialog(self.projekt)
+        dialog = ProjektdatenDialog(self.projekt, vorlage=self.vorlage)
         self.assertTrue(dialog.beschriftungen.schalter.isChecked())
         self.assertEqual(dialog.beschriftungen.felder["kunde"].text(), "Auftraggeber")
         self.assertEqual(dialog.beschriftungen.felder["firma"].text(), "Firma")
 
-    def test_der_dialog_zeigt_die_gespeicherte_wahl(self):
+    def test_in_den_vorgaben_gibt_es_keine_eigenen_felder(self):
+        """Ihre Inhalte gehören dem einzelnen Projekt."""
         from verteilerly.gui.dialoge import ProjektdatenDialog
 
-        self.projekt.eigene_felder_auf = {"leisten"}
-        dialog = ProjektdatenDialog(self.projekt)
-        self.assertFalse(dialog.blattarten["deckblatt"].isChecked())
-        self.assertTrue(dialog.blattarten["leisten"].isChecked())
+        dialog = ProjektdatenDialog(
+            self.projekt, vorgaben=True, vorlage=self.vorlage
+        )
+        self.assertFalse(dialog.eigene.isVisibleTo(dialog))
 
 
 @unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
@@ -3730,14 +3766,18 @@ class TestPassform(unittest.TestCase):
                 self.assertLessEqual(dialog.width(), mass.width())
                 self.assertLessEqual(dialog.height(), mass.height())
 
-    def test_die_vorgaben_rollen_statt_ueberzulaufen(self):
-        """Die Felder passen nicht auf 800 Bildpunkte Höhe — also rollen sie."""
-        dialog = self._zeigen(self.alle["Vorgaben"])
+    def test_die_projektdaten_rollen_statt_ueberzulaufen(self):
+        """Die Felder passen nicht auf 800 Bildpunkte Höhe — also rollen sie.
+
+        Die Vorgaben taugen dafür nicht mehr: seit die eigenen Felder in
+        der Blattvorlage stehen, ist der Dialog dort kurz genug.
+        """
+        dialog = self._zeigen(self.alle["Projektdaten"])
         self.assertIsNotNone(dialog.rollbereich)
         self.assertTrue(dialog.rollbereich.verticalScrollBar().isVisible())
 
     def test_mit_platz_ist_kein_balken_zu_sehen(self):
-        dialog = self._zeigen(self.alle["Vorgaben"])
+        dialog = self._zeigen(self.alle["Projektdaten"])
         dialog.resize(dialog.width(), dialog.rollbereich.widget().sizeHint().height() * 2)
         ANWENDUNG.processEvents()
         self.assertFalse(dialog.rollbereich.verticalScrollBar().isVisible())

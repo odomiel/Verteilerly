@@ -104,10 +104,16 @@ dass ein umbenanntes Feld auch im nächsten neuen Verteiler so heißt.
 Das Deckblatt hat mehr Platz und schreibt die Vorgabe aus (*Verteilernummer*
 statt *Verteiler-Nr.*); ein selbst gesetztes Wort gilt überall unverändert.
 
-**Eigene Felder** — frei benannte Paare wie *Standort: Keller* — erscheinen
-im Schriftfeld. Eine Häkchenzeile *Anzeigen auf* sagt, auf welchen
-Blattarten: Deckblatt, Verteilerbelegung, Leistenblättern. Eine abgewählte
-Blattart lässt den Inhalt unberührt, sie zeigt ihn nur nicht.
+**Eigene Felder** — frei benannte Zeilen wie *Standort: Keller* — erscheinen
+im Schriftfeld hinter der Marke `eigene`. **Angelegt werden sie in der
+Blattvorlage**, im Blattvorlagen-Editor: dort stehen die `eigene_felder` (nur
+die Namen, in ihrer Reihenfolge) und `eigene_felder_auf` — auf welchen
+Blattarten sie erscheinen, Deckblatt, Verteilerbelegung, Leistenblättern.
+*Bearbeiten ▸ Projektdaten* **füllt** sie dann je Verteiler; der Name steht
+fest, der Inhalt gehört dem Projekt. Ein Feld ohne Inhalt bleibt als leere
+Zeile stehen — zum Ausfüllen von Hand —, und der Haken davor nimmt es wie
+jedes andere Feld vom Blatt, ohne den Inhalt zu löschen. Was eine andere
+Blattvorlage nicht führt, bleibt gespeichert und kommt mit ihr wieder.
 
 Auf der **Verteilerbelegung** stehen sie am Platz der Leiste: dieses Blatt
 zeigt alle Leisten, also keine einzelne — eine Zeile „Leiste" bliebe dort

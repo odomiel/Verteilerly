@@ -530,10 +530,15 @@ def _eintraege(
     blatt: Blatt,
     leiste: int | None,
     blattart: str = "leisten",
+    vorlage: Blattvorlage = STANDARD,
 ) -> list[tuple[str, str]]:
-    """Was hinter einer Marke des Schriftfeldes steht."""
+    """Was hinter einer Marke des Schriftfeldes steht.
+
+    Die eigenen Felder stehen in der **Blattvorlage** - sie sagt, welche
+    Zeilen es gibt; das Projekt liefert nur die Inhalte.
+    """
     v = projekt.verteiler
-    eigene = list(projekt.eigene_felder_hier(blattart).items())
+    eigene = projekt.eigene_felder_hier(blattart, vorlage)
     if marke == "strich":
         return [(STRICH, "")]
     if marke == "eigene":
@@ -592,7 +597,9 @@ def schriftfeldwerte(
         zeile
         for block in vorlage.schriftfeld
         for eintrag in block
-        for zeile in _eintraege(eintrag.marke, projekt, traeger, leiste, blattart)
+        for zeile in _eintraege(
+            eintrag.marke, projekt, traeger, leiste, blattart, vorlage
+        )
         # Eine Tabelle hat keine Striche - dort zaehlen nur die Angaben.
         if zeile[0] != STRICH
     ]
@@ -617,7 +624,9 @@ def schriftfeldspalten(
             (name, wert, eintrag.ausrichtung)
             for eintrag in block
             for name, wert in schriftfeldzeilen(
-                _eintraege(eintrag.marke, projekt, traeger, leiste, blattart)
+                _eintraege(
+                    eintrag.marke, projekt, traeger, leiste, blattart, vorlage
+                )
             )
         ]
         for block in vorlage.schriftfeld
@@ -628,6 +637,7 @@ def beispielschriftfeld(
     projekt: Projekt,
     leiste: int | None = None,
     blattart: str = "leisten",
+    vorlage: Blattvorlage = STANDARD,
 ) -> tuple[
     list[tuple[str, str, str]], list[tuple[str, str]], list[tuple[str, list[str]]]
 ]:
@@ -654,13 +664,13 @@ def beispielschriftfeld(
         (_mit_doppelpunkt(projekt.beschriftung("verteilernummer")), v.nummer),
     ]
     if blattart == "belegung":
-        verteiler += list(projekt.eigene_felder_hier("belegung").items())
+        verteiler += projekt.eigene_felder_hier("belegung", vorlage)
     else:
         verteiler.append((
             _mit_doppelpunkt(projekt.beschriftung("leiste")),
             "" if leiste is None else projekt.leistenname(leiste),
         ))
-        verteiler += list(projekt.eigene_felder_hier(blattart).items())
+        verteiler += projekt.eigene_felder_hier(blattart, vorlage)
 
     anschriften: list[tuple[str, list[str]]] = []
     for marke in ("firma", "kunde"):
@@ -831,7 +841,7 @@ def _beispiel_verteiler(
     Auf der Verteilerbelegung gibt es keine einzelne Leiste; dort stehen
     an ihrer Stelle die eigenen Felder.
     """
-    zeilen = beispielschriftfeld(projekt, leiste, blattart)[1]
+    zeilen = beispielschriftfeld(projekt, leiste, blattart, vorlage)[1]
     # Die Zeilenhoehe richtet sich nach der Matrix darueber, damit beide
     # Haelften dieselbe Schrift tragen; der Block steht dann aber mittig
     # zwischen den beiden Strichen statt oben angeschlagen.
@@ -927,7 +937,7 @@ def deckblattzeilen(
         (wort("gezeichnet", "Gezeichnet"), _paar(projekt, "gezeichnet")),
         ("Blattvorlage", vorlage.name if not vorlage.standard else ""),
     ]
-    zeilen += list(projekt.eigene_felder_hier("deckblatt").items())
+    zeilen += projekt.eigene_felder_hier("deckblatt", vorlage)
     # Eine Anschrift steht auch hier zeilenweise.
     return schriftfeldzeilen([(n, w) for n, w in zeilen if str(w).strip()])
 

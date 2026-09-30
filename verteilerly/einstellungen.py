@@ -1,4 +1,4 @@
-"""Projektdaten und eigene Felder in den Einstellungen merken.
+"""Projektdaten in den Einstellungen merken.
 
 Die Projektdaten sind bei einem Errichter meist dieselben: Firma, Kürzel,
 Kunde wiederholen sich von Verteiler zu Verteiler. Er wird deshalb in der
@@ -14,7 +14,6 @@ from __future__ import annotations
 from .modell import LEISTEN_SCHREIBWEISEN, LEISTEN_ZAHLEN, Projekt
 
 GRUPPE_BRIEFKOPF = "briefkopf"
-GRUPPE_EIGENE = "eigene_felder"
 GRUPPE_BESCHRIFTUNGEN = "beschriftungen"
 SCHLUESSEL_AUSGEBLENDET = "felder_ausgeblendet"
 #: Wie die Leisten im naechsten neuen Verteiler heissen. Im Projekt steht
@@ -52,9 +51,13 @@ def _gruppe_lesen(einstellungen, gruppe: str) -> dict[str, str]:
 
 
 def briefkopf_sichern(einstellungen, projekt: Projekt) -> None:
-    """Schreibt Projektdaten, eigene Felder und die Auswahl in die conf."""
+    """Schreibt Projektdaten und die Auswahl in die conf.
+
+    Die **eigenen Felder** stehen nicht dabei: welche es gibt, sagt die
+    Blattvorlage, und ihre Inhalte gehoeren dem einzelnen Projekt - eine
+    Vorgabe dafuer gab es einmal und hat mehr verwirrt als geholfen.
+    """
     _gruppe_schreiben(einstellungen, GRUPPE_BRIEFKOPF, projekt.briefkopf)
-    _gruppe_schreiben(einstellungen, GRUPPE_EIGENE, projekt.eigene_felder)
     _gruppe_schreiben(
         einstellungen, GRUPPE_BESCHRIFTUNGEN, projekt.eigene_beschriftungen()
     )
@@ -62,11 +65,10 @@ def briefkopf_sichern(einstellungen, projekt: Projekt) -> None:
     einstellungen.sync()
 
 
-def briefkopf_laden(einstellungen) -> tuple[dict[str, str], dict[str, str], set[str]]:
-    """Was in der conf steht: Projektdaten, eigene Felder, abgewaehlte Felder."""
+def briefkopf_laden(einstellungen) -> tuple[dict[str, str], set[str]]:
+    """Was in der conf steht: Projektdaten und abgewaehlte Felder."""
     return (
         _gruppe_lesen(einstellungen, GRUPPE_BRIEFKOPF),
-        _gruppe_lesen(einstellungen, GRUPPE_EIGENE),
         set(_liste(einstellungen.value(SCHLUESSEL_AUSGEBLENDET))),
     )
 
@@ -74,8 +76,8 @@ def briefkopf_laden(einstellungen) -> tuple[dict[str, str], dict[str, str], set[
 def beschriftungen_laden(einstellungen) -> dict[str, str]:
     """Die gemerkten eigenen Woerter fuer das Schriftfeld.
 
-    Eigener Zugriff, damit die drei bisherigen Rueckgabewerte von
-    ``briefkopf_laden`` bleiben, wie sie sind.
+    Eigener Zugriff, damit die Rueckgabewerte von ``briefkopf_laden``
+    bleiben, wie sie sind.
     """
     return _gruppe_lesen(einstellungen, GRUPPE_BESCHRIFTUNGEN)
 
@@ -107,11 +109,9 @@ def briefkopf_uebernehmen(einstellungen, projekt: Projekt) -> Projekt:
     Was im Projekt schon steht, bleibt stehen - uebernommen wird nur, was
     dort fehlt. Damit ueberschreibt die Vorgabe nie eine Eingabe.
     """
-    briefkopf, eigene, ausgeblendet = briefkopf_laden(einstellungen)
+    briefkopf, ausgeblendet = briefkopf_laden(einstellungen)
     for name, wert in briefkopf.items():
         projekt.briefkopf.setdefault(name, wert)
-    for name, wert in eigene.items():
-        projekt.eigene_felder.setdefault(name, wert)
     for marke, wert in beschriftungen_laden(einstellungen).items():
         projekt.beschriftungen.setdefault(marke, wert)
     projekt.ausgeblendet |= ausgeblendet

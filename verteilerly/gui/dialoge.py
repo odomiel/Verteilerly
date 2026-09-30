@@ -53,7 +53,6 @@ from ..blattvorlagen import (
 )
 from ..farbcodes import Kabeltypen
 from ..modell import (
-    BLATTART_BESCHRIFTUNG,
     BLATTART_NAMEN,
     BLATTARTEN,
     BLATTBESCHRIFTUNG,
@@ -1873,9 +1872,13 @@ class ProjektdatenDialog(PassenderDialog):
         parent: QWidget | None = None,
         vorgaben: bool = False,
         quelle: Projekt | None = None,
+        vorlage=None,
     ) -> None:
         super().__init__(parent)
         self.vorgaben = vorgaben
+        # Welche eigenen Felder es gibt, sagt die Blattvorlage; hier
+        # werden sie nur gefuellt. Ohne Vorlage gibt es keine.
+        self.eigene_namen = tuple(getattr(vorlage, "eigene_felder", ()) or ())
         self.quelle = quelle
         self.setWindowTitle(
             u("Vorgaben für neue Verteiler") if vorgaben else u("Projektdaten")
@@ -1903,56 +1906,43 @@ class ProjektdatenDialog(PassenderDialog):
         self.felder = projektdaten.felder
         self.haken = projektdaten.haken
 
+        # Die eigenen Felder: Namen aus der Blattvorlage, hier werden sie
+        # gefuellt. Anlegen und Benennen geschieht im
+        # Blattvorlagen-Editor - die Vorlage sagt, welche Zeilen das Blatt
+        # hat, das Projekt, was darin steht.
         self.eigene = QTableWidget(0, 2)
         self.eigene.setHorizontalHeaderLabels([u("Feldname"), u("Inhalt")])
         self.eigene.horizontalHeader().setStretchLastSection(True)
         self.eigene.setToolTip(
             u("Das Häkchen am Feldnamen entscheidet, ob das Feld auf den "
-            "Blättern erscheint.")
+            "Blättern erscheint. Die Namen stehen in der Blattvorlage.")
         )
         self.eigene.verticalHeader().setVisible(False)
         self.eigene.setMinimumHeight(150)
-        for name, wert in projekt.eigene_felder.items():
-            self._zeile_anhaengen(name, wert, projekt.sichtbar(name))
-
-        # Auf welchen Blaettern die eigenen Felder erscheinen.
-        self.blattarten: dict[str, QCheckBox] = {}
-        blattzeile = QHBoxLayout()
-        blattzeile.addWidget(QLabel(u("Anzeigen auf:")))
-        for art in BLATTARTEN:
-            haken = QCheckBox(u(BLATTART_BESCHRIFTUNG[art]))
-            haken.setChecked(art in projekt.eigene_felder_auf)
-            haken.setToolTip(
-                u("Ohne Haken erscheinen die eigenen Felder auf dieser Blattart "
-                "nicht; ihr Inhalt bleibt erhalten.")
+        for name in self.eigene_namen:
+            self._zeile_anhaengen(
+                name, projekt.eigene_felder.get(name, ""), projekt.sichtbar(name)
             )
-            self.blattarten[art] = haken
-            blattzeile.addWidget(haken)
-        blattzeile.addStretch(1)
-        # In den Vorgaben hat die Zeile nichts zu suchen: sie gehoert zum
-        # Projekt, nicht zu dem, was jeder neue Verteiler erbt.
-        self.blattkasten = QWidget()
-        self.blattkasten.setLayout(blattzeile)
-        self.blattkasten.setVisible(not vorgaben)
 
         self.beschriftungen = BeschriftungsFelder(projekt.beschriftungen, self)
         projektdaten.zusatz(self.beschriftungen.schalter)
 
-        hinzu = QPushButton(u("Feld hinzufügen"))
-        hinzu.clicked.connect(lambda: self._zeile_anhaengen("", "", True))
-        weg = QPushButton(u("Feld entfernen"))
-        weg.clicked.connect(self._zeile_entfernen)
-        knoepfe = QHBoxLayout()
-        knoepfe.addWidget(hinzu)
-        knoepfe.addWidget(weg)
-        knoepfe.addStretch(1)
-
         eigenblock = QVBoxLayout()
         eigenblock.addWidget(self.eigene)
-        eigenblock.addWidget(self.blattkasten)
-        eigenblock.addLayout(knoepfe)
+        woher = QLabel(
+            u("Welche eigenen Felder es gibt, steht in der Blattvorlage — "
+              "anzulegen im Blattvorlagen-Editor.")
+            if self.eigene_namen
+            else u("Diese Blattvorlage hat keine eigenen Felder. Anlegen "
+                   "lassen sie sich im Blattvorlagen-Editor.")
+        )
+        woher.setWordWrap(True)
+        eigenblock.addWidget(woher)
         eigene = QGroupBox(u("Eigene Felder"))
         eigene.setLayout(eigenblock)
+        # In den Vorgaben haben sie nichts zu suchen: ihre Inhalte
+        # gehoeren dem einzelnen Projekt.
+        eigene.setVisible(not vorgaben)
 
         # Links die Felder, rechts die Beschriftungen: untereinander
         # waere der Dialog hoeher als mancher Bildschirm.
@@ -2009,9 +1999,6 @@ class ProjektdatenDialog(PassenderDialog):
             else:
                 feld.setText(wert)
             self.projektdaten.haken[name].setChecked(self.quelle.sichtbar(name))
-        self.eigene.setRowCount(0)
-        for name, wert in self.quelle.eigene_felder.items():
-            self._zeile_anhaengen(name, wert, self.quelle.sichtbar(name))
         for marke, feld in self.beschriftungen.felder.items():
             feld.setText(self.quelle.beschriftung(marke))
 
@@ -2019,17 +2006,16 @@ class ProjektdatenDialog(PassenderDialog):
         zeile = self.eigene.rowCount()
         self.eigene.insertRow(zeile)
         feldname = QTableWidgetItem(name)
-        feldname.setFlags(feldname.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+        # Der Name kommt aus der Blattvorlage - hier nur ankreuzen.
+        feldname.setFlags(
+            (feldname.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+            & ~Qt.ItemFlag.ItemIsEditable
+        )
         feldname.setCheckState(
             Qt.CheckState.Checked if sichtbar else Qt.CheckState.Unchecked
         )
         self.eigene.setItem(zeile, 0, feldname)
         self.eigene.setItem(zeile, 1, QTableWidgetItem(wert))
-
-    def _zeile_entfernen(self) -> None:
-        zeile = self.eigene.currentRow()
-        if zeile >= 0:
-            self.eigene.removeRow(zeile)
 
     def uebernehmen(self) -> None:
         """Schreibt die Eingaben ins Projekt - samt der Auswahl."""
@@ -2042,7 +2028,10 @@ class ProjektdatenDialog(PassenderDialog):
         self.projekt.briefkopf = self.projektdaten.werte()
         ausgeblendet |= self.projektdaten.ausgeblendet()
 
-        eigene: dict[str, str] = {}
+        # Die Inhalte der eigenen Felder. Namen, die diese Vorlage nicht
+        # kennt, bleiben unangetastet - eine andere Vorlage braucht sie
+        # vielleicht wieder.
+        eigene = dict(self.projekt.eigene_felder)
         for zeile in range(self.eigene.rowCount()):
             name = self.eigene.item(zeile, 0)
             wert = self.eigene.item(zeile, 1)
@@ -2054,7 +2043,4 @@ class ProjektdatenDialog(PassenderDialog):
                 ausgeblendet.add(schluessel)
         self.projekt.eigene_felder = eigene
         self.projekt.ausgeblendet = ausgeblendet
-        self.projekt.eigene_felder_auf = {
-            art for art, haken in self.blattarten.items() if haken.isChecked()
-        }
         self.projekt.beschriftungen = self.beschriftungen.werte()

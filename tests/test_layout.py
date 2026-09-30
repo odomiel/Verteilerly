@@ -425,33 +425,44 @@ class TestSchriftfeld(unittest.TestCase):
     """Je Blatt korrekt, nicht kopiert."""
 
     def setUp(self):
+        import dataclasses
+
+        from verteilerly.blattvorlagen import STANDARD
+
         v = Verteiler.aus_geometrie(1, 4, 10, name="Muster", nummer="V-01")
         self.projekt = Projekt(
             verteiler=v,
             briefkopf={"firma": "Musterfirma", "erstellt_am": "01.09.2026"},
             eigene_felder={"Standort": "Keller"},
         )
+        # Welche eigenen Felder ein Blatt zeigt, sagt die Blattvorlage.
+        self.vorlage = dataclasses.replace(STANDARD, eigene_felder=("Standort",))
+
+    def _vorlage(self, **felder):
+        import dataclasses
+
+        return dataclasses.replace(self.vorlage, **felder)
 
     def test_jedes_leistenblatt_traegt_seine_eigene_nummer(self):
-        folge = blaetter(self.projekt)
+        folge = blaetter(self.projekt, self.vorlage)
         for nummer, blatt in enumerate(folge[2:], 1):
             with self.subTest(leiste=nummer):
                 self.assertIn(str(nummer), _texte(blatt))
 
     def test_stammdaten_stehen_auf_jedem_blatt(self):
-        for blatt in blaetter(self.projekt):
+        for blatt in blaetter(self.projekt, self.vorlage):
             with self.subTest(blatt=blatt.titel):
                 self.assertIn("Musterfirma", _texte(blatt))
                 self.assertIn("Muster", _texte(blatt))
 
     def test_eigene_felder_erscheinen(self):
-        self.assertIn("Keller", _texte(blaetter(self.projekt)[0]))
+        self.assertIn("Keller", _texte(blaetter(self.projekt, self.vorlage)[0]))
 
     def test_abgewaehltes_feld_steht_auf_keinem_blatt(self):
         """Der Wert bleibt im Projekt, das Blatt zeigt ihn nicht."""
         self.projekt.sichtbarkeit_setzen("firma", False)
         self.projekt.sichtbarkeit_setzen("Standort", False)
-        for blatt in blaetter(self.projekt):
+        for blatt in blaetter(self.projekt, self.vorlage):
             with self.subTest(blatt=blatt.titel):
                 self.assertNotIn("Musterfirma", _texte(blatt))
                 self.assertNotIn("Keller", _texte(blatt))
@@ -462,57 +473,59 @@ class TestSchriftfeld(unittest.TestCase):
         self.projekt.briefkopf["kunde"] = "Kunde AG"
         self.projekt.sichtbarkeit_setzen("kunde", False)
         self.projekt.sichtbarkeit_setzen("Standort", False)
-        for blatt in blaetter(self.projekt):
+        for blatt in blaetter(self.projekt, self.vorlage):
             with self.subTest(blatt=blatt.titel):
                 self.assertNotIn("Kunde", _texte(blatt))
                 self.assertNotIn("Standort", _texte(blatt))
 
     def test_leeres_feld_behaelt_seine_beschriftung(self):
         """Angewählt und leer heißt: hier wird von Hand eingetragen."""
-        texte = _texte(leistenblatt(self.projekt, 1))
+        texte = _texte(leistenblatt(self.projekt, 1, self.vorlage))
         self.assertIn("Geprüft", texte)          # in den Projektdaten nicht gefüllt
         self.assertIn("Stand", texte)
 
     def test_paar_faellt_erst_weg_wenn_beide_haelften_weg_sind(self):
         self.projekt.sichtbarkeit_setzen("geprueft_am", False)
-        self.assertIn("Geprüft", _texte(leistenblatt(self.projekt, 1)))
+        self.assertIn("Geprüft", _texte(leistenblatt(self.projekt, 1, self.vorlage)))
         self.projekt.sichtbarkeit_setzen("geprueft_von", False)
-        self.assertNotIn("Geprüft", _texte(leistenblatt(self.projekt, 1)))
+        self.assertNotIn("Geprüft", _texte(leistenblatt(self.projekt, 1, self.vorlage)))
 
     def test_blatteigene_marken_bleiben_immer(self):
         """Verteiler, Leiste und Blatt gehören zum Blatt, nicht zu den Projektdaten."""
         for name in ("verteiler", "verteilernummer", "leiste", "blatt"):
             self.projekt.sichtbarkeit_setzen(name, False)
-        texte = _texte(leistenblatt(self.projekt, 1))
+        texte = _texte(leistenblatt(self.projekt, 1, self.vorlage))
         self.assertIn("Verteiler", texte)
         self.assertIn("Leiste", texte)
 
     def test_belegung_fuehrt_keine_leiste_sondern_eigene_felder(self):
         """Die Belegung gilt allen Leisten - dort steht der Platzhalter."""
-        texte = _texte(verteilerbelegungen(self.projekt)[0])
+        texte = _texte(verteilerbelegungen(self.projekt, self.vorlage)[0])
         self.assertNotIn("Leiste", texte)
         self.assertIn("Standort", texte)
         self.assertIn("Keller", texte)
 
     def test_eigene_felder_stehen_auf_der_belegung_nur_einmal(self):
-        texte = _texte(verteilerbelegungen(self.projekt)[0])
+        texte = _texte(verteilerbelegungen(self.projekt, self.vorlage)[0])
         self.assertEqual(texte.count("Standort"), 1)
         self.assertEqual(texte.count("Keller"), 1)
 
     def test_belegung_ohne_eigene_felder_bleibt_ohne_leiste(self):
-        self.projekt.eigene_felder.clear()
-        self.assertNotIn("Leiste", _texte(verteilerbelegungen(self.projekt)[0]))
+        ohne = self._vorlage(eigene_felder=())
+        self.assertNotIn("Leiste", _texte(verteilerbelegungen(self.projekt, ohne)[0]))
 
     def test_abgewaehlte_blattart_zeigt_die_felder_nicht(self):
         """Der Inhalt bleibt, nur dieses Blatt fuehrt ihn nicht."""
-        self.projekt.eigene_felder_auf = {"leisten"}
-        self.assertNotIn("Keller", _texte(verteilerbelegungen(self.projekt)[0]))
-        self.assertNotIn("Keller", _texte(deckblatt(self.projekt)))
-        self.assertIn("Keller", _texte(leistenblatt(self.projekt, 1)))
+        nur_leisten = self._vorlage(eigene_felder_auf=("leisten",))
+        self.assertNotIn(
+            "Keller", _texte(verteilerbelegungen(self.projekt, nur_leisten)[0])
+        )
+        self.assertNotIn("Keller", _texte(deckblatt(self.projekt, nur_leisten)))
+        self.assertIn("Keller", _texte(leistenblatt(self.projekt, 1, nur_leisten)))
         self.assertEqual(self.projekt.eigene_felder["Standort"], "Keller")
 
     def test_leistenblatt_fuehrt_weiter_seine_leiste(self):
-        texte = _texte(leistenblatt(self.projekt, 1))
+        texte = _texte(leistenblatt(self.projekt, 1, self.vorlage))
         self.assertIn("Leiste", texte)
         self.assertIn("Standort", texte)
 
@@ -520,13 +533,13 @@ class TestSchriftfeld(unittest.TestCase):
         """Erstellt am/von: fällt eine Hälfte weg, bleibt die andere."""
         self.projekt.briefkopf["erstellt_von"] = "T. Mirik"
         self.projekt.sichtbarkeit_setzen("erstellt_am", False)
-        texte = " ".join(_texte(blaetter(self.projekt)[0]))
+        texte = " ".join(_texte(blaetter(self.projekt, self.vorlage)[0]))
         self.assertIn("T. Mirik", texte)
         self.assertNotIn("01.09.2026", texte)
 
     def test_leere_felder_bleiben_leer(self):
         """Ein nicht gefuelltes Feld erzeugt keinen leeren Text."""
-        for blatt in blaetter(self.projekt):
+        for blatt in blaetter(self.projekt, self.vorlage):
             self.assertNotIn("", _texte(blatt))
 
 

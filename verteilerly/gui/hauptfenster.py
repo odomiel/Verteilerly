@@ -1042,7 +1042,7 @@ class Hauptfenster(QMainWindow):
             return
         # Die gemerkten Vorgaben stehen schon im Dialog und sind dort für
         # diesen Verteiler zu ändern.
-        gemerkt, _, ausgeblendet = einstellungsspeicher.briefkopf_laden(
+        gemerkt, ausgeblendet = einstellungsspeicher.briefkopf_laden(
             self.einstellungen
         )
         # Angehakt ist, was die Vorgaben füllen - ein leeres Feld gehört
@@ -1064,10 +1064,10 @@ class Hauptfenster(QMainWindow):
         einstellungsspeicher.leistenweise_merken(
             self.einstellungen, self.leistenweise_vorgabe
         )
-        # Was der Dialog trägt, gilt; die eigenen Felder kommen aus der conf.
+        # Was der Dialog trägt, gilt; die Vorgaben füllen nur auf.
         projekt = self.neues_projekt(dialog.projekt())
         self._projekt_setzen(projekt, None)
-        uebernommen = len(projekt.briefkopf) + len(projekt.eigene_felder)
+        uebernommen = len(projekt.briefkopf)
         self.statusBar().showMessage(
             u("Neuer Verteiler: {0} DA auf {1}").format(
                 self.projekt.verteiler.da_gesamt,
@@ -1249,12 +1249,11 @@ class Hauptfenster(QMainWindow):
         bearbeitete Projektdaten ändern die Vorgaben nicht mehr von
         selbst, sonst überschriebe der letzte Kunde sie ungefragt.
         """
-        briefkopf, eigene, ausgeblendet = einstellungsspeicher.briefkopf_laden(
+        briefkopf, ausgeblendet = einstellungsspeicher.briefkopf_laden(
             self.einstellungen
         )
         muster = Projekt(
             briefkopf=briefkopf,
-            eigene_felder=eigene,
             ausgeblendet=ausgeblendet,
             beschriftungen=einstellungsspeicher.beschriftungen_laden(
                 self.einstellungen
@@ -1266,7 +1265,7 @@ class Hauptfenster(QMainWindow):
         dialog.uebernehmen()
         einstellungsspeicher.briefkopf_sichern(self.einstellungen, muster)
         self.statusBar().showMessage(
-            u("Vorgaben gemerkt: {0} Felder stehen im nächsten neuen Verteiler schon da").format(len(muster.briefkopf) + len(muster.eigene_felder)),
+            u("Vorgaben gemerkt: {0} Felder stehen im nächsten neuen Verteiler schon da").format(len(muster.briefkopf)),
             8000,
         )
 
@@ -2117,7 +2116,9 @@ class Hauptfenster(QMainWindow):
     def projektdaten_bearbeiten(self) -> None:
         if self.projekt is None:
             return
-        dialog = ProjektdatenDialog(self.projekt, self)
+        dialog = ProjektdatenDialog(
+            self.projekt, self, vorlage=self.vorschau.blattvorlage
+        )
         if dialog.exec() == ProjektdatenDialog.DialogCode.Accepted:
             dialog.uebernehmen()
             self._belegung_geaendert()

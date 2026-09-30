@@ -202,19 +202,20 @@ class TestFeldauswahl(unittest.TestCase):
         del daten["ausgeblendet"]
         self.assertEqual(projektdatei.aus_dict(daten).ausgeblendet, set())
 
-    def test_blattarten_der_eigenen_felder_kommen_zurueck(self):
-        """Auf welchen Blättern die eigenen Felder stehen."""
+    def test_die_inhalte_der_eigenen_felder_kommen_zurueck(self):
+        """Die Inhalte gehören dem Projekt - die Namen der Blattvorlage."""
         projekt = beispielprojekt()
         projekt.eigene_felder["Standort"] = "Keller"
-        projekt.eigene_felder_auf = {"belegung"}
         projektdatei.speichern(projekt, self.ziel)
-        self.assertEqual(projektdatei.laden(self.ziel).eigene_felder_auf, {"belegung"})
+        self.assertEqual(
+            projektdatei.laden(self.ziel).eigene_felder["Standort"], "Keller"
+        )
 
-    def test_keine_blattart_bleibt_keine(self):
-        projekt = beispielprojekt()
-        projekt.eigene_felder_auf = set()
-        projektdatei.speichern(projekt, self.ziel)
-        self.assertEqual(projektdatei.laden(self.ziel).eigene_felder_auf, set())
+    def test_die_blattarten_stehen_nicht_mehr_in_der_datei(self):
+        """Sie gehören seit Fassung 10 der Blattvorlage."""
+        daten = projektdatei.als_dict(beispielprojekt())
+        self.assertNotIn("eigene_felder_auf", daten)
+        self.assertEqual(daten["formatversion"], projektdatei.FORMATVERSION)
 
     def test_eigene_beschriftungen_kommen_zurueck(self):
         """Das eigene Wort steht in der Projektdatei."""
@@ -263,15 +264,15 @@ class TestFeldauswahl(unittest.TestCase):
         erste = daten["verteiler"]["buchten"][0]["leisten"][0]["stifte"][0]
         self.assertNotIn("stile", erste["a"])
 
-    def test_aeltere_datei_zeigt_die_felder_ueberall(self):
-        from verteilerly.modell import BLATTARTEN
-
+    def test_eine_aeltere_datei_mit_blattarten_wird_uebergangen(self):
+        """Bis Fassung 9 stand die Wahl hier - lesen darf sie nicht stören."""
         daten = projektdatei.als_dict(beispielprojekt())
-        del daten["eigene_felder_auf"]
-        daten["formatversion"] = 4
-        self.assertEqual(
-            projektdatei.aus_dict(daten).eigene_felder_auf, set(BLATTARTEN)
-        )
+        daten["eigene_felder_auf"] = ["belegung"]
+        daten["eigene_felder"] = {"Standort": "Keller"}
+        daten["formatversion"] = 9
+        projekt = projektdatei.aus_dict(daten)
+        self.assertEqual(projekt.eigene_felder, {"Standort": "Keller"})
+        self.assertFalse(hasattr(projekt, "eigene_felder_auf"))
 
 
 class TestAeltereDateien(unittest.TestCase):

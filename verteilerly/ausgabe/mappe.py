@@ -601,7 +601,7 @@ def _schriftfeld_beispiel(
     dem gezeichneten Blatt.
     """
     matrix, verteiler, anschriften = beispielschriftfeld(
-        projekt, leiste_nr, blattart
+        projekt, leiste_nr, blattart, vorlage
     )
     links = _spaltenteilung(
         blatt, zeug, schriftfeldanteile(2, vorlage.schriftfeld_anteile),
