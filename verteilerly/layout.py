@@ -17,6 +17,7 @@ from .blattvorlagen import LINKS, MITTE, RECHTS, STANDARD, Blattvorlage
 from .modell import (
     BLATTARTEN,
     BLATTBESCHRIFTUNG,
+    BRIEFKOPF_FELDER,
     LEERER_STIL,
     STILFELDER,
     TEILBARE_FELDER,
@@ -507,6 +508,40 @@ PAARMARKEN = {
     "geprueft": ("geprueft_am", "geprueft_von"),
     "gezeichnet": ("gezeichnet_am", "gezeichnet_von", "kuerzel"),
 }
+
+
+#: Projektdatenfelder, die nicht am Schriftfeld haengen: der
+#: Dokumenttitel ueberschreibt das Deckblatt, benennt das PDF und steht in
+#: der Mappe in A1 - er gilt darum in jeder Blattvorlage.
+OHNE_SCHRIFTFELD = ("dokumenttitel",)
+
+
+def briefkopffelder(vorlage: Blattvorlage) -> tuple[str, ...]:
+    """Welche Projektdatenfelder diese Blattvorlage fuehrt.
+
+    Ihr Schriftfeld sagt es: jede Marke steht fuer ein Feld, die
+    Paarmarken (``erstellt``, ``stand``, ``geprueft``, ``gezeichnet``) fuer
+    zwei oder drei. Was zum Blatt selbst gehoert (Verteiler, Leiste,
+    Blatt), der Querstrich und die eigenen Felder sind keine
+    Projektdaten und bleiben aussen vor. Die Reihenfolge ist die von
+    ``BRIEFKOPF_FELDER`` - eine Liste, die mit der Vorlage die Ordnung
+    wechselt, laesst sich nicht wiederfinden.
+
+    Die Bauart ``beispiel`` fuehrt ihr Schriftfeld fest im Programm; dort
+    gelten alle Felder.
+    """
+    if vorlage.schriftfeld_art == "beispiel":
+        return BRIEFKOPF_FELDER
+    # Was auch ohne Schriftfeld wirkt, gilt immer.
+    gefuehrt: set[str] = set(OHNE_SCHRIFTFELD)
+    for block in vorlage.schriftfeld:
+        for eintrag in block:
+            marke = eintrag.marke
+            if marke in PAARMARKEN:
+                gefuehrt.update(PAARMARKEN[marke])
+            else:
+                gefuehrt.add(marke)
+    return tuple(name for name in BRIEFKOPF_FELDER if name in gefuehrt)
 
 
 def _marke_sichtbar(marke: str, projekt: Projekt) -> bool:

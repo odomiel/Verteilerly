@@ -52,6 +52,7 @@ from ..blattvorlagen import (
     blattvorlage_umbenennen,
 )
 from ..farbcodes import Kabeltypen
+from ..layout import briefkopffelder
 from ..modell import (
     BLATTART_NAMEN,
     BLATTARTEN,
@@ -203,6 +204,7 @@ class NeuerVerteilerDialog(PassenderDialog):
             blattvorlage or self.blattvorlagen.standard.id
         )
         self.blattvorlagenwahl.setCurrentIndex(max(stelle, 0))
+        self.blattvorlagenwahl.currentIndexChanged.connect(self._felder_anpassen)
 
         stammdaten = QFormLayout()
         stammdaten.addRow(u("Verteilername:"), self.name)
@@ -325,6 +327,10 @@ class NeuerVerteilerDialog(PassenderDialog):
             briefkopf, ausgeblendet,
             u("Projektdaten — stehen auf jedem Blatt, später änderbar"),
         )
+        # Gezeigt wird, was die gewaehlte Blattvorlage fuehrt - ein Feld,
+        # das auf keinem ihrer Blaetter erscheint, will hier niemand
+        # ausfuellen.
+        self._felder_anpassen()
         rollbereich = QScrollArea()
         rollbereich.setWidget(self.projektdaten)
         rollbereich.setWidgetResizable(True)
@@ -507,16 +513,38 @@ class NeuerVerteilerDialog(PassenderDialog):
         """Die Kennung der gewaehlten Blattvorlage."""
         return self.blattvorlagenwahl.currentData() or ""
 
+    def _felder_anpassen(self, *_args) -> None:
+        """Zeigt die Projektdatenfelder der gewaehlten Blattvorlage.
+
+        Wechselt die Wahl, wechselt die Liste; was verborgen wird, behaelt
+        seinen Inhalt - eine andere Vorlage fuehrt es vielleicht wieder.
+        """
+        kennung = self.blattvorlage()
+        if not kennung:
+            self.projektdaten.nur_diese_zeigen(None)
+            return
+        self.projektdaten.nur_diese_zeigen(
+            briefkopffelder(self.blattvorlagen.gewaehlt(kennung))
+        )
+
     def leisten_schreibweise(self) -> str:
         """Wie die Leisten dieses Verteilers heissen sollen."""
         return LEISTEN_BUCHSTABEN if self.buchstaben.isChecked() else LEISTEN_ZAHLEN
 
     def projekt(self) -> Projekt:
-        """Der neue Verteiler samt den hier eingetippten Projektdaten."""
+        """Der neue Verteiler samt den hier eingetippten Projektdaten.
+
+        Was diese Blattvorlage nicht fuehrt, ist auch **abgewaehlt**: das
+        Feld steht hier nicht zur Eingabe, also soll es auch auf keinem
+        Blatt auftauchen - sonst zeigte das Deckblatt einen Wert aus den
+        Vorgaben, den niemand sehen wollte. Der Inhalt bleibt erhalten und
+        ist unter Bearbeiten ▸ Projektdaten wieder anzuhaken.
+        """
         return Projekt(
             verteiler=self.verteiler(),
             briefkopf=self.projektdaten.werte(),
-            ausgeblendet=self.projektdaten.ausgeblendet(),
+            ausgeblendet=self.projektdaten.ausgeblendet()
+            | self.projektdaten.verborgene(),
             leisten_schreibweise=self.leisten_schreibweise(),
         )
 
@@ -1617,7 +1645,11 @@ class ProjektdatenFelder(QGroupBox):
         self.haken: dict[str, QCheckBox] = {}
         #: Je Datumsfeld ein Knopf, der das heutige Datum einsetzt.
         self.datumsknoepfe: dict[str, QToolButton] = {}
-        form = QFormLayout()
+        #: In welcher Zeile des Formulars ein Feld steht - zum Verbergen.
+        self.zeilen: dict[str, int] = {}
+        #: Welche Felder gezeigt werden; ohne Einschraenkung alle.
+        self._gezeigt: set[str] = set(BRIEFKOPF_FELDER)
+        self.form = form = QFormLayout()
         for name in BRIEFKOPF_FELDER:
             feld = self._feld_bauen(name, briefkopf.get(name, ""))
             haken = QCheckBox(u(BRIEFKOPF_BESCHRIFTUNG.get(name, name)) + ":")
@@ -1633,6 +1665,7 @@ class ProjektdatenFelder(QGroupBox):
                 self._mithaken(feld, haken)
             self.felder[name] = feld
             self.haken[name] = haken
+            self.zeilen[name] = form.rowCount()
             form.addRow(
                 haken,
                 self._mit_datumsknopf(name, feld)
@@ -1654,6 +1687,23 @@ class ProjektdatenFelder(QGroupBox):
         aufbau.addLayout(form)
         aufbau.addLayout(self.schnell)
         self.setLayout(aufbau)
+
+    def nur_diese_zeigen(self, namen) -> None:
+        """Zeigt die genannten Felder und verbirgt die uebrigen.
+
+        Verborgen ist nicht geloescht: Wert und Haken bleiben stehen, denn
+        eine andere Blattvorlage fuehrt das Feld vielleicht wieder. Wer
+        nichts angibt, bekommt alle - so war es, bevor die Blattvorlage
+        mitredete.
+        """
+        gezeigt = set(namen) if namen is not None else set(self.zeilen)
+        for name, zeile in self.zeilen.items():
+            self.form.setRowVisible(zeile, name in gezeigt)
+        self._gezeigt = gezeigt
+
+    def verborgene(self) -> set[str]:
+        """Die Felder, die diese Blattvorlage nicht fuehrt."""
+        return {name for name in self.zeilen if name not in self._gezeigt}
 
     def zusatz(self, feld: QWidget) -> None:
         """Haengt etwas rechts an die Auswahlzeile - dort ist Platz frei."""

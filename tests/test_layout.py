@@ -594,6 +594,88 @@ class TestSchriftfeld(unittest.TestCase):
             self.assertNotIn("", _texte(blatt))
 
 
+class TestBriefkopffelder(unittest.TestCase):
+    """Welche Projektdatenfelder eine Blattvorlage führt."""
+
+    def _vorlage(self, *marken):
+        import dataclasses
+
+        from verteilerly.blattvorlagen import STANDARD, Schriftfeldeintrag
+
+        return dataclasses.replace(
+            STANDARD,
+            schriftfeld=(tuple(Schriftfeldeintrag(m) for m in marken),),
+        )
+
+    def test_eine_marke_ein_feld(self):
+        from verteilerly.layout import briefkopffelder
+
+        self.assertEqual(
+            briefkopffelder(self._vorlage("firma", "kunde")),
+            ("firma", "kunde", "dokumenttitel"),
+        )
+
+    def test_eine_paarmarke_steht_fuer_ihre_felder(self):
+        from verteilerly.layout import briefkopffelder
+
+        felder = briefkopffelder(self._vorlage("erstellt"))
+        self.assertIn("erstellt_am", felder)
+        self.assertIn("erstellt_von", felder)
+
+    def test_gezeichnet_bringt_auch_das_kuerzel(self):
+        from verteilerly.layout import briefkopffelder
+
+        self.assertIn("kuerzel", briefkopffelder(self._vorlage("gezeichnet")))
+
+    def test_was_zum_blatt_gehoert_ist_kein_projektdatenfeld(self):
+        from verteilerly.layout import briefkopffelder
+
+        self.assertEqual(
+            briefkopffelder(self._vorlage("verteiler", "leiste", "blatt", "strich")),
+            ("dokumenttitel",),
+        )
+
+    def test_der_dokumenttitel_gilt_immer(self):
+        """Er benennt das PDF und überschreibt das Deckblatt."""
+        from verteilerly.layout import briefkopffelder
+
+        self.assertIn("dokumenttitel", briefkopffelder(self._vorlage("firma")))
+
+    def test_ein_eigenes_feld_zaehlt_nicht_mit(self):
+        import dataclasses
+
+        from verteilerly.blattvorlagen import Schriftfeldeintrag
+        from verteilerly.layout import briefkopffelder
+
+        vorlage = dataclasses.replace(
+            self._vorlage("firma"),
+            eigene_felder=("Auftrag",),
+            schriftfeld=((Schriftfeldeintrag("firma"), Schriftfeldeintrag("Auftrag")),),
+        )
+        self.assertEqual(briefkopffelder(vorlage), ("firma", "dokumenttitel"))
+
+    def test_die_reihenfolge_ist_die_der_felderliste(self):
+        from verteilerly.layout import briefkopffelder
+        from verteilerly.modell import BRIEFKOPF_FELDER
+
+        felder = briefkopffelder(self._vorlage("kunde", "firma"))
+        self.assertEqual(
+            list(felder),
+            [name for name in BRIEFKOPF_FELDER if name in felder],
+        )
+
+    def test_die_mustertabellen_fuehren_alles(self):
+        """Ihr Schriftfeld steht fest im Programm."""
+        import dataclasses
+
+        from verteilerly.blattvorlagen import STANDARD
+        from verteilerly.layout import briefkopffelder
+        from verteilerly.modell import BRIEFKOPF_FELDER
+
+        vorlage = dataclasses.replace(STANDARD, schriftfeld_art="beispiel")
+        self.assertEqual(briefkopffelder(vorlage), BRIEFKOPF_FELDER)
+
+
 class TestLeistenblatt(unittest.TestCase):
     def setUp(self):
         self.v = Verteiler.aus_geometrie(1, 4, 10, name="Muster")

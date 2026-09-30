@@ -129,6 +129,16 @@ Verteiler* führt dieselben Felder und schreibt sie in die
 Bearbeitete Projektdaten ändern die Vorgaben **nicht** von selbst —
 sonst überschriebe der letzte Kunde sie ungefragt.
 
+**Welche Felder der Dialog *Neuer Verteiler* zeigt, sagt die gewählte
+Blattvorlage**: `layout.briefkopffelder()` liest die Marken ihres
+Schriftfeldes und löst die Paarmarken auf (`erstellt` → `erstellt_am`,
+`erstellt_von`; `gezeichnet` zusätzlich `kuerzel`). Was zum Blatt gehört
+(Verteiler, Leiste, Blatt), der Querstrich und die eigenen Felder zählen nicht
+mit; der `dokumenttitel` gilt immer, denn er benennt das PDF und überschreibt
+das Deckblatt. Ein weggelassenes Feld behält seinen Wert, wird aber
+**abgewählt** — sonst stünde ein Wert aus den Vorgaben auf dem Deckblatt, ohne
+im Dialog zu stehen.
+
 Beim Anlegen stehen sie schon in den Feldern; was im Projekt steht,
 bleibt stehen, die Vorgabe überschreibt nie eine Eingabe. **Angehakt ist
 dabei nur, was sie füllen** — ein leeres Feld gehört auf kein Blatt, bis

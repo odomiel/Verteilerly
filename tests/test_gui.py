@@ -3121,6 +3121,62 @@ class TestProjektdatenImNeuenVerteiler(unittest.TestCase):
     def _dialog(self, **kw):
         return NeuerVerteilerDialog(self.vorlagen, None, None, **kw)
 
+    def _mit_blattvorlagen(self, kennung, **kw):
+        """Der Dialog mit den mitgelieferten Blattvorlagen."""
+        import pathlib as pl
+
+        from verteilerly.blattvorlagen import Blattvorlagen
+
+        blatt = Blattvorlagen.laden(
+            pl.Path(__file__).resolve().parent.parent / "daten" / "blattvorlagen"
+        )
+        return NeuerVerteilerDialog(
+            self.vorlagen, None, None, kw.pop("briefkopf", None),
+            kw.pop("ausgeblendet", None), blatt, kennung, **kw
+        )
+
+    def test_gezeigt_wird_was_die_blattvorlage_fuehrt(self):
+        """»Knapp« hat keine Anlagen- und Kundennummer im Schriftfeld."""
+        dialog = self._mit_blattvorlagen("knapp")
+        felder = dialog.projektdaten
+        self.assertFalse(felder.form.isRowVisible(felder.zeilen["anlagennummer"]))
+        self.assertFalse(felder.form.isRowVisible(felder.zeilen["kundennummer"]))
+        self.assertTrue(felder.form.isRowVisible(felder.zeilen["firma"]))
+        # Der Dokumenttitel haengt nicht am Schriftfeld und gilt immer.
+        self.assertTrue(felder.form.isRowVisible(felder.zeilen["dokumenttitel"]))
+
+    def test_die_liste_folgt_der_wahl_der_blattvorlage(self):
+        dialog = self._mit_blattvorlagen("standard")
+        felder = dialog.projektdaten
+        self.assertTrue(felder.form.isRowVisible(felder.zeilen["anlagennummer"]))
+        stelle = dialog.blattvorlagenwahl.findData("knapp")
+        dialog.blattvorlagenwahl.setCurrentIndex(stelle)
+        self.assertFalse(felder.form.isRowVisible(felder.zeilen["anlagennummer"]))
+
+    def test_ein_verborgenes_feld_behaelt_seinen_wert(self):
+        """Eine andere Blattvorlage führt es vielleicht wieder."""
+        dialog = self._mit_blattvorlagen("knapp", briefkopf={"anlagennummer": "A-1"})
+        self.assertEqual(
+            dialog.projektdaten.felder["anlagennummer"].text(), "A-1"
+        )
+        self.assertEqual(dialog.projekt().briefkopf["anlagennummer"], "A-1")
+
+    def test_was_die_blattvorlage_nicht_fuehrt_ist_abgewaehlt(self):
+        """Sonst stünde es auf dem Deckblatt, ohne im Dialog zu stehen."""
+        dialog = self._mit_blattvorlagen("knapp", briefkopf={"anlagennummer": "A-1"})
+        projekt = dialog.projekt()
+        self.assertIn("anlagennummer", projekt.ausgeblendet)
+        self.assertFalse(projekt.sichtbar("anlagennummer"))
+        self.assertTrue(projekt.sichtbar("firma"))
+
+    def test_ohne_blattvorlagen_stehen_alle_felder_da(self):
+        dialog = self._dialog()
+        felder = dialog.projektdaten
+        self.assertTrue(
+            all(felder.form.isRowVisible(z) for z in felder.zeilen.values())
+        )
+        self.assertEqual(felder.verborgene(), set())
+
     def test_gemerkte_werte_stehen_schon_drin(self):
         dialog = self._dialog(
             briefkopf={"firma": "Musterfirma", "kuerzel": "JD"},
