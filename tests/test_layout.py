@@ -427,7 +427,7 @@ class TestSchriftfeld(unittest.TestCase):
     def setUp(self):
         import dataclasses
 
-        from verteilerly.blattvorlagen import STANDARD
+        from verteilerly.blattvorlagen import STANDARD, Schriftfeldeintrag
 
         v = Verteiler.aus_geometrie(1, 4, 10, name="Muster", nummer="V-01")
         self.projekt = Projekt(
@@ -435,8 +435,17 @@ class TestSchriftfeld(unittest.TestCase):
             briefkopf={"firma": "Musterfirma", "erstellt_am": "01.09.2026"},
             eigene_felder={"Standort": "Keller"},
         )
-        # Welche eigenen Felder ein Blatt zeigt, sagt die Blattvorlage.
-        self.vorlage = dataclasses.replace(STANDARD, eigene_felder=("Standort",))
+        # Welche eigenen Felder ein Blatt zeigt, sagt die Blattvorlage -
+        # und **wo** sie stehen: jedes Feld steht mit seinem Namen in
+        # genau einem Block.
+        self.vorlage = dataclasses.replace(
+            STANDARD,
+            eigene_felder=("Standort",),
+            schriftfeld=(
+                *STANDARD.schriftfeld[:-1],
+                (*STANDARD.schriftfeld[-1], Schriftfeldeintrag("Standort")),
+            ),
+        )
 
     def _vorlage(self, **felder):
         import dataclasses
@@ -498,21 +507,38 @@ class TestSchriftfeld(unittest.TestCase):
         self.assertIn("Verteiler", texte)
         self.assertIn("Leiste", texte)
 
-    def test_belegung_fuehrt_keine_leiste_sondern_eigene_felder(self):
-        """Die Belegung gilt allen Leisten - dort steht der Platzhalter."""
+    def test_die_belegung_fuehrt_keine_leiste(self):
+        """Sie gilt allen Leisten - die Zeile bliebe leer."""
         texte = _texte(verteilerbelegungen(self.projekt, self.vorlage)[0])
         self.assertNotIn("Leiste", texte)
-        self.assertIn("Standort", texte)
-        self.assertIn("Keller", texte)
 
-    def test_eigene_felder_stehen_auf_der_belegung_nur_einmal(self):
+    def test_eigene_felder_stehen_auch_dort_an_ihrem_platz(self):
         texte = _texte(verteilerbelegungen(self.projekt, self.vorlage)[0])
         self.assertEqual(texte.count("Standort"), 1)
         self.assertEqual(texte.count("Keller"), 1)
 
-    def test_belegung_ohne_eigene_felder_bleibt_ohne_leiste(self):
-        ohne = self._vorlage(eigene_felder=())
-        self.assertNotIn("Leiste", _texte(verteilerbelegungen(self.projekt, ohne)[0]))
+    def test_ein_feld_steht_in_dem_block_in_den_es_gesetzt_wurde(self):
+        """Mehrere eigene Felder lassen sich unabhängig verteilen."""
+        from verteilerly.blattvorlagen import Schriftfeldeintrag
+        from verteilerly.layout import schriftfeldspalten
+
+        self.projekt.eigene_felder["Monteur"] = "Müller"
+        vorlage = self._vorlage(
+            eigene_felder=("Standort", "Monteur"),
+            schriftfeld=(
+                (Schriftfeldeintrag("firma"), Schriftfeldeintrag("Standort")),
+                (Schriftfeldeintrag("verteiler"),),
+                (Schriftfeldeintrag("erstellt"), Schriftfeldeintrag("Monteur")),
+            ),
+        )
+        bloecke = [
+            [name for name, _wert, _aus in block]
+            for block in schriftfeldspalten(self.projekt, 1, vorlage)
+        ]
+        self.assertIn("Standort", bloecke[0])
+        self.assertNotIn("Monteur", bloecke[0])
+        self.assertIn("Monteur", bloecke[2])
+        self.assertNotIn("Standort", bloecke[2])
 
     def test_abgewaehlte_blattart_zeigt_die_felder_nicht(self):
         """Der Inhalt bleibt, nur dieses Blatt fuehrt ihn nicht."""

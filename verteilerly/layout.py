@@ -541,14 +541,15 @@ def _eintraege(
     eigene = projekt.eigene_felder_hier(blattart, vorlage)
     if marke == "strich":
         return [(STRICH, "")]
-    if marke == "eigene":
-        # Auf der Verteilerbelegung stehen sie am Platz der Leiste -
-        # zweimal braucht sie niemand.
-        return [] if blattart == "belegung" else eigene
+    if marke in tuple(vorlage.eigene_felder):
+        # Ein eigenes Feld steht mit seinem Namen im Schriftfeld und
+        # gehoert damit genau einem Block - auf jedem Blatt an derselben
+        # Stelle, damit man es dort sucht, wo man es kennt.
+        return [zeile for zeile in eigene if zeile[0] == marke]
     if marke == "leiste" and blattart == "belegung":
-        # Dieses Blatt zeigt alle Leisten, also keine einzelne: der Platz
-        # gehoert hier den eigenen Feldern.
-        return eigene
+        # Dieses Blatt zeigt alle Leisten, also keine einzelne: die Zeile
+        # bliebe leer und faellt darum weg.
+        return []
     if not _marke_sichtbar(marke, projekt):
         return []
     if marke == "verteiler":

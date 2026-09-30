@@ -29,7 +29,7 @@ spalten:
 schriftfeld:
   - [firma, kunde, anlagennummer, kundennummer]
   - [verteiler, verteilernummer, leiste, blatt]
-  - [erstellt, stand, geprueft, gezeichnet, eigene]
+  - [erstellt, stand, geprueft, gezeichnet]
 
 buchten_je_blatt: 2
 da_nummern: false

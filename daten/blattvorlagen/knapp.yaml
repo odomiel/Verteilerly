@@ -21,4 +21,4 @@ kabel_gedreht: false
 schriftfeld:
   - [firma, kunde]
   - [verteiler, verteilernummer, leiste, blatt]
-  - [erstellt, stand, geprueft, gezeichnet, eigene]
+  - [erstellt, stand, geprueft, gezeichnet]

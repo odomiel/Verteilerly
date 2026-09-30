@@ -413,10 +413,12 @@ im Blattvorlagen-Editor, hier werden sie
 <b>gefüllt</b>: der Name steht fest, der Inhalt gehört dem Verteiler. Das
 Häkchen davor entscheidet wie bei den übrigen Feldern, ob die Zeile auf den
 Blättern erscheint; der Inhalt bleibt dabei erhalten. Ein Feld der Vorlage ohne
-Inhalt steht als leere Zeile auf dem Blatt — zum Ausfüllen von Hand. Auf der
-Verteilerbelegung stehen die eigenen Felder am Platz der Leiste: dieses Blatt
-zeigt alle Leisten, also keine einzelne. Trägt eine andere Blattvorlage ein
-Feld nicht, bleibt sein Inhalt gespeichert und kommt mit ihr wieder.</p>
+Inhalt steht als leere Zeile auf dem Blatt — zum Ausfüllen von Hand. Jedes
+Feld steht auf jedem Blatt an <b>derselben Stelle</b>, dort, wo die Vorlage es
+in den Block gesetzt hat; die Zeile <i>Leiste</i> fällt auf der
+Verteilerbelegung weg, weil dieses Blatt alle Leisten zeigt. Trägt eine andere
+Blattvorlage ein Feld nicht, bleibt sein Inhalt gespeichert und kommt mit ihr
+wieder.</p>
 
 <p><b>Beschriftungen ändern</b> — der Schalter <i>Erweitert: Beschriftungen
 auf dem Blatt ändern</i> in der Auswahlzeile klappt neben den Feldern eine
@@ -596,10 +598,13 @@ Liste von Marken; die Blöcke stehen nebeneinander:</p>
 <code>anlagennummer</code>, <code>kundennummer</code>, <code>verteiler</code>,
 <code>verteilernummer</code>, <code>leiste</code>, <code>blatt</code>,
 <code>erstellt</code>, <code>stand</code>, <code>geprueft</code>,
-<code>gezeichnet</code>, <code>dokumenttitel</code>, <code>eigene</code> und
-<code>strich</code>. <code>eigene</code> steht für alle selbst angelegten
-Felder, <code>strich</code> für einen Querstrich quer durch den Block: keine
-Angabe, sondern eine Linie, die trennt, was darüber steht. Sie läuft
+<code>gezeichnet</code>, <code>dokumenttitel</code> und
+<code>strich</code> — dazu <b>der Name jedes eigenen Feldes</b> dieser
+Vorlage: ein eigenes Feld steht mit seinem Namen da (<code>- Auftrag</code>)
+und gehört damit genau einem Block; mehrere Felder lassen sich also
+unabhängig voneinander verteilen. <code>strich</code> ist ein Querstrich quer
+durch den Block: keine Angabe, sondern eine Linie, die trennt, was darüber
+steht. Sie läuft
 <b>von Kante zu Kante</b> — sie schließt mit der Umrandung des Schriftfeldes
 bzw. der Trennlinie zum nächsten Block ab und lässt seitlich keine Luft. Im
 PDF ist sie eine feine Linie, in der Excel-Mappe der untere Rand der Zeile; in den
@@ -622,17 +627,25 @@ daran.</p>
     - {marke: blatt, ausrichtung: mitte}</pre>
 
 <p><code>eigene_felder</code> ist die Liste der eigenen Zeilen —
-<b>nur die Namen</b>, in dieser Reihenfolge; hinter der Marke
-<code>eigene</code> stehen genau sie. Gefüllt werden sie je Verteiler unter
-<b>Bearbeiten ▸ Projektdaten</b>. <code>eigene_felder_auf</code> sagt, auf
-welchen Blattarten sie erscheinen (<code>deckblatt</code>,
-<code>belegung</code>, <code>leisten</code>); ohne Angabe auf allen, eine leere
-Liste heißt: auf keiner.</p>
+<b>nur die Namen</b>. Jeder Name ist danach eine <b>Marke des
+Schriftfeldes</b>: wo er in einem Block steht, steht die Zeile.
+Gefüllt werden sie je Verteiler unter <b>Bearbeiten ▸ Projektdaten</b>.
+<code>eigene_felder_auf</code> sagt, auf welchen Blattarten sie erscheinen
+(<code>deckblatt</code>, <code>belegung</code>, <code>leisten</code>); ohne
+Angabe auf allen, eine leere Liste heißt: auf keiner.</p>
 
 <pre>eigene_felder:
     - Auftrag
     - Monteur
-eigene_felder_auf: [leisten]</pre>
+eigene_felder_auf: [leisten]
+schriftfeld:
+    - [firma, kunde, Auftrag]
+    - [verteiler, verteilernummer, leiste]
+    - [erstellt, stand, Monteur]</pre>
+
+<p>Die Marke <code>eigene</code> für <i>alle</i> Felder gab es bis
+2026.09.30. Steht sie noch in einer Datei, wird sie mit einem Hinweis
+übergangen — tragen Sie die Felder einzeln ein.</p>
 
 <p><code>schriftfeld_anteile</code> gibt die Breiten der Blöcke als Verhältnis
 (<code>[0.42, 0.58]</code>); ohne Angabe teilt das Programm nach Augenmaß.
@@ -962,10 +975,14 @@ Mustertabellen (<code>schriftfeld_art: beispiel</code>) stellt er nicht ein.</p>
 Zeilen</b> des Schriftfeldes an: <i>Hinzufügen</i> setzt eine neue in die Liste
 (der Name wird gleich getippt), <i>Entfernen</i> nimmt die gewählte heraus,
 <i>Nach oben</i> und <i>Nach unten</i> ordnen sie. Sichtbar werden sie über die
-Marke <code>eigene</code> im Schriftfeld, und die Häkchenzeile <i>Anzeigen
-auf</i> sagt, auf welchen Blattarten das gilt. Hier stehen nur die
-<b>Namen</b> — <b>gefüllt</b> werden die Zeilen je Verteiler unter
-<b>Bearbeiten ▸ Projektdaten</b>.</p>
+Auswahlmenü <b>+</b> des Schriftfeldes: dort stehen die eigenen Felder unter
+einem Trenner hinter den festen Angaben, und jedes wird in <b>den Block
+gesetzt, in dem es stehen soll</b> — mehrere Felder lassen sich so unabhängig
+voneinander verteilen. Die Häkchenzeile <i>Anzeigen auf</i> sagt, auf welchen
+Blattarten sie erscheinen. Hier stehen nur die <b>Namen</b> — <b>gefüllt</b>
+werden die Zeilen je Verteiler unter <b>Bearbeiten ▸ Projektdaten</b>. Wird
+ein Feld umbenannt oder entfernt, verschwindet sein Eintrag aus dem
+Schriftfeld mit: er zeigte sonst ins Leere.</p>
 
 <h3>11.2 &nbsp; Das Protokoll</h3>
 

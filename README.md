@@ -105,10 +105,13 @@ Das Deckblatt hat mehr Platz und schreibt die Vorgabe aus (*Verteilernummer*
 statt *Verteiler-Nr.*); ein selbst gesetztes Wort gilt überall unverändert.
 
 **Eigene Felder** — frei benannte Zeilen wie *Standort: Keller* — erscheinen
-im Schriftfeld hinter der Marke `eigene`. **Angelegt werden sie in der
-Blattvorlage**, im Blattvorlagen-Editor: dort stehen die `eigene_felder` (nur
-die Namen, in ihrer Reihenfolge) und `eigene_felder_auf` — auf welchen
-Blattarten sie erscheinen, Deckblatt, Verteilerbelegung, Leistenblättern.
+im Schriftfeld, **jedes an seinem Platz**: der Feldname ist eine Marke des
+Schriftfeldes, steht also in genau einem Block, und mehrere Felder lassen sich
+unabhängig voneinander verteilen. **Angelegt werden sie in der Blattvorlage**,
+im Blattvorlagen-Editor: dort stehen die `eigene_felder` (nur die Namen) und
+`eigene_felder_auf` — auf welchen Blattarten sie erscheinen, Deckblatt,
+Verteilerbelegung, Leistenblättern. Die Sammelmarke `eigene` für *alle* Felder
+gab es bis 2026.09.30; in einer Datei wird sie mit Hinweis übergangen.
 *Bearbeiten ▸ Projektdaten* **füllt** sie dann je Verteiler; der Name steht
 fest, der Inhalt gehört dem Projekt. Ein Feld ohne Inhalt bleibt als leere
 Zeile stehen — zum Ausfüllen von Hand —, und der Haken davor nimmt es wie

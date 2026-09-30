@@ -530,6 +530,8 @@ mitgelieferte Blattvorlagen wiederhergestellt: supplied sheet templates restored
 '{0}: fuellgrad_kabel liegt zwischen 0,1 und 1': '{0}: fuellgrad_kabel is between 0.1 and 1'
 '{0}: polster_kabel darf nicht negativ sein': '{0}: polster_kabel must not be negative'
 '{0}: eigene_felder ist eine Liste von Feldnamen': '{0}: eigene_felder is a list of field names'
+? '{0}: {1!r} gibt es nicht mehr - tragen Sie die eigenen Felder einzeln ein'
+: '{0}: {1!r} no longer exists - enter the own fields one by one'
 '{0}: eigene_felder_auf ist eine Liste von Blattarten': '{0}: eigene_felder_auf is a list of sheet kinds'
 '{0}: das eigene Feld {1} steht zweimal - einmal genügt': '{0}: the own field {1} appears twice - once
   is enough'

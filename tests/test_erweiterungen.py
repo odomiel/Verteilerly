@@ -981,15 +981,74 @@ class TestEigeneFelderImEditor(unittest.TestCase):
         self.assertTrue(self.dialog.eigene_auf["leisten"].isChecked())
         self.assertFalse(self.dialog.eigene_auf["deckblatt"].isChecked())
 
-    def test_ein_neues_feld_steht_gleich_auf_dem_blatt(self):
+    def test_ein_platziertes_feld_steht_gleich_auf_dem_blatt(self):
         from verteilerly.layout import Text, leistenblatt
 
         self._setzen("Auftrag")
+        self.dialog.schriftfeld.eigene_felder_setzen(("Auftrag",))
+        self.dialog.schriftfeld.marke_hinzufuegen(0, "Auftrag")
         self.dialog.projekt.eigene_felder["Auftrag"] = "A-42"
         blatt = leistenblatt(self.dialog.projekt, 1, self.dialog.vorlage())
         texte = [e.text for e in blatt.elemente if isinstance(e, Text)]
         self.assertIn("Auftrag", texte)
         self.assertIn("A-42", texte)
+
+    def test_zwei_felder_lassen_sich_auf_bloecke_verteilen(self):
+        """Genau der Zweck: jedes Feld dorthin, wo es gebraucht wird."""
+        self._setzen("Auftrag", "Monteur")
+        self.dialog.schriftfeld.eigene_felder_setzen(("Auftrag", "Monteur"))
+        self.dialog.schriftfeld.marke_hinzufuegen(0, "Auftrag")
+        self.dialog.schriftfeld.marke_hinzufuegen(2, "Monteur")
+        bloecke = [
+            [eintrag.marke for eintrag in block]
+            for block in self.dialog.vorlage().schriftfeld
+        ]
+        self.assertIn("Auftrag", bloecke[0])
+        self.assertIn("Monteur", bloecke[2])
+        self.assertNotIn("Monteur", bloecke[0])
+
+    def test_die_eigenen_felder_stehen_im_auswahlmenue(self):
+        self._setzen("Auftrag")
+        self.dialog._eigene_geaendert()
+        self.assertEqual(self.dialog.schriftfeld._eigene, ("Auftrag",))
+
+    def test_ein_umbenanntes_feld_nimmt_seinen_eintrag_mit(self):
+        """Sonst zeigte das Schriftfeld auf eine Marke, die es nicht gibt."""
+        self._setzen("Auftrag")
+        self.dialog.schriftfeld.eigene_felder_setzen(("Auftrag",))
+        self.dialog.schriftfeld.marke_hinzufuegen(0, "Auftrag")
+        self.dialog.eigene.item(0).setText("Bestellung")
+        self.dialog._eigene_geaendert()
+        marken = [
+            eintrag.marke for block in self.dialog.vorlage().schriftfeld
+            for eintrag in block
+        ]
+        self.assertNotIn("Auftrag", marken)
+        # Und die Vorlage besteht weiter die Prüfung.
+        from verteilerly.blattvorlagen import (
+            blattvorlage_als_yaml,
+            blattvorlage_aus_yaml,
+        )
+
+        zurueck = blattvorlage_aus_yaml(
+            blattvorlage_als_yaml(self.dialog.vorlage()), "probe"
+        )
+        self.assertEqual(zurueck.eigene_felder, ("Bestellung",))
+
+    def test_die_alte_sammelmarke_wird_uebergangen(self):
+        """Bis 2026.09.30 stand „eigene" für alle Felder."""
+        from verteilerly.blattvorlagen import blattvorlage_aus_yaml
+
+        hinweise = []
+        vorlage = blattvorlage_aus_yaml(
+            {"id": "alt", "name": "Alt", "eigene_felder": ["Auftrag"],
+             "schriftfeld": [["firma", "eigene"]]},
+            "alt.yaml", hinweise,
+        )
+        self.assertEqual(
+            [e.marke for e in vorlage.schriftfeld[0]], ["firma"]
+        )
+        self.assertTrue(any("eigene" in h for h in hinweise))
 
 
 class TestSchriftfeldImEditor(unittest.TestCase):

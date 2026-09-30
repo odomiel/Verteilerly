@@ -37,10 +37,10 @@ from ...layout import schriftfeldanteile
 from ...modell import BLATTBESCHRIFTUNG, LINKS, MITTE, RECHTS
 from ...sprachen import u
 
-#: Wie die Angaben im Editor heissen - wie auf dem Blatt, dazu "eigene".
+#: Wie die Angaben im Editor heissen - wie auf dem Blatt. Ein eigenes
+#: Feld heisst, wie es heisst, und steht darum nicht in dieser Tabelle.
 MARKENNAMEN = {
     **BLATTBESCHRIFTUNG,
-    "eigene": "Eigene Felder",
     "strich": "Querstrich",
 }
 #: Wie die Ausrichtungen heissen. Auch die Spaltentabelle des Dialogs
@@ -89,6 +89,9 @@ class SchriftfeldEditor(QWidget):
         super().__init__(parent)
         self._bloecke: list[list[Schriftfeldeintrag]] = [[]]
         self._breiten: list[float] = []
+        #: Die eigenen Felder dieser Vorlage - sie stehen im Auswahlmenue
+        #: neben Firma und Kunde, jedes einzeln platzierbar.
+        self._eigene: tuple[str, ...] = ()
         self._symbole: dict[tuple[str, str], QIcon] = {}
         self.listen: list[QListWidget] = []
         self.breiten: list[QDoubleSpinBox] = []
@@ -125,6 +128,24 @@ class SchriftfeldEditor(QWidget):
         self._aufbauen()
 
     # -- Zustand -------------------------------------------------------------
+
+    def eigene_felder_setzen(self, namen) -> None:
+        """Welche eigenen Felder zur Wahl stehen - und was mit den anderen wird.
+
+        Wird ein Feld umbenannt oder entfernt, stehen seine Eintraege im
+        Schriftfeld ins Leere: sie werden **mit entfernt**, sonst
+        beanstandete die Pruefung eine Marke, die es nicht mehr gibt.
+        """
+        self._eigene = tuple(namen)
+        bekannt = set(SCHRIFTFELDMARKEN) | set(self._eigene)
+        vorher = [list(block) for block in self._bloecke]
+        self._bloecke = [
+            [eintrag for eintrag in block if eintrag.marke in bekannt]
+            for block in self._bloecke
+        ]
+        self._aufbauen()
+        if self._bloecke != vorher:
+            self.geaendert.emit()
 
     def setzen(self, schriftfeld, anteile) -> None:
         """Uebernimmt Bloecke und Breiten einer Vorlage - ohne Signal.
@@ -329,6 +350,15 @@ class SchriftfeldEditor(QWidget):
             handlung.triggered.connect(
                 lambda _an=False, b=block, m=marke: self.marke_hinzufuegen(b, m)
             )
+        if self._eigene:
+            # Die eigenen Felder darunter, mit einem Trenner davor: sie
+            # gehoeren dieser Vorlage, nicht dem Programm.
+            auswahl.addSeparator()
+            for marke in self._eigene:
+                handlung = auswahl.addAction(marke)
+                handlung.triggered.connect(
+                    lambda _an=False, b=block, m=marke: self.marke_hinzufuegen(b, m)
+                )
         dazu.setMenu(auswahl)
         dazu.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         weg = QToolButton()

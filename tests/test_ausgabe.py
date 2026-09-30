@@ -138,7 +138,16 @@ class TestPdf(unittest.TestCase):
 
         from verteilerly.blattvorlagen import STANDARD
 
-        vorlage = dataclasses.replace(STANDARD, eigene_felder=("Standort",))
+        from verteilerly.blattvorlagen import Schriftfeldeintrag
+
+        vorlage = dataclasses.replace(
+            STANDARD,
+            eigene_felder=("Standort",),
+            schriftfeld=(
+                *STANDARD.schriftfeld[:-1],
+                (*STANDARD.schriftfeld[-1], Schriftfeldeintrag("Standort")),
+            ),
+        )
         pdf_schreiben(_projekt(), self.ziel, vorlage)
         text = "\n".join(s.extract_text() for s in PdfReader(str(self.ziel)).pages)
         self.assertIn("Standort", text)

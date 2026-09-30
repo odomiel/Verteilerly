@@ -67,7 +67,11 @@ SPALTENFELDER = (
     "kabel",
 )
 
-# Was im Schriftfeld stehen kann. „eigene“ steht fuer alle eigenen Felder.
+# Was im Schriftfeld stehen kann - dazu die **Namen der eigenen Felder**
+# dieser Vorlage: jedes steht einzeln im Block, in dem es gebraucht wird.
+#: Die alte Marke fuer *alle* eigenen Felder. Es gibt sie nicht mehr;
+#: beim Lesen wird sie uebergangen, damit eine alte Datei weiter laeuft.
+SAMMELMARKE = "eigene"
 SCHRIFTFELDMARKEN = (
     "firma",
     "kunde",
@@ -82,7 +86,6 @@ SCHRIFTFELDMARKEN = (
     "geprueft",
     "gezeichnet",
     "dokumenttitel",
-    "eigene",
     # Keine Angabe, sondern ein Strich quer durch den Block - er trennt,
     # was darueber steht, von dem darunter.
     "strich",
@@ -142,7 +145,7 @@ STANDARDSCHRIFTFELD = tuple(
     for block in (
         ("firma", "kunde", "anlagennummer", "kundennummer"),
         ("verteiler", "verteilernummer", "leiste", "blatt"),
-        ("erstellt", "stand", "geprueft", "gezeichnet", "eigene"),
+        ("erstellt", "stand", "geprueft", "gezeichnet"),
     )
 )
 
@@ -279,12 +282,17 @@ def _spalten_aus_yaml(eintraege, herkunft: str, hinweise=None) -> tuple[Spalte, 
 
 
 def _schriftfeld_aus_yaml(
-    eintraege, herkunft: str, hinweise=None
+    eintraege,
+    herkunft: str,
+    hinweise=None,
+    eigene_felder: tuple[str, ...] = (),
 ) -> tuple[tuple[Schriftfeldeintrag, ...], ...]:
     """Die Bloecke des Schriftfeldes.
 
     Kurzform ist die blosse Marke, lang geht es mit eigener Ausrichtung -
-    wie bei den Spalten des Leistenblattes.
+    wie bei den Spalten des Leistenblattes. **Ein eigenes Feld steht mit
+    seinem Namen da** (``- Auftrag``) und gehoert damit in genau einen
+    Block; ``eigene_felder`` sagt, welche Namen es gibt.
     """
     spalten = []
     for spalte in eintraege:
@@ -297,8 +305,20 @@ def _schriftfeld_aus_yaml(
                     eintrag, SCHRIFTFELDSCHLUESSEL, herkunft, hinweise, "schriftfeld"
                 )
             marke = str(eintrag.get("marke", "")).strip()
-            if marke not in SCHRIFTFELDMARKEN:
-                bekannt = ", ".join(SCHRIFTFELDMARKEN)
+            if marke == SAMMELMARKE:
+                # Bis 2026.09.30 stand hier eine Marke fuer *alle* eigenen
+                # Felder. Seither steht jedes einzeln - eine alte Datei
+                # soll daran nicht scheitern, sondern es erfahren.
+                if hinweise is not None:
+                    hinweise.append(
+                        u("{0}: {1!r} gibt es nicht mehr - tragen Sie die "
+                          "eigenen Felder einzeln ein").format(
+                              herkunft, SAMMELMARKE
+                          )
+                    )
+                continue
+            if marke not in SCHRIFTFELDMARKEN and marke not in eigene_felder:
+                bekannt = ", ".join((*SCHRIFTFELDMARKEN, *eigene_felder))
                 raise BlattvorlagenFehler(
                     u("{0}: {1!r} gehört nicht ins Schriftfeld (bekannt: {2})").format(herkunft, marke, bekannt)
                 )
@@ -308,6 +328,9 @@ def _schriftfeld_aus_yaml(
                     u("{0}: Ausrichtung {1!r} gibt es nicht").format(herkunft, ausrichtung)
                 )
             marken.append(Schriftfeldeintrag(marke, ausrichtung))
+        # Ein Block, in dem nur die alte Sammelmarke stand, bleibt leer -
+        # weglassen waere schlimmer: die Breiten der Bloecke verschoben
+        # sich, und das Blatt saehe anders aus als gemeint.
         spalten.append(tuple(marken))
     if not spalten:
         raise BlattvorlagenFehler(u("{0}: leeres Schriftfeld").format(herkunft))
@@ -333,6 +356,9 @@ def blattvorlage_aus_yaml(
     unbekannte_schluessel(schrift, SCHRIFTSCHLUESSEL, wo, hinweise, "schrift")
     unbekannte_schluessel(belegung, BELEGUNGSSCHLUESSEL, wo, hinweise, "belegung")
 
+    # Die eigenen Felder zuerst: ihre Namen sind gueltige Marken des
+    # Schriftfeldes, also muessen sie vor ihm bekannt sein.
+    eigene = _eigene_aus_yaml(inhalt.get("eigene_felder"), wo, hinweise)
     vorlage = Blattvorlage(
         id=str(inhalt["id"]),
         name=str(inhalt["name"]),
@@ -355,11 +381,13 @@ def blattvorlage_aus_yaml(
             else STANDARD.spalten
         ),
         schriftfeld=(
-            _schriftfeld_aus_yaml(inhalt["schriftfeld"], wo, hinweise)
+            _schriftfeld_aus_yaml(
+                inhalt["schriftfeld"], wo, hinweise, eigene
+            )
             if inhalt.get("schriftfeld")
             else STANDARD.schriftfeld
         ),
-        eigene_felder=_eigene_aus_yaml(inhalt.get("eigene_felder"), wo, hinweise),
+        eigene_felder=eigene,
         eigene_felder_auf=_blattarten_aus_yaml(
             inhalt.get("eigene_felder_auf"), wo, hinweise
         ),

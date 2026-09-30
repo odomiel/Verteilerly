@@ -308,7 +308,7 @@ class EditorDialog(PassenderDialog):
             u("Namen der eigenen Zeilen des Schriftfeldes. Gefüllt werden sie "
               "je Verteiler unter Bearbeiten ▸ Projektdaten.")
         )
-        self.eigene.itemChanged.connect(self._geaendert)
+        self.eigene.itemChanged.connect(self._eigene_geaendert)
         knoepfe = QHBoxLayout()
         for text, ruf in (
             (u("Hinzufügen"), self._eigenes_hinzu),
@@ -347,19 +347,28 @@ class EditorDialog(PassenderDialog):
         aufbau.addWidget(hinweis)
         return kasten
 
+    def _eigene_geaendert(self, *_args) -> None:
+        """Ein Name kam dazu, fiel weg oder heisst anders.
+
+        Das Schriftfeld baut daraus sein Auswahlmenue - und verliert
+        Eintraege, deren Feld es nicht mehr gibt.
+        """
+        self.schriftfeld.eigene_felder_setzen(self.eigenefelder())
+        self._geaendert()
+
     def _eigenes_hinzu(self) -> None:
         eintrag = QListWidgetItem(u("Neues Feld"))
         eintrag.setFlags(eintrag.flags() | Qt.ItemFlag.ItemIsEditable)
         self.eigene.addItem(eintrag)
         self.eigene.setCurrentItem(eintrag)
         self.eigene.editItem(eintrag)
-        self._geaendert()
+        self._eigene_geaendert()
 
     def _eigenes_weg(self) -> None:
         zeile = self.eigene.currentRow()
         if zeile >= 0:
             self.eigene.takeItem(zeile)
-            self._geaendert()
+            self._eigene_geaendert()
 
     def _eigenes_schieben(self, richtung: int) -> None:
         zeile = self.eigene.currentRow()
@@ -369,7 +378,7 @@ class EditorDialog(PassenderDialog):
         eintrag = self.eigene.takeItem(zeile)
         self.eigene.insertItem(ziel, eintrag)
         self.eigene.setCurrentRow(ziel)
-        self._geaendert()
+        self._eigene_geaendert()
 
     def eigenefelder(self) -> tuple[str, ...]:
         """Die Namen, wie sie in der Liste stehen - ohne Leere und Doppelte."""
@@ -511,8 +520,11 @@ class EditorDialog(PassenderDialog):
         for feld in felder:
             feld.blockSignals(False)
         self._spalten_setzen(vorlage.spalten)
-        self.schriftfeld.setzen(vorlage.schriftfeld, vorlage.schriftfeld_anteile)
         self._eigenefelder_setzen(vorlage.eigene_felder, vorlage.eigene_felder_auf)
+        # Erst die Namen, dann das Schriftfeld: dessen Auswahlmenue baut
+        # sich aus ihnen, und seine Eintraege zeigen auf sie.
+        self.schriftfeld.eigene_felder_setzen(vorlage.eigene_felder)
+        self.schriftfeld.setzen(vorlage.schriftfeld, vorlage.schriftfeld_anteile)
         self.geaendert = False
         self._neu_zeichnen()
 
