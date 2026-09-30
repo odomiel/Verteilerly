@@ -3025,6 +3025,56 @@ class TestProjektdatenDialog(unittest.TestCase):
         self.assertEqual(dialog.beschriftungen.felder["kunde"].text(), "Auftraggeber")
         self.assertEqual(dialog.beschriftungen.felder["firma"].text(), "Firma")
 
+    def test_gezeigt_wird_was_die_blattvorlage_fuehrt(self):
+        """Wie im neuen Verteiler: die Vorlage sagt, welche Felder es gibt."""
+        import pathlib as pl
+
+        from verteilerly.blattvorlagen import Blattvorlagen
+        from verteilerly.gui.dialoge import ProjektdatenDialog
+
+        blatt = Blattvorlagen.laden(
+            pl.Path(__file__).resolve().parent.parent / "daten" / "blattvorlagen"
+        )
+        dialog = ProjektdatenDialog(self.projekt, vorlage=blatt.gewaehlt("knapp"))
+        felder = dialog.projektdaten
+        self.assertFalse(felder.form.isRowVisible(felder.zeilen["anlagennummer"]))
+        self.assertTrue(felder.form.isRowVisible(felder.zeilen["firma"]))
+        self.assertTrue(felder.form.isRowVisible(felder.zeilen["dokumenttitel"]))
+
+    def test_ein_verborgenes_feld_wird_hier_nicht_abgewaehlt(self):
+        """Am offenen Verteiler stehen Werte, die niemand angefasst hat."""
+        import pathlib as pl
+
+        from verteilerly.blattvorlagen import Blattvorlagen
+        from verteilerly.gui.dialoge import ProjektdatenDialog
+
+        blatt = Blattvorlagen.laden(
+            pl.Path(__file__).resolve().parent.parent / "daten" / "blattvorlagen"
+        )
+        self.projekt.briefkopf["anlagennummer"] = "A-1"
+        dialog = ProjektdatenDialog(self.projekt, vorlage=blatt.gewaehlt("knapp"))
+        dialog.uebernehmen()
+        self.assertEqual(self.projekt.briefkopf["anlagennummer"], "A-1")
+        self.assertTrue(self.projekt.sichtbar("anlagennummer"))
+
+    def test_in_den_vorgaben_stehen_alle_felder(self):
+        """Sie gelten für jeden nächsten Verteiler, nicht für eine Vorlage."""
+        import pathlib as pl
+
+        from verteilerly.blattvorlagen import Blattvorlagen
+        from verteilerly.gui.dialoge import ProjektdatenDialog
+
+        blatt = Blattvorlagen.laden(
+            pl.Path(__file__).resolve().parent.parent / "daten" / "blattvorlagen"
+        )
+        dialog = ProjektdatenDialog(
+            self.projekt, vorgaben=True, vorlage=blatt.gewaehlt("knapp")
+        )
+        felder = dialog.projektdaten
+        self.assertTrue(
+            all(felder.form.isRowVisible(z) for z in felder.zeilen.values())
+        )
+
     def test_in_den_vorgaben_gibt_es_keine_eigenen_felder(self):
         """Ihre Inhalte gehören dem einzelnen Projekt."""
         from verteilerly.gui.dialoge import ProjektdatenDialog

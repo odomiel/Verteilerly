@@ -1951,6 +1951,15 @@ class ProjektdatenDialog(PassenderDialog):
             {name for name in BRIEFKOPF_FELDER if not projekt.sichtbar(name)},
             mit_datumsknoepfen=not vorgaben,
         )
+        # Gezeigt wird, was die Blattvorlage dieses Verteilers fuehrt - ein
+        # Feld, das auf keinem seiner Blaetter erscheint, will hier niemand
+        # ausfuellen. **Abgewaehlt wird dabei nichts**: anders als beim
+        # neuen Verteiler stehen hier Werte, die der Anwender nie angefasst
+        # hat - sie still vom Deckblatt zu nehmen waere eine Aenderung, um
+        # die niemand gebeten hat. In den Vorgaben gilt keine Vorlage: sie
+        # gelten fuer jeden naechsten Verteiler.
+        if vorlage is not None and not vorgaben:
+            projektdaten.nur_diese_zeigen(briefkopffelder(vorlage))
         self.projektdaten = projektdaten
         # Die Tests und der Rest des Dialogs greifen weiter direkt zu.
         self.felder = projektdaten.felder
