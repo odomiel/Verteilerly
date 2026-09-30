@@ -909,8 +909,15 @@ def deckblattzeilen(
 ) -> list[tuple[str, str]]:
     """Was auf dem Deckblatt steht - Beschriftung und Wert.
 
-    Leere Zeilen fallen weg, mehrzeilige Anschriften stehen zeilenweise.
-    Gezeichnetes Blatt und Excel-Mappe fragen dieselbe Stelle.
+    Leere Zeilen der Projektdaten fallen weg, mehrzeilige Anschriften
+    stehen zeilenweise. Gezeichnetes Blatt und Excel-Mappe fragen dieselbe
+    Stelle.
+
+    **Ein eigenes Feld bleibt auch leer stehen** - genau wie im
+    Schriftfeld: die Blattvorlage hat diese Zeile ausdruecklich angelegt,
+    und wer sie angelegt hat, will sie sehen, notfalls zum Ausfuellen von
+    Hand. Ein Deckblatt, das die Zeile weglaesst, waehrend das
+    Leistenblatt sie zeigt, sieht wie ein Fehler aus - und war einer.
 
     Das Deckblatt hat Platz und schreibt die Woerter deshalb aus:
     "Verteilernummer" statt "Verteiler-Nr.". Wer ein Wort selbst gesetzt
@@ -938,9 +945,10 @@ def deckblattzeilen(
         (wort("gezeichnet", "Gezeichnet"), _paar(projekt, "gezeichnet")),
         ("Blattvorlage", vorlage.name if not vorlage.standard else ""),
     ]
-    zeilen += projekt.eigene_felder_hier("deckblatt", vorlage)
+    gefuellt = [(n, w) for n, w in zeilen if str(w).strip()]
+    gefuellt += projekt.eigene_felder_hier("deckblatt", vorlage)
     # Eine Anschrift steht auch hier zeilenweise.
-    return schriftfeldzeilen([(n, w) for n, w in zeilen if str(w).strip()])
+    return schriftfeldzeilen(gefuellt)
 
 
 def deckblatt(projekt: Projekt, vorlage: Blattvorlage = STANDARD) -> Blatt:

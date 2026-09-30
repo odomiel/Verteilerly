@@ -517,6 +517,31 @@ class TestSchriftfeld(unittest.TestCase):
         self.assertEqual(texte.count("Standort"), 1)
         self.assertEqual(texte.count("Keller"), 1)
 
+    def test_auf_dem_deckblatt_steht_ein_eigenes_feld_auch_leer(self):
+        """Die Vorlage hat die Zeile angelegt - dann gehört sie aufs Blatt."""
+        from verteilerly.layout import deckblattzeilen
+
+        vorlage = self._vorlage(eigene_felder=("Standort", "Monteur"))
+        zeilen = dict(deckblattzeilen(self.projekt, vorlage))
+        self.assertEqual(zeilen["Standort"], "Keller")
+        self.assertIn("Monteur", zeilen, "die leere Zeile fehlte auf dem Deckblatt")
+        self.assertEqual(zeilen["Monteur"], "")
+        texte = _texte(deckblatt(self.projekt, vorlage))
+        self.assertIn("Monteur", texte)
+
+    def test_ein_leeres_projektdatenfeld_bleibt_dem_deckblatt_fern(self):
+        """Nur die eigenen Felder stehen leer da - „Geprüft" nicht."""
+        from verteilerly.layout import deckblattzeilen
+
+        zeilen = dict(deckblattzeilen(self.projekt, self.vorlage))
+        self.assertNotIn("Geprüft", zeilen)
+
+    def test_eine_abgewaehlte_blattart_laesst_das_deckblatt_leer(self):
+        from verteilerly.layout import deckblattzeilen
+
+        vorlage = self._vorlage(eigene_felder_auf=("leisten",))
+        self.assertNotIn("Standort", dict(deckblattzeilen(self.projekt, vorlage)))
+
     def test_ein_feld_steht_in_dem_block_in_den_es_gesetzt_wurde(self):
         """Mehrere eigene Felder lassen sich unabhängig verteilen."""
         from verteilerly.blattvorlagen import Schriftfeldeintrag
