@@ -211,6 +211,21 @@ class TestFeldauswahl(unittest.TestCase):
             projektdatei.laden(self.ziel).eigene_felder["Standort"], "Keller"
         )
 
+    def test_die_umgekehrte_belegung_kommt_zurueck(self):
+        projekt = beispielprojekt()
+        projekt.belegung_umgekehrt = True
+        projektdatei.speichern(projekt, self.ziel)
+        self.assertTrue(projektdatei.laden(self.ziel).belegung_umgekehrt)
+
+    def test_die_normalform_steht_nicht_in_der_datei(self):
+        daten = projektdatei.als_dict(beispielprojekt())
+        self.assertNotIn("belegung_umgekehrt", daten)
+
+    def test_eine_aeltere_datei_liest_sich_als_normalform(self):
+        daten = projektdatei.als_dict(beispielprojekt())
+        daten["formatversion"] = 10
+        self.assertFalse(projektdatei.aus_dict(daten).belegung_umgekehrt)
+
     def test_die_blattarten_stehen_nicht_mehr_in_der_datei(self):
         """Sie gehören seit Fassung 10 der Blattvorlage."""
         daten = projektdatei.als_dict(beispielprojekt())

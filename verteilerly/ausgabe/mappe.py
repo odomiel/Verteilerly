@@ -182,6 +182,20 @@ def _deckblatt(mappe, projekt: Projekt, vorlage: Blattvorlage, zeug) -> object:
 # -- Verteilerbelegung ------------------------------------------------------
 
 
+def _belegungsspalte(
+    da_anzahl: int, start_da: int, anzahl_da: int, umgekehrt: bool
+) -> int:
+    """Die erste Spalte eines DA-Blocks in der Leiste - ab 1 gezaehlt.
+
+    Dasselbe wie ``layout._belegungsplatz``, nur in Zellen statt in
+    Millimetern: in der Normalform steht DA 1 links, umgekehrt rechts.
+    """
+    vorn = start_da - 1
+    if umgekehrt:
+        vorn = da_anzahl - vorn - anzahl_da
+    return vorn + 1
+
+
 def _belegungen(mappe, projekt: Projekt, vorlage: Blattvorlage, zeug) -> list:
     """Je Blatt der Zeichnung eines in der Mappe."""
     gruppen = belegungsgruppen(projekt, vorlage)
@@ -243,7 +257,10 @@ def _belegung(
             # Leiste - und DA-Nummern nur, wenn die Vorlage sie führt.
             for da in range(1, leiste.da_anzahl + 1):
                 feld = blatt.cell(
-                    row=zeile, column=spalte + da,
+                    row=zeile,
+                    column=spalte + _belegungsspalte(
+                        leiste.da_anzahl, da, 1, projekt.belegung_umgekehrt
+                    ),
                     value=str(da) if vorlage.da_nummern else None,
                 )
                 if vorlage.da_nummern:
@@ -251,11 +268,18 @@ def _belegung(
                         max(vorlage.schrift_klein - 1, 5), False, "#555555"
                     )
                     feld.alignment = zeug.lage("mitte")
+                # Der Kasten umschliesst die Leiste - links ist links,
+                # gleich welche Doppelader dort steht.
+                stelle = feld.column - spalte
                 feld.border = zeug.rahmen(
                     left=zeug.strich(LINIE_FEIN) if vorlage.da_nummern
-                    else (zeug.strich(LINIE) if da == 1 else None),
+                    else (zeug.strich(LINIE) if stelle == 1 else None),
                     right=zeug.strich(LINIE_FEIN) if vorlage.da_nummern
-                    else (zeug.strich(LINIE) if da == leiste.da_anzahl else None),
+                    else (
+                        zeug.strich(LINIE)
+                        if stelle == leiste.da_anzahl
+                        else None
+                    ),
                     top=zeug.strich(LINIE), bottom=zeug.strich(LINIE),
                 )
 
@@ -263,8 +287,11 @@ def _belegung(
                 for abschnitt in kabel.abschnitte:
                     if abschnitt.leiste != leiste.nummer:
                         continue
-                    von = spalte + abschnitt.start_da
-                    bis = spalte + abschnitt.end_da
+                    von = spalte + _belegungsspalte(
+                        leiste.da_anzahl, abschnitt.start_da,
+                        abschnitt.anzahl_da, projekt.belegung_umgekehrt,
+                    )
+                    bis = von + abschnitt.anzahl_da - 1
                     blatt.merge_cells(
                         start_row=zeile, start_column=von,
                         end_row=zeile, end_column=bis,

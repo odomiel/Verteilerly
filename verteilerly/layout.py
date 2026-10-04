@@ -1278,8 +1278,11 @@ def verteilerbelegung(
         for abschnitt in kabel.abschnitte:
             if abschnitt.leiste not in kaesten:
                 continue
-            kx, ky, _ = kaesten[abschnitt.leiste]
-            bx = kx + (abschnitt.start_da - 1) * zelle_b
+            kx, ky, da = kaesten[abschnitt.leiste]
+            bx = _belegungsplatz(
+                kx, zelle_b, da, abschnitt.start_da, abschnitt.anzahl_da,
+                projekt.belegung_umgekehrt,
+            )
             bb = abschnitt.anzahl_da * zelle_b
             blatt.rechteck(bx, ky, bb, zelle_h, fuellung=FUELLUNG_KABEL, staerke=0.5)
             beschriftung = kabel.beschriftung
@@ -1303,12 +1306,36 @@ def verteilerbelegung(
         for nummer, (kx, ky, da) in kaesten.items():
             for i in range(da):
                 blatt.text(
-                    kx + i * zelle_b, ky + zelle_h * 0.6, zelle_b, zelle_h * 0.4,
+                    _belegungsplatz(
+                        kx, zelle_b, da, i + 1, 1, projekt.belegung_umgekehrt
+                    ),
+                    ky + zelle_h * 0.6, zelle_b, zelle_h * 0.4,
                     str(i + 1), vorlage.schrift_klein, MITTE, False, TINTE_LEISE,
                 )
 
     schriftfeld(blatt, projekt, None, vorlage, "belegung")
     return blatt
+
+
+def _belegungsplatz(
+    kx: float,
+    zelle_b: float,
+    da_anzahl: int,
+    start_da: int,
+    anzahl_da: int,
+    umgekehrt: bool,
+) -> float:
+    """Wo ein Block von Doppeladern in der Leiste anfaengt.
+
+    In der Normalform liegt DA 1 links, umgekehrt rechts: dann faengt der
+    Block so viele Zellen vor dem rechten Rand an, wie hinter ihm noch
+    stehen. Beide Stellen - Kabelbloecke und DA-Nummern - rechnen hier,
+    damit sie nicht auseinanderlaufen.
+    """
+    vorn = start_da - 1
+    if umgekehrt:
+        vorn = da_anzahl - vorn - anzahl_da
+    return kx + vorn * zelle_b
 
 
 def _luft_verteilen(

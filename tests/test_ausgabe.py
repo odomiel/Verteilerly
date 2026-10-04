@@ -41,6 +41,45 @@ def _projekt() -> Projekt:
     )
 
 
+class TestUmgekehrteBelegungInDerMappe(unittest.TestCase):
+    """Blatt und Mappe zeigen dieselbe Leserichtung."""
+
+    def setUp(self):
+        import pathlib as pl
+
+        self.ordner = tempfile.TemporaryDirectory()
+        self.addCleanup(self.ordner.cleanup)
+        self.ziel = pl.Path(self.ordner.name) / "mappe.xlsx"
+
+    def _spalten(self, umgekehrt):
+        import openpyxl
+
+        from verteilerly.ausgabe import xlsx_schreiben
+        from verteilerly.modell import Projekt, Verteiler
+
+        v = Verteiler.aus_geometrie(1, 1, 10, name="Probe")
+        v.kabel_anlegen("Erstes", 1, 1, 3)
+        v.kabel_anlegen("Letztes", 1, 9, 2)
+        xlsx_schreiben(
+            Projekt(verteiler=v, belegung_umgekehrt=umgekehrt), self.ziel
+        )
+        blatt = openpyxl.load_workbook(self.ziel)["Verteilerbelegung"]
+        return {
+            z.value: z.column
+            for reihe in blatt.iter_rows()
+            for z in reihe
+            if z.value in ("Erstes", "Letztes")
+        }
+
+    def test_normalform_beginnt_links(self):
+        spalten = self._spalten(False)
+        self.assertLess(spalten["Erstes"], spalten["Letztes"])
+
+    def test_umgekehrt_beginnt_rechts(self):
+        spalten = self._spalten(True)
+        self.assertGreater(spalten["Erstes"], spalten["Letztes"])
+
+
 class TestSchriftschnitt(unittest.TestCase):
     """Fett und kursiv gibt es im PDF als eigene Schnitte."""
 

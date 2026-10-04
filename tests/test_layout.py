@@ -594,6 +594,88 @@ class TestSchriftfeld(unittest.TestCase):
             self.assertNotIn("", _texte(blatt))
 
 
+class TestUmgekehrteBelegung(unittest.TestCase):
+    """Von rechts nach links - wie an einem Verteiler, der so belegt wird."""
+
+    def _blatt(self, umgekehrt):
+        v = Verteiler.aus_geometrie(1, 1, 10, name="Probe")
+        v.kabel_anlegen("Erstes", 1, 1, 3)
+        v.kabel_anlegen("Letztes", 1, 9, 2)
+        projekt = Projekt(verteiler=v, belegung_umgekehrt=umgekehrt)
+        return verteilerbelegungen(projekt)[0]
+
+    def _blocke(self, blatt):
+        """Je Kabel die linke Kante seines Blocks."""
+        return {
+            e.text: e.x for e in blatt.elemente
+            if isinstance(e, Text) and e.text in ("Erstes", "Letztes")
+        }
+
+    def test_normalform_beginnt_links(self):
+        stellen = self._blocke(self._blatt(False))
+        self.assertLess(stellen["Erstes"], stellen["Letztes"])
+
+    def test_umgekehrt_beginnt_rechts(self):
+        stellen = self._blocke(self._blatt(True))
+        self.assertGreater(stellen["Erstes"], stellen["Letztes"])
+
+    def test_der_kasten_der_leiste_bleibt_wo_er_ist(self):
+        """Gespiegelt wird der Inhalt, nicht das Blatt."""
+        from verteilerly.layout import Rechteck
+
+        kaesten = [
+            max((e for e in self._blatt(u).elemente if isinstance(e, Rechteck)),
+                key=lambda r: r.breite)
+            for u in (False, True)
+        ]
+        self.assertAlmostEqual(kaesten[0].x, kaesten[1].x, places=6)
+        self.assertAlmostEqual(kaesten[0].breite, kaesten[1].breite, places=6)
+
+    def test_der_block_bleibt_so_breit_wie_seine_doppeladern(self):
+        from verteilerly.layout import Rechteck
+
+        breiten = []
+        for umgekehrt in (False, True):
+            blatt = self._blatt(umgekehrt)
+            kaesten = sorted(
+                (e for e in blatt.elemente if isinstance(e, Rechteck)),
+                key=lambda r: r.breite,
+            )
+            breiten.append(sorted(round(r.breite, 4) for r in kaesten))
+        self.assertEqual(breiten[0], breiten[1])
+
+    def test_die_da_nummern_laufen_mit(self):
+        import dataclasses
+
+        from verteilerly.blattvorlagen import STANDARD
+
+        vorlage = dataclasses.replace(STANDARD, da_nummern=True, zelle_breite=8.0)
+        v = Verteiler.aus_geometrie(1, 1, 10, name="Probe")
+        stellen = []
+        for umgekehrt in (False, True):
+            blatt = verteilerbelegungen(
+                Projekt(verteiler=v, belegung_umgekehrt=umgekehrt), vorlage
+            )[0]
+            zahlen = {
+                e.text: e.x for e in blatt.elemente
+                if isinstance(e, Text) and e.text in ("1", "10")
+            }
+            stellen.append(zahlen)
+        self.assertLess(stellen[0]["1"], stellen[0]["10"])
+        self.assertGreater(stellen[1]["1"], stellen[1]["10"])
+
+    def test_leistenblatt_und_adressen_bleiben_unberuehrt(self):
+        """Gedreht wird nur das Bild der Belegung."""
+        v = Verteiler.aus_geometrie(1, 1, 10, name="Probe")
+        v.leiste(1).stift(1).a.bezeichnung = "Erste Ader"
+        projekt = Projekt(verteiler=v, belegung_umgekehrt=True)
+        texte = _texte(leistenblatt(projekt, 1))
+        self.assertIn("Erste Ader", texte)
+        # Die erste Zeile des Blattes bleibt Stift 1.
+        stifte = [t for t in texte if t in ("1", "10")]
+        self.assertEqual(stifte[0], "1")
+
+
 class TestBriefkopffelder(unittest.TestCase):
     """Welche Projektdatenfelder eine Blattvorlage führt."""
 

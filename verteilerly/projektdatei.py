@@ -33,7 +33,7 @@ from .modell import (
 from .sprachen import u
 
 DATEIKENNUNG = "verteilerly-projekt"
-FORMATVERSION = 10
+FORMATVERSION = 11
 # Fassung 1 nannte die Buchten noch Reihen, Fassung 2 kannte noch keine
 # abgewaehlten Felder, Fassung 3 noch keinen Vermerk im Rangierfeld,
 # Fassung 4 noch keine Wahl der Blattarten fuer die eigenen Felder,
@@ -42,9 +42,10 @@ FORMATVERSION = 10
 # noch keine Leisten mit Buchstaben, und bis Fassung 9 stand die Wahl der
 # Blattarten fuer die eigenen Felder am Projekt - seither in der
 # Blattvorlage, und ``eigene_felder_auf`` wird beim Lesen uebergangen.
+# Fassung 10 kannte noch keine umgekehrte Verteilerbelegung.
 # Solche Dateien werden weiter gelesen; geschrieben wird immer die neue
 # Fassung.
-LESBARE_VERSIONEN = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+LESBARE_VERSIONEN = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)
 
 
 class ProjektdateiFehler(ModellFehler):
@@ -148,6 +149,10 @@ def als_dict(projekt: Projekt) -> dict[str, Any]:
     # der Vorgabe abweicht - eine gezaehlte Leiste braucht keinen Eintrag.
     if projekt.leisten_schreibweise != LEISTEN_ZAHLEN:
         daten["leisten_schreibweise"] = projekt.leisten_schreibweise
+    # Ebenso die Leserichtung der Belegung: geschrieben nur, wenn sie
+    # umgekehrt ist - die Normalform braucht keinen Eintrag.
+    if projekt.belegung_umgekehrt:
+        daten["belegung_umgekehrt"] = True
     return daten
 
 
@@ -258,6 +263,8 @@ def aus_dict(daten: dict[str, Any]) -> Projekt:
             if daten.get("leisten_schreibweise") in LEISTEN_SCHREIBWEISEN
             else LEISTEN_ZAHLEN
         ),
+        # Aeltere Dateien kannten nur die Normalform: von links nach rechts.
+        belegung_umgekehrt=bool(daten.get("belegung_umgekehrt", False)),
     )
 
 

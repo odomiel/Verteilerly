@@ -233,6 +233,11 @@ Vorlagen und Einstellungen &einspielen…: '&Restore templates and settings…'
 '&Sprache': '&Language'
 Schreibweise der &Rangierungen: Notation of the &jumpers
 '&Leisten beschriften': 'Label the &strips'
+Verteilerbelegung &umkehren: '&Reverse the frame layout'
+? "Die Doppeladern stehen von rechts nach links — wie an einem Verteiler, der von rechts belegt wird"
+: "The pairs run from right to left — like a frame that is filled from the right"
+Die Verteilerbelegung läuft von rechts nach links: The frame layout runs from right to left
+Die Verteilerbelegung läuft von links nach rechts: The frame layout runs from left to right
 '&Vorschau anzeigen': Show &preview
 '&Leistenansicht anzeigen': Show &strip view
 Verteiler&übersicht anzeigen: Show frame &overview

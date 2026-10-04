@@ -1195,6 +1195,12 @@ class Projekt:
     # Wie die Leisten heissen - gezaehlt oder mit Buchstaben. Ebenfalls
     # eine Anzeigesache; im Modell traegt jede Leiste ihre Nummer.
     leisten_schreibweise: str = LEISTEN_ZAHLEN
+    # Ob die Verteilerbelegung von rechts nach links zu lesen ist. Eine
+    # Eigenschaft der Anlage: an manchem Verteiler wird von rechts
+    # aufgelegt, und das Blatt soll aussehen wie das Gerät davor. Nur das
+    # Blattbild der Belegung dreht sich - DA 1 bleibt DA 1 und steht in
+    # Leistenblatt, Datenliste und Adresse unveraendert.
+    belegung_umgekehrt: bool = False
 
     def beschriftung(self, marke: str) -> str:
         """Wie eine Zeile des Schriftfeldes ueberschrieben ist."""

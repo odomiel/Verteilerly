@@ -118,9 +118,8 @@ Zeile stehen — zum Ausfüllen von Hand —, und der Haken davor nimmt es wie
 jedes andere Feld vom Blatt, ohne den Inhalt zu löschen. Was eine andere
 Blattvorlage nicht führt, bleibt gespeichert und kommt mit ihr wieder.
 
-Auf der **Verteilerbelegung** stehen sie am Platz der Leiste: dieses Blatt
-zeigt alle Leisten, also keine einzelne — eine Zeile „Leiste" bliebe dort
-leer. In allen mitgelieferten Blattvorlagen ist das so.
+Auf der **Verteilerbelegung** stehen sie an ihrem Platz wie auf jedem Blatt;
+die Zeile „Leiste" fällt dort weg, weil dieses Blatt alle Leisten zeigt.
 
 Was bei jedem Verteiler gleich ist — Firma, Kürzel, der Ersteller —,
 wird als **Vorgabe** gesetzt: *Einstellungen ▸ Vorgaben für neue
@@ -338,6 +337,16 @@ Verteiler die ganze Ausgabe, *Kabel entfernen* nur dort, wo wirklich ein
 Kabel liegt, *Speichern* nur, wenn es etwas zu speichern gibt. Jeder
 Eintrag trägt einen Statushinweis, der auch im ausgegrauten Zustand
 erscheint und sagt, wofür er da ist.
+
+**Die Verteilerbelegung lässt sich umkehren**: *Einstellungen ▸
+Verteilerbelegung umkehren* stellt die Doppeladern von rechts nach links —
+wie an einem Verteiler, der von rechts belegt wird. Gedreht wird allein das
+Bild dieses Blattes, in Vorschau, PDF und Excel-Mappe gleichermaßen; DA 1
+bleibt DA 1, und Leistenblätter, Datenlisten und Adressen rühren sich nicht.
+`belegung_umgekehrt` gehört dem Verteiler (Projektdatei, Formatversion 11,
+geschrieben nur wenn gesetzt), und der Haken lässt sich zurücknehmen.
+Gerechnet wird an einer Stelle — `layout._belegungsplatz()` für das Blatt,
+`mappe._belegungsspalte()` für das Raster.
 
 In der **Verteilerbelegung** steht kein Raster: gezeichnet wird allein das
 Kabel. Was frei bleibt — links davon, rechts davon oder beides —, ist eine

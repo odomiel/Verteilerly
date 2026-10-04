@@ -545,6 +545,16 @@ class Hauptfenster(QMainWindow):
             )
             self.leistenweisen_gruppe.addAction(handlung)
             leistennamen.addAction(handlung)
+        self.aktion_belegung_umgekehrt = QAction(
+            u("Verteilerbelegung &umkehren"), self
+        )
+        self.aktion_belegung_umgekehrt.setCheckable(True)
+        self.aktion_belegung_umgekehrt.setStatusTip(
+            u("Die Doppeladern stehen von rechts nach links — wie an einem "
+              "Verteiler, der von rechts belegt wird")
+        )
+        self.aktion_belegung_umgekehrt.triggered.connect(self.belegung_umkehren)
+        einstellungen.addAction(self.aktion_belegung_umgekehrt)
         einstellungen.addAction(self.aktion_freitext)
 
         # Wie die Vorschau lassen sich Verteileruebersicht und Leistenansicht
@@ -771,6 +781,31 @@ class Hauptfenster(QMainWindow):
             u("Die Leisten heißen {0}").format(beispiel), 6000
         )
 
+    def belegung_umkehren(self, an: bool) -> None:
+        """Dreht die Leserichtung der Verteilerbelegung des offenen Projekts.
+
+        Eine Eigenschaft der Anlage, nicht des Programms: sie steht in der
+        Projektdatei und laesst sich zuruecknehmen. Nur das Blattbild der
+        Belegung dreht sich - DA 1 bleibt DA 1.
+        """
+        if self.projekt is None:
+            self.aktion_belegung_umgekehrt.setChecked(False)
+            return
+        if self.projekt.belegung_umgekehrt == bool(an):
+            return
+        self._stand_merken()
+        self.projekt.belegung_umgekehrt = bool(an)
+        self.veraendert = True
+        self._titel_setzen()
+        self.aktionen_auffrischen()
+        self._vorschau_anstossen()
+        self.statusBar().showMessage(
+            u("Die Verteilerbelegung läuft von rechts nach links")
+            if an
+            else u("Die Verteilerbelegung läuft von links nach rechts"),
+            6000,
+        )
+
     @property
     def leisten_schreibweise(self) -> str:
         """Wie die Leisten des offenen Verteilers heissen.
@@ -986,6 +1021,12 @@ class Hauptfenster(QMainWindow):
         sagt, was fehlt - er erscheint auch bei ausgegrauten Einträgen.
         """
         offen = self.projekt is not None
+        # Der Haken zeigt, wie das offene Projekt dasteht - ohne Projekt
+        # gibt es nichts zu umkehren.
+        self.aktion_belegung_umgekehrt.setEnabled(offen)
+        self.aktion_belegung_umgekehrt.setChecked(
+            offen and self.projekt.belegung_umgekehrt
+        )
         self.aktion_rueckgaengig.setEnabled(offen and bool(self._rueckgaengig))
         self.aktion_wiederherstellen.setEnabled(
             offen and bool(self._wiederherstellen)

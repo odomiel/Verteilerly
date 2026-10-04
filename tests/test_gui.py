@@ -2649,8 +2649,49 @@ class TestMenuezustaende(unittest.TestCase):
              "Vorlagen und Einstellungen einspielen…",
              "Sprache", "Schreibweise der Rangierungen",
             "Leisten beschriften",
+            "Verteilerbelegung umkehren",
             "Freitext im Rangierfeld zulassen"],
         )
+
+    def test_die_belegung_laesst_sich_umkehren(self):
+        """Eine Eigenschaft der Anlage - sie steht in der Projektdatei."""
+        f = self.fenster
+        self._projekt()
+        self.assertTrue(f.aktion_belegung_umgekehrt.isEnabled())
+        self.assertFalse(f.aktion_belegung_umgekehrt.isChecked())
+        f.belegung_umkehren(True)
+        self.assertTrue(f.projekt.belegung_umgekehrt)
+        self.assertTrue(f.veraendert)
+        f.belegung_umkehren(False)
+        self.assertFalse(f.projekt.belegung_umgekehrt)
+
+    def test_der_haken_folgt_dem_projekt(self):
+        from verteilerly.modell import Projekt, Verteiler
+
+        f = self.fenster
+        f._projekt_setzen(
+            Projekt(
+                verteiler=Verteiler.aus_geometrie(1, 2, 10, name="Probe"),
+                belegung_umgekehrt=True,
+            ),
+            None,
+        )
+        self.assertTrue(f.aktion_belegung_umgekehrt.isChecked())
+
+    def test_ohne_verteiler_ist_der_haken_aus(self):
+        f = self.fenster
+        self.assertFalse(f.aktion_belegung_umgekehrt.isEnabled())
+        f.belegung_umkehren(True)
+        self.assertFalse(f.aktion_belegung_umgekehrt.isChecked())
+
+    def test_das_umkehren_laesst_sich_zuruecknehmen(self):
+        f = self.fenster
+        self._projekt()
+        f.belegung_umkehren(True)
+        self.assertTrue(f.aktion_rueckgaengig.isEnabled())
+        f.rueckgaengig()
+        self.assertFalse(f.projekt.belegung_umgekehrt)
+        self.assertFalse(f.aktion_belegung_umgekehrt.isChecked())
 
     def test_jede_schreibweise_steht_im_menue(self):
         from verteilerly import schreibweisen
