@@ -315,10 +315,16 @@ sich weiter öffnen. Denselben Weg geht die Kommandozeile:
 `Verteilerly <datei>`.
 
 **Schreibgeschützt öffnen** (*Datei ▸ Schreibgeschützt öffnen…*,
-Strg+Umschalt+O) zeigt eine Datei, ohne sie zurückzuschreiben: geändert werden
-darf alles, nur `Speichern` ist aus, und `speichern()` leitet auf *Speichern
-unter…* um — auch aus der Rückfrage beim Schließen heraus. Die neue Datei
-gehört dann dem Anwender, der Schutz fällt weg. Dasselbe stellt
+Strg+Umschalt+O) zeigt eine Datei zum Ansehen: **nichts lässt sich ändern**.
+Gesperrt wird an jeder Stelle, an der geändert wird — `LeistenModell` gibt
+keine beschreibbare Zelle mehr her (`flags()`) und nimmt auch von Hand nichts
+an (`_eintragen()`, `stil_setzen()`, `teilung_setzen()`), die Tabelle öffnet
+keinen Editor mehr (`NoEditTriggers`), die Zellenknöpfe sind aus, die
+`Uebersicht` legt kein Kabel auf und keines um, und
+`aktionen_auffrischen()` graut jeden Menüeintrag aus, der am Projekt
+arbeitet. Lesen, markieren, suchen und ausgeben bleiben; `speichern()` leitet
+auf *Speichern unter…* um — auch aus der Rückfrage beim Schließen heraus. Die
+neue Datei gehört dann dem Anwender, der Schutz fällt weg. Dasselbe stellt
 `datei_oeffnen()` selbst fest, wenn `os.access(pfad, os.W_OK)` nein sagt: sonst
 fiele es erst beim Speichern auf. Zu sehen ist es in der Titelzeile und als
 rotes *schreibgeschützt* neben dem Prozentfeld der geteilten Zelle

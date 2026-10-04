@@ -168,6 +168,8 @@ class LeistenModell(QAbstractTableModel):
         # eintraegt, will einen Tippfehler als Fehler gemeldet bekommen
         # und nicht als Vermerk stehen haben.
         self.freitext_erlaubt = False
+        # Schreibgeschuetzt: zu sehen, aber nicht zu aendern.
+        self.schreibgeschuetzt = False
         # Ob die letzte Eingabe angenommen wurde - danach richtet sich,
         # ob Enter eine Zeile weiterspringt.
         self.eingabe_angenommen = True
@@ -198,6 +200,15 @@ class LeistenModell(QAbstractTableModel):
         self.verteiler = verteiler
         self.leiste_nr = leiste_nr
         self.endResetModel()
+
+    def schreibschutz_setzen(self, an: bool) -> None:
+        """Keine Zelle mehr beschreibbar - oder wieder alle."""
+        self.schreibgeschuetzt = bool(an)
+        if self.rowCount():
+            self.dataChanged.emit(
+                self.index(0, 0),
+                self.index(self.rowCount() - 1, self.columnCount() - 1),
+            )
 
     def farben_setzen(self, farben: Farben) -> None:
         self.farben = farben
@@ -250,7 +261,8 @@ class LeistenModell(QAbstractTableModel):
 
     def stil_setzen(self, index: QModelIndex, stil: Textstil) -> bool:
         feld = self.stilfeld(index.column())
-        if feld is None or not index.isValid() or self._leiste is None:
+        if (feld is None or not index.isValid() or self._leiste is None
+                or self.schreibgeschuetzt):
             return False
         stift_nr, seite = self._stelle(index.row())
         self._leiste.stift(stift_nr).ader(seite).stil_setzen(feld, stil)
@@ -284,7 +296,7 @@ class LeistenModell(QAbstractTableModel):
     def teilung_setzen(self, index: QModelIndex, teilung: Zellenteilung) -> bool:
         feld = self.teilfeld(index.column())
         ader = self._ader_zu(index)
-        if feld is None or ader is None:
+        if feld is None or ader is None or self.schreibgeschuetzt:
             return False
         ader.teilung_setzen(feld, teilung)
         self.dataChanged.emit(index, index)
@@ -306,6 +318,12 @@ class LeistenModell(QAbstractTableModel):
 
     def flags(self, index: QModelIndex):
         grund = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+        # Schreibgeschuetzt ist keine Zelle beschreibbar: damit ist jeder
+        # Weg zu - Doppelklick, Eingabetaste, Lostippen und das Leeren
+        # mit Entf, das die Flagge selbst abfragt. Lesen und Markieren
+        # bleiben, man soll ja etwas sehen koennen.
+        if self.schreibgeschuetzt:
+            return grund
         if index.column() == SPALTE_KABEL:
             stift_nr, seite = self._stelle(index.row())
             # Beschreibbar ist, wo ein Kabel anfaengt - auch eines ohne
@@ -452,7 +470,10 @@ class LeistenModell(QAbstractTableModel):
         return self.eingabe_angenommen
 
     def _eintragen(self, index: QModelIndex, wert, rolle) -> bool:
-        if rolle != Qt.ItemDataRole.EditRole or self._leiste is None:
+        # Der Schutz sitzt hier, nicht nur an den Flaggen: wer das Modell
+        # von Hand beschriebe, umginge ihn sonst.
+        if (rolle != Qt.ItemDataRole.EditRole or self._leiste is None
+                or self.schreibgeschuetzt):
             return False
 
         zeile, spalte = index.row(), index.column()
@@ -1106,8 +1127,9 @@ class LeistenAnsicht(QWidget):
         """
         index = self._stilzelle()
         stil = self.modell.stil(index) if index is not None else None
+        darf = not self.modell.schreibgeschuetzt
         for knopf in (*self.ausrichtungsknoepfe.values(), self.fett, self.kursiv):
-            knopf.setEnabled(bool(self._stilzellen()))
+            knopf.setEnabled(darf and bool(self._stilzellen()))
         for art, knopf in self.ausrichtungsknoepfe.items():
             knopf.setChecked(bool(stil) and stil.ausrichtung == art)
         self.fett.setChecked(bool(stil) and stil.fett)
@@ -1115,10 +1137,10 @@ class LeistenAnsicht(QWidget):
 
         teilbar = self._teilzelle()
         teilung = self.modell.teilung(teilbar) if teilbar is not None else None
-        self.teilen.setEnabled(bool(self._teilzellen()))
+        self.teilen.setEnabled(darf and bool(self._teilzellen()))
         self.teilen.setChecked(bool(teilung) and teilung.geteilt)
         # Der Anteil laesst sich nur an einer geteilten Zelle einstellen.
-        self.anteil.setEnabled(bool(teilung) and teilung.geteilt)
+        self.anteil.setEnabled(darf and bool(teilung) and teilung.geteilt)
         if teilung is not None:
             self.anteil.blockSignals(True)
             self.anteil.setValue(teilung.anteil)
@@ -1241,15 +1263,29 @@ class LeistenAnsicht(QWidget):
         self._schreibschutz_faerben()
 
     def schreibschutz_setzen(self, an: bool, grund: str = "") -> None:
-        """Zeigt neben dem Anteil an, dass nicht gespeichert werden kann.
+        """Nichts laesst sich mehr aendern - und es steht rot daneben.
 
         Nicht nur in der Titelzeile: wer hier tippt, soll hier sehen,
-        dass die Datei nicht zurueckgeschrieben wird.
+        warum nichts geschieht. Gesperrt wird an der Wurzel - das Modell
+        gibt keine beschreibbare Zelle mehr her -, die Knoepfe und die
+        Eingabeausloeser der Tabelle kommen dazu, damit es auch so
+        aussieht.
         """
+        self.modell.schreibschutz_setzen(an)
+        self.tabelle.setEditTriggers(
+            QAbstractItemView.EditTrigger.NoEditTriggers if an
+            else (
+                QAbstractItemView.EditTrigger.DoubleClicked
+                | QAbstractItemView.EditTrigger.SelectedClicked
+                | QAbstractItemView.EditTrigger.EditKeyPressed
+                | QAbstractItemView.EditTrigger.AnyKeyPressed
+            )
+        )
         self.schreibschutz.setText(u("schreibgeschützt") if an else "")
         self.schreibschutz.setToolTip(grund)
         self.schreibschutz.setVisible(an)
         self._schreibschutz_faerben()
+        self._knoepfe_auffrischen()
 
     def _schreibschutz_faerben(self) -> None:
         """Rot aus dem Farbsatz - im dunklen Satz ein helleres Rot."""

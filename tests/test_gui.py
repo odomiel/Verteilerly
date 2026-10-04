@@ -1771,6 +1771,97 @@ class TestSchreibschutz(unittest.TestCase):
         self.assertTrue(self.fenster.schreibgeschuetzt)
         self.assertTrue(self._steht_da())
 
+    def test_keine_zelle_laesst_sich_mehr_beschreiben(self):
+        """Der Schutz sitzt am Modell - damit ist jeder Weg zu."""
+        from verteilerly.gui.leistenansicht import (
+            SPALTE_BEMERKUNG,
+            SPALTE_BEZEICHNUNG,
+        )
+
+        self.fenster.datei_oeffnen(self.datei)
+        modell = self.fenster.leistenansicht.modell
+        for spalte in (SPALTE_BEZEICHNUNG, SPALTE_BEMERKUNG):
+            self.assertTrue(
+                modell.flags(modell.index(0, spalte))
+                & Qt.ItemFlag.ItemIsEditable
+            )
+
+        self.fenster.datei_oeffnen(self.datei, schreibgeschuetzt=True)
+        modell = self.fenster.leistenansicht.modell
+        for spalte in (SPALTE_BEZEICHNUNG, SPALTE_BEMERKUNG):
+            with self.subTest(spalte=spalte):
+                index = modell.index(0, spalte)
+                self.assertFalse(
+                    modell.flags(index) & Qt.ItemFlag.ItemIsEditable
+                )
+                # Lesen und Markieren bleiben - man soll etwas sehen.
+                self.assertTrue(modell.flags(index) & Qt.ItemFlag.ItemIsEnabled)
+                self.assertFalse(modell.setData(index, "Neu"))
+
+    def test_die_tabelle_oeffnet_keinen_editor_mehr(self):
+        from PySide6.QtWidgets import QAbstractItemView
+
+        self.fenster.datei_oeffnen(self.datei, schreibgeschuetzt=True)
+        self.assertEqual(
+            self.fenster.leistenansicht.tabelle.editTriggers(),
+            QAbstractItemView.EditTrigger.NoEditTriggers,
+        )
+
+    def test_die_zellenknoepfe_sind_aus(self):
+        ansicht = self.fenster.leistenansicht
+        self.fenster.datei_oeffnen(self.datei, schreibgeschuetzt=True)
+        ansicht.tabelle.setCurrentIndex(ansicht.modell.index(0, 2))
+        ansicht._knoepfe_auffrischen()
+        for knopf in (*ansicht.ausrichtungsknoepfe.values(), ansicht.fett,
+                      ansicht.kursiv, ansicht.teilen, ansicht.anteil):
+            with self.subTest(knopf=knopf.toolTip()):
+                self.assertFalse(knopf.isEnabled())
+
+    def test_die_uebersicht_legt_nichts_um(self):
+        self.fenster.datei_oeffnen(self.datei, schreibgeschuetzt=True)
+        self.assertTrue(self.fenster.uebersicht.schreibgeschuetzt)
+
+    def test_die_menueeintraege_zum_aendern_sind_aus(self):
+        """Lesen, suchen und ausgeben bleiben."""
+        f = self.fenster
+        f.datei_oeffnen(self.datei, schreibgeschuetzt=True)
+        f.uebersicht.auswahl = (1, 1)
+        f.aktionen_auffrischen()
+        for name in ("aktion_kabel", "aktion_kabel_weg", "aktion_kabel_aendern",
+                     "aktion_projektdaten", "aktion_belegung_umgekehrt"):
+            with self.subTest(handlung=name):
+                self.assertFalse(getattr(f, name).isEnabled())
+        self.assertFalse(f.leistennamen_menue.isEnabled())
+        for name in ("aktion_pdf", "aktion_xlsx", "aktion_csv", "aktion_suchen",
+                     "aktion_speichern_unter", "aktion_vorlage"):
+            with self.subTest(handlung=name):
+                self.assertTrue(getattr(f, name).isEnabled())
+
+    def test_zurueckgenommen_wird_auch_nicht(self):
+        """Ein Stand von vorhin waere eine Aenderung wie jede andere."""
+        f = self.fenster
+        f.datei_oeffnen(self.datei)
+        f.projekt.verteiler.name = "Geändert"
+        f._belegung_geaendert()
+        self.assertTrue(f.aktion_rueckgaengig.isEnabled())
+        f.schreibschutz_setzen(True, "Probe")
+        self.assertFalse(f.aktion_rueckgaengig.isEnabled())
+        self.assertFalse(f.aktion_wiederherstellen.isEnabled())
+
+    def test_aufgehoben_geht_alles_wieder(self):
+        from verteilerly.gui.leistenansicht import SPALTE_BEZEICHNUNG
+
+        f = self.fenster
+        f.datei_oeffnen(self.datei, schreibgeschuetzt=True)
+        f.datei_oeffnen(self.datei)
+        modell = f.leistenansicht.modell
+        self.assertTrue(
+            modell.flags(modell.index(0, SPALTE_BEZEICHNUNG))
+            & Qt.ItemFlag.ItemIsEditable
+        )
+        self.assertFalse(f.uebersicht.schreibgeschuetzt)
+        self.assertTrue(f.aktion_kabel.isEnabled())
+
     def test_ein_neuer_verteiler_ist_nicht_geschuetzt(self):
         self.fenster.datei_oeffnen(self.datei, schreibgeschuetzt=True)
         verteiler = Verteiler.aus_geometrie(1, 2, 10, name="Neu")

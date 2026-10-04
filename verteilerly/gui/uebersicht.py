@@ -57,11 +57,20 @@ class Uebersicht(QWidget):
         self._ziel: tuple[int, int, bool] | None = None
         #: Das Kabel, das gerade am Zeiger haengt.
         self._gezogen: Kabel | None = None
+        #: Schreibgeschuetzt: anschauen ja, umlegen und auflegen nein.
+        self.schreibgeschuetzt = False
         self.setMouseTracking(True)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setAcceptDrops(True)
 
     # -- Zustand -----------------------------------------------------------
+
+    def schreibschutz_setzen(self, an: bool) -> None:
+        """Kein Auflegen per Doppelklick und kein Umlegen per Ziehen."""
+        self.schreibgeschuetzt = bool(an)
+        if an:
+            self._griff = None
+            self._ziel = None
 
     def verteiler_setzen(self, verteiler: Verteiler | None) -> None:
         self.verteiler = verteiler
@@ -153,7 +162,7 @@ class Uebersicht(QWidget):
 
     def mouseDoubleClickEvent(self, ereignis) -> None:
         stelle = self._zelle_bei(int(ereignis.position().x()), int(ereignis.position().y()))
-        if stelle is None or self.verteiler is None:
+        if stelle is None or self.verteiler is None or self.schreibgeschuetzt:
             return
         leiste, da = stelle
         kabel = self.verteiler.kabel_an(leiste, da)
@@ -169,7 +178,7 @@ class Uebersicht(QWidget):
         Strecke, die das Erscheinungsbild als Ziehen versteht - sonst
         haette schon ein zittriger Klick das Kabel verschoben.
         """
-        if self._griff is not None and (
+        if self._griff is not None and not self.schreibgeschuetzt and (
             ereignis.buttons() & Qt.MouseButton.LeftButton
         ):
             druckpunkt, kabel, versatz = self._griff
@@ -216,6 +225,7 @@ class Uebersicht(QWidget):
             ereignis.mimeData().hasFormat(KABELFRACHT)
             and self._gezogen is not None
             and self.verteiler is not None
+            and not self.schreibgeschuetzt
         )
 
     def _zielstelle(self, ereignis) -> tuple[int, int, bool] | None:

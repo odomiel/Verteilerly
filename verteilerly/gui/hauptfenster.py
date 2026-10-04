@@ -862,13 +862,22 @@ class Hauptfenster(QMainWindow):
         self.setWindowTitle("  ".join(teile))
 
     def schreibschutz_setzen(self, an: bool, grund: str = "") -> None:
-        """Merkt den Schutz und zeigt ihn - in der Titelzeile und rot
-        neben den Zellenknoepfen der Leistenansicht."""
+        """Nichts laesst sich aendern, und es steht rot daneben.
+
+        Gesperrt wird an jeder Stelle, an der geaendert wird: die
+        Leistenansicht gibt keine beschreibbare Zelle mehr her, die
+        Uebersicht nimmt kein Kabel mehr an und legt keines um, und die
+        Menueeintraege, die am Projekt arbeiten, sind aus
+        (``aktionen_auffrischen``). Gelesen, markiert, gesucht und
+        ausgegeben wird weiter.
+        """
         self.schreibgeschuetzt = bool(an)
         self.schreibschutz_grund = grund if an else ""
         self.leistenansicht.schreibschutz_setzen(
             self.schreibgeschuetzt, self.schreibschutz_grund
         )
+        self.uebersicht.schreibschutz_setzen(self.schreibgeschuetzt)
+        self.aktionen_auffrischen()
 
     def _fehler_zeigen(self, text: str) -> None:
         self.statusBar().showMessage(text, 8000)
@@ -1056,32 +1065,37 @@ class Hauptfenster(QMainWindow):
         sagt, was fehlt - er erscheint auch bei ausgegrauten Einträgen.
         """
         offen = self.projekt is not None
+        # Schreibgeschuetzt bleibt alles zu lesen, zu suchen und
+        # auszugeben - nur geaendert wird nichts mehr.
+        aenderbar = offen and not self.schreibgeschuetzt
         # Der Haken zeigt, wie das offene Projekt dasteht - ohne Projekt
         # gibt es nichts zu umkehren.
-        self.aktion_belegung_umgekehrt.setEnabled(offen)
+        self.aktion_belegung_umgekehrt.setEnabled(aenderbar)
         self.aktion_belegung_umgekehrt.setChecked(
             offen and self.projekt.belegung_umgekehrt
         )
         # Ebenso die Beschriftung: sie gehoert dem offenen Verteiler.
-        self.leistennamen_menue.setEnabled(offen)
+        self.leistennamen_menue.setEnabled(aenderbar)
         for handlung in self.leistenweisen_gruppe.actions():
             handlung.setChecked(handlung.data() == self.leisten_schreibweise)
-        self.aktion_rueckgaengig.setEnabled(offen and bool(self._rueckgaengig))
+        self.aktion_rueckgaengig.setEnabled(
+            aenderbar and bool(self._rueckgaengig)
+        )
         self.aktion_wiederherstellen.setEnabled(
-            offen and bool(self._wiederherstellen)
+            aenderbar and bool(self._wiederherstellen)
         )
         for handlung in (
             self.aktion_speichern_unter,
             self.aktion_pdf,
             self.aktion_xlsx,
             self.aktion_csv,
-            self.aktion_kabel,
             self.aktion_vorlage,
             self.aktion_suchen,
-            self.aktion_projektdaten,
             self.aktion_export,
         ):
             handlung.setEnabled(offen)
+        for handlung in (self.aktion_kabel, self.aktion_projektdaten):
+            handlung.setEnabled(aenderbar)
         self.export_knopf.setEnabled(offen)
         self.exportmenue.setEnabled(offen)
 
@@ -1092,8 +1106,10 @@ class Hauptfenster(QMainWindow):
             and (self.veraendert or self.pfad is None)
         )
         hat_kabel = self._kabel_der_auswahl() is not None
-        self.aktion_kabel_weg.setEnabled(hat_kabel)
-        self.aktion_kabel_aendern.setEnabled(hat_kabel)
+        self.aktion_kabel_weg.setEnabled(hat_kabel and not self.schreibgeschuetzt)
+        self.aktion_kabel_aendern.setEnabled(
+            hat_kabel and not self.schreibgeschuetzt
+        )
 
     def _kabel_der_auswahl(self):
         """Das Kabel an der ausgewählten Doppelader, wenn dort eines liegt."""
