@@ -65,8 +65,8 @@ strips. One strip size per bay. Such a frame can be stored as a
 <li><b>Letters instead of numbers</b> — the check mark below the custom frame
 gives the strips letters: <i>strip A</i> instead of <i>strip 1</i>. It applies
 to <b>both</b> ways — a template says how many strips there are, not what they
-are called. It comes preset with the last choice made, and later it can be
-changed under <i>Settings ▸ Label the strips</i> (section 3).</li>
+are called. It starts empty — every new frame is counted at first — and later
+it can be changed under <i>Settings ▸ Label the strips</i> (section 3).</li>
 <li><b>Reverse the frame layout</b> — the check mark below it puts the pairs on
 the frame layout from right to left, for a frame that is filled from the right.
 Like the other one it applies to both ways and can be changed later under
@@ -142,9 +142,10 @@ addresses are numbers anyway.</p>
 <p><b>It belongs to the frame</b>, not to the program: its strips carry those
 labels on the hardware, and so the choice is kept in the <b>project file</b>.
 A frame with letters and one with numbers can be kept side by side — each
-brings its own labelling. At the same time the choice is remembered as the
-<b>default</b>: the next <i>new</i> frame gets it, just like the project
-data.</p>
+brings its own labelling. It is <b>not remembered</b>: every <i>new</i> frame
+starts counted and gets its labelling in the <i>New frame</i> dialog or here —
+just like the reversed layout. The menu is greyed out as long as no frame is
+open.</p>
 
 <p><b>From right to left</b> — <b>Settings ▸ Reverse the frame layout</b> turns
 the reading direction of the frame layout: the pairs then run from right to

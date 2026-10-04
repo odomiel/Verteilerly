@@ -1,5 +1,11 @@
 """Projektdaten in den Einstellungen merken.
 
+Wie die Leisten heissen und ob die Verteilerbelegung umgekehrt ist, steht
+**nicht** hier: beides gehoert dem Verteiler und steht in seiner
+Projektdatei. Eine Vorgabe dafuer gab es bis 2026.10.04 - sie fuehrte
+dazu, dass ein neuer Verteiler die Beschriftung des letzten erbte, ohne
+dass jemand danach gefragt hatte.
+
 Die Projektdaten sind bei einem Errichter meist dieselben: Firma, Kürzel,
 Kunde wiederholen sich von Verteiler zu Verteiler. Er wird deshalb in der
 Verteilerly.conf mitgeführt und in einen neuen Verteiler übernommen -
@@ -19,7 +25,6 @@ SCHLUESSEL_AUSGEBLENDET = "felder_ausgeblendet"
 #: Wie die Leisten im naechsten neuen Verteiler heissen. Im Projekt steht
 #: die Wahl mit; hier steht sie als Vorgabe, weil ein Errichter seine
 #: Verteiler meist gleich beschriftet.
-SCHLUESSEL_LEISTEN = "leisten_schreibweise"
 
 
 def _liste(wert) -> list[str]:
@@ -82,17 +87,6 @@ def beschriftungen_laden(einstellungen) -> dict[str, str]:
     return _gruppe_lesen(einstellungen, GRUPPE_BESCHRIFTUNGEN)
 
 
-def leistenweise_merken(einstellungen, schreibweise: str) -> None:
-    """Merkt, wie die Leisten im naechsten neuen Verteiler heissen."""
-    einstellungen.setValue(SCHLUESSEL_LEISTEN, leistenweise(schreibweise))
-    einstellungen.sync()
-
-
-def leistenweise_laden(einstellungen) -> str:
-    """Die gemerkte Vorgabe - Unbekanntes wird wieder gezaehlt."""
-    return leistenweise(einstellungen.value(SCHLUESSEL_LEISTEN, LEISTEN_ZAHLEN))
-
-
 def leistenweise(wert) -> str:
     """Prueft eine Angabe; was das Programm nicht kennt, wird gezaehlt.
 
@@ -118,12 +112,3 @@ def briefkopf_uebernehmen(einstellungen, projekt: Projekt) -> Projekt:
     return projekt
 
 
-def leistenweise_uebernehmen(einstellungen, projekt: Projekt) -> Projekt:
-    """Legt die gemerkte Beschriftung in ein Projekt, das keine nennt.
-
-    Eigener Aufruf, nicht Teil von ``briefkopf_uebernehmen``: wer den
-    Verteiler im Dialog anlegt, hat den Haken dort schon gesetzt oder
-    weggenommen, und eine Vorgabe darf eine Eingabe nicht ueberschreiben.
-    """
-    projekt.leisten_schreibweise = leistenweise_laden(einstellungen)
-    return projekt

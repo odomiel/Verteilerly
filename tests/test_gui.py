@@ -1944,14 +1944,10 @@ class TestMenuezustaende(unittest.TestCase):
         f.schreibweise_waehlen("einfach")
 
     def test_leisten_heissen_auf_wunsch_mit_buchstaben(self):
-        """Die Beschriftung gehört dem Verteiler - und wird als Vorgabe gemerkt."""
+        """Die Beschriftung gehört dem Verteiler - nur ihm."""
         from verteilerly.modell import Verteiler
 
-        from . import einstellung_bewahren
-
         f = self.fenster
-        einstellung_bewahren(self, f.einstellungen, "leisten_schreibweise")
-        self.addCleanup(f.leistenweise_waehlen, "zahlen")
         self._projekt()
         f.leistenweise_waehlen("buchstaben")
         self.assertEqual(f.leisten_schreibweise, "buchstaben")
@@ -1963,28 +1959,54 @@ class TestMenuezustaende(unittest.TestCase):
         angehakt = [e for e in f.leistenweisen_gruppe.actions() if e.isChecked()]
         self.assertEqual([e.data() for e in angehakt], ["buchstaben"])
 
-        # Gemerkt wird sie als Vorgabe für den nächsten neuen Verteiler.
-        self.assertEqual(
-            f.einstellungen.value("leisten_schreibweise"), "buchstaben"
-        )
-        neu = f.neues_projekt(Verteiler.aus_geometrie(1, 2, 10))
-        self.assertEqual(neu.leisten_schreibweise, "buchstaben")
+    def test_die_beschriftung_wird_nicht_zur_vorgabe(self):
+        """Wie die umgekehrte Belegung: der nächste Verteiler fängt gezählt an."""
+        from verteilerly.modell import Verteiler
 
-    def test_der_haken_im_neuen_verteiler_gilt_und_wird_vorgabe(self):
-        """Was im Dialog steht, zählt - auch das Weglassen des Hakens."""
+        f = self.fenster
+        self._projekt()
+        f.leistenweise_waehlen("buchstaben")
+        self.assertIsNone(f.einstellungen.value("leisten_schreibweise"))
+        neu = f.neues_projekt(Verteiler.aus_geometrie(1, 2, 10))
+        self.assertEqual(neu.leisten_schreibweise, "zahlen")
+        self.assertFalse(neu.belegung_umgekehrt)
+
+    def test_ohne_verteiler_ist_die_beschriftung_nicht_zu_waehlen(self):
+        f = self.fenster
+        self.assertFalse(f.leistennamen_menue.isEnabled())
+        self._projekt()
+        self.assertTrue(f.leistennamen_menue.isEnabled())
+
+    def test_der_haken_folgt_dem_geoeffneten_projekt(self):
+        from verteilerly.modell import Projekt, Verteiler
+
+        f = self.fenster
+        f._projekt_setzen(
+            Projekt(
+                verteiler=Verteiler.aus_geometrie(1, 2, 10, name="Probe"),
+                leisten_schreibweise="buchstaben",
+            ),
+            None,
+        )
+        angehakt = [e for e in f.leistenweisen_gruppe.actions() if e.isChecked()]
+        self.assertEqual([e.data() for e in angehakt], ["buchstaben"])
+
+    def test_die_haken_im_neuen_verteiler_gelten_fuer_dieses_projekt(self):
+        """Was im Dialog steht, zählt - gemerkt wird es nicht."""
         from unittest import mock
 
         from verteilerly.gui import hauptfenster as modul
 
-        from . import einstellung_bewahren
-
         f = self.fenster
-        einstellung_bewahren(self, f.einstellungen, "leisten_schreibweise")
-        self.addCleanup(f.leistenweise_waehlen, "zahlen")
 
-        def anlegen(haken):
+        def anlegen(buchstaben, umgekehrt=False):
             def vorbereiten(dialog):
-                dialog.buchstaben.setChecked(haken)
+                dialog.buchstaben.setChecked(buchstaben)
+                dialog.belegung_umgekehrt.setChecked(umgekehrt)
+                # Der nächste Dialog fängt wieder ohne Haken an.
+                self.assertFalse(
+                    dialog.buchstaben.isChecked() if not buchstaben else False
+                )
                 return modul.NeuerVerteilerDialog.DialogCode.Accepted
 
             with mock.patch.object(
@@ -1992,18 +2014,15 @@ class TestMenuezustaende(unittest.TestCase):
             ):
                 f.neuer_verteiler()
 
-        anlegen(True)
+        anlegen(True, True)
         self.assertEqual(f.projekt.leisten_schreibweise, "buchstaben")
-        self.assertEqual(
-            f.einstellungen.value("leisten_schreibweise"), "buchstaben"
-        )
+        self.assertTrue(f.projekt.belegung_umgekehrt)
         self.assertTrue(f.leistenansicht.auswahl.itemText(0).startswith("Leiste A"))
+        self.assertIsNone(f.einstellungen.value("leisten_schreibweise"))
 
-        # Der nächste Dialog hat den Haken schon - wer ihn wegnimmt,
-        # bekommt Zahlen, die Vorgabe schreibt nichts dazwischen.
         anlegen(False)
         self.assertEqual(f.projekt.leisten_schreibweise, "zahlen")
-        self.assertEqual(f.einstellungen.value("leisten_schreibweise"), "zahlen")
+        self.assertFalse(f.projekt.belegung_umgekehrt)
 
     def test_ein_geoeffnetes_projekt_bringt_seine_beschriftung_mit(self):
         """Nicht die Einstellung gilt, sondern was in der Datei steht."""
@@ -3465,14 +3484,14 @@ class TestNeuerVerteilerDialog(unittest.TestCase):
         self.assertTrue(d.buchstaben.isEnabled())
         self.assertEqual(d.projekt().leisten_schreibweise, "buchstaben")
 
-    def test_die_vorgabe_steht_im_haken_schon_da(self):
+    def test_die_haken_fangen_leer_an(self):
+        """Jeder neue Verteiler beginnt gezählt und von links nach rechts."""
         from verteilerly.gui.dialoge import NeuerVerteilerDialog
 
-        dialog = NeuerVerteilerDialog(
-            self.vorlagen, None, None, leisten="buchstaben"
-        )
+        dialog = NeuerVerteilerDialog(self.vorlagen, None, None)
         self.addCleanup(dialog.done, 0)
-        self.assertTrue(dialog.buchstaben.isChecked())
+        self.assertFalse(dialog.buchstaben.isChecked())
+        self.assertFalse(dialog.belegung_umgekehrt.isChecked())
 
     def test_erweitert_ist_zunaechst_aus(self):
         """Der Regelfall ist der gleichmäßige Verteiler."""

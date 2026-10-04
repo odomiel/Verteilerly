@@ -445,10 +445,14 @@ genannt wird — Wahlliste, Blätter, Verteilerbelegung, PDF, Mappe, Datenlisten
 werden darf beides: `C 2a` und `3 2a` meinen dieselbe Ader; die Adressen
 stehen in der Projektdatei ohnehin als Nummern. Die Beschriftung **gehört dem
 Verteiler** — seine Leisten sind am Gerät so beschriftet — und steht darum in
-der Projektdatei; die `Verteilerly.conf` merkt sie nur als Vorgabe für den
-nächsten neuen Verteiler. Im Dialog *Neuer Verteiler* steht sie darum gleich
-als Haken **Buchstaben statt Zahlen** — vorbelegt mit der letzten Wahl und
-wirksam für die Vorlage wie für den benutzerdefinierten Verteiler.
+der Projektdatei — **nicht** in der `Verteilerly.conf`: eine Vorgabe gab es bis
+2026.10.04, sie ließ den nächsten Verteiler die Beschriftung des letzten erben,
+ohne dass jemand danach gefragt hatte. Jeder neue fängt darum gezählt an, wie
+er auch mit der Belegung von links nach rechts anfängt. Im Dialog *Neuer
+Verteiler* stehen beide Haken beieinander — **Buchstaben statt Zahlen** und
+**Verteilerbelegung umkehren** —, leer vorbelegt und wirksam für die Vorlage
+wie für den benutzerdefinierten Verteiler; das Menü *Einstellungen ▸ Leisten
+beschriften* ist ausgegraut, solange kein Verteiler offen ist.
 
 Wie das Blatt aussieht, sagt eine **Blattvorlage**; was darauf steht,
 kommt aus dem Projekt. **Drei liegen bei** — *Standard* mit allen Spalten,

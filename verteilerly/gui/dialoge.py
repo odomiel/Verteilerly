@@ -172,7 +172,6 @@ class NeuerVerteilerDialog(PassenderDialog):
         ausgeblendet: set[str] | None = None,
         blattvorlagen: Blattvorlagen | None = None,
         blattvorlage: str = "",
-        leisten: str = LEISTEN_ZAHLEN,
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle(u("Neuer Verteiler"))
@@ -310,14 +309,15 @@ class NeuerVerteilerDialog(PassenderDialog):
         # Wie die Leisten heissen, gehoert zum Verteiler - darum gleich
         # hier. Der Haken steht unter dem eigenen Verteiler und gilt
         # trotzdem fuer beide Wege: eine Vorlage sagt, wie viele Leisten
-        # es gibt, nicht wie sie heissen.
+        # es gibt, nicht wie sie heissen. Vorbelegt ist er nicht: jeder
+        # neue Verteiler faengt gezaehlt an, wie er auch mit der Belegung
+        # von links nach rechts anfaengt.
         self.buchstaben = QCheckBox(u("Buchstaben statt Zahlen"))
         self.buchstaben.setToolTip(
             u("Die Leisten heißen dann A, B, C statt 1, 2, 3 — auch aus "
               "einer Vorlage. Später unter Einstellungen ▸ Leisten "
               "beschriften zu ändern.")
         )
-        self.buchstaben.setChecked(leisten == LEISTEN_BUCHSTABEN)
 
         # Auch die Leserichtung der Belegung gehoert zum Verteiler, und wer
         # einen von rechts belegten dokumentiert, weiss es beim Anlegen.
