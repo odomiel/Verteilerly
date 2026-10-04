@@ -1623,26 +1623,22 @@ class TestUmbruch(unittest.TestCase):
         self.assertEqual(zeilen, ["Kabel-", "name"])
         self.assertLessEqual(self.misst("Kabel-"), 4)
 
-    def test_eine_kleinere_zeile_geht_vor_dem_umbruch(self):
-        """Zwei volle Zeilen sehen gedraengt aus, eine kleinere nicht."""
+    def test_umgebrochen_wird_vor_dem_verkleinern(self):
+        """Zwei Zeilen in voller Groesse statt einer geschrumpften.
+
+        Bis 2026.10.04 ging eine kleiner gesetzte einzelne Zeile vor
+        (``einzeilig_ab``): der Kabelname schrumpfte, obwohl der Block
+        zwei Zeilen in voller Groesse getragen haette.
+        """
         groesse, zeilen = self.einpassen(
             "Wohnzimmer Nord", 12, 20, 3.0, 1.0, 0.25, self.misst
         )
-        self.assertEqual(len(zeilen), 2)          # ohne Vorgabe wie bisher
-        groesse, zeilen = self.einpassen(
-            "Wohnzimmer Nord", 12, 20, 3.0, 1.0, 0.25, self.misst,
-            einzeilig_ab=1.0,
-        )
-        self.assertEqual(zeilen, ["Wohnzimmer Nord"])
-        self.assertLessEqual(self.misst(zeilen[0], groesse), 12)
-
-    def test_unter_der_grenze_wird_doch_umgebrochen(self):
-        """Eine Zeile, die nur noch winzig passt, hilft niemandem."""
-        groesse, zeilen = self.einpassen(
-            "Wohnzimmer Nord", 12, 20, 3.0, 1.0, 0.25, self.misst,
-            einzeilig_ab=2.5,
-        )
-        self.assertGreater(len(zeilen), 1)
+        self.assertEqual(zeilen, ["Wohnzimmer", "Nord"])
+        self.assertEqual(groesse, 2.0)
+        self.assertLessEqual(max(self.misst(z, groesse) for z in zeilen), 12)
+        # Auf einer Zeile haette dieselbe Groesse nicht gereicht - und
+        # genau die kleinere Zeile stand hier bisher.
+        self.assertGreater(self.misst("Wohnzimmer Nord", groesse), 12)
 
     def test_leerer_text_bleibt_leer(self):
         self.assertEqual(self.umbrechen("", 10, self.misst), [])

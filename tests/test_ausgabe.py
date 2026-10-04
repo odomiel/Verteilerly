@@ -336,12 +336,12 @@ class TestSchriftgroessen(unittest.TestCase):
             with self.subTest(wort=wort):
                 self.assertIn(wort, text)
 
-    def test_eine_zeile_kleiner_geht_vor_zwei_vollen(self):
-        """Ein kleiner Block soll nicht vollgestopft aussehen.
+    def test_lieber_zwei_volle_zeilen_als_eine_geschrumpfte(self):
+        """Ein schmaler Block traegt zwei Zeilen in voller Groesse.
 
-        „Melder 1" passt in den schmalen Block nur umgebrochen, wenn die
-        Schrift ihre volle Groesse behaelt - eine Stufe kleiner steht es
-        auf einer Zeile und laesst Luft.
+        „Melder 1" passte einzeilig nur eine Stufe kleiner in den Block
+        einer Doppelader; so stand er dort bis 2026.10.04. Lesbarer sind
+        zwei Zeilen, so gross wie der Block sie traegt.
         """
         from verteilerly.layout import Text, textzeilen, verteilerbelegungen
 
@@ -353,14 +353,12 @@ class TestSchriftgroessen(unittest.TestCase):
             if isinstance(e, Text) and e.text == "Melder 1"
         )
         groesse, zeilen = textzeilen(feld)
-        self.assertEqual(zeilen, ["Melder 1"])
-        self.assertLess(groesse, feld.groesse)
-        # Kleiner als die kleine Schrift der Vorlage wird dafuer nicht
-        # gesetzt - dann waere der Umbruch das Bessere.
-        self.assertGreaterEqual(groesse, feld.einzeilig_ab)
-        self.assertLessEqual(
-            stringWidth(zeilen[0], SCHRIFT, groesse), feld.breite * PT_JE_MM
-        )
+        self.assertEqual(zeilen, ["Melder", "1"])
+        self.assertEqual(groesse, feld.groesse)
+        for zeile in zeilen:
+            self.assertLessEqual(
+                stringWidth(zeile, SCHRIFT, groesse), feld.breite * PT_JE_MM
+            )
 
     def test_kein_text_eines_blattes_laeuft_ueber(self):
         """Die Probe aufs Ganze: jedes Feld jedes Blattes nachgemessen."""

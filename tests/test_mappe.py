@@ -283,7 +283,7 @@ class TestBlattbild(unittest.TestCase):
         )
         groesse, zeilen = umgebrochene_zeilen(
             "Linie 1 — Melderkreis", platz.breite, platz.hoehe,
-            platz.groesse, platz.einzeilig_ab,
+            platz.groesse,
         )
         self.assertEqual(feld.value, "\n".join(zeilen))
         self.assertEqual(feld.font.size, groesse)

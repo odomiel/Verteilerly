@@ -369,9 +369,9 @@ dieselbe Stelle). Wie viel Platz er darin bekommt, sagt `kabelfeld()`: nicht den
 ganzen Block, sondern `fuellgrad_kabel` davon (Vorgabe 0,82), und mindestens
 `polster_kabel` bleibt am Rahmen frei — ein Name von Rand zu Rand ließe den
 Block vollgestopft aussehen. Beides steht unter `belegung` in der
-Blattvorlage, ist also je Vorlage einstellbar. Wird es eng, wird zuerst die Schrift
-kleiner: eine einzelne Zeile gilt bis herunter zu `schrift_klein` als
-besser als zwei volle (`einzeilig_ab`). Erst darunter wird **umgebrochen**:
+Blattvorlage, ist also je Vorlage einstellbar. Wird es eng, wird zuerst
+**umgebrochen** und erst danach verkleinert — gesucht ist die größte Schrift,
+mit der der Name auf so vielen Zeilen, wie der Block sie trägt, hineingeht:
 `zeilen_umbrechen()` und `umbruch_einpassen()` in `layout.py`
 brechen an Leerzeichen und an `/`, `-`, `_`. Muss ein Wort selbst
 umbrechen, wird es **mit Trennstrich zwischen den Silben** getrennt:

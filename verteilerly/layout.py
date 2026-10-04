@@ -144,9 +144,6 @@ class Text:
     #: so gross nehmen, wie der Kasten sie traegt? Ohne das bleibt es bei
     #: einer Zeile, die notfalls schrumpft.
     umbruch: bool = False
-    #: Bis zu welcher Groesse eine einzelne Zeile dem Umbruch vorgezogen
-    #: wird - kleiner gesetzt sieht luftiger aus als zwei volle Zeilen.
-    einzeilig_ab: float = 0.0
 
     @property
     def zeilenlaenge(self) -> float:
@@ -199,7 +196,6 @@ def umgebrochene_zeilen(
     breite: float,
     hoehe: float,
     groesse: float,
-    einzeilig_ab: float = 0.0,
 ) -> tuple[float, list[str]]:
     """Schriftgroesse in Punkt und die Zeilen eines umbrechenden Feldes.
 
@@ -213,7 +209,6 @@ def umgebrochene_zeilen(
         KLEINSTE_SCHRIFT * PUNKT_IN_MM,
         SCHRITT * PUNKT_IN_MM,
         geschaetzte_breite,
-        einzeilig_ab * PUNKT_IN_MM,
     )
     # Krumme Zahlen wie 6.749999 helfen niemandem - auch nicht der Mappe.
     return round(gross / PUNKT_IN_MM, 2), zeilen
@@ -223,7 +218,6 @@ def textzeilen(element: Text) -> tuple[float, list[str]]:
     """Dasselbe fuer ein fertiges Textfeld des Zeichenmodells."""
     return umgebrochene_zeilen(
         str(element.text), element.breite, element.hoehe, element.groesse,
-        element.einzeilig_ab,
     )
 
 
@@ -383,7 +377,6 @@ def umbruch_einpassen(
     kleinste: float,
     schritt: float,
     misst,
-    einzeilig_ab: float = 0.0,
 ) -> tuple[float, list[str]]:
     """Die groesste Schrift, mit der der Text umgebrochen ins Feld passt.
 
@@ -394,22 +387,14 @@ def umbruch_einpassen(
     kleinsten Schrift nicht, bleibt stehen, was in den Kasten geht, und
     die letzte Zeile endet mit Punkten.
 
-    ``einzeilig_ab`` sagt, bis zu welcher Groesse eine einzelne Zeile
-    einem Umbruch vorgezogen wird: eine Stufe kleiner gesetzt sieht
-    luftiger aus als zwei Zeilen, die das Feld ausfuellen. Erst darunter
-    wird umgebrochen - dann ist das Feld wirklich zu klein.
+    **Umgebrochen wird vor dem Verkleinern**: gesucht ist die groesste
+    Schrift, mit der der Text - auf so viele Zeilen verteilt, wie der
+    Kasten traegt - noch hineingeht. Ein langer Name steht damit
+    zweizeilig und lesbar, statt einzeilig zusammenzuschrumpfen.
     """
     text = str(text)
     if not text.strip() or breite <= 0 or hoehe <= 0:
         return groesse, [text]
-
-    einzeln = text.strip()
-    einzeilig = max(kleinste, groesse)
-    while einzeilig_ab and einzeilig >= einzeilig_ab:
-        if (misst(einzeln, einzeilig) <= breite
-                and einzeilig * ZEILENABSTAND <= hoehe):
-            return einzeilig, [einzeln]
-        einzeilig -= schritt
 
     stuecke = [st.rstrip() for st in _stuecke(text) if st.strip()]
 
@@ -1181,8 +1166,6 @@ class Kabelfeld:
     breite: float
     hoehe: float
     groesse: float
-    #: Bis hierher ist eine einzelne Zeile besser als ein Umbruch.
-    einzeilig_ab: float
 
 
 def kabelfeld(
@@ -1202,7 +1185,6 @@ def kabelfeld(
         breite=platz_b,
         hoehe=platz_h,
         groesse=kabelbeschriftung_groesse(platz_h, vorlage),
-        einzeilig_ab=vorlage.schrift_klein,
     )
 
 
@@ -1295,7 +1277,6 @@ def verteilerbelegung(
             blatt.text(
                 feld.x, feld.y, feld.breite, feld.hoehe,
                 beschriftung, feld.groesse, MITTE, umbruch=True,
-                einzeilig_ab=feld.einzeilig_ab,
             )
 
     # Die DA-Nummern zuletzt, damit sie auch auf einem Kabelblock stehen.
