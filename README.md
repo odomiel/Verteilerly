@@ -372,8 +372,8 @@ Block vollgestopft aussehen. Beides steht unter `belegung` in der
 Blattvorlage, ist also je Vorlage einstellbar. Wird es eng, wird zuerst
 **umgebrochen** und erst danach verkleinert — gesucht ist die größte Schrift,
 mit der der Name auf so vielen Zeilen, wie der Block sie trägt, hineingeht.
-Mehr als `zeilen_kabel` Zeilen (Vorgabe 2) werden es nicht; darunter wird die
-Schrift kleiner, und was auch klein nicht passt, wird gekürzt:
+Gedeckelt wird die Zahl der Zeilen hier nicht — der Block ist breit genug, und
+was auch klein nicht passt, wird gekürzt:
 `zeilen_umbrechen()` und `umbruch_einpassen()` in `layout.py`
 brechen an Leerzeichen und an `/`, `-`, `_`. Muss ein Wort selbst
 umbrechen, wird es **mit Trennstrich zwischen den Silben** getrennt:
@@ -439,8 +439,10 @@ Zeichnungen üblich. Quer ist die Klammer so lang, wie das Kabel Zeilen
 belegt: ein langer Name passt dort hinein, statt in einer breiten Spalte
 Platz zu fressen, den Bezeichnung und Bemerkung besser brauchen können.
 Steuern lässt sich das je Blattvorlage über `kabel_gedreht`; die Vorlage
-*Knapp* hat eine breite Kabelspalte und lässt den Namen waagerecht. Wie viele
-Zeilen er dort wie auf der Verteilerbelegung bekommt, sagt `zeilen_kabel`.
+*Knapp* hat eine breite Kabelspalte und lässt den Namen waagerecht. Weil die
+Spalte schmal ist, bleibt es dort bei `zeilen_kabel` Zeilen (Vorgabe 2) —
+darunter wird die Schrift kleiner. Auf der Verteilerbelegung gilt der Deckel
+nicht, ihr Block ist breit.
 
 **Firma und Kunde tragen eine Anschrift, keine Zeile.** Im
 Projektdatendialog sind beide Felder mehrzeilig; Name, Straße und Ort stehen auf dem

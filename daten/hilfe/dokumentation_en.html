@@ -576,6 +576,9 @@ cell of the layout.</td><td><code>false</code></td></tr>
 <tr><td><code>kabel_gedreht</code></td><td><code>true</code> turns the cable name
 in the strip sheet sideways — for narrow cable columns.</td>
 <td><code>true</code></td></tr>
+<tr><td><code>zeilen_kabel</code></td><td>Onto how many lines the cable name in
+the cable column may wrap at most; below that the type gets smaller. On the
+frame layout the limit does not apply.</td><td>2</td></tr>
 </table>
 
 <p>The four font sizes stand in points under <code>schrift</code>:
@@ -689,8 +692,6 @@ sheet allows.</td><td>6 / 9</td></tr>
 name may take up at most (0.1 to 1).</td><td>0.82</td></tr>
 <tr><td><code>polster_kabel</code></td><td>How much air stays at the frame of
 the block at least.</td><td>0.6</td></tr>
-<tr><td><code>zeilen_kabel</code></td><td>Onto how many lines the cable name
-may wrap at most; below that the type gets smaller.</td><td>2</td></tr>
 </table>
 
 <h4>A complete example</h4>
@@ -759,9 +760,8 @@ divided — that is where you click.</li>
 well as vertically, and as large as the block carries it — with air all round,
 so that a small block does not look crammed. When it gets tight the name is
 <b>wrapped</b> first and only then made smaller: two lines at full size read
-better than one shrunken one. It does not go beyond <b>two lines</b> — more
-would stand in the block like a paragraph; below that the type gets smaller
-(<code>zeilen_kabel</code> in the sheet template). It wraps at spaces and at the
+better than one shrunken one. How many lines it takes is up to the block: no
+limit applies here. It wraps at spaces and at the
 characters that structure a cable name anyway (<code>/</code>, <code>-</code>,
 <code>_</code>). If that does not suffice either, the word is <b>hyphenated —
 with a hyphen and between its syllables</b> (<i>Wohn-zim-mer</i>,
@@ -772,7 +772,9 @@ in the workbook as well.</li>
 <li>On the <b>strip sheet</b> the same holds for the cable column: the row
 lines end before it, the cable stands as a block across its rows, and there too
 the name wraps before it shrinks. Read sideways the lines stand <b>next to each
-other</b> — the first one left, the second to its right.</li>
+other</b> — the first one left, the second to its right. The column is narrow,
+so it stops at <b>two lines</b> (<code>zeilen_kabel</code> in the sheet
+template); if that does not suffice, the type gets smaller.</li>
 </ul>
 
 <h2><a name="ausgabe"></a>9 &nbsp; Output</h2>

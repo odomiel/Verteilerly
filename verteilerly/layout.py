@@ -1186,8 +1186,6 @@ class Kabelfeld:
     breite: float
     hoehe: float
     groesse: float
-    #: Auf wie viele Zeilen der Name hoechstens umbricht.
-    zeilen: int
 
 
 def kabelfeld(
@@ -1207,7 +1205,6 @@ def kabelfeld(
         breite=platz_b,
         hoehe=platz_h,
         groesse=kabelbeschriftung_groesse(platz_h, vorlage),
-        zeilen=vorlage.zeilen_kabel,
     )
 
 
@@ -1296,11 +1293,13 @@ def verteilerbelegung(
             # Mitten in den Block, so gross wie er es traegt, notfalls
             # auf mehrere Zeilen: der Kabelname ist die Auskunft dieses
             # Blattes, nicht eine Fussnote in seiner linken oberen Ecke.
+            # Gedeckelt wird die Zahl der Zeilen hier nicht - der Block
+            # ist breit, und ein dritte Zeile ist besser als ein Rest
+            # mit Punkten.
             feld = kabelfeld(bx, ky, bb, zelle_h, vorlage)
             blatt.text(
                 feld.x, feld.y, feld.breite, feld.hoehe,
                 beschriftung, feld.groesse, MITTE, umbruch=True,
-                zeilen_hoechstens=feld.zeilen,
             )
 
     # Die DA-Nummern zuletzt, damit sie auch auf einem Kabelblock stehen.

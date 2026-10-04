@@ -67,6 +67,7 @@ ZAHLEN = (
         ("kopfzeile_hoehe", "Kopfzeile", "mm", 3.0, 20.0, 0.5),
         ("zeilenhoehe_max", "Zeilenhöhe höchstens", "mm", 1.0, 20.0, 0.1),
         ("zeilenhoehe_min", "Zeilenhöhe mindestens", "mm", 1.0, 20.0, 0.1),
+        ("zeilen_kabel", "Zeilen des Kabelnamens", "", 1.0, 6.0, 1.0),
     )),
     ("Schriftgrößen", (
         ("schrift_gross", "Groß", "pt", 4.0, 40.0, 0.5),
@@ -82,7 +83,6 @@ ZAHLEN = (
         ("abstand_buchten", "Abstand der Buchten", "mm", 0.0, 40.0, 0.5),
         ("fuellgrad_kabel", "Füllgrad des Kabelnamens", "", 0.1, 1.0, 0.02),
         ("polster_kabel", "Polster um den Kabelnamen", "mm", 0.0, 5.0, 0.1),
-        ("zeilen_kabel", "Zeilen des Kabelnamens", "", 1.0, 6.0, 1.0),
     )),
 )
 # Die Hoehe des Schriftfeldes steht bei seinen Bloecken, nicht beim Blatt.

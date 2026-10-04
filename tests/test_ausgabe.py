@@ -304,14 +304,14 @@ class TestSchriftgroessen(unittest.TestCase):
         from verteilerly.layout import Text, textzeilen, verteilerbelegungen
 
         v = Verteiler.aus_geometrie(1, 4, 10, name="Muster")
-        v.kabel_anlegen("Melderkreis Erdgeschoss West", 1, 1, 2)
+        v.kabel_anlegen("Melderkreis Erdgeschoss West", 1, 1, 1)
         blatt = verteilerbelegungen(Projekt(verteiler=v))[0]
         feld = next(
             e for e in blatt.elemente
             if isinstance(e, Text) and e.text.startswith("Melderkreis")
         )
         groesse, zeilen = textzeilen(feld)
-        self.assertEqual(zeilen, ["Melderkreis", "Erdgeschoss West"])
+        self.assertEqual(zeilen, ["Melderkreis", "Erdgeschoss", "West"])
         # Was das gemeinsame Mass sagt, haelt auch Helvetica ein: das PDF
         # muss nicht nachtraeglich verkleinern.
         for zeile in zeilen:
@@ -381,43 +381,48 @@ class TestSchriftgroessen(unittest.TestCase):
             with self.subTest(wort=wort):
                 self.assertIn(wort, text)
 
-    def test_der_kabelname_bleibt_bei_zwei_zeilen(self):
-        """Was auch zweizeilig nicht passt, wird kleiner gesetzt.
+    def test_nur_die_kabelspalte_bleibt_bei_zwei_zeilen(self):
+        """Der Deckel gilt der schmalen Spalte, nicht dem breiten Block.
 
-        Die Blattvorlage sagt mit ``zeilen_kabel``, wie viele Zeilen der
-        Name bekommt; drei standen im Block wie ein Absatz.
+        In der Kabelspalte des Leistenblatts stehen hoechstens
+        ``zeilen_kabel`` Zeilen; auf der Verteilerbelegung nimmt der Name
+        so viele, wie der Block sie traegt - lieber drei Zeilen als ein
+        Rest mit Punkten.
         """
         from verteilerly.blattvorlagen import STANDARD
-        from verteilerly.layout import Text, textzeilen, verteilerbelegungen
-
-        v = Verteiler.aus_geometrie(1, 4, 10, name="Muster")
-        lang = "Melderkreis Erdgeschoss West"
-        v.kabel_anlegen(lang, 1, 1, 2)
-        blatt = verteilerbelegungen(Projekt(verteiler=v))[0]
-        feld = next(
-            e for e in blatt.elemente if isinstance(e, Text) and e.text == lang
+        from verteilerly.layout import (
+            Text,
+            leistenblatt,
+            textzeilen,
+            verteilerbelegungen,
         )
-        self.assertEqual(feld.zeilen_hoechstens, STANDARD.zeilen_kabel)
-        groesse, zeilen = textzeilen(feld)
+
+        lang = "Melderkreis Erdgeschoss West"
+        v = Verteiler.aus_geometrie(1, 4, 10, name="Muster")
+        v.kabel_anlegen(lang, 1, 1, 1)
+        projekt = Projekt(verteiler=v)
+
+        spalte = next(
+            e for e in leistenblatt(projekt, 1).elemente
+            if isinstance(e, Text) and e.text == lang
+        )
+        self.assertEqual(spalte.zeilen_hoechstens, STANDARD.zeilen_kabel)
+        groesse, zeilen = textzeilen(spalte)
         self.assertEqual(len(zeilen), 2)
-        self.assertLess(groesse, feld.groesse)
+        self.assertEqual(" ".join(zeilen), lang)
+
+        block = next(
+            e for e in verteilerbelegungen(projekt)[0].elemente
+            if isinstance(e, Text) and e.text == lang
+        )
+        self.assertEqual(block.zeilen_hoechstens, 0)
+        groesse, zeilen = textzeilen(block)
+        self.assertEqual(len(zeilen), 3)
+        self.assertEqual(" ".join(zeilen), lang)
         for zeile in zeilen:
             self.assertLessEqual(
-                stringWidth(zeile, SCHRIFT, groesse), feld.breite * PT_JE_MM
+                stringWidth(zeile, SCHRIFT, groesse), block.breite * PT_JE_MM
             )
-
-        # Die Kehrseite: ueber eine einzige Doppelader passt derselbe
-        # Name auch auf zwei Zeilen nicht mehr - dann wird gekuerzt,
-        # statt eine dritte Zeile anzufangen.
-        eng = Verteiler.aus_geometrie(1, 4, 10, name="Muster")
-        eng.kabel_anlegen(lang, 1, 1, 1)
-        blatt = verteilerbelegungen(Projekt(verteiler=eng))[0]
-        feld = next(
-            e for e in blatt.elemente if isinstance(e, Text) and e.text == lang
-        )
-        _, zeilen = textzeilen(feld)
-        self.assertEqual(len(zeilen), 2)
-        self.assertTrue(zeilen[-1].endswith("…"))
 
     def test_kein_text_eines_blattes_laeuft_ueber(self):
         """Die Probe aufs Ganze: jedes Feld jedes Blattes nachgemessen."""

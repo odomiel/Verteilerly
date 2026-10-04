@@ -45,13 +45,13 @@ BLATTSCHLUESSEL = (
     "schrift", "spalten", "schriftfeld", "schriftfeld_art",
     "schriftfeld_anteile", "eigene_felder", "eigene_felder_auf",
     "buchten_je_blatt", "da_nummern",
-    "kabel_gedreht", "belegung",
+    "kabel_gedreht", "zeilen_kabel", "belegung",
 )
 SCHRIFTSCHLUESSEL = ("gross", "mittel", "normal", "klein")
 BELEGUNGSSCHLUESSEL = (
     "zelle_breite", "zelle_hoehe", "leistenlabel",
     "abstand_leisten", "abstand_buchten",
-    "fuellgrad_kabel", "polster_kabel", "zeilen_kabel",
+    "fuellgrad_kabel", "polster_kabel",
 )
 SPALTENSCHLUESSEL = ("feld", "ueberschrift", "anteil", "ausrichtung")
 SCHRIFTFELDSCHLUESSEL = ("marke", "ausrichtung")
@@ -192,6 +192,11 @@ class Blattvorlage:
     # Die Kabelspalte ist schmal; quer gelesen passt der Name trotzdem
     # hinein, statt auf Winzigkeit zu schrumpfen.
     kabel_gedreht: bool = True
+    # Auf wie viele Zeilen der Kabelname in der schmalen Kabelspalte des
+    # Leistenblatts hoechstens umbricht. Der Block der Verteilerbelegung
+    # ist breit und zaehlt nicht mit - dort nimmt der Name so viele
+    # Zeilen, wie er traegt.
+    zeilen_kabel: int = 2
     zelle_breite: float = 6.0
     zelle_hoehe: float = 9.0
     leistenlabel: float = 14.0
@@ -202,10 +207,6 @@ class Blattvorlage:
     # liesse den Block vollgestopft aussehen.
     fuellgrad_kabel: float = 0.82
     polster_kabel: float = 0.6
-    # Auf wie viele Zeilen der Kabelname hoechstens umbricht. Mehr als
-    # zwei stehen im Block wie ein Absatz; darunter wird lieber die
-    # Schrift kleiner.
-    zeilen_kabel: int = 2
 
     def __post_init__(self) -> None:
         # Eine blosse Marke darf fuer sich stehen: ein von Hand gebautes
@@ -406,6 +407,9 @@ def blattvorlage_aus_yaml(
         ),
         da_nummern=bool(inhalt.get("da_nummern", STANDARD.da_nummern)),
         kabel_gedreht=bool(inhalt.get("kabel_gedreht", STANDARD.kabel_gedreht)),
+        zeilen_kabel=int(
+            _zahl(inhalt, "zeilen_kabel", STANDARD.zeilen_kabel, wo)
+        ),
         zelle_breite=_zahl(belegung, "zelle_breite", STANDARD.zelle_breite, wo),
         zelle_hoehe=_zahl(belegung, "zelle_hoehe", STANDARD.zelle_hoehe, wo),
         leistenlabel=_zahl(belegung, "leistenlabel", STANDARD.leistenlabel, wo),
@@ -419,9 +423,6 @@ def blattvorlage_aus_yaml(
             belegung, "fuellgrad_kabel", STANDARD.fuellgrad_kabel, wo
         ),
         polster_kabel=_zahl(belegung, "polster_kabel", STANDARD.polster_kabel, wo),
-        zeilen_kabel=int(
-            _zahl(belegung, "zeilen_kabel", STANDARD.zeilen_kabel, wo)
-        ),
     )
     if vorlage.schriftfeld_art not in SCHRIFTFELDARTEN:
         bekannt = ", ".join(SCHRIFTFELDARTEN)
@@ -563,7 +564,8 @@ def blattvorlage_als_yaml(vorlage: Blattvorlage) -> dict:
         inhalt["eigene_felder"] = list(vorlage.eigene_felder)
     if vorlage.eigene_felder_auf != STANDARD.eigene_felder_auf:
         inhalt["eigene_felder_auf"] = list(vorlage.eigene_felder_auf)
-    for feld in ("buchten_je_blatt", "da_nummern", "kabel_gedreht"):
+    for feld in ("buchten_je_blatt", "da_nummern", "kabel_gedreht",
+                 "zeilen_kabel"):
         _abweichung(inhalt, feld, getattr(vorlage, feld), getattr(STANDARD, feld))
     belegung: dict = {}
     for feld in BELEGUNGSSCHLUESSEL:
