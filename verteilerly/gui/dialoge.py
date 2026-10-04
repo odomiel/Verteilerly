@@ -319,6 +319,15 @@ class NeuerVerteilerDialog(PassenderDialog):
         )
         self.buchstaben.setChecked(leisten == LEISTEN_BUCHSTABEN)
 
+        # Auch die Leserichtung der Belegung gehoert zum Verteiler, und wer
+        # einen von rechts belegten dokumentiert, weiss es beim Anlegen.
+        self.belegung_umgekehrt = QCheckBox(u("Verteilerbelegung umkehren"))
+        self.belegung_umgekehrt.setToolTip(
+            u("Die Doppeladern stehen auf der Verteilerbelegung von rechts "
+              "nach links. Später unter Einstellungen ▸ Verteilerbelegung "
+              "umkehren zu ändern.")
+        )
+
         # Die Projektdaten gleich mit: was in der Verteilerly.conf gemerkt
         # ist, steht schon drin und lässt sich hier für diesen Verteiler
         # ändern. Er sitzt in einem Rollbereich, sonst wäre der
@@ -349,6 +358,7 @@ class NeuerVerteilerDialog(PassenderDialog):
         links.addWidget(self.eigen)
         links.addWidget(eigenkasten)
         links.addWidget(self.buchstaben)
+        links.addWidget(self.belegung_umgekehrt)
         links.addStretch(1)
 
         nebeneinander = QHBoxLayout()
@@ -546,6 +556,7 @@ class NeuerVerteilerDialog(PassenderDialog):
             ausgeblendet=self.projektdaten.ausgeblendet()
             | self.projektdaten.verborgene(),
             leisten_schreibweise=self.leisten_schreibweise(),
+            belegung_umgekehrt=self.belegung_umgekehrt.isChecked(),
         )
 
 

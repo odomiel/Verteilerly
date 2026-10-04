@@ -338,6 +338,19 @@ class Vorschau(QWidget):
                 self.auswahl.setCurrentIndex(i)
                 return
 
+    def belegung_zeigen(self) -> bool:
+        """Springt zur Verteilerbelegung - zum ersten ihrer Blaetter.
+
+        Nicht am Titel zu erkennen: bei mehreren Buchten heisst jedes
+        Belegungsblatt nach seiner Bucht. Die Blattfolge ist dagegen
+        fest - Deckblatt, Belegung(en), dann je Leiste ein Blatt -, also
+        ist es das zweite Blatt. Zurueck kommt, ob es eines gab.
+        """
+        if len(self.blaetter) < 2:
+            return False
+        self.auswahl.setCurrentIndex(1)
+        return True
+
     def _schieben(self, richtung: int) -> None:
         neu = self.auswahl.currentIndex() + richtung
         if 0 <= neu < self.auswahl.count():

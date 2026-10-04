@@ -163,6 +163,9 @@ class Hauptfenster(QMainWindow):
         self.veraendert = False
         # Die Staende fuer das Zuruecknehmen: was war, was rueckgaengig
         # gemacht wurde, und der Stand seit der letzten Aenderung.
+        #: Soll die Vorschau beim naechsten Auffrischen die
+        #: Verteilerbelegung zeigen? Das Umkehren sieht man nur dort.
+        self._vorschau_belegung = False
         self._rueckgaengig: list[dict] = []
         self._wiederherstellen: list[dict] = []
         self._stand: dict | None = None
@@ -798,7 +801,8 @@ class Hauptfenster(QMainWindow):
         self.veraendert = True
         self._titel_setzen()
         self.aktionen_auffrischen()
-        self._vorschau_anstossen()
+        # Zu sehen ist die Aenderung nur auf der Belegung - also dorthin.
+        self._vorschau_anstossen(belegung=True)
         self.statusBar().showMessage(
             u("Die Verteilerbelegung läuft von rechts nach links")
             if an
@@ -964,13 +968,24 @@ class Hauptfenster(QMainWindow):
             not (self.uebersichtsbereich.isHidden() and self.leistenansicht.isHidden())
         )
 
-    def _vorschau_anstossen(self) -> None:
-        """Sammelt schnelle Aenderungen, statt bei jedem Tastendruck neu zu bauen."""
+    def _vorschau_anstossen(self, belegung: bool = False) -> None:
+        """Sammelt schnelle Aenderungen, statt bei jedem Tastendruck neu zu bauen.
+
+        ``belegung`` laesst die Vorschau danach die Verteilerbelegung
+        zeigen - fuer Aenderungen, die man nur dort sieht.
+        """
+        self._vorschau_belegung = self._vorschau_belegung or belegung
         if self.vorschau.isVisible():
             self.vorschau_takt.start()
 
     def _vorschau_auffrischen(self) -> None:
         self.vorschau.aktualisieren()
+        # Wer eine Aenderung am Belegungsblatt angestossen hat, will sie
+        # auch sehen: dieses Blatt geht dann dem der gewaehlten Leiste vor.
+        if self._vorschau_belegung:
+            self._vorschau_belegung = False
+            if self.vorschau.belegung_zeigen():
+                return
         nummer = self.leistenansicht.modell.leiste_nr
         if nummer is not None:
             self.vorschau.blatt_zeigen(f"Leiste {self._leistenname(nummer)}")

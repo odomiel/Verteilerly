@@ -344,7 +344,10 @@ wie an einem Verteiler, der von rechts belegt wird. Gedreht wird allein das
 Bild dieses Blattes, in Vorschau, PDF und Excel-Mappe gleichermaßen; DA 1
 bleibt DA 1, und Leistenblätter, Datenlisten und Adressen rühren sich nicht.
 `belegung_umgekehrt` gehört dem Verteiler (Projektdatei, Formatversion 11,
-geschrieben nur wenn gesetzt), und der Haken lässt sich zurücknehmen.
+geschrieben nur wenn gesetzt), und der Haken lässt sich zurücknehmen; die
+Vorschau springt dabei einmal auf die Belegung, weil man es nur dort sieht.
+Im Dialog *Neuer Verteiler* steht derselbe Haken unter *Buchstaben statt
+Zahlen* — beides gehört zum Verteiler.
 Gerechnet wird an einer Stelle — `layout._belegungsplatz()` für das Blatt,
 `mappe._belegungsspalte()` für das Raster.
 

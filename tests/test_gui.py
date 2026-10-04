@@ -1265,6 +1265,11 @@ class TestVorschau(unittest.TestCase):
         self.vorschau = Vorschau()
         self.vorschau.projekt_setzen(Projekt(verteiler=self.v))
 
+    def test_die_belegung_ist_das_zweite_blatt(self):
+        """belegung_zeigen() springt dorthin, auch wenn sie nach Buchten heißt."""
+        self.assertTrue(self.vorschau.belegung_zeigen())
+        self.assertEqual(self.vorschau.auswahl.currentIndex(), 1)
+
     def test_blattfolge_steht_zur_wahl(self):
         self.assertEqual(self.vorschau.auswahl.count(), 6)
         self.assertEqual(self.vorschau.auswahl.itemText(0), "Deckblatt")
@@ -2684,6 +2689,27 @@ class TestMenuezustaende(unittest.TestCase):
         f.belegung_umkehren(True)
         self.assertFalse(f.aktion_belegung_umgekehrt.isChecked())
 
+    def test_die_vorschau_springt_beim_umkehren_zur_belegung(self):
+        """Zu sehen ist die Änderung nur dort."""
+        f = self.fenster
+        self._projekt()
+        f.leistenansicht.leiste_zeigen(2)
+        f._vorschau_auffrischen()
+        self.assertEqual(f.vorschau.auswahl.currentText(), "Leiste 2")
+        f.belegung_umkehren(True)
+        f._vorschau_auffrischen()
+        self.assertEqual(f.vorschau.auswahl.currentText(), "Verteilerbelegung")
+
+    def test_danach_zeigt_sie_wieder_die_bearbeitete_leiste(self):
+        f = self.fenster
+        self._projekt()
+        f.leistenansicht.leiste_zeigen(2)
+        f.belegung_umkehren(True)
+        f._vorschau_auffrischen()
+        f._belegung_geaendert()
+        f._vorschau_auffrischen()
+        self.assertEqual(f.vorschau.auswahl.currentText(), "Leiste 2")
+
     def test_das_umkehren_laesst_sich_zuruecknehmen(self):
         f = self.fenster
         self._projekt()
@@ -3199,6 +3225,27 @@ class TestEinstellungen(unittest.TestCase):
         )
 
 
+def _layout_mit(widget):
+    """Das Layout, das dieses Widget traegt, und seine Stelle darin.
+
+    Die Haken des Dialogs sitzen in einer verschachtelten Box - das
+    Layout des Elternfensters kennt sie nicht direkt.
+    """
+    eltern = widget.parentWidget()
+    stapel = [eltern.layout()] if eltern is not None else []
+    while stapel:
+        aufbau = stapel.pop()
+        if aufbau is None:
+            continue
+        for i in range(aufbau.count()):
+            eintrag = aufbau.itemAt(i)
+            if eintrag.widget() is widget:
+                return aufbau, i
+            if eintrag.layout() is not None:
+                stapel.append(eintrag.layout())
+    return None, -1
+
+
 @unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
 class TestProjektdatenImNeuenVerteiler(unittest.TestCase):
     """Die gemerkten Vorgaben stehen gleich beim Anlegen zur Hand."""
@@ -3267,6 +3314,22 @@ class TestProjektdatenImNeuenVerteiler(unittest.TestCase):
             all(felder.form.isRowVisible(z) for z in felder.zeilen.values())
         )
         self.assertEqual(felder.verborgene(), set())
+
+    def test_die_belegung_laesst_sich_gleich_beim_anlegen_umkehren(self):
+        """Wer einen von rechts belegten Verteiler anlegt, weiß es jetzt."""
+        dialog = self._dialog()
+        self.assertFalse(dialog.belegung_umgekehrt.isChecked())
+        self.assertFalse(dialog.projekt().belegung_umgekehrt)
+        dialog.belegung_umgekehrt.setChecked(True)
+        self.assertTrue(dialog.projekt().belegung_umgekehrt)
+
+    def test_der_haken_steht_unter_den_buchstaben(self):
+        """Beides gehört zum Verteiler und steht darum beisammen."""
+        dialog = self._dialog()
+        aufbau, stelle = _layout_mit(dialog.buchstaben)
+        self.assertIsNotNone(aufbau, "der Haken sitzt in keinem Layout")
+        nachbar = aufbau.itemAt(stelle + 1)
+        self.assertIs(nachbar.widget(), dialog.belegung_umgekehrt)
 
     def test_gemerkte_werte_stehen_schon_drin(self):
         dialog = self._dialog(

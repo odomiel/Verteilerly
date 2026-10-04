@@ -33,6 +33,9 @@ Spalten, Schriftgrößen und Ränder der Blätter. Später unter Einstellungen �
 Aus Vorlage: From template
 Benutzerdefiniert: Custom
 Buchstaben statt Zahlen: Letters instead of numbers
+Verteilerbelegung umkehren: Reverse the frame layout
+? "Die Doppeladern stehen auf der Verteilerbelegung von rechts nach links. Später unter Einstellungen ▸ Verteilerbelegung umkehren zu ändern."
+: "On the frame layout the pairs run from right to left. Can be changed later under Settings ▸ Reverse the frame layout."
 ' DA': ' pairs'
 'Erweiterte Verteiler: Buchten einzeln festlegen': 'Advanced frames: set up each bay separately'
 Jede Bucht bekommt ihre eigene Zahl an Leisten und ihre eigene Leistengröße. Eine Leistengröße je Bucht.: Every
