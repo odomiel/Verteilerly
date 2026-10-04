@@ -308,12 +308,22 @@ class Blattflaeche(QWidget):
         return max(kleinste, groesse)
 
     def _flagge(self, ausrichtung: str) -> int:
+        """Wie Qt den Text in seinem Kasten setzt.
+
+        ``TextDontClip`` gehoert dazu: eine Zeile bekommt einen Kasten
+        von einer Zeilenhoehe, und die ist knapper als die Schrift hoch
+        ist (Oberlaenge plus Unterlaenge). Ohne das schnitte Qt die
+        Unterlaengen von g, y und p an jeder umgebrochenen Zeile ab -
+        gezeichnet wird ohnehin nur, was das Layoutmodell vorgemessen
+        hat.
+        """
         waagerecht = {
             "links": Qt.AlignmentFlag.AlignLeft,
             "mitte": Qt.AlignmentFlag.AlignHCenter,
             "rechts": Qt.AlignmentFlag.AlignRight,
         }[ausrichtung]
-        return int(waagerecht | Qt.AlignmentFlag.AlignVCenter)
+        return int(waagerecht | Qt.AlignmentFlag.AlignVCenter
+                   | Qt.TextFlag.TextDontClip)
 
 
 class Vorschau(QWidget):

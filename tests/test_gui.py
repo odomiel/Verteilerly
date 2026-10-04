@@ -1364,6 +1364,88 @@ class TestVorschau(unittest.TestCase):
 
 
 @unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
+class TestUnterlaengenInDerVorschau(unittest.TestCase):
+    """Der Schwanz von g und y gehoert zum Buchstaben.
+
+    Eine umgebrochene Zeile bekommt einen Kasten von einer Zeilenhoehe,
+    und die ist knapper als die Schrift hoch ist. Ohne ``TextDontClip``
+    schnitte Qt jede Zeile an ihrem Kasten ab - und zwar genau dort, wo
+    die naechste anfaengt.
+    """
+
+    def _baender(self, beschnitten: bool) -> list[tuple[int, int]]:
+        """Die Baender dunkler Zeilen im Kabelblock - von oben nach unten."""
+        from verteilerly.gui.vorschau import Blattflaeche
+        from verteilerly.layout import Text as Blatttext
+        from verteilerly.layout import verteilerbelegungen
+
+        verteiler = Verteiler.aus_geometrie(1, 4, 10, name="Muster")
+        verteiler.kabel_anlegen("Gygy Gygy Gygy", 1, 1, 1)
+        blatt = verteilerbelegungen(Projekt(verteiler=verteiler))[0]
+        flaeche = Blattflaeche()
+        self.addCleanup(flaeche.close)
+        if beschnitten:
+            # So stand es bis 2026.10.04: ohne TextDontClip.
+            flaeche._flagge = lambda _a: int(
+                Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter
+            )
+        # Gross genug, dass die drei Zeilen sich nicht beruehren.
+        flaeche.resize(2200, 3000)
+        flaeche.blatt_setzen(blatt)
+        bild = flaeche.grab().toImage()
+
+        skala = flaeche._skala(blatt)
+        links = (flaeche.width() - blatt.breite * skala) / 2
+        oben = (flaeche.height() - blatt.hoehe * skala) / 2
+        feld = next(
+            e for e in blatt.elemente
+            if isinstance(e, Blatttext) and e.text.startswith("Gygy")
+        )
+        x0 = int(links + feld.x * skala) + 1
+        x1 = int(links + (feld.x + feld.breite) * skala) - 1
+        y0 = int(oben + feld.y * skala) - 10
+        y1 = int(oben + (feld.y + feld.hoehe) * skala) + 10
+        dunkel = [
+            y for y in range(y0, y1)
+            if any(bild.pixelColor(x, y).lightness() < 120 for x in range(x0, x1))
+        ]
+        self.assertTrue(dunkel, "keine Schrift im Kabelblock")
+        baender, erste, letzte = [], dunkel[0], dunkel[0]
+        for y in dunkel[1:]:
+            if y == letzte + 1:
+                letzte = y
+                continue
+            baender.append((erste, letzte))
+            erste = letzte = y
+        baender.append((erste, letzte))
+        return baender
+
+    def test_drei_zeilen_drei_baender(self):
+        self.assertEqual(len(self._baender(beschnitten=False)), 3)
+
+    def test_der_schwanz_wird_nicht_abgeschnitten(self):
+        """Beschnitten fehlen unten ein paar Reihen - an jeder Zeile."""
+        ganz = self._baender(beschnitten=False)
+        beschnitten = self._baender(beschnitten=True)
+        self.assertEqual(len(ganz), len(beschnitten))
+        for voll, gestutzt in zip(ganz, beschnitten):
+            with self.subTest(zeile=voll):
+                self.assertEqual(voll[0], gestutzt[0])    # oben gleich
+                self.assertGreater(voll[1], gestutzt[1])  # unten mehr
+
+    def test_die_flagge_sagt_es(self):
+        from verteilerly.gui.vorschau import Blattflaeche
+
+        flaeche = Blattflaeche()
+        self.addCleanup(flaeche.close)
+        for ausrichtung in ("links", "mitte", "rechts"):
+            with self.subTest(ausrichtung=ausrichtung):
+                self.assertTrue(
+                    flaeche._flagge(ausrichtung) & int(Qt.TextFlag.TextDontClip)
+                )
+
+
+@unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
 class TestVorschauVergroessern(unittest.TestCase):
     """Vergroessern, und Rollbalken, sobald das Blatt nicht mehr passt."""
 
