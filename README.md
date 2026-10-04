@@ -578,6 +578,16 @@ Die Blätter entstehen in `layout.py` als Zeichenanweisungen in Millimetern
 QPainter, die PDF-Ausgabe mit ReportLab: eine einzige Quelle für das
 Blattbild, Vorschau und Ausdruck können nicht auseinanderlaufen.
 
+**Die Vorschau lässt sich vergrößern**: neben der Blattvorlage stehen `−`,
+eine Auswahl und `+`. *Einpassen* legt das Blatt ins Fenster (so fängt sie an),
+die Stufen von 50 % bis 400 % zeigen es in wahrer Größe — bei 100 % ist ein
+Millimeter des Blattes einer auf dem Bildschirm, gerechnet aus
+`physicalDotsPerInch` des Schirms. Dasselbe tut Strg mit dem Mausrad; ohne Strg
+rollt es nur. Die Blattfläche steckt dafür in einem `QScrollArea` mit
+`setWidgetResizable(True)`, und der Griff ist ihre **Mindestgröße**: eingepasst
+ist sie klein (240 × 300), vergrößert genau so groß wie das Blatt — dann zeigt
+der Rollbereich von selbst seine Balken.
+
 Die drei Wege aus dem Programm heraus stehen unter *Datei ▸ Exportieren*
 beieinander — PDF (Strg+E), Excel-Mappe und CSV. Vor dem PDF fragt ein kleiner Dialog, welche
 Blattarten hineinkommen — Deckblatt, Verteilerbelegung, Leistenblätter;

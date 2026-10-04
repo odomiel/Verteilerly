@@ -1364,6 +1364,97 @@ class TestVorschau(unittest.TestCase):
 
 
 @unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
+class TestVorschauVergroessern(unittest.TestCase):
+    """Vergroessern, und Rollbalken, sobald das Blatt nicht mehr passt."""
+
+    def setUp(self):
+        from verteilerly.gui.vorschau import Vorschau
+
+        verteiler = Verteiler.aus_geometrie(1, 4, 10, name="Muster")
+        verteiler.kabel_anlegen("Halle Ost", 1, 1, 2)
+        self.vorschau = Vorschau()
+        self.addCleanup(self.vorschau.close)
+        self.vorschau.resize(520, 620)
+        self.vorschau.projekt_setzen(Projekt(verteiler=verteiler))
+        self.vorschau.show()
+        ANWENDUNG.processEvents()
+
+    def _balken(self):
+        rollbereich = self.vorschau.rollbereich
+        return (rollbereich.horizontalScrollBar().isVisible(),
+                rollbereich.verticalScrollBar().isVisible())
+
+    def _rad(self, strg: bool, hinauf: bool = True):
+        from PySide6.QtCore import QPoint, QPointF
+        from PySide6.QtGui import QWheelEvent
+
+        return QWheelEvent(
+            QPointF(50, 50), QPointF(50, 50), QPoint(0, 0),
+            QPoint(0, 120 if hinauf else -120),
+            Qt.MouseButton.NoButton,
+            Qt.KeyboardModifier.ControlModifier if strg
+            else Qt.KeyboardModifier.NoModifier,
+            Qt.ScrollPhase.NoScrollPhase, False,
+        )
+
+    def test_eingepasst_braucht_es_keine_balken(self):
+        from verteilerly.gui.vorschau import EINPASSEN
+
+        self.assertEqual(self.vorschau.flaeche.zoom, EINPASSEN)
+        self.assertEqual(self._balken(), (False, False))
+
+    def test_vergroessert_erscheinen_die_balken(self):
+        """Die Flaeche wird groesser als die Sicht - darum rollt sie."""
+        self.vorschau.zoom_stufen(1)
+        ANWENDUNG.processEvents()
+        sicht = self.vorschau.rollbereich.viewport()
+        self.assertGreater(self.vorschau.flaeche.width(), sicht.width())
+        self.assertGreater(self.vorschau.flaeche.height(), sicht.height())
+        self.assertEqual(self._balken(), (True, True))
+
+    def test_vom_einpassen_geht_es_zur_wahren_groesse(self):
+        """Wer vergroessert, will nicht bei 50 % landen."""
+        self.vorschau.zoom_stufen(1)
+        self.assertEqual(self.vorschau.zoomwahl.currentData(), 1.0)
+        self.vorschau.zoomwahl.setCurrentIndex(0)
+        self.vorschau.zoom_stufen(-1)
+        self.assertEqual(self.vorschau.zoomwahl.currentData(), 0.5)
+
+    def test_an_den_enden_ist_schluss(self):
+        from verteilerly.gui.vorschau import ZOOMSTUFEN
+
+        for _ in range(len(ZOOMSTUFEN) + 3):
+            self.vorschau.zoom_stufen(1)
+        self.assertEqual(self.vorschau.zoomwahl.currentData(), ZOOMSTUFEN[-1])
+        self.assertFalse(self.vorschau.groesser.isEnabled())
+        for _ in range(len(ZOOMSTUFEN) + 3):
+            self.vorschau.zoom_stufen(-1)
+        self.assertEqual(self.vorschau.zoomwahl.currentData(), ZOOMSTUFEN[0])
+        self.assertFalse(self.vorschau.kleiner.isEnabled())
+
+    def test_strg_und_rad_vergroessern(self):
+        self.vorschau.flaeche.wheelEvent(self._rad(strg=True))
+        self.assertEqual(self.vorschau.zoomwahl.currentData(), 1.0)
+        self.vorschau.flaeche.wheelEvent(self._rad(strg=True, hinauf=False))
+        self.assertEqual(self.vorschau.zoomwahl.currentData(), 0.75)
+
+    def test_ohne_strg_rollt_das_rad_nur(self):
+        """Sonst spraenge die Vorschau beim Rollen in der Groesse."""
+        vorher = self.vorschau.zoomwahl.currentData()
+        rad = self._rad(strg=False)
+        self.vorschau.flaeche.wheelEvent(rad)
+        self.assertEqual(self.vorschau.zoomwahl.currentData(), vorher)
+        self.assertFalse(rad.isAccepted())
+
+    def test_die_groesse_bleibt_beim_blattwechsel(self):
+        self.vorschau.zoom_stufen(1)
+        self.vorschau.auswahl.setCurrentIndex(2)
+        ANWENDUNG.processEvents()
+        self.assertEqual(self.vorschau.flaeche.zoom, 1.0)
+        self.assertEqual(self._balken(), (True, True))
+
+
+@unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
 class TestKabelnameInDerBelegung(unittest.TestCase):
     """Mittig im Block, umgebrochen statt abgeschnitten.
 

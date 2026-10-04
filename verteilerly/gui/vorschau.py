@@ -10,10 +10,12 @@ from __future__ import annotations
 from PySide6.QtCore import QRectF, Qt, Signal
 from PySide6.QtGui import QColor, QFont, QFontMetricsF, QPainter, QPen
 from PySide6.QtWidgets import (
+    QApplication,
     QComboBox,
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QScrollArea,
     QSizePolicy,
     QVBoxLayout,
     QWidget,
@@ -35,6 +37,13 @@ from ..sprachen import u
 
 PUNKT_IN_MM = 25.4 / 72.0
 PAPIERRAND = 10  # Pixel um das Blatt herum
+# Die Stufen der Vergroesserung: 1.0 ist das Blatt in seiner wahren
+# Groesse, soweit der Bildschirm seine Masse kennt. 0 steht daneben fuer
+# "ins Fenster einpassen" - damit faengt die Vorschau an.
+EINPASSEN = 0.0
+ZOOMSTUFEN = (0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0)
+# Rechnet der Bildschirm Unsinn, bleibt es bei der ueblichen Dichte.
+PUNKTE_JE_ZOLL = 96.0
 # So weit darf die Schrift schrumpfen, damit ein Text in sein Feld passt -
 # dieselbe Untergrenze wie im PDF (ausgabe/pdf.py).
 KLEINSTE_SCHRIFT = 5.0
@@ -43,22 +52,77 @@ KLEINSTE_SCHRIFT = 5.0
 class Blattflaeche(QWidget):
     """Ein Blatt, in die verfuegbare Flaeche eingepasst."""
 
+    #: Strg und Mausrad: eine Stufe hinauf oder hinab.
+    zoom_gerollt = Signal(int)
+
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.blatt: Blatt | None = None
         self.farben: Farben = HELL
+        #: Bildpunkte je Millimeter, oder EINPASSEN fuer "ins Fenster".
+        self.zoom: float = EINPASSEN
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.setMinimumSize(240, 300)
 
     def blatt_setzen(self, blatt: Blatt | None) -> None:
         self.blatt = blatt
+        self._groesse_nachfuehren()
         self.update()
 
     def farben_setzen(self, farben: Farben) -> None:
         self.farben = farben
         self.update()
 
+    def zoom_setzen(self, faktor: float) -> None:
+        """Vergroessert das Blatt; ``EINPASSEN`` passt es ins Fenster.
+
+        Gemessen wird in wahrer Groesse: bei 1.0 ist ein Millimeter des
+        Blattes ein Millimeter auf dem Bildschirm, soweit der seine
+        Masse kennt.
+        """
+        self.zoom = max(faktor, EINPASSEN)
+        self._groesse_nachfuehren()
+        self.update()
+
+    def punkte_je_mm(self) -> float:
+        """Wie viele Bildpunkte ein Millimeter auf diesem Schirm hat."""
+        schirm = self.screen() or QApplication.primaryScreen()
+        dichte = schirm.physicalDotsPerInch() if schirm else PUNKTE_JE_ZOLL
+        # Manche Schirme melden gar nichts oder Unsinn.
+        if not 30.0 <= dichte <= 600.0:
+            dichte = PUNKTE_JE_ZOLL
+        return dichte / 25.4
+
+    def _groesse_nachfuehren(self) -> None:
+        """Beim Vergroessern waechst die Flaeche - der Rollbereich merkt es.
+
+        Die Mindestgroesse ist der Griff dafuer: ein ``QScrollArea`` mit
+        ``setWidgetResizable`` macht seinen Inhalt so gross wie die
+        Sichtflaeche, aber nie kleiner als dessen Mindestmass. Ist das
+        Blatt groesser, erscheinen die Rollbalken von selbst.
+        """
+        if self.blatt is None or self.zoom == EINPASSEN:
+            self.setMinimumSize(240, 300)
+            return
+        skala = self.zoom * self.punkte_je_mm()
+        self.setMinimumSize(
+            int(self.blatt.breite * skala) + 2 * PAPIERRAND,
+            int(self.blatt.hoehe * skala) + 2 * PAPIERRAND,
+        )
+
+    def wheelEvent(self, ereignis) -> None:  # noqa: N802 - Qt-Name
+        """Strg und Mausrad vergroessern, sonst rollt der Rollbereich."""
+        if ereignis.modifiers() & Qt.KeyboardModifier.ControlModifier:
+            schritt = ereignis.angleDelta().y()
+            if schritt:
+                self.zoom_gerollt.emit(1 if schritt > 0 else -1)
+                ereignis.accept()
+                return
+        ereignis.ignore()
+
     def _skala(self, blatt: Blatt) -> float:
+        if self.zoom != EINPASSEN:
+            return self.zoom * self.punkte_je_mm()
         breite = self.width() - 2 * PAPIERRAND
         hoehe = self.height() - 2 * PAPIERRAND
         return max(0.05, min(breite / blatt.breite, hoehe / blatt.hoehe))
@@ -295,18 +359,48 @@ class Vorschau(QWidget):
         kopf.addWidget(self.vor)
         kopf.addWidget(self.zaehler)
 
+        self.kleiner = QPushButton("−")
+        self.groesser = QPushButton("+")
+        for knopf in (self.kleiner, self.groesser):
+            knopf.setFixedWidth(30)
+            knopf.setStyleSheet("padding: 4px 0;")
+        self.kleiner.setToolTip(u("Kleiner (Strg und Mausrad)"))
+        self.groesser.setToolTip(u("Größer (Strg und Mausrad)"))
+        self.kleiner.clicked.connect(lambda: self.zoom_stufen(-1))
+        self.groesser.clicked.connect(lambda: self.zoom_stufen(1))
+
+        self.zoomwahl = QComboBox()
+        self.zoomwahl.addItem(u("Einpassen"), EINPASSEN)
+        for stufe in ZOOMSTUFEN:
+            self.zoomwahl.addItem(u("{0} %").format(round(stufe * 100)), stufe)
+        self.zoomwahl.setToolTip(
+            u("Wie groß das Blatt gezeigt wird. Passt es nicht mehr ins "
+            "Fenster, erscheinen Rollbalken.")
+        )
+        self.zoomwahl.currentIndexChanged.connect(self._zoom_gewaehlt)
+
         zweite = QHBoxLayout()
         zweite.setContentsMargins(0, 0, 0, 6)
         zweite.addWidget(QLabel(u("Blattvorlage:")))
         zweite.addWidget(self.vorlagenname, 1)
+        zweite.addWidget(self.kleiner)
+        zweite.addWidget(self.zoomwahl)
+        zweite.addWidget(self.groesser)
 
         self.flaeche = Blattflaeche()
+        self.flaeche.zoom_gerollt.connect(self.zoom_stufen)
+        # Der Rollbereich macht die Flaeche so gross wie seine Sicht -
+        # und laesst ihr ihre Mindestgroesse, sobald vergroessert wird.
+        self.rollbereich = QScrollArea()
+        self.rollbereich.setWidgetResizable(True)
+        self.rollbereich.setFrameShape(QScrollArea.Shape.NoFrame)
+        self.rollbereich.setWidget(self.flaeche)
 
         gesamt = QVBoxLayout(self)
         gesamt.setContentsMargins(8, 8, 8, 8)
         gesamt.addLayout(kopf)
         gesamt.addLayout(zweite)
-        gesamt.addWidget(self.flaeche, 1)
+        gesamt.addWidget(self.rollbereich, 1)
 
     # -- Zustand -----------------------------------------------------------
 
@@ -364,6 +458,33 @@ class Vorschau(QWidget):
             return False
         self.auswahl.setCurrentIndex(1)
         return True
+
+    # -- Vergroessern ------------------------------------------------------
+
+    def zoom_stufen(self, richtung: int) -> None:
+        """Eine Stufe hinauf oder hinab - vom Einpassen aus ab 100 %.
+
+        Wer einpasst und vergroessert, will das Blatt groesser sehen,
+        nicht kleiner: darum beginnt der Weg nach oben bei der wahren
+        Groesse, der nach unten bei der Stufe darunter.
+        """
+        stufen = list(ZOOMSTUFEN)
+        jetzt = self.zoomwahl.currentData()
+        if jetzt == EINPASSEN:
+            ziel = 1.0 if richtung > 0 else stufen[0]
+        else:
+            stelle = stufen.index(jetzt) + richtung
+            if not 0 <= stelle < len(stufen):
+                return
+            ziel = stufen[stelle]
+        self.zoomwahl.setCurrentIndex(self.zoomwahl.findData(ziel))
+
+    def _zoom_gewaehlt(self, _index: int) -> None:
+        daten = self.zoomwahl.currentData()
+        self.flaeche.zoom_setzen(EINPASSEN if daten is None else float(daten))
+        stufen = list(ZOOMSTUFEN)
+        self.kleiner.setEnabled(daten != stufen[0])
+        self.groesser.setEnabled(daten != stufen[-1])
 
     def _schieben(self, richtung: int) -> None:
         neu = self.auswahl.currentIndex() + richtung

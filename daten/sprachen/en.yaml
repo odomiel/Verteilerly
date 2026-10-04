@@ -391,6 +391,12 @@ Wie das Blatt aussieht — Spalten, Schriftgrößen, Ränder. Zu ändern unter E
 Keine Vorschau.: No preview.
 'Blatt:': 'Sheet:'
 '{0} / {1}': '{0} / {1}'
+Einpassen: Fit to window
+'{0} %': '{0} %'
+Größer (Strg und Mausrad): Larger (Ctrl and mouse wheel)
+Kleiner (Strg und Mausrad): Smaller (Ctrl and mouse wheel)
+Wie groß das Blatt gezeigt wird. Passt es nicht mehr ins Fenster, erscheinen Rollbalken.: How
+  large the sheet is shown. Once it no longer fits the window, scroll bars appear.
 Buchten, Leisten und DA muessen mindestens 1 sein: Bays, strips and pairs must be at least 1
 Ein Verteiler braucht mindestens eine Bucht: A frame needs at least one bay
 Ein Kabel muss mindestens eine Doppelader haben: A cable must have at least one pair
