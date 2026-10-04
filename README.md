@@ -398,7 +398,12 @@ wie sie gerechnet wurden.
 
 Auf dem **Leistenblatt** gilt dasselbe für die Kabelspalte: die
 Zeilenstriche enden davor. Das Kabel steht dort als ein Block über seine
-Zeilen, und was frei bleibt, ist eine durchgehende Fläche.
+Zeilen, und was frei bleibt, ist eine durchgehende Fläche. Der Name bricht
+auch dort um, bevor er schrumpft — quer gedreht **nebeneinander**: für ein
+gedrehtes Feld ist die Höhe des Kastens die Länge der Zeile und seine Breite
+der Platz, auf dem die Zeilen sich stapeln (`textzeilen()` dreht beides mit,
+`_zeilen_gedreht()` im PDF und der gedrehte Malrahmen der Vorschau setzen es
+um).
 
 Das **Deckblatt trägt kein Schriftfeld** — es ist selbst eines: Titel,
 Verteiler, Aufbau, Kennzahlen und die Projektdaten stehen dort als Liste.
@@ -434,7 +439,8 @@ Zeichnungen üblich. Quer ist die Klammer so lang, wie das Kabel Zeilen
 belegt: ein langer Name passt dort hinein, statt in einer breiten Spalte
 Platz zu fressen, den Bezeichnung und Bemerkung besser brauchen können.
 Steuern lässt sich das je Blattvorlage über `kabel_gedreht`; die Vorlage
-*Knapp* hat eine breite Kabelspalte und lässt den Namen waagerecht.
+*Knapp* hat eine breite Kabelspalte und lässt den Namen waagerecht. Wie viele
+Zeilen er dort wie auf der Verteilerbelegung bekommt, sagt `zeilen_kabel`.
 
 **Firma und Kunde tragen eine Anschrift, keine Zeile.** Im
 Projektdatendialog sind beide Felder mehrzeilig; Name, Straße und Ort stehen auf dem

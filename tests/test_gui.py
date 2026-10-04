@@ -1449,6 +1449,49 @@ class TestKabelnameInDerBelegung(unittest.TestCase):
                 gezeichnet, _, _ = self._tinte(name, da)
                 self.assertEqual(gezeichnet, len(textzeilen(feld)[1]))
 
+    def test_quer_stehen_die_zeilen_nebeneinander(self):
+        """In der Kabelspalte stapeln sich die Zeilen ueber die Breite.
+
+        Gezaehlt werden darum senkrechte Baender: zwei Zeilen quer sind
+        zwei Streifen Tinte nebeneinander, nicht uebereinander.
+        """
+        from verteilerly.gui.vorschau import Blattflaeche
+        from verteilerly.layout import Text as Blatttext
+        from verteilerly.layout import leistenblatt
+
+        v = Verteiler.aus_geometrie(1, 2, 10, name="Muster")
+        v.kabel_anlegen("Melderkreis Erdgeschoss West", 1, 1, 1)
+        blatt = leistenblatt(Projekt(verteiler=v), 1)
+        flaeche = Blattflaeche()
+        self.addCleanup(flaeche.close)
+        flaeche.resize(800, 1100)
+        flaeche.blatt_setzen(blatt)
+        bild = flaeche.grab().toImage()
+
+        skala = flaeche._skala(blatt)
+        links = (flaeche.width() - blatt.breite * skala) / 2
+        oben = (flaeche.height() - blatt.hoehe * skala) / 2
+        feld = next(
+            e for e in blatt.elemente
+            if isinstance(e, Blatttext) and "Melderkreis" in e.text
+        )
+        self.assertEqual(feld.drehung, 90)
+        x0 = int(links + feld.x * skala) + 2
+        x1 = int(links + (feld.x + feld.breite) * skala) - 2
+        y0 = int(oben + feld.y * skala) + 1
+        y1 = int(oben + (feld.y + feld.hoehe) * skala) - 1
+
+        baender, im_band, tinte = 0, False, False
+        for x in range(x0, x1):
+            dunkel = any(
+                bild.pixelColor(x, y).lightness() < 120 for y in range(y0, y1)
+            )
+            if dunkel and not im_band:
+                baender += 1
+            im_band, tinte = dunkel, tinte or dunkel
+        self.assertTrue(tinte, "keine Schrift in der Kabelspalte")
+        self.assertEqual(baender, 2)
+
 
 @unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
 class TestMenuezustaende(unittest.TestCase):

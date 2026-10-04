@@ -360,6 +360,27 @@ class TestSchriftgroessen(unittest.TestCase):
                 stringWidth(zeile, SCHRIFT, groesse), feld.breite * PT_JE_MM
             )
 
+    def test_der_quer_umgebrochene_name_steht_im_pdf(self):
+        """Quer gedreht stehen die Zeilen nebeneinander - vollstaendig.
+
+        Ueber eine einzige Doppelader schrumpfte der Name bis 5 pt und
+        wurde dann abgeschnitten; jetzt bricht er um.
+        """
+        ordner = tempfile.TemporaryDirectory()
+        self.addCleanup(ordner.cleanup)
+        ziel = Path(ordner.name) / "quer.pdf"
+
+        v = Verteiler.aus_geometrie(1, 2, 10, name="Probe")
+        v.kabel_anlegen("Melderkreis Erdgeschoss West", 1, 1, 1)
+        pdf_schreiben(Projekt(verteiler=v), ziel)
+
+        from pypdf import PdfReader
+
+        text = "\n".join(s.extract_text() for s in PdfReader(str(ziel)).pages)
+        for wort in ("Melderkreis", "Erdgeschoss", "West"):
+            with self.subTest(wort=wort):
+                self.assertIn(wort, text)
+
     def test_der_kabelname_bleibt_bei_zwei_zeilen(self):
         """Was auch zweizeilig nicht passt, wird kleiner gesetzt.
 

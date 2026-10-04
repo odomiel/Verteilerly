@@ -832,6 +832,32 @@ class TestKabelspalte(unittest.TestCase):
         self.assertEqual(waagerecht[0].drehung, 0)
         self.assertEqual(waagerecht[0].zeilenlaenge, waagerecht[0].breite)
 
+    def test_der_name_bricht_auch_quer_um(self):
+        """Ueber eine Doppelader blieb sonst ein Rest mit Punkten.
+
+        Quer gelesen ist die Hoehe der Klammer die Laenge der Zeile und
+        die Breite der Spalte der Platz, auf dem die Zeilen sich
+        stapeln - ``textzeilen`` dreht beides mit.
+        """
+        from verteilerly.layout import PUNKT_IN_MM, ZEILENABSTAND, textzeilen
+
+        v = Verteiler.aus_geometrie(1, 2, 10)
+        v.kabel_anlegen("Melderkreis Erdgeschoss West", 1, 1, 1)
+        blatt = leistenblatt(Projekt(verteiler=v), 1)
+        feld = next(
+            e for e in blatt.elemente
+            if isinstance(e, Text) and "Melderkreis" in e.text
+        )
+        self.assertTrue(feld.umbruch)
+        self.assertEqual(feld.zeilen_hoechstens, STANDARD.zeilen_kabel)
+        groesse, zeilen = textzeilen(feld)
+        self.assertEqual(len(zeilen), 2)
+        self.assertEqual(" ".join(zeilen), "Melderkreis Erdgeschoss West")
+        # Gestapelt wird ueber die Breite, nicht ueber die Hoehe.
+        self.assertLessEqual(
+            len(zeilen) * groesse * ZEILENABSTAND * PUNKT_IN_MM, feld.breite
+        )
+
     def test_gekuerztes_kabel_sagt_es_auch_quer(self):
         v = Verteiler.aus_geometrie(1, 2, 10)
         v.kabel_anlegen("Zuleitung BMZ", 1, 1, 3, da_gesamt=4)

@@ -220,9 +220,15 @@ def umgebrochene_zeilen(
 
 
 def textzeilen(element: Text) -> tuple[float, list[str]]:
-    """Dasselbe fuer ein fertiges Textfeld des Zeichenmodells."""
+    """Dasselbe fuer ein fertiges Textfeld des Zeichenmodells.
+
+    Quer gedreht ist die Hoehe des Kastens die Laenge der Zeile und
+    seine Breite der Platz, auf dem die Zeilen sich stapeln - beim
+    aufrechten Feld umgekehrt.
+    """
+    stapel = element.breite if element.drehung else element.hoehe
     return umgebrochene_zeilen(
-        str(element.text), element.breite, element.hoehe, element.groesse,
+        str(element.text), element.zeilenlaenge, stapel, element.groesse,
         element.zeilen_hoechstens,
     )
 
@@ -1630,15 +1636,21 @@ def _kabelklammern(
                 # muesste er in die schmale Spalte gequetscht werden.
                 if kabel.gekuerzt:
                     beschriftung = f"{beschriftung} ({zusatz})"
+                # Quer gelesen stapeln sich die Zeilen ueber die Breite
+                # der Spalte - ein langer Name ueber einer einzigen
+                # Doppelader bricht um, statt bis zur Unleserlichkeit zu
+                # schrumpfen.
                 blatt.text(
                     x, y + 1.5, breite, hoehe - 3, beschriftung,
                     vorlage.schrift_klein, MITTE, drehung=90,
+                    umbruch=True, zeilen_hoechstens=vorlage.zeilen_kabel,
                 )
                 continue
 
             blatt.text(
                 x + 1.5, y, breite - 3, min(hoehe, zeile_h * 2),
                 beschriftung, vorlage.schrift_klein,
+                umbruch=True, zeilen_hoechstens=vorlage.zeilen_kabel,
             )
             if kabel.gekuerzt and hoehe >= zeile_h * 2:
                 blatt.text(

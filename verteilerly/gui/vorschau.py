@@ -131,7 +131,7 @@ class Blattflaeche(QWidget):
         schrift = QFont(self.font())
         schrift.setBold(element.fett)
         schrift.setItalic(element.kursiv)
-        if element.umbruch and not element.drehung:
+        if element.umbruch:
             self._text_umgebrochen(maler, element, umriss, schrift, skala)
             return
         schrift.setPixelSize(self._passende_pixel(element, laenge, skala))
@@ -169,33 +169,47 @@ class Blattflaeche(QWidget):
         Mass - so stehen im Ausdruck dieselben Zeilen wie hier.
         Nachgemessen wird mit der Schrift der Oberflaeche: baut sie
         breiter, wird eine Stufe kleiner gesetzt, nie groesser.
+
+        Quer gedreht wird im gedrehten Koordinatensystem gezeichnet: dort
+        steht der Kasten aufrecht, und die Zeilen stapeln sich wie
+        gewohnt nach unten - auf dem Blatt nebeneinander.
         """
         punkt, zeilen = textzeilen(element)
         zeilen = [z for z in zeilen if z.strip()]
         if not zeilen:
             return
 
+        laenge = umriss.height() if element.drehung else umriss.width()
         kleinste = max(1, int(KLEINSTE_SCHRIFT * PUNKT_IN_MM * skala))
         groesse = max(kleinste, round(punkt * PUNKT_IN_MM * skala))
         while groesse > kleinste:
             gemessen = QFont(schrift)
             gemessen.setPixelSize(int(groesse))
             masse = QFontMetricsF(gemessen)
-            if all(masse.horizontalAdvance(z) <= umriss.width() for z in zeilen):
+            if all(masse.horizontalAdvance(z) <= laenge for z in zeilen):
                 break
             groesse -= 1
 
         schrift.setPixelSize(max(1, int(groesse)))
         abstand = groesse * ZEILENABSTAND
-        oben = umriss.center().y() - abstand * len(zeilen) / 2
 
         maler.save()
         maler.resetTransform()
         maler.setFont(schrift)
         maler.setPen(QColor(element.farbe))
+        if element.drehung:
+            maler.translate(umriss.center())
+            maler.rotate(-element.drehung)
+            platz = QRectF(
+                -umriss.height() / 2, -umriss.width() / 2,
+                umriss.height(), umriss.width(),
+            )
+        else:
+            platz = umriss
+        oben = platz.center().y() - abstand * len(zeilen) / 2
         for i, zeile in enumerate(zeilen):
             kasten = QRectF(
-                umriss.left(), oben + abstand * i, umriss.width(), abstand
+                platz.left(), oben + abstand * i, platz.width(), abstand
             )
             maler.drawText(kasten, self._flagge(element.ausrichtung), zeile)
         maler.restore()

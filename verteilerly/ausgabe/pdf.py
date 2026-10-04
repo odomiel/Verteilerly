@@ -132,7 +132,7 @@ def _schriftschnitt(fett: bool, kursiv: bool) -> str:
 def _text(blech: canvas.Canvas, element: Text, hoehe_pt: float) -> None:
     schrift = _schriftschnitt(element.fett, element.kursiv)
     laenge_pt = element.zeilenlaenge * PT_JE_MM
-    if element.umbruch and not element.drehung:
+    if element.umbruch:
         _text_umgebrochen(blech, element, schrift, hoehe_pt)
         return
     groesse = _passende_groesse(str(element.text), schrift, element.groesse, laenge_pt)
@@ -171,21 +171,26 @@ def _text_umgebrochen(
     Mass - sonst braeche die Vorschau an anderen Stellen. Nachgemessen
     wird hier mit Helvetica: baut sie doch breiter, wird die Schrift eine
     Stufe kleiner, nie groesser. Gezeichnet werden die Zeilen von oben
-    nach unten, zusammen mittig um die Mitte des Kastens.
+    nach unten, zusammen mittig um die Mitte des Kastens - quer gedreht
+    nebeneinander, dafuer sorgt ``_zeilen_gedreht``.
     """
+    laenge_pt = element.zeilenlaenge * PT_JE_MM
     breite_pt = element.breite * PT_JE_MM
     groesse, zeilen = textzeilen(element)
     zeilen = [z for z in zeilen if z.strip()]
     if not zeilen:
         return
     while groesse > KLEINSTE_SCHRIFT and any(
-        stringWidth(z, schrift, groesse) > breite_pt for z in zeilen
+        stringWidth(z, schrift, groesse) > laenge_pt for z in zeilen
     ):
         groesse = max(KLEINSTE_SCHRIFT, groesse - SCHRITT)
 
     blech.setFont(schrift, groesse)
     blech.setFillColor(HexColor(element.farbe))
     abstand = groesse * ZEILENABSTAND
+    if element.drehung:
+        _zeilen_gedreht(blech, element, zeilen, groesse, abstand, hoehe_pt)
+        return
     mitte = _y(element.y + element.hoehe / 2, hoehe_pt)
     oben = mitte + abstand * len(zeilen) / 2
     x = element.x * PT_JE_MM
@@ -197,6 +202,40 @@ def _text_umgebrochen(
             blech.drawCentredString(x + breite_pt / 2, grundlinie, zeile)
         else:
             blech.drawString(x, grundlinie, zeile)
+
+
+def _zeilen_gedreht(
+    blech: canvas.Canvas,
+    element: Text,
+    zeilen: list[str],
+    groesse: float,
+    abstand: float,
+    hoehe_pt: float,
+) -> None:
+    """Mehrere Zeilen quer im Kasten - sie stehen nebeneinander.
+
+    Quer gelesen stapeln die Zeilen sich ueber die Breite der Spalte:
+    wer den Kopf nach links legt, liest die erste links, die naechste
+    darunter - auf dem Blatt also rechts daneben. Der Stapel steht
+    mittig im Kasten, genau wie die einzelne Zeile.
+    """
+    breite_pt = element.breite * PT_JE_MM
+    unten = _y(element.y + element.hoehe, hoehe_pt)
+    laenge_pt = element.hoehe * PT_JE_MM
+    mitte = element.x * PT_JE_MM + breite_pt / 2 + groesse * 0.35
+
+    blech.saveState()
+    blech.translate(mitte, unten)
+    blech.rotate(element.drehung)
+    for i, zeile in enumerate(zeilen):
+        versatz = -(i - (len(zeilen) - 1) / 2) * abstand
+        if element.ausrichtung == RECHTS:
+            blech.drawRightString(laenge_pt, versatz, zeile)
+        elif element.ausrichtung == MITTE:
+            blech.drawCentredString(laenge_pt / 2, versatz, zeile)
+        else:
+            blech.drawString(0, versatz, zeile)
+    blech.restoreState()
 
 
 def _text_gedreht(
