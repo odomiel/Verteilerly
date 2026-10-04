@@ -371,7 +371,9 @@ ganzen Block, sondern `fuellgrad_kabel` davon (Vorgabe 0,82), und mindestens
 Block vollgestopft aussehen. Beides steht unter `belegung` in der
 Blattvorlage, ist also je Vorlage einstellbar. Wird es eng, wird zuerst
 **umgebrochen** und erst danach verkleinert — gesucht ist die größte Schrift,
-mit der der Name auf so vielen Zeilen, wie der Block sie trägt, hineingeht:
+mit der der Name auf so vielen Zeilen, wie der Block sie trägt, hineingeht.
+Mehr als `zeilen_kabel` Zeilen (Vorgabe 2) werden es nicht; darunter wird die
+Schrift kleiner, und was auch klein nicht passt, wird gekürzt:
 `zeilen_umbrechen()` und `umbruch_einpassen()` in `layout.py`
 brechen an Leerzeichen und an `/`, `-`, `_`. Muss ein Wort selbst
 umbrechen, wird es **mit Trennstrich zwischen den Silben** getrennt:

@@ -82,6 +82,7 @@ ZAHLEN = (
         ("abstand_buchten", "Abstand der Buchten", "mm", 0.0, 40.0, 0.5),
         ("fuellgrad_kabel", "Füllgrad des Kabelnamens", "", 0.1, 1.0, 0.02),
         ("polster_kabel", "Polster um den Kabelnamen", "mm", 0.0, 5.0, 0.1),
+        ("zeilen_kabel", "Zeilen des Kabelnamens", "", 1.0, 6.0, 1.0),
     )),
 )
 # Die Hoehe des Schriftfeldes steht bei seinen Bloecken, nicht beim Blatt.
@@ -179,7 +180,9 @@ class EditorDialog(PassenderDialog):
                 wert = QDoubleSpinBox()
                 wert.setRange(unten, oben)
                 wert.setSingleStep(schritt)
-                wert.setDecimals(2)
+                # Eine Anzahl hat keine Nachkommastellen: „2,00 Zeilen"
+                # liest sich wie ein Mass, und das ist es nicht.
+                wert.setDecimals(0 if schritt >= 1 else 2)
                 if einheit:
                     wert.setSuffix(f" {einheit}")
                 wert.valueChanged.connect(self._geaendert)
@@ -558,7 +561,10 @@ class EditorDialog(PassenderDialog):
             eigene_felder_auf=tuple(
                 art for art, haken in self.eigene_auf.items() if haken.isChecked()
             ),
-            **{feld: wert.value() for feld, wert in self.zahlen.items()},
+            **{
+                feld: (wert.value() if wert.decimals() else int(wert.value()))
+                for feld, wert in self.zahlen.items()
+            },
             **{feld: haken.isChecked() for feld, haken in self.schalter.items()},
         )
 

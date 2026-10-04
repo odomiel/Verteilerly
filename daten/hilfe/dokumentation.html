@@ -708,6 +708,8 @@ das Blatt es hergibt.</td><td>6 / 9</td></tr>
 Kabelname höchstens einnimmt (0,1 bis 1).</td><td>0,82</td></tr>
 <tr><td><code>polster_kabel</code></td><td>Wie viel Luft am Rahmen des Blocks
 mindestens bleibt.</td><td>0,6</td></tr>
+<tr><td><code>zeilen_kabel</code></td><td>Auf wie viele Zeilen der Kabelname
+höchstens umbricht; darunter wird die Schrift kleiner.</td><td>2</td></tr>
 </table>
 
 <h4>Ein vollständiges Beispiel</h4>
@@ -777,7 +779,10 @@ Editor bleibt jede Leiste unterteilt — dort wird geklickt.</li>
 senkrecht, und so groß, wie der Block es trägt — mit Luft ringsum, damit ein
 kleiner Block nicht vollgestopft aussieht. Wird es eng, wird zuerst
 <b>umgebrochen</b> und erst danach verkleinert: zwei Zeilen in voller Größe
-sind lesbarer als eine geschrumpfte. Umgebrochen wird an Leerzeichen und
+sind lesbarer als eine geschrumpfte. Mehr als <b>zwei Zeilen</b> werden es
+nicht — so viele stünden im Block wie ein Absatz; darunter wird die Schrift
+kleiner (<code>zeilen_kabel</code> in der Blattvorlage).
+Umgebrochen wird an Leerzeichen und
 an den Zeichen, die einen Kabelnamen ohnehin gliedern (<code>/</code>,
 <code>-</code>, <code>_</code>). Reicht auch das nicht, wird das Wort
 <b>getrennt — mit Trennstrich und zwischen den Silben</b>

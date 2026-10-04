@@ -1640,5 +1640,28 @@ class TestUmbruch(unittest.TestCase):
         # genau die kleinere Zeile stand hier bisher.
         self.assertGreater(self.misst("Wohnzimmer Nord", groesse), 12)
 
+    def test_mehr_als_zwei_zeilen_werden_nicht_gesetzt(self):
+        """Drei Zeilen stehen im Block wie ein Absatz."""
+        ohne = self.einpassen(
+            "Melderkreis Erdgeschoss West", 12, 20, 3.0, 1.0, 0.25, self.misst
+        )
+        self.assertGreater(len(ohne[1]), 2)       # ohne Deckel wie bisher
+        groesse, zeilen = self.einpassen(
+            "Melderkreis Erdgeschoss West", 12, 20, 3.0, 1.0, 0.25, self.misst,
+            hoechstens=2,
+        )
+        self.assertEqual(len(zeilen), 2)
+        self.assertLess(groesse, ohne[0])         # dafuer eine Stufe kleiner
+        self.assertLessEqual(max(self.misst(z, groesse) for z in zeilen), 12)
+
+    def test_was_in_zwei_zeilen_nicht_passt_endet_mit_punkten(self):
+        """Der Deckel gilt auch, wenn die kleinste Schrift nicht reicht."""
+        groesse, zeilen = self.einpassen(
+            "Ein sehr langer Kabelname ueber viele Zeilen", 4, 20, 3.0, 1.0,
+            0.25, self.misst, hoechstens=2,
+        )
+        self.assertEqual(len(zeilen), 2)
+        self.assertTrue(zeilen[-1].endswith("…"))
+
     def test_leerer_text_bleibt_leer(self):
         self.assertEqual(self.umbrechen("", 10, self.misst), [])

@@ -304,14 +304,14 @@ class TestSchriftgroessen(unittest.TestCase):
         from verteilerly.layout import Text, textzeilen, verteilerbelegungen
 
         v = Verteiler.aus_geometrie(1, 4, 10, name="Muster")
-        v.kabel_anlegen("Melderkreis Erdgeschoss West", 1, 1, 1)
+        v.kabel_anlegen("Melderkreis Erdgeschoss West", 1, 1, 2)
         blatt = verteilerbelegungen(Projekt(verteiler=v))[0]
         feld = next(
             e for e in blatt.elemente
             if isinstance(e, Text) and e.text.startswith("Melderkreis")
         )
         groesse, zeilen = textzeilen(feld)
-        self.assertEqual(zeilen, ["Melderkreis", "Erdgeschoss", "West"])
+        self.assertEqual(zeilen, ["Melderkreis", "Erdgeschoss West"])
         # Was das gemeinsame Mass sagt, haelt auch Helvetica ein: das PDF
         # muss nicht nachtraeglich verkleinern.
         for zeile in zeilen:
@@ -359,6 +359,44 @@ class TestSchriftgroessen(unittest.TestCase):
             self.assertLessEqual(
                 stringWidth(zeile, SCHRIFT, groesse), feld.breite * PT_JE_MM
             )
+
+    def test_der_kabelname_bleibt_bei_zwei_zeilen(self):
+        """Was auch zweizeilig nicht passt, wird kleiner gesetzt.
+
+        Die Blattvorlage sagt mit ``zeilen_kabel``, wie viele Zeilen der
+        Name bekommt; drei standen im Block wie ein Absatz.
+        """
+        from verteilerly.blattvorlagen import STANDARD
+        from verteilerly.layout import Text, textzeilen, verteilerbelegungen
+
+        v = Verteiler.aus_geometrie(1, 4, 10, name="Muster")
+        lang = "Melderkreis Erdgeschoss West"
+        v.kabel_anlegen(lang, 1, 1, 2)
+        blatt = verteilerbelegungen(Projekt(verteiler=v))[0]
+        feld = next(
+            e for e in blatt.elemente if isinstance(e, Text) and e.text == lang
+        )
+        self.assertEqual(feld.zeilen_hoechstens, STANDARD.zeilen_kabel)
+        groesse, zeilen = textzeilen(feld)
+        self.assertEqual(len(zeilen), 2)
+        self.assertLess(groesse, feld.groesse)
+        for zeile in zeilen:
+            self.assertLessEqual(
+                stringWidth(zeile, SCHRIFT, groesse), feld.breite * PT_JE_MM
+            )
+
+        # Die Kehrseite: ueber eine einzige Doppelader passt derselbe
+        # Name auch auf zwei Zeilen nicht mehr - dann wird gekuerzt,
+        # statt eine dritte Zeile anzufangen.
+        eng = Verteiler.aus_geometrie(1, 4, 10, name="Muster")
+        eng.kabel_anlegen(lang, 1, 1, 1)
+        blatt = verteilerbelegungen(Projekt(verteiler=eng))[0]
+        feld = next(
+            e for e in blatt.elemente if isinstance(e, Text) and e.text == lang
+        )
+        _, zeilen = textzeilen(feld)
+        self.assertEqual(len(zeilen), 2)
+        self.assertTrue(zeilen[-1].endswith("…"))
 
     def test_kein_text_eines_blattes_laeuft_ueber(self):
         """Die Probe aufs Ganze: jedes Feld jedes Blattes nachgemessen."""

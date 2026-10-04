@@ -689,6 +689,8 @@ sheet allows.</td><td>6 / 9</td></tr>
 name may take up at most (0.1 to 1).</td><td>0.82</td></tr>
 <tr><td><code>polster_kabel</code></td><td>How much air stays at the frame of
 the block at least.</td><td>0.6</td></tr>
+<tr><td><code>zeilen_kabel</code></td><td>Onto how many lines the cable name
+may wrap at most; below that the type gets smaller.</td><td>2</td></tr>
 </table>
 
 <h4>A complete example</h4>
@@ -757,7 +759,9 @@ divided — that is where you click.</li>
 well as vertically, and as large as the block carries it — with air all round,
 so that a small block does not look crammed. When it gets tight the name is
 <b>wrapped</b> first and only then made smaller: two lines at full size read
-better than one shrunken one. It wraps at spaces and at the
+better than one shrunken one. It does not go beyond <b>two lines</b> — more
+would stand in the block like a paragraph; below that the type gets smaller
+(<code>zeilen_kabel</code> in the sheet template). It wraps at spaces and at the
 characters that structure a cable name anyway (<code>/</code>, <code>-</code>,
 <code>_</code>). If that does not suffice either, the word is <b>hyphenated —
 with a hyphen and between its syllables</b> (<i>Wohn-zim-mer</i>,

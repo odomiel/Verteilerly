@@ -51,7 +51,7 @@ SCHRIFTSCHLUESSEL = ("gross", "mittel", "normal", "klein")
 BELEGUNGSSCHLUESSEL = (
     "zelle_breite", "zelle_hoehe", "leistenlabel",
     "abstand_leisten", "abstand_buchten",
-    "fuellgrad_kabel", "polster_kabel",
+    "fuellgrad_kabel", "polster_kabel", "zeilen_kabel",
 )
 SPALTENSCHLUESSEL = ("feld", "ueberschrift", "anteil", "ausrichtung")
 SCHRIFTFELDSCHLUESSEL = ("marke", "ausrichtung")
@@ -202,6 +202,10 @@ class Blattvorlage:
     # liesse den Block vollgestopft aussehen.
     fuellgrad_kabel: float = 0.82
     polster_kabel: float = 0.6
+    # Auf wie viele Zeilen der Kabelname hoechstens umbricht. Mehr als
+    # zwei stehen im Block wie ein Absatz; darunter wird lieber die
+    # Schrift kleiner.
+    zeilen_kabel: int = 2
 
     def __post_init__(self) -> None:
         # Eine blosse Marke darf fuer sich stehen: ein von Hand gebautes
@@ -415,6 +419,9 @@ def blattvorlage_aus_yaml(
             belegung, "fuellgrad_kabel", STANDARD.fuellgrad_kabel, wo
         ),
         polster_kabel=_zahl(belegung, "polster_kabel", STANDARD.polster_kabel, wo),
+        zeilen_kabel=int(
+            _zahl(belegung, "zeilen_kabel", STANDARD.zeilen_kabel, wo)
+        ),
     )
     if vorlage.schriftfeld_art not in SCHRIFTFELDARTEN:
         bekannt = ", ".join(SCHRIFTFELDARTEN)
@@ -431,6 +438,10 @@ def blattvorlage_aus_yaml(
         )
     if vorlage.polster_kabel < 0:
         raise BlattvorlagenFehler(u("{0}: polster_kabel darf nicht negativ sein").format(wo))
+    if vorlage.zeilen_kabel < 1:
+        raise BlattvorlagenFehler(
+            u("{0}: zeilen_kabel muss mindestens 1 sein").format(wo)
+        )
     return vorlage
 
 

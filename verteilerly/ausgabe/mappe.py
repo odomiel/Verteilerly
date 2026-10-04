@@ -309,7 +309,7 @@ def _belegung(
                     )
                     groesse, zeilen = umgebrochene_zeilen(
                         kabel.beschriftung, feld.breite, feld.hoehe,
-                        feld.groesse,
+                        feld.groesse, feld.zeilen,
                     )
                     feld = blatt.cell(
                         row=zeile, column=von, value="\n".join(zeilen)

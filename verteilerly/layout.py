@@ -144,6 +144,9 @@ class Text:
     #: so gross nehmen, wie der Kasten sie traegt? Ohne das bleibt es bei
     #: einer Zeile, die notfalls schrumpft.
     umbruch: bool = False
+    #: Auf wie viele Zeilen hoechstens - 0 heisst: so viele, wie der
+    #: Kasten traegt.
+    zeilen_hoechstens: int = 0
 
     @property
     def zeilenlaenge(self) -> float:
@@ -196,6 +199,7 @@ def umgebrochene_zeilen(
     breite: float,
     hoehe: float,
     groesse: float,
+    hoechstens: int = 0,
 ) -> tuple[float, list[str]]:
     """Schriftgroesse in Punkt und die Zeilen eines umbrechenden Feldes.
 
@@ -209,6 +213,7 @@ def umgebrochene_zeilen(
         KLEINSTE_SCHRIFT * PUNKT_IN_MM,
         SCHRITT * PUNKT_IN_MM,
         geschaetzte_breite,
+        hoechstens,
     )
     # Krumme Zahlen wie 6.749999 helfen niemandem - auch nicht der Mappe.
     return round(gross / PUNKT_IN_MM, 2), zeilen
@@ -218,6 +223,7 @@ def textzeilen(element: Text) -> tuple[float, list[str]]:
     """Dasselbe fuer ein fertiges Textfeld des Zeichenmodells."""
     return umgebrochene_zeilen(
         str(element.text), element.breite, element.hoehe, element.groesse,
+        element.zeilen_hoechstens,
     )
 
 
@@ -377,6 +383,7 @@ def umbruch_einpassen(
     kleinste: float,
     schritt: float,
     misst,
+    hoechstens: int = 0,
 ) -> tuple[float, list[str]]:
     """Die groesste Schrift, mit der der Text umgebrochen ins Feld passt.
 
@@ -391,6 +398,10 @@ def umbruch_einpassen(
     Schrift, mit der der Text - auf so viele Zeilen verteilt, wie der
     Kasten traegt - noch hineingeht. Ein langer Name steht damit
     zweizeilig und lesbar, statt einzeilig zusammenzuschrumpfen.
+
+    ``hoechstens`` deckelt die Zahl der Zeilen; 0 heisst: so viele, wie
+    in den Kasten gehen. Mehr Zeilen stehen im Feld wie ein Absatz -
+    darunter wird lieber die Schrift kleiner.
     """
     text = str(text)
     if not text.strip() or breite <= 0 or hoehe <= 0:
@@ -410,7 +421,8 @@ def umbruch_einpassen(
                 zeilen = zeilen_umbrechen(
                     text, breite, lambda z: misst(z, gewaehlt)
                 )
-                if len(zeilen) * gewaehlt * ZEILENABSTAND <= hoehe:
+                if (len(zeilen) * gewaehlt * ZEILENABSTAND <= hoehe
+                        and not (hoechstens and len(zeilen) > hoechstens)):
                     return gewaehlt, zeilen
             if gewaehlt <= kleinste:
                 return None
@@ -424,6 +436,8 @@ def umbruch_einpassen(
     zeilen = zeilen_umbrechen(text, breite, lambda z: misst(z, kleinste))
 
     passen = max(1, int(hoehe / (kleinste * ZEILENABSTAND)))
+    if hoechstens:
+        passen = min(passen, hoechstens)
     if len(zeilen) > passen:
         zeilen = zeilen[:passen]
         zeilen[-1] = _gekuerzt(
@@ -1166,6 +1180,8 @@ class Kabelfeld:
     breite: float
     hoehe: float
     groesse: float
+    #: Auf wie viele Zeilen der Name hoechstens umbricht.
+    zeilen: int
 
 
 def kabelfeld(
@@ -1185,6 +1201,7 @@ def kabelfeld(
         breite=platz_b,
         hoehe=platz_h,
         groesse=kabelbeschriftung_groesse(platz_h, vorlage),
+        zeilen=vorlage.zeilen_kabel,
     )
 
 
@@ -1277,6 +1294,7 @@ def verteilerbelegung(
             blatt.text(
                 feld.x, feld.y, feld.breite, feld.hoehe,
                 beschriftung, feld.groesse, MITTE, umbruch=True,
+                zeilen_hoechstens=feld.zeilen,
             )
 
     # Die DA-Nummern zuletzt, damit sie auch auf einem Kabelblock stehen.
