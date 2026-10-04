@@ -314,6 +314,18 @@ die letzte, und `.json` gehört nicht uns; ältere Dateien (`.vtly.json`) lassen
 sich weiter öffnen. Denselben Weg geht die Kommandozeile:
 `Verteilerly <datei>`.
 
+**Schreibgeschützt öffnen** (*Datei ▸ Schreibgeschützt öffnen…*,
+Strg+Umschalt+O) zeigt eine Datei, ohne sie zurückzuschreiben: geändert werden
+darf alles, nur `Speichern` ist aus, und `speichern()` leitet auf *Speichern
+unter…* um — auch aus der Rückfrage beim Schließen heraus. Die neue Datei
+gehört dann dem Anwender, der Schutz fällt weg. Dasselbe stellt
+`datei_oeffnen()` selbst fest, wenn `os.access(pfad, os.W_OK)` nein sagt: sonst
+fiele es erst beim Speichern auf. Zu sehen ist es in der Titelzeile und als
+rotes *schreibgeschützt* neben dem Prozentfeld der geteilten Zelle
+(`LeistenAnsicht.schreibschutz_setzen()`, Farbe `warnung` aus dem Farbsatz).
+Ein zurückgenommener Stand gehört zu derselben Datei — `vorgeschichte=True`
+lässt den Schutz darum stehen.
+
 **Verknüpft wird von Hand**, in der Dateiverwaltung — das Programm trägt nichts
 ein. `verknuepfung.py` (ohne Qt) gibt nur Auskunft, und *Tools ▸ Projektdateien
 verknüpfen…* zeigt sie: welche Datei zu verknüpfen ist (`zu_verknuepfen()` —

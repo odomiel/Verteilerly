@@ -389,6 +389,14 @@ Leiste {0}, DA {1}: Strip {0}, pair {1}
 Wie das Blatt aussieht — Spalten, Schriftgrößen, Ränder. Zu ändern unter Einstellungen ▸ Blattvorlage.: How
   the sheet looks — columns, font sizes, margins. To be changed under Settings ▸ Sheet template.
 Keine Vorschau.: No preview.
+(schreibgeschützt): (read-only)
+schreibgeschützt: read-only
+Ansehen, ohne die Datei zu überschreiben: Look at it without overwriting the file
+'Die Datei lässt sich nicht schreiben: {0}': 'The file cannot be written: {0}'
+'Schreibgeschützt geöffnet: {0}': 'Opened read-only: {0}'
+Schreibgeschützt öffne&n…: Open read-o&nly…
+'So geöffnet: {0}': 'Opened that way: {0}'
+Verteiler schreibgeschützt öffnen: Open frame read-only
 'Blatt:': 'Sheet:'
 '{0} / {1}': '{0} / {1}'
 Einpassen: Fit to window

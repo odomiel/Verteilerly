@@ -161,6 +161,12 @@ class Hauptfenster(QMainWindow):
         self.projekt: Projekt | None = None
         self.pfad: pathlib.Path | None = None
         self.veraendert = False
+        #: Diese Datei wird nicht zurueckgeschrieben - entweder, weil sie
+        #: so geoeffnet wurde, oder weil sie auf der Platte schreibgeschuetzt
+        #: ist. Geaendert werden darf trotzdem; der Weg hinaus ist
+        #: "Speichern unter".
+        self.schreibgeschuetzt = False
+        self.schreibschutz_grund = ""
         # Die Staende fuer das Zuruecknehmen: was war, was rueckgaengig
         # gemacht wurde, und der Stand seit der letzten Aenderung.
         #: Soll die Vorschau beim naechsten Auffrischen die
@@ -368,6 +374,9 @@ class Hauptfenster(QMainWindow):
                hinweis=u("Einen Verteiler aus einer Vorlage oder eigenen Maßen anlegen"))
         aktion(u("Ö&ffnen…"), self.oeffnen, "Ctrl+O", True,
                hinweis=u("Eine gespeicherte Verteilerdatei öffnen"))
+        aktion(u("Schreibgeschützt öffne&n…"), self.schreibgeschuetzt_oeffnen,
+               "Ctrl+Shift+O",
+               hinweis=u("Ansehen, ohne die Datei zu überschreiben"))
         self.aktion_speichern = aktion(
             u("&Speichern"), self.speichern, "Ctrl+S", True,
             hinweis=u("Den Verteiler speichern"),
@@ -846,9 +855,20 @@ class Hauptfenster(QMainWindow):
         if self.projekt is not None:
             name = self.projekt.verteiler.name or u("ohne Namen")
             teile.append(name if not self.pfad else f"{name} — {self.pfad.name}")
+        if self.schreibgeschuetzt:
+            teile.append(u("(schreibgeschützt)"))
         if self.veraendert:
             teile.append("•")
         self.setWindowTitle("  ".join(teile))
+
+    def schreibschutz_setzen(self, an: bool, grund: str = "") -> None:
+        """Merkt den Schutz und zeigt ihn - in der Titelzeile und rot
+        neben den Zellenknoepfen der Leistenansicht."""
+        self.schreibgeschuetzt = bool(an)
+        self.schreibschutz_grund = grund if an else ""
+        self.leistenansicht.schreibschutz_setzen(
+            self.schreibgeschuetzt, self.schreibschutz_grund
+        )
 
     def _fehler_zeigen(self, text: str) -> None:
         self.statusBar().showMessage(text, 8000)
@@ -992,17 +1012,22 @@ class Hauptfenster(QMainWindow):
         projekt: Projekt | None,
         pfad: pathlib.Path | None,
         vorgeschichte: bool = False,
+        schreibgeschuetzt: bool = False,
+        grund: str = "",
     ) -> None:
         """Zeigt ein Projekt - ein neues, ein geoeffnetes, ein zurueckgenommenes.
 
         ``vorgeschichte`` behaelt die Staende zum Zuruecknehmen. Nur das
         Zuruecknehmen selbst setzt es: ein anderes Projekt hat eine
         andere Vorgeschichte, und ein Stand von vorhin gehoerte zu einem
-        anderen Verteiler.
+        anderen Verteiler - und derselben Datei, also bleibt dabei auch
+        der Schreibschutz stehen.
         """
         self.projekt = projekt
         self.pfad = pfad
         self.veraendert = False
+        if not vorgeschichte:
+            self.schreibschutz_setzen(schreibgeschuetzt, grund)
         if not vorgeschichte:
             self._rueckgaengig.clear()
             self._wiederherstellen.clear()
@@ -1063,7 +1088,8 @@ class Hauptfenster(QMainWindow):
         # Speichern nur, wenn es etwas zu speichern gibt: ungesicherte
         # Änderungen oder eine Datei, die es noch nicht gibt.
         self.aktion_speichern.setEnabled(
-            offen and (self.veraendert or self.pfad is None)
+            offen and not self.schreibgeschuetzt
+            and (self.veraendert or self.pfad is None)
         )
         hat_kabel = self._kabel_der_auswahl() is not None
         self.aktion_kabel_weg.setEnabled(hat_kabel)
@@ -1315,17 +1341,34 @@ class Hauptfenster(QMainWindow):
         )
 
     def oeffnen(self) -> None:
+        self._oeffnen_lassen(False)
+
+    def schreibgeschuetzt_oeffnen(self) -> None:
+        """Dieselbe Datei, nur ohne Weg zurueck auf die Platte."""
+        self._oeffnen_lassen(True)
+
+    def _oeffnen_lassen(self, schreibgeschuetzt: bool) -> None:
         if not self._darf_verwerfen():
             return
-        name, _ = QFileDialog.getOpenFileName(self, u("Verteiler öffnen"), "", DATEIFILTER)
+        titel = (
+            u("Verteiler schreibgeschützt öffnen") if schreibgeschuetzt
+            else u("Verteiler öffnen")
+        )
+        name, _ = QFileDialog.getOpenFileName(self, titel, "", DATEIFILTER)
         if name:
-            self.datei_oeffnen(pathlib.Path(name))
+            self.datei_oeffnen(pathlib.Path(name), schreibgeschuetzt)
 
-    def datei_oeffnen(self, pfad: pathlib.Path) -> bool:
+    def datei_oeffnen(
+        self, pfad: pathlib.Path, schreibgeschuetzt: bool = False
+    ) -> bool:
         """Oeffnet diese Datei - aus dem Dialog wie vom Doppelklick.
 
         Der Weg ueber die Dateiverwaltung kommt ohne Dialog hierher; was
         schiefgeht, wird darum hier gemeldet und nicht weitergereicht.
+
+        Schreibgeschuetzt ist die Datei auch dann, wenn das Dateisystem
+        sie nicht schreiben laesst: sonst faende man es erst beim
+        Speichern heraus, mit der Arbeit im Ruecken.
         """
         pfad = pathlib.Path(pfad)
         try:
@@ -1333,14 +1376,27 @@ class Hauptfenster(QMainWindow):
         except (ModellFehler, OSError) as fehler:
             QMessageBox.critical(self, u("Öffnen fehlgeschlagen"), str(fehler))
             return False
-        self._projekt_setzen(projekt, pfad)
-        self.statusBar().showMessage(u("Geöffnet: {0}").format(pfad))
+        grund = ""
+        if schreibgeschuetzt:
+            grund = u("So geöffnet: {0}").format(pfad)
+        elif not os.access(pfad, os.W_OK):
+            schreibgeschuetzt = True
+            grund = u("Die Datei lässt sich nicht schreiben: {0}").format(pfad)
+        self._projekt_setzen(
+            projekt, pfad, schreibgeschuetzt=schreibgeschuetzt, grund=grund
+        )
+        self.statusBar().showMessage(
+            u("Schreibgeschützt geöffnet: {0}").format(pfad) if schreibgeschuetzt
+            else u("Geöffnet: {0}").format(pfad)
+        )
         return True
 
     def speichern(self) -> bool:
         if self.projekt is None:
             return False
-        if self.pfad is None:
+        # Schreibgeschuetzt gibt es nur einen Weg: unter neuem Namen.
+        # Auch die Rueckfrage beim Schliessen kommt hier vorbei.
+        if self.pfad is None or self.schreibgeschuetzt:
             return self.speichern_unter()
         try:
             projektdatei.speichern(self.projekt, self.pfad)
@@ -1363,6 +1419,8 @@ class Hauptfenster(QMainWindow):
         if not name:
             return False
         self.pfad = pathlib.Path(name)
+        # Die neue Datei gehoert dem Anwender - der Schutz galt der alten.
+        self.schreibschutz_setzen(False)
         return self.speichern()
 
     # -- Ausgabe -----------------------------------------------------------

@@ -91,6 +91,14 @@ unsaved changes the program asks; the buttons are <i>Save</i>, <i>Discard</i>
 and <i>Cancel</i>. Older files are called <code>.vtly.json</code>; they can
 still be opened, and saving them keeps their name.</p>
 
+<p><b>Opening read-only</b> — <b>File ▸ Open read-only…</b> (Ctrl+Shift+O)
+shows a file without overwriting it: everything can be changed, only <i>Save</i>
+is off; the way out is <i>Save as…</i>, and the new file is an ordinary one
+again. The same happens by itself when the file is write-protected on disk —
+otherwise you would notice only at saving time, with the work behind you. How
+to tell: the title bar says <i>(read-only)</i>, and in the strip view a red
+<b>read-only</b> stands next to the percentage of the split cell.</p>
+
 <p><b>Double click in the file manager</b> — a project file
 (<code>.vtly</code>) opens Verteilerly as soon as it is linked with the right
 executable in the file manager. <b>Linking is done by hand</b>, where that
@@ -1138,8 +1146,9 @@ extensions</i>.</p>
 
 <table border="1" cellspacing="0" cellpadding="5">
 <tr><th>Menu</th><th>Entry</th><th>Shortcut</th></tr>
-<tr><td rowspan="9"><b>File</b></td><td>New frame…</td><td>Ctrl+N</td></tr>
+<tr><td rowspan="10"><b>File</b></td><td>New frame…</td><td>Ctrl+N</td></tr>
 <tr><td>Open…</td><td>Ctrl+O</td></tr>
+<tr><td>Open read-only…</td><td>Ctrl+Shift+O</td></tr>
 <tr><td>Save</td><td>Ctrl+S</td></tr>
 <tr><td>Save as…</td><td>Ctrl+Shift+S</td></tr>
 <tr><td>Export</td><td></td></tr>

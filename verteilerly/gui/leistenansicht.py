@@ -874,6 +874,12 @@ class LeistenAnsicht(QWidget):
         kopf.addSpacing(16)
         for knopf in self._textknoepfe():
             kopf.addWidget(knopf)
+        # Der Schreibschutz steht dort, wo gearbeitet wird: neben den
+        # Knoepfen, die die Zelle aendern. Leer nimmt er keinen Platz.
+        self.schreibschutz = QLabel("")
+        self.schreibschutz.setVisible(False)
+        kopf.addSpacing(8)
+        kopf.addWidget(self.schreibschutz)
         # Was hier steht, ist Chrom und waechst nicht mit dem Verteiler:
         # ein Text, der die Kabel der Leiste aufzaehlte, hat die Vorschau
         # aus dem Fenster geschoben (siehe minimumSizeHint).
@@ -1232,6 +1238,29 @@ class LeistenAnsicht(QWidget):
     def farben_setzen(self, farben) -> None:
         self.modell.farben_setzen(farben)
         self._symbole_auffrischen()
+        self._schreibschutz_faerben()
+
+    def schreibschutz_setzen(self, an: bool, grund: str = "") -> None:
+        """Zeigt neben dem Anteil an, dass nicht gespeichert werden kann.
+
+        Nicht nur in der Titelzeile: wer hier tippt, soll hier sehen,
+        dass die Datei nicht zurueckgeschrieben wird.
+        """
+        self.schreibschutz.setText(u("schreibgeschützt") if an else "")
+        self.schreibschutz.setToolTip(grund)
+        self.schreibschutz.setVisible(an)
+        self._schreibschutz_faerben()
+
+    def _schreibschutz_faerben(self) -> None:
+        """Rot aus dem Farbsatz - im dunklen Satz ein helleres Rot."""
+        if not hasattr(self, "schreibschutz"):
+            return
+        schrift = self.schreibschutz.font()
+        schrift.setBold(True)
+        self.schreibschutz.setFont(schrift)
+        self.schreibschutz.setStyleSheet(
+            f"color: {self.modell.farben.warnung};"
+        )
 
     def schreibweise_setzen(self, schreibweise: Schreibweise) -> None:
         self.modell.schreibweise_setzen(schreibweise)

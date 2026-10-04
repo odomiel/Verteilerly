@@ -1667,6 +1667,119 @@ class TestKabelnameInDerBelegung(unittest.TestCase):
 
 
 @unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
+class TestSchreibschutz(unittest.TestCase):
+    """Ansehen, ohne die Datei zu ueberschreiben."""
+
+    def setUp(self):
+        from verteilerly import projektdatei
+        from verteilerly.gui import hauptfenster
+        from verteilerly.gui.hauptfenster import Hauptfenster
+
+        self.ordner = tempfile.TemporaryDirectory()
+        self.addCleanup(self.ordner.cleanup)
+        verteiler = Verteiler.aus_geometrie(1, 4, 10, name="Probe")
+        verteiler.kabel_anlegen("Leitung", 1, 1, 4)
+        self.datei = pathlib.Path(self.ordner.name) / "probe.vtly"
+        projektdatei.speichern(Projekt(verteiler=verteiler), self.datei)
+        self.fenster = Hauptfenster()
+        # Ein Fenster mit ungesicherten Aenderungen fragt beim Schliessen
+        # nach - und ein unbeantworteter Dialog haengt die Testreihe auf.
+        verwerfen = mock.patch.object(
+            hauptfenster, "frage",
+            return_value=QMessageBox.StandardButton.Discard,
+        )
+        verwerfen.start()
+        self.addCleanup(verwerfen.stop)
+        self.addCleanup(self.fenster.close)
+
+    def _hinweis(self):
+        return self.fenster.leistenansicht.schreibschutz
+
+    def _steht_da(self) -> bool:
+        """Ob der Hinweis am Fenster haengt.
+
+        ``isVisible`` taugt hier nicht: das Testfenster wird nie gezeigt,
+        und ein Kind eines unsichtbaren Fensters ist nie sichtbar.
+        """
+        return not self._hinweis().isHidden()
+
+    def test_schreibgeschuetzt_geoeffnet_steht_es_rot_daneben(self):
+        self.fenster.datei_oeffnen(self.datei, schreibgeschuetzt=True)
+        self.assertTrue(self.fenster.schreibgeschuetzt)
+        self.assertTrue(self._steht_da())
+        self.assertIn("schreibgeschützt", self._hinweis().text())
+        from verteilerly.gui.thema import SAETZE
+
+        self.assertIn(
+            SAETZE[self.fenster.thema_name].warnung,
+            self._hinweis().styleSheet(),
+        )
+        self.assertIn("(schreibgeschützt)", self.fenster.windowTitle())
+        self.assertFalse(self.fenster.aktion_speichern.isEnabled())
+
+    def test_gewoehnlich_geoeffnet_steht_da_nichts(self):
+        self.fenster.datei_oeffnen(self.datei)
+        self.assertFalse(self.fenster.schreibgeschuetzt)
+        self.assertFalse(self._steht_da())
+        self.assertNotIn("(schreibgeschützt)", self.fenster.windowTitle())
+
+    def test_eine_nicht_schreibbare_datei_merkt_das_programm_selbst(self):
+        """Sonst faellt es erst beim Speichern auf."""
+        self.datei.chmod(0o444)
+        self.addCleanup(self.datei.chmod, 0o644)
+        self.fenster.datei_oeffnen(self.datei)
+        self.assertTrue(self.fenster.schreibgeschuetzt)
+        self.assertIn(str(self.datei), self.fenster.schreibschutz_grund)
+
+    def test_speichern_geht_nur_unter_neuem_namen(self):
+        self.fenster.datei_oeffnen(self.datei, schreibgeschuetzt=True)
+        ziel = pathlib.Path(self.ordner.name) / "neu.vtly"
+        from verteilerly.gui import hauptfenster
+
+        with mock.patch.object(
+            hauptfenster.QFileDialog, "getSaveFileName",
+            return_value=(str(ziel), ""),
+        ):
+            self.assertTrue(self.fenster.speichern())
+        self.assertTrue(ziel.exists())
+        # Die neue Datei gehoert dem Anwender: der Schutz ist weg.
+        self.assertFalse(self.fenster.schreibgeschuetzt)
+        self.assertFalse(self._steht_da())
+        self.assertEqual(self.fenster.pfad, ziel)
+
+    def test_die_alte_datei_bleibt_unberuehrt(self):
+        alt = self.datei.read_text(encoding="utf-8")
+        self.fenster.datei_oeffnen(self.datei, schreibgeschuetzt=True)
+        self.fenster.projekt.verteiler.name = "Geändert"
+        self.fenster._belegung_geaendert()
+        ziel = pathlib.Path(self.ordner.name) / "neu.vtly"
+        from verteilerly.gui import hauptfenster
+
+        with mock.patch.object(
+            hauptfenster.QFileDialog, "getSaveFileName",
+            return_value=(str(ziel), ""),
+        ):
+            self.fenster.speichern()
+        self.assertEqual(self.datei.read_text(encoding="utf-8"), alt)
+
+    def test_zuruecknehmen_hebt_den_schutz_nicht_auf(self):
+        """Der Stand gehoert zu derselben Datei."""
+        self.fenster.datei_oeffnen(self.datei, schreibgeschuetzt=True)
+        self.fenster.projekt.verteiler.name = "Geändert"
+        self.fenster._belegung_geaendert()
+        self.fenster.rueckgaengig()
+        self.assertTrue(self.fenster.schreibgeschuetzt)
+        self.assertTrue(self._steht_da())
+
+    def test_ein_neuer_verteiler_ist_nicht_geschuetzt(self):
+        self.fenster.datei_oeffnen(self.datei, schreibgeschuetzt=True)
+        verteiler = Verteiler.aus_geometrie(1, 2, 10, name="Neu")
+        self.fenster._projekt_setzen(Projekt(verteiler=verteiler), None)
+        self.assertFalse(self.fenster.schreibgeschuetzt)
+        self.assertFalse(self._steht_da())
+
+
+@unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
 class TestMenuezustaende(unittest.TestCase):
     """Ausgegraut ist, was gerade nicht geht."""
 

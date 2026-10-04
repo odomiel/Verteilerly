@@ -1,8 +1,8 @@
 Python 3.14 - Lizenzen der eingebauten Fremdbestandteile
 =========================================================
 
-Auszug aus Doc/license.rst des CPython-Quelltextes, Fassung 3.14.7
-(https://github.com/python/cpython/blob/v3.14.7/Doc/license.rst).
+Auszug aus Doc/license.rst des CPython-Quelltextes, Fassung 3.14.8
+(https://github.com/python/cpython/blob/v3.14.8/Doc/license.rst).
 Die Lizenz von Python selbst (PSF License 2.0) steht in
 Python-LICENSE.txt.
 
