@@ -19,9 +19,13 @@ from ..sprachen import u
 #: Fracht soll hier nichts ausloesen.
 KABELFRACHT = "application/x-verteilerly-kabel"
 
-ZELLE_B = 27
-ZELLE_H = 32
-LABEL_B = 32
+# Eine DA-Zelle im Bearbeitungsfenster. Groesser als auf dem Blatt, und
+# zwar mit Absicht: hier soll der Name auch eines Kabels zu lesen sein,
+# das nur eine oder zwei Doppeladern belegt. Die Hoehe traegt dafuer zwei
+# Zeilen - ein Name bricht um, bevor er abgeschnitten wird.
+ZELLE_B = 38
+ZELLE_H = 46
+LABEL_B = 36
 RAND = 14
 ABSTAND_LEISTEN = 9
 ABSTAND_BUCHTEN = 30
@@ -371,16 +375,38 @@ class Uebersicht(QWidget):
             beschriftung = kabel.beschriftung
             if kabel.gekuerzt and abschnitt is kabel.abschnitte[-1]:
                 beschriftung = u("{0} (gekürzt)").format(beschriftung)
-            masse = QFontMetrics(self.font())
-            platz = block.adjusted(6, 0, -4, 0)
             maler.setPen(self.farben.q("akzent"))
-            maler.drawText(
-                platz,
-                Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
-                masse.elidedText(
-                    beschriftung, Qt.TextElideMode.ElideRight, platz.width()
-                ),
-            )
+            self._namen_zeichnen(maler, block, beschriftung)
+
+    def _namen_zeichnen(self, maler: QPainter, block: QRect, name: str) -> None:
+        """Den Kabelnamen in seinen Block - umgebrochen, wenn es sein muss.
+
+        Ein Kabel ueber eine Doppelader hat nur eine Zellbreite Platz; in
+        einer Zeile blieben davon drei Buchstaben und ein Auslassungszeichen.
+        Also wird umgebrochen, solange die Zeilen in die Hoehe passen, und
+        erst wenn auch das nicht reicht, einzeilig abgeschnitten - lieber
+        ein halber Name als keiner.
+        """
+        platz = block.adjusted(4, 2, -3, -2)
+        text, flaggen = self.namenslage(name, platz)
+        maler.drawText(platz, flaggen, text)
+
+    def namenslage(self, name: str, platz: QRect):
+        """Was von einem Namen zu sehen ist und wie - Text und Flaggen.
+
+        Getrennt vom Zeichnen, damit die Entscheidung pruefbar bleibt:
+        passt der umgebrochene Name in die Hoehe, wird umgebrochen; sonst
+        bleibt es bei einer Zeile mit Auslassungszeichen.
+        """
+        masse = QFontMetrics(self.font())
+        lage = Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+        umbruch = lage | Qt.TextFlag.TextWordWrap
+        if masse.boundingRect(platz, umbruch, name).height() <= platz.height():
+            return name, umbruch
+        return (
+            masse.elidedText(name, Qt.TextElideMode.ElideRight, platz.width()),
+            lage,
+        )
 
     def _auswahl_zeichnen(self, maler: QPainter) -> None:
         if self.auswahl is None or self.auswahl[0] not in self._kaesten:

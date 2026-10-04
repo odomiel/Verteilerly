@@ -1158,6 +1158,61 @@ class TestUebersicht(unittest.TestCase):
 
 
 @unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
+class TestKabelnamenInDerUebersicht(unittest.TestCase):
+    """Auch ein Kabel über eine Doppelader soll lesbar beschriftet sein."""
+
+    def setUp(self):
+        from verteilerly.gui.uebersicht import Uebersicht
+
+        self.uebersicht = Uebersicht()
+        self.addCleanup(self.uebersicht.close)
+        self.uebersicht.verteiler_setzen(
+            Verteiler.aus_geometrie(1, 2, 10, name="Probe")
+        )
+
+    def _platz(self, da_anzahl):
+        from PySide6.QtCore import QRect
+
+        from verteilerly.gui.uebersicht import ZELLE_B, ZELLE_H
+
+        return QRect(0, 0, da_anzahl * ZELLE_B - 7, ZELLE_H - 4)
+
+    def test_in_eine_zelle_passen_zwei_zeilen(self):
+        from PySide6.QtGui import QFontMetrics
+
+        from verteilerly.gui.uebersicht import ZELLE_H
+
+        zeile = QFontMetrics(self.uebersicht.font()).lineSpacing()
+        self.assertGreaterEqual(ZELLE_H - 4, 2 * zeile)
+
+    def test_ein_kurzer_name_bricht_um_statt_abzubrechen(self):
+        from PySide6.QtCore import Qt
+
+        text, flaggen = self.uebersicht.namenslage("Halle Ost", self._platz(1))
+        self.assertEqual(text, "Halle Ost", "der Name wurde gekürzt")
+        self.assertTrue(flaggen & Qt.TextFlag.TextWordWrap)
+
+    def test_was_auch_umgebrochen_nicht_passt_wird_abgeschnitten(self):
+        from PySide6.QtCore import Qt
+
+        lang = "Leitung zur Halle Ost über den Hof und weiter"
+        text, flaggen = self.uebersicht.namenslage(lang, self._platz(1))
+        self.assertNotEqual(text, lang)
+        self.assertFalse(flaggen & Qt.TextFlag.TextWordWrap)
+
+    def test_ein_breiter_block_bleibt_einzeilig(self):
+        text, _flaggen = self.uebersicht.namenslage("Tor 3", self._platz(4))
+        self.assertEqual(text, "Tor 3")
+
+    def test_gezeichnet_wird_ohne_ausnahme(self):
+        from PySide6.QtGui import QImage
+
+        self.uebersicht.verteiler.kabel_anlegen("Halle Ost", 1, 1, 1)
+        self.uebersicht.resize(self.uebersicht.sizeHint())
+        bild = QImage(self.uebersicht.size(), QImage.Format.Format_ARGB32)
+        self.uebersicht.render(bild)
+
+
 class TestKabelZiehen(unittest.TestCase):
     """Ein Kabel in der Übersicht woandershin ziehen."""
 

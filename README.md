@@ -357,7 +357,10 @@ durchgehende Fläche; wie viele Doppeladern ein Kabel belegt, zeigt die
 Breite seines Blocks. Die DA-Nummern in den Zellen führt keine
 mitgelieferte Vorlage mehr; wer sie will, setzt `da_nummern: true` in
 seiner Blattvorlage. Im Bearbeitungsmodus bleibt jede Leiste unterteilt:
-dort wird auf die einzelne Doppelader geklickt.
+dort wird auf die einzelne Doppelader geklickt. Die Zellen sind dort
+**größer** als auf dem Blatt (38 × 46 statt 27 × 32 Bildpunkte), damit auch ein
+Kabel über eine einzige Doppelader seinen Namen zeigt: `namenslage()` bricht
+ihn um, solange die Zeilen in den Block passen, und schneidet erst dann ab.
 
 Der **Kabelname steht mitten im Block**, waagerecht wie senkrecht, und so
 groß, wie dieser ihn trägt (höchstens `schrift_mittel` der Blattvorlage;
