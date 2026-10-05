@@ -883,8 +883,22 @@ yet — and reports on it:</p>
 measures. That shows whether the file is understood the way it was
 meant;</li>
 <li><b>remarks</b> — keys the program does not know, and for a sheet template a
-file name that does not carry its identifier.</li>
+file name that does not carry its identifier;</li>
+<li><b>to be refreshed</b> — entries that no longer exist in this form. They are
+skipped while reading, and the report names them together with the version in
+which they went.</li>
 </ul>
+
+<p><b>Refreshing</b> — if something stands under <i>to be refreshed</i>, the
+report carries a button <i>Refresh…</i>. It rewrites the file to today's state:
+the collective mark <code>eigene</code> is replaced by the names of the own
+fields, <code>zeilen_kabel</code> moves out of the block <code>belegung</code>
+to sheet level. Only <b>what the program knows as retired</b> is changed — an
+unknown key stays, because it may be a typo. <b>Comments and the order of the
+lines are lost</b> in the process, since the file is written anew; the old
+version stays next to it as <code>&lt;name&gt;.yaml.alt</code>. Before writing,
+the program reads the result once more as in operation — what would fail there
+is not written.</p>
 
 <p>It is read by the same rules as at startup: what the report approves, the
 program accepts as well. Only then put the file into the working folder and

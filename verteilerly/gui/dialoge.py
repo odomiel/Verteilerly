@@ -1267,12 +1267,14 @@ class PruefberichtDialog(PassenderDialog):
     def __init__(self, bericht, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.bericht = bericht
+        #: Ob in diesem Dialog etwas an der Datei geaendert wurde.
+        self.aufgefrischt = False
         self.setWindowTitle(u("Vorlage geprüft"))
 
-        urteil = QLabel(bericht.urteil)
-        schrift = urteil.font()
+        self.urteil = QLabel(bericht.urteil)
+        schrift = self.urteil.font()
         schrift.setBold(True)
-        urteil.setFont(schrift)
+        self.urteil.setFont(schrift)
 
         self.text = QPlainTextEdit()
         self.text.setReadOnly(True)
@@ -1283,12 +1285,55 @@ class PruefberichtDialog(PassenderDialog):
         knoepfe.button(QDialogButtonBox.StandardButton.Close).setText(u("Schließen"))
         knoepfe.rejected.connect(self.reject)
         knoepfe.accepted.connect(self.accept)
+        # Nur wenn es etwas aufzufrischen gibt - ein Knopf, der nie etwas
+        # tut, verwirrt mehr, als er nuetzt.
+        self.auffrischen = None
+        if bericht.aufzufrischen:
+            self.auffrischen = knoepfe.addButton(
+                u("Auffrischen…"), QDialogButtonBox.ButtonRole.ActionRole
+            )
+            self.auffrischen.setToolTip(
+                u("Schreibt die Datei auf den heutigen Stand um; die alte "
+                  "Fassung bleibt als .alt daneben liegen.")
+            )
+            self.auffrischen.clicked.connect(self._auffrischen)
 
         aufbau = QVBoxLayout(self)
-        aufbau.addWidget(urteil)
+        aufbau.addWidget(self.urteil)
         aufbau.addWidget(QLabel(str(bericht.datei)))
         aufbau.addWidget(self.text)
         aufbau.addWidget(knoepfe)
+
+    def _auffrischen(self) -> None:
+        """Fragt, frischt auf und zeigt den neuen Bericht."""
+        from .. import pruefung
+
+        antwort = frage(
+            self,
+            u("Vorlage auffrischen?"),
+            u("Die Datei wird aus den gelesenen Angaben neu geschrieben:\n\n{0}\n\n"
+              "Kommentare und die Reihenfolge der Zeilen gehen dabei verloren. "
+              "Die alte Fassung bleibt als „{1}“ daneben liegen.").format(
+                  "\n".join(f"• {zeile}" for zeile in self.bericht.aufzufrischen),
+                  self.bericht.datei.name + pruefung.SICHERUNG,
+              ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Yes,
+        )
+        if antwort != QMessageBox.StandardButton.Yes:
+            return
+        ergebnis = pruefung.auffrischen(self.bericht.datei, self.bericht.art)
+        if not ergebnis.gelungen:
+            QMessageBox.critical(
+                self, u("Auffrischen fehlgeschlagen"), ergebnis.fehler
+            )
+            return
+        self.aufgefrischt = bool(ergebnis.aenderungen)
+        self.bericht = pruefung.pruefen(self.bericht.datei, self.bericht.art)
+        self.urteil.setText(self.bericht.urteil)
+        self.text.setPlainText(self.als_text(self.bericht))
+        if self.auffrischen is not None:
+            self.auffrischen.setEnabled(bool(self.bericht.aufzufrischen))
 
     @staticmethod
     def als_text(bericht) -> str:
@@ -1306,6 +1351,11 @@ class PruefberichtDialog(PassenderDialog):
                 zeilen.append("")
             zeilen.append(u("Anmerkungen"))
             zeilen += [f"  {zeile}" for zeile in bericht.hinweise]
+        if bericht.aufzufrischen:
+            if zeilen:
+                zeilen.append("")
+            zeilen.append(u("Aufzufrischen"))
+            zeilen += [f"  {zeile}" for zeile in bericht.aufzufrischen]
         return "\n".join(zeilen)
 
 

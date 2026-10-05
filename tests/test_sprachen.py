@@ -126,6 +126,12 @@ class TestWortliste(unittest.TestCase):
         from verteilerly.pruefung import ARTEN
 
         gebraucht |= {wie for _art, wie in ARTEN}
+        # Was die Blattvorlage abgelegt hat, steht als Tabelle im Modul;
+        # der Ersatztext geht erst beim Anzeigen durch u(…).
+        from verteilerly.blattvorlagen import ABGELEGT
+
+        gebraucht |= {a.ersatz for a in ABGELEGT}
+        gebraucht |= {a.stelle for a in ABGELEGT}
         gebraucht |= set(BRIEFKOPF_BESCHRIFTUNG.values())
         gebraucht |= set(BLATTART_BESCHRIFTUNG.values())
         gebraucht |= set(BLATTART_NAMEN.values())

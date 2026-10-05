@@ -1363,6 +1363,25 @@ class TestVorschau(unittest.TestCase):
         self.assertIsNone(self.vorschau.flaeche.blatt)
 
 
+def hinweismeldung_abfangen(hauptfenster, gesammelt: list):
+    """Faengt die Meldung zu den Vorlagendateien ab.
+
+    Sie baut ihren Kasten selbst (Titel, Text, Einzelheiten) und zeigt
+    ihn mit ``exec`` - ein unbeantworteter Dialog haengt die ganze
+    Testreihe auf, also wird genau das abgefangen.
+    """
+    def gezeigt(kasten):
+        gesammelt.append(
+            "\n".join((
+                kasten.windowTitle(), kasten.text(),
+                kasten.informativeText(), kasten.detailedText(),
+            ))
+        )
+        return 0
+
+    return mock.patch.object(hauptfenster.QMessageBox, "exec", gezeigt)
+
+
 @unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")
 class TestUnterlaengenInDerVorschau(unittest.TestCase):
     """Der Schwanz von g und y gehoert zum Buchstaben.
@@ -2861,8 +2880,7 @@ class TestMenuezustaende(unittest.TestCase):
         gemeldet = []
         with mock.patch.object(hauptfenster.pfade, "blattvorlagenordner_alle",
                                return_value=[ziel]), \
-             mock.patch.object(hauptfenster.QMessageBox, "warning",
-                               lambda *args, **kw: gemeldet.append(args[2])):
+             hinweismeldung_abfangen(hauptfenster, gemeldet):
             vorlagen = f._blattvorlagen_laden()
 
         self.assertIn("knapp", [v.id for v in vorlagen.alle])
@@ -2895,10 +2913,12 @@ class TestMenuezustaende(unittest.TestCase):
         self.assertIn("zeilenhohe_max", zettel[0])
 
         gemeldet = []
-        with mock.patch.object(hauptfenster.QMessageBox, "warning",
-                               lambda *args, **kw: gemeldet.append(args[2])):
+        with hinweismeldung_abfangen(hauptfenster, gemeldet):
             f._hinweise_zeigen(zettel)
         self.assertIn("zeilenhohe_max", gemeldet[0])
+        # Die Meldung sagt auch, was damit geschah und wo es hingehört.
+        self.assertIn("übergangen", gemeldet[0])
+        self.assertIn("Blattvorlage prüfen", gemeldet[0])
 
     def test_geloeschte_blattvorlagen_bleiben_beim_laden_weg(self):
         """Ohne den Vermerk holte das Abbild sie zurück."""
@@ -4633,6 +4653,66 @@ class TestToolsMenue(unittest.TestCase):
         ordner = self.fenster._pruefordner("blattvorlage")
         self.assertTrue(ordner.is_dir())
         self.assertEqual(ordner.name, "blattvorlagen")
+
+    def _alte_vorlage(self) -> pathlib.Path:
+        datei = self.ziel / "alt.yaml"
+        datei.write_text(
+            "id: alt\nname: Alt\neigene_felder: [Auftrag]\n"
+            "schriftfeld:\n  - [firma, eigene]\n",
+            encoding="utf-8",
+        )
+        return datei
+
+    def test_eine_alte_vorlage_bekommt_den_knopf(self):
+        """Ohne etwas aufzufrischen gibt es den Knopf nicht."""
+        from verteilerly.gui.dialoge import PruefberichtDialog
+        from verteilerly.pruefung import pruefen
+
+        dialog = PruefberichtDialog(pruefen(self._alte_vorlage(), "blattvorlage"))
+        self.addCleanup(dialog.close)
+        self.assertIsNotNone(dialog.auffrischen)
+        self.assertIn("Aufzufrischen", dialog.text.toPlainText())
+
+        heil = self.ziel / "heil.yaml"
+        heil.write_text("id: heil\nname: Heil\n", encoding="utf-8")
+        ohne = PruefberichtDialog(pruefen(heil, "blattvorlage"))
+        self.addCleanup(ohne.close)
+        self.assertIsNone(ohne.auffrischen)
+
+    def test_der_knopf_frischt_auf_und_zeigt_den_neuen_bericht(self):
+        from verteilerly.gui import dialoge
+        from verteilerly.gui.dialoge import PruefberichtDialog
+        from verteilerly.pruefung import SICHERUNG, pruefen
+
+        datei = self._alte_vorlage()
+        dialog = PruefberichtDialog(pruefen(datei, "blattvorlage"))
+        self.addCleanup(dialog.close)
+        with mock.patch.object(
+            dialoge, "frage", return_value=QMessageBox.StandardButton.Yes
+        ):
+            dialog.auffrischen.click()
+        self.assertTrue(dialog.aufgefrischt)
+        self.assertEqual(dialog.bericht.aufzufrischen, [])
+        self.assertIn("Ordnung", dialog.urteil.text())
+        self.assertFalse(dialog.auffrischen.isEnabled())
+        self.assertIn("Auftrag", datei.read_text(encoding="utf-8"))
+        self.assertTrue((self.ziel / ("alt.yaml" + SICHERUNG)).exists())
+
+    def test_wer_abbricht_behaelt_seine_datei(self):
+        from verteilerly.gui import dialoge
+        from verteilerly.gui.dialoge import PruefberichtDialog
+        from verteilerly.pruefung import pruefen
+
+        datei = self._alte_vorlage()
+        vorher = datei.read_text(encoding="utf-8")
+        dialog = PruefberichtDialog(pruefen(datei, "blattvorlage"))
+        self.addCleanup(dialog.close)
+        with mock.patch.object(
+            dialoge, "frage", return_value=QMessageBox.StandardButton.Cancel
+        ):
+            dialog.auffrischen.click()
+        self.assertFalse(dialog.aufgefrischt)
+        self.assertEqual(datei.read_text(encoding="utf-8"), vorher)
 
 
 @unittest.skipIf(ANWENDUNG is None, "PySide6 ist nicht vorhanden")

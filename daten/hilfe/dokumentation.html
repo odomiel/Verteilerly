@@ -908,8 +908,23 @@ liegt;</li>
 Maße. Daran ist zu sehen, ob die Datei so verstanden wird, wie sie gemeint
 war;</li>
 <li><b>Anmerkungen</b> — Schlüssel, die das Programm nicht kennt, und bei
-einer Blattvorlage ein Dateiname, der nicht ihre Kennung trägt.</li>
+einer Blattvorlage ein Dateiname, der nicht ihre Kennung trägt;</li>
+<li><b>Aufzufrischen</b> — Angaben, die es in dieser Form nicht mehr gibt. Sie
+werden beim Lesen übergangen, und der Bericht nennt sie samt der Fassung, mit
+der sie wegfielen.</li>
 </ul>
+
+<p><b>Auffrischen</b> — steht etwas unter <i>Aufzufrischen</i>, trägt der
+Bericht einen Knopf <i>Auffrischen…</i>. Er schreibt die Datei auf den heutigen
+Stand um: die Sammelmarke <code>eigene</code> wird durch die Namen der eigenen
+Felder ersetzt, <code>zeilen_kabel</code> wandert aus dem Block
+<code>belegung</code> auf die Blattebene. Geändert wird <b>nur, was das
+Programm als abgelegt kennt</b> — ein unbekannter Schlüssel bleibt stehen, denn
+er kann ein Tippfehler sein. <b>Kommentare und die Reihenfolge der Zeilen gehen
+dabei verloren</b>, weil die Datei neu geschrieben wird; die alte Fassung
+bleibt als <code>&lt;name&gt;.yaml.alt</code> daneben liegen. Vor dem Schreiben
+liest das Programm das Ergebnis noch einmal wie im Betrieb — was dabei
+durchfiele, wird nicht geschrieben.</p>
 
 <p>Gelesen wird mit denselben Regeln wie beim Start: was der Bericht gutheißt,
 nimmt das Programm auch an. Erst danach die Datei in den Arbeitsordner legen

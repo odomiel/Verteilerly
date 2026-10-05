@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 
 import yaml
 
-from .blattvorlagen import blattvorlage_aus_yaml
+from .blattvorlagen import blattvorlage_auffrischen, blattvorlage_aus_yaml
 from .farbcodes import Kabeltypen
 from .modell import ModellFehler, mehrzahl
 from .sprachen import u
@@ -46,15 +46,44 @@ class Bericht:
     angaben: list[str] = field(default_factory=list)
     #: Was gilt, aber Fragen aufwirft - unbekannte Schluessel.
     hinweise: list[str] = field(default_factory=list)
+    #: Was sich auffrischen liesse - eine Zeile je Angabe, die es nicht
+    #: mehr gibt. Leer heisst: die Datei ist auf dem heutigen Stand.
+    aufzufrischen: list[str] = field(default_factory=list)
 
     @property
     def urteil(self) -> str:
         """Ein Satz, der oben im Bericht steht."""
         if not self.gut:
             return u("Diese Datei kann das Programm nicht lesen.")
+        if self.aufzufrischen:
+            return u("Die Datei ist brauchbar, stammt aber aus einer älteren Fassung.")
         if self.hinweise:
             return u("Die Datei ist brauchbar, mit Anmerkungen.")
         return u("Die Datei ist in Ordnung.")
+
+
+@dataclass
+class Auffrischung:
+    """Was das Auffrischen einer Vorlagendatei ergab."""
+
+    datei: pathlib.Path
+    #: Wohin die alte Fassung gelegt wurde - None, wenn nichts geschah.
+    sicherung: pathlib.Path | None = None
+    #: Was geaendert wurde, Zeile fuer Zeile.
+    aenderungen: list[str] = field(default_factory=list)
+    fehler: str = ""
+
+    @property
+    def gelungen(self) -> bool:
+        return not self.fehler
+
+    @property
+    def urteil(self) -> str:
+        if self.fehler:
+            return u("Aufgefrischt wurde nichts: {0}").format(self.fehler)
+        if not self.aenderungen:
+            return u("Es war nichts aufzufrischen.")
+        return mehrzahl(len(self.aenderungen), "Angabe", "Angaben") + u(" aufgefrischt")
 
 
 def _inhalt(pfad: pathlib.Path) -> dict:
@@ -88,7 +117,10 @@ def _vorlage(pfad: pathlib.Path, bericht: Bericht) -> None:
 
 
 def _blattvorlage(pfad: pathlib.Path, bericht: Bericht) -> None:
-    vorlage = blattvorlage_aus_yaml(_inhalt(pfad), pfad.name, bericht.hinweise)
+    inhalt = _inhalt(pfad)
+    # Trockenlauf: was das Auffrischen aendern wuerde, ohne es zu tun.
+    bericht.aufzufrischen = blattvorlage_auffrischen(inhalt)[1]
+    vorlage = blattvorlage_aus_yaml(inhalt, pfad.name, bericht.hinweise)
     spalten = ", ".join(spalte.feld for spalte in vorlage.spalten)
     bloecke = " | ".join(
         ", ".join(eintrag.marke for eintrag in block)
@@ -146,6 +178,58 @@ PRUEFER = {
     "blattvorlage": _blattvorlage,
     "kabeltypen": _kabeltypen,
 }
+
+
+#: Was sich auffrischen laesst. Fuer die anderen Arten gibt es nichts
+#: abzulegen - sie haben noch nie etwas verloren.
+AUFFRISCHBAR = {"blattvorlage": blattvorlage_auffrischen}
+
+#: Die alte Fassung bleibt daneben liegen, mit dieser Endung.
+SICHERUNG = ".alt"
+
+
+def auffrischen(pfad, art: str) -> Auffrischung:
+    """Schreibt die Datei auf den heutigen Stand um.
+
+    Geaendert wird nur, was das Programm als abgelegt kennt; alles
+    andere bleibt, wie es ist. **Kommentare gehen dabei verloren** - die
+    Datei wird aus den gelesenen Angaben neu geschrieben, und YAML
+    behaelt keine Kommentare. Darum bleibt die alte Fassung als
+    ``<name>.yaml.alt`` daneben liegen.
+
+    Vor dem Schreiben wird das Ergebnis gelesen wie im Betrieb: was
+    dabei durchfaellt, wird nicht geschrieben.
+    """
+    pfad = pathlib.Path(pfad)
+    ergebnis = Auffrischung(datei=pfad)
+    auffrischer = AUFFRISCHBAR.get(art)
+    if auffrischer is None:
+        ergebnis.fehler = u("Für diese Art gibt es nichts aufzufrischen.")
+        return ergebnis
+    try:
+        inhalt = _inhalt(pfad)
+        neu, getan = auffrischer(inhalt)
+        if not getan:
+            return ergebnis
+        # Erst lesen, dann schreiben: eine Datei, die danach nicht mehr
+        # taugt, waere schlimmer als eine veraltete.
+        pruefer = PRUEFER[art]
+        probe = Bericht(art=art, datei=pfad)
+        text = yaml.safe_dump(neu, allow_unicode=True, sort_keys=False)
+        with tempfile.TemporaryDirectory() as ordner:
+            vorab = pathlib.Path(ordner) / pfad.name
+            vorab.write_text(text, encoding="utf-8")
+            pruefer(vorab, probe)
+        sicherung = pfad.with_suffix(pfad.suffix + SICHERUNG)
+        shutil.copyfile(pfad, sicherung)
+        pfad.write_text(text, encoding="utf-8")
+        ergebnis.sicherung = sicherung
+        ergebnis.aenderungen = getan
+    except (ModellFehler, yaml.YAMLError, OSError) as fehler:
+        ergebnis.fehler = str(fehler)
+    except (ValueError, TypeError, KeyError, AttributeError) as fehler:
+        ergebnis.fehler = u("Nicht lesbar: {0}").format(fehler)
+    return ergebnis
 
 
 def pruefen(pfad, art: str) -> Bericht:

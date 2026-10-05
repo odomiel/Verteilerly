@@ -12,6 +12,7 @@ verteiler zeigen; eine Datei muss also nur angeben, was sie anders will.
 
 from __future__ import annotations
 
+import copy
 import pathlib
 from dataclasses import dataclass, field, replace
 
@@ -67,11 +68,50 @@ SPALTENFELDER = (
     "kabel",
 )
 
+@dataclass(frozen=True)
+class Abgelegt:
+    """Eine Angabe, die es in der Blattvorlage einmal gab.
+
+    Hier steht alles an einer Stelle, was eine alte Datei noch tragen
+    kann: wie die Angabe hiess, wo sie stand, seit wann es sie nicht
+    mehr gibt und was an ihre Stelle tritt. Daraus speisen sich die
+    Meldung beim Lesen **und** das Auffrischen der Datei
+    (``blattvorlage_auffrischen``) - sonst sagte das eine, was das
+    andere nicht taete.
+    """
+
+    name: str
+    #: Wo sie stand: "schriftfeld" oder der Block, etwa "belegung".
+    wo: str
+    #: Die Fassung, mit der sie wegfiel.
+    seit: str
+    #: Was heute an ihrer Stelle steht - ein Satzteil fuer die Meldung.
+    ersatz: str
+    #: Wo sie stand, als Satzteil - die Meldung ist fuer Menschen.
+    stelle: str
+
+
 # Was im Schriftfeld stehen kann - dazu die **Namen der eigenen Felder**
 # dieser Vorlage: jedes steht einzeln im Block, in dem es gebraucht wird.
 #: Die alte Marke fuer *alle* eigenen Felder. Es gibt sie nicht mehr;
 #: beim Lesen wird sie uebergangen, damit eine alte Datei weiter laeuft.
 SAMMELMARKE = "eigene"
+ABGELEGT = (
+    Abgelegt(
+        name=SAMMELMARKE,
+        wo="schriftfeld",
+        seit="2026.09.30",
+        ersatz="die Namen der eigenen Felder, jeder in seinem Block",
+        stelle="im Schriftfeld",
+    ),
+    Abgelegt(
+        name="zeilen_kabel",
+        wo="belegung",
+        seit="2026.10.04b7",
+        ersatz="zeilen_kabel auf der Blattebene, neben kabel_gedreht",
+        stelle="im Block „belegung“",
+    ),
+)
 SCHRIFTFELDMARKEN = (
     "firma",
     "kunde",
@@ -315,12 +355,7 @@ def _schriftfeld_aus_yaml(
                 # Felder. Seither steht jedes einzeln - eine alte Datei
                 # soll daran nicht scheitern, sondern es erfahren.
                 if hinweise is not None:
-                    hinweise.append(
-                        u("{0}: {1!r} gibt es nicht mehr - tragen Sie die "
-                          "eigenen Felder einzeln ein").format(
-                              herkunft, SAMMELMARKE
-                          )
-                    )
+                    hinweise.append(hinweis_abgelegt(herkunft, ABGELEGT[0]))
                 continue
             if marke not in SCHRIFTFELDMARKEN and marke not in eigene_felder:
                 bekannt = ", ".join((*SCHRIFTFELDMARKEN, *eigene_felder))
@@ -359,7 +394,13 @@ def blattvorlage_aus_yaml(
     belegung = inhalt.get("belegung") or {}
     unbekannte_schluessel(inhalt, BLATTSCHLUESSEL, wo, hinweise)
     unbekannte_schluessel(schrift, SCHRIFTSCHLUESSEL, wo, hinweise, "schrift")
-    unbekannte_schluessel(belegung, BELEGUNGSSCHLUESSEL, wo, hinweise, "belegung")
+    # Was abgelegt ist, kennt das Programm - es ist kein Tippfehler und
+    # wird darum auch nicht als einer gemeldet.
+    abgelegte_melden(belegung, "belegung", wo, hinweise)
+    unbekannte_schluessel(
+        belegung, (*BELEGUNGSSCHLUESSEL, *abgelegte_namen("belegung")),
+        wo, hinweise, "belegung",
+    )
 
     # Die eigenen Felder zuerst: ihre Namen sind gueltige Marken des
     # Schriftfeldes, also muessen sie vor ihm bekannt sein.
@@ -459,6 +500,96 @@ def _zahlwert(wert):
 def _abweichung(ziel: dict, schluessel: str, wert, vorgabe) -> None:
     if wert != vorgabe:
         ziel[schluessel] = _zahlwert(wert)
+
+
+def abgelegte_namen(wo: str) -> tuple[str, ...]:
+    """Die Namen, die es an dieser Stelle einmal gab."""
+    return tuple(a.name for a in ABGELEGT if a.wo == wo)
+
+
+def abgelegte_melden(
+    inhalt, wo: str, herkunft: str, hinweise: list[str] | None
+) -> None:
+    """Sagt zu jeder abgelegten Angabe, die noch dasteht, was mit ihr ist.
+
+    Ohne das meldete sie sich als unbekannter Schluessel - also als
+    moeglicher Tippfehler, obwohl das Programm sie genau kennt.
+    """
+    if hinweise is None or not isinstance(inhalt, dict):
+        return
+    for abgelegt in ABGELEGT:
+        if abgelegt.wo == wo and abgelegt.name in inhalt:
+            hinweise.append(hinweis_abgelegt(herkunft, abgelegt))
+
+
+def hinweis_abgelegt(herkunft: str, abgelegt: Abgelegt) -> str:
+    """Der Satz, der eine abgelegte Angabe erklaert.
+
+    Er sagt dreierlei, weil der Anwender dreierlei wissen muss: was in
+    seiner Datei steht, was das Programm damit gemacht hat und was
+    heute an diese Stelle gehoert.
+    """
+    return u(
+        "{0}: Die Angabe „{1}“ {2} gibt es seit Fassung {3} nicht mehr; "
+        "sie wurde beim Lesen übergangen. An ihrer Stelle steht heute {4}. "
+        "Auffrischen lässt sich die Datei unter Tools ▸ Blattvorlage prüfen…"
+    ).format(
+        herkunft, abgelegt.name, u(abgelegt.stelle), abgelegt.seit,
+        u(abgelegt.ersatz),
+    )
+
+
+def blattvorlage_auffrischen(inhalt: dict) -> tuple[dict, list[str]]:
+    """Macht aus einer alten Datei eine heutige - ohne sie zu deuten.
+
+    Zurueck kommen der aufgefrischte Inhalt und was dabei geschah; eine
+    leere Liste heisst: es war nichts aufzufrischen. Geaendert wird nur,
+    was in ``ABGELEGT`` steht - ein unbekannter Schluessel bleibt stehen,
+    denn er kann ein Tippfehler sein, und den soll niemand automatisch
+    "berichtigt" bekommen.
+    """
+    neu = copy.deepcopy(inhalt)
+    getan: list[str] = []
+
+    # Die Sammelmarke: sie stand fuer *alle* eigenen Felder dieses Blocks.
+    # Genau die traegt das Programm jetzt einzeln ein - der Block sieht
+    # danach aus wie vorher, nur ausgeschrieben.
+    eigene = [str(n).strip() for n in (neu.get("eigene_felder") or []) if str(n).strip()]
+    bloecke = neu.get("schriftfeld")
+    if isinstance(bloecke, list):
+        for block in bloecke:
+            if not isinstance(block, list):
+                continue
+            stelle = 0
+            while stelle < len(block):
+                eintrag = block[stelle]
+                marke = (
+                    eintrag.get("marke") if isinstance(eintrag, dict) else eintrag
+                )
+                if str(marke).strip() != SAMMELMARKE:
+                    stelle += 1
+                    continue
+                block[stelle:stelle + 1] = list(eigene)
+                stelle += len(eigene)
+                getan.append(
+                    u("„{0}“ im Schriftfeld durch {1} ersetzt").format(
+                        SAMMELMARKE,
+                        ", ".join(eigene) if eigene
+                        else u("nichts — die Vorlage führt keine eigenen Felder"),
+                    )
+                )
+
+    # zeilen_kabel stand kurz im Block "belegung" und gehoert aufs Blatt.
+    belegung = neu.get("belegung")
+    if isinstance(belegung, dict) and "zeilen_kabel" in belegung:
+        wert = belegung.pop("zeilen_kabel")
+        neu.setdefault("zeilen_kabel", wert)
+        if not belegung:
+            neu.pop("belegung")
+        getan.append(
+            u("zeilen_kabel aus dem Block „belegung“ auf die Blattebene geholt")
+        )
+    return neu, getan
 
 
 def _eigene_aus_yaml(inhalt, wo: str, hinweise: list[str] | None) -> tuple[str, ...]:

@@ -1912,9 +1912,13 @@ class Hauptfenster(QMainWindow):
         if not name:
             return
         bericht = pruefung.pruefen(pathlib.Path(name), art)
-        PruefberichtDialog(bericht, self).exec()
+        dialog = PruefberichtDialog(bericht, self)
+        dialog.exec()
+        if dialog.aufgefrischt and art == "blattvorlage":
+            # Die Datei auf der Platte ist eine andere als die geladene.
+            self.blattvorlagen_neu_laden()
         self.statusBar().showMessage(
-            f"{pathlib.Path(name).name}: {bericht.urteil}", 8000
+            f"{pathlib.Path(name).name}: {dialog.bericht.urteil}", 8000
         )
 
     def _pruefordner(self, art: str) -> pathlib.Path:
@@ -2100,16 +2104,41 @@ class Hauptfenster(QMainWindow):
         )
 
     def _hinweise_zeigen(self, hinweise=None) -> None:
-        """Zeigt einmal, was beim Lesen der Vorlagen auffiel."""
+        """Zeigt einmal, was beim Lesen der Vorlagendateien auffiel.
+
+        Die Meldung sagt dreierlei, weil der Anwender dreierlei wissen
+        muss: was aufgefallen ist, was das Programm damit gemacht hat
+        und wo er es in Ordnung bringt. "Beanstandet" allein liess ihn
+        mit einer Warnung sitzen, zu der es nichts zu tun gab.
+        """
         gesammelt = self.hinweise if hinweise is None else hinweise
         if not gesammelt:
             return
-        QMessageBox.warning(
-            self,
-            mehrzahl(len(gesammelt), "Vorlage", "Vorlagen") + u(" beanstandet"),
-            u("Was nicht stimmt, steht dahinter. Die übrigen Vorlagen "
-              "stehen weiter zur Wahl.\n\n{0}").format("\n".join(gesammelt)),
+        try:
+            ordner = str(pfade.eigener_datenordner())
+        except OSError:
+            ordner = ""
+        kasten = QMessageBox(self)
+        kasten.setIcon(QMessageBox.Icon.Information)
+        kasten.setWindowTitle(
+            mehrzahl(len(gesammelt), "Anmerkung", "Anmerkungen")
+            + u(" zu den Vorlagendateien")
         )
+        kasten.setText(
+            u("Beim Lesen der Vorlagen ist Folgendes aufgefallen. Die "
+              "betroffenen Angaben wurden übergangen; das Programm läuft "
+              "mit allen Vorlagen weiter.")
+        )
+        kasten.setInformativeText(
+            "\n\n".join(f"•  {zeile}" for zeile in gesammelt)
+        )
+        kasten.setDetailedText(
+            u("Vorlagen liegen in:\n{0}\n\nEine Blattvorlage lässt sich "
+              "unter Tools ▸ Blattvorlage prüfen… nachsehen und auf den "
+              "heutigen Stand bringen; die alte Fassung bleibt dabei "
+              "daneben liegen.").format(ordner or "—")
+        )
+        kasten.exec()
 
     def _vorlagen_laden(self, hinweise=None) -> Vorlagen:
         """Alle Vorlagenordner zusammen; eigene gehen vor mitgelieferten.

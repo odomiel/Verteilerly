@@ -12,7 +12,7 @@ import tempfile
 import unittest
 
 from verteilerly.pfade import mitgeliefert
-from verteilerly.pruefung import ARTEN, pruefen
+from verteilerly.pruefung import ARTEN, SICHERUNG, auffrischen, pruefen
 
 
 class TestMitgelieferte(unittest.TestCase):
@@ -128,6 +128,81 @@ class TestBericht(unittest.TestCase):
         gelesen = " | ".join(bericht.angaben)
         self.assertIn("Probe", gelesen)
         self.assertIn("1", gelesen)
+
+    def test_eine_alte_blattvorlage_laesst_sich_auffrischen(self):
+        """Was abgelegt ist, traegt der Bericht als Aufzufrischendes."""
+        pfad = self._datei(
+            "alt.yaml",
+            "id: alt\n"
+            "name: Alte Vorlage\n"
+            "eigene_felder: [Auftrag, Revision]\n"
+            "schriftfeld:\n"
+            "  - [firma, eigene]\n"
+            "  - [verteiler, leiste]\n"
+            "belegung:\n"
+            "  zelle_hoehe: 12\n"
+            "  zeilen_kabel: 3\n",
+        )
+        bericht = pruefen(pfad, "blattvorlage")
+        # Lesbar bleibt sie - sonst waere nichts aufzufrischen.
+        self.assertTrue(bericht.gut, bericht.fehler)
+        self.assertEqual(len(bericht.aufzufrischen), 2)
+        self.assertIn("älteren Fassung", bericht.urteil)
+        # Die Meldung nennt die Angabe, die Fassung und den Ersatz.
+        gemeldet = " | ".join(bericht.hinweise)
+        for stueck in ("eigene", "2026.09.30", "zeilen_kabel", "2026.10.04b7"):
+            with self.subTest(stueck=stueck):
+                self.assertIn(stueck, gemeldet)
+
+        ergebnis = auffrischen(pfad, "blattvorlage")
+        self.assertTrue(ergebnis.gelungen, ergebnis.fehler)
+        self.assertEqual(len(ergebnis.aenderungen), 2)
+        self.assertEqual(ergebnis.sicherung.name, "alt.yaml" + SICHERUNG)
+        self.assertIn("eigene", ergebnis.sicherung.read_text(encoding="utf-8"))
+
+        danach = pruefen(pfad, "blattvorlage")
+        self.assertTrue(danach.gut, danach.fehler)
+        self.assertEqual(danach.aufzufrischen, [])
+        self.assertEqual(danach.hinweise, [])
+        # Die eigenen Felder stehen jetzt einzeln im ersten Block.
+        self.assertIn("Auftrag", danach.angaben[3])
+        self.assertIn("Revision", danach.angaben[3])
+
+    def test_zweimal_auffrischen_aendert_nichts_mehr(self):
+        pfad = self._datei(
+            "einmal.yaml",
+            "id: einmal\nname: Einmal\neigene_felder: [Auftrag]\n"
+            "schriftfeld:\n  - [firma, eigene]\n",
+        )
+        auffrischen(pfad, "blattvorlage")
+        stand = pfad.read_text(encoding="utf-8")
+        zweite = auffrischen(pfad, "blattvorlage")
+        self.assertTrue(zweite.gelungen)
+        self.assertEqual(zweite.aenderungen, [])
+        self.assertIsNone(zweite.sicherung)
+        self.assertEqual(pfad.read_text(encoding="utf-8"), stand)
+        self.assertIn("nichts", zweite.urteil)
+
+    def test_eine_heile_vorlage_hat_nichts_aufzufrischen(self):
+        pfad = self._datei("heil.yaml", "id: heil\nname: Heil\nrand: 12\n")
+        self.assertEqual(pruefen(pfad, "blattvorlage").aufzufrischen, [])
+        self.assertEqual(auffrischen(pfad, "blattvorlage").aenderungen, [])
+
+    def test_andere_arten_frischt_niemand_auf(self):
+        """Verteilervorlagen und Kabeltypen haben nie etwas abgelegt."""
+        pfad = self._datei("v.yaml", "id: v\nname: V\nbuchten: 1\n"
+                           "leisten_je_bucht: 2\nda_je_leiste: 10\n")
+        ergebnis = auffrischen(pfad, "vorlage")
+        self.assertFalse(ergebnis.gelungen)
+        self.assertIn("nichts aufzufrischen", ergebnis.fehler)
+
+    def test_eine_unlesbare_datei_wird_nicht_ueberschrieben(self):
+        pfad = self._datei("kaputt.yaml", "kein: [gueltiges, {yaml")
+        vorher = pfad.read_text(encoding="utf-8")
+        ergebnis = auffrischen(pfad, "blattvorlage")
+        self.assertFalse(ergebnis.gelungen)
+        self.assertEqual(pfad.read_text(encoding="utf-8"), vorher)
+        self.assertFalse(pfad.with_suffix(".yaml" + SICHERUNG).exists())
 
     def test_eine_unbekannte_art_wird_gesagt(self):
         bericht = pruefen(self.ziel / "x.yaml", "wetterbericht")

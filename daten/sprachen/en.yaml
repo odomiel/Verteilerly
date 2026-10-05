@@ -553,15 +553,43 @@ mitgelieferte Blattvorlagen wiederhergestellt: supplied sheet templates restored
 '{0}: zeilen_kabel muss mindestens 1 sein': '{0}: zeilen_kabel must be at least 1'
 '{0}: polster_kabel darf nicht negativ sein': '{0}: polster_kabel must not be negative'
 '{0}: eigene_felder ist eine Liste von Feldnamen': '{0}: eigene_felder is a list of field names'
-? '{0}: {1!r} gibt es nicht mehr - tragen Sie die eigenen Felder einzeln ein'
-: '{0}: {1!r} no longer exists - enter the own fields one by one'
 '{0}: eigene_felder_auf ist eine Liste von Blattarten': '{0}: eigene_felder_auf is a list of sheet kinds'
 '{0}: das eigene Feld {1} steht zweimal - einmal genügt': '{0}: the own field {1} appears twice - once
   is enough'
 '{0}: {1} ist keine Blattart - bekannt sind {2}': '{0}: {1} is not a kind of sheet - known are {2}'
-' beanstandet': ' with remarks'
-? "Was nicht stimmt, steht dahinter. Die übrigen Vorlagen stehen weiter zur Wahl.\n\n{0}"
-: "What is wrong with it stands behind it. The remaining templates are still available.\n\n{0}"
+' zu den Vorlagendateien': ' on the template files'
+Anmerkung: Remark
+Beim Lesen der Vorlagen ist Folgendes aufgefallen. Die betroffenen Angaben wurden übergangen; das Programm läuft mit allen Vorlagen weiter.: The
+  following came up while reading the templates. The entries concerned were skipped; the program runs
+  on with all templates.
+? "Vorlagen liegen in:\n{0}\n\nEine Blattvorlage lässt sich unter Tools ▸ Blattvorlage prüfen… nachsehen und auf den heutigen Stand bringen; die alte Fassung bleibt dabei daneben liegen."
+: "Templates are kept in:\n{0}\n\nA sheet template can be inspected and brought up to today's state under Tools ▸ Check sheet template…; the old version stays next to it."
+? '{0}: Die Angabe „{1}“ {2} gibt es seit Fassung {3} nicht mehr; sie wurde beim Lesen übergangen. An ihrer Stelle steht heute {4}. Auffrischen lässt sich die Datei unter Tools ▸ Blattvorlage prüfen…'
+: '{0}: the entry “{1}” {2} is gone since version {3}; it was skipped while reading. Its place is taken today by {4}. The file can be brought up to date under Tools ▸ Check sheet template…'
+im Schriftfeld: in the title block
+'im Block „belegung“': 'in the block “belegung”'
+die Namen der eigenen Felder, jeder in seinem Block: the names of the own fields, each in its block
+zeilen_kabel auf der Blattebene, neben kabel_gedreht: zeilen_kabel at sheet level, next to kabel_gedreht
+'„{0}“ im Schriftfeld durch {1} ersetzt': '“{0}” in the title block replaced by {1}'
+nichts — die Vorlage führt keine eigenen Felder: nothing — the template carries no own fields
+zeilen_kabel aus dem Block „belegung“ auf die Blattebene geholt: zeilen_kabel moved from the block “belegung”
+  to sheet level
+Aufzufrischen: To be refreshed
+Auffrischen…: Refresh…
+Auffrischen fehlgeschlagen: Refreshing failed
+Vorlage auffrischen?: Refresh template?
+? "Die Datei wird aus den gelesenen Angaben neu geschrieben:\n\n{0}\n\nKommentare und die Reihenfolge der Zeilen gehen dabei verloren. Die alte Fassung bleibt als „{1}“ daneben liegen."
+: "The file is rewritten from the entries that were read:\n\n{0}\n\nComments and the order of the lines are lost in the process. The old version stays next to it as “{1}”."
+Schreibt die Datei auf den heutigen Stand um; die alte Fassung bleibt als .alt daneben liegen.: Rewrites
+  the file to today's state; the old version stays next to it as .alt.
+Die Datei ist brauchbar, stammt aber aus einer älteren Fassung.: The file is usable, but comes from an
+  older version.
+Es war nichts aufzufrischen.: There was nothing to refresh.
+'Aufgefrischt wurde nichts: {0}': 'Nothing was refreshed: {0}'
+Für diese Art gibt es nichts aufzufrischen.: For this kind there is nothing to refresh.
+' aufgefrischt': ' refreshed'
+Angabe: entry
+Angaben: entries
 Einstellungen: Settings
 ? "Die Einstellungen in {0} ließen sich nicht lesen ({1}).\n\nDie Datei bleibt unberührt — was Sie in diesem Lauf einstellen, wird darum nicht gemerkt. Schließen Sie das Programm, sehen Sie sich die Datei an, und legen Sie sie notfalls beiseite: beim nächsten Start wird sie neu angelegt."
 : "The settings in {0} could not be read ({1}).\n\nThe file is left untouched — what you set in this run is therefore not remembered. Close the program, take a look at the file, and put it aside if need be: it will be created anew on the next start."

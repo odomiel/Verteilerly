@@ -572,12 +572,32 @@ Geworfen wird nichts, ein Bericht kommt immer. Die Oberfläche macht daraus
 den `PruefberichtDialog`; `PruefberichtDialog.als_text()` setzt denselben
 Text, den der Dialog zeigt.
 
-**Eine Formatnummer wie in der Projektdatei gibt es hier bewusst nicht.**
-Eine Vorlagendatei wird von Hand geschrieben und sagt nur, was sie anders
-will; jede Erweiterung war bisher additiv, alte Dateien lesen sich
-unverändert. Der wunde Punkt ist ein anderer: ein vertippter Schlüssel fiele
-nirgends auf, weil die Vorgabe greift. `modell.unbekannte_schluessel()`
-meldet ihn darum — für Verteilervorlagen, Blattvorlagen und Kabeltypen.
+**Was abgelegt ist, steht an einer Stelle** (`blattvorlagen.ABGELEGT`): Name,
+Ort, die Fassung, mit der die Angabe wegfiel, und was heute an ihrer Stelle
+steht. Daraus speisen sich beide Seiten — die Meldung beim Lesen
+(`hinweis_abgelegt()`: was in der Datei steht, was das Programm damit tat, was
+heute dorthin gehört) und das Auffrischen (`blattvorlage_auffrischen()`).
+Sonst sagte das eine, was das andere nicht täte. Der Bericht führt es als
+`aufzufrischen`, der Dialog bietet dann *Auffrischen…*: `pruefung.auffrischen()`
+schreibt die Datei neu, legt die alte als `<name>.yaml.alt` daneben und liest
+das Ergebnis **vorher** einmal wie im Betrieb — was durchfiele, wird nicht
+geschrieben. Geändert wird nur, was in `ABGELEGT` steht; ein unbekannter
+Schlüssel bleibt stehen, denn er kann ein Tippfehler sein.
+
+**Eine Formatnummer wie in der Projektdatei gibt es hier weiter nicht** — aber
+nicht mehr mit der Begründung, es gäbe nichts zu versionieren: die Sammelmarke
+`eigene` fiel weg, `zeilen_kabel` wechselte den Block, beides sind keine
+additiven Erweiterungen. Eine Nummer brächte für diese Fälle nichts, was die
+Liste oben nicht besser kann: sie müsste von Hand gepflegt werden, in Dateien,
+die von Hand geschrieben sind — eine falsche Nummer wäre schlimmer als keine,
+weil sie eine Umschreibung auslöste oder unterschlüge. Die Liste dagegen
+erkennt die Angabe an ihrem Namen, trifft also unabhängig davon zu, was in der
+Datei behauptet wird. Was eine Nummer zusätzlich sagen könnte — „diese Datei
+stammt aus einer **neueren** Fassung" —, sagt der Hinweis auf den unbekannten
+Schlüssel bereits, wenn auch vorsichtiger. Der wunde Punkt bleibt derselbe wie
+zuvor: ein vertippter Schlüssel fiele nirgends auf, weil die Vorgabe greift.
+`modell.unbekannte_schluessel()` meldet ihn darum — für Verteilervorlagen,
+Blattvorlagen und Kabeltypen.
 Gültig bleibt die Datei: sie kann aus einer neueren Fassung
 stammen. Das Hauptfenster sammelt alles in `self.hinweise` und zeigt es
 einmal beim Start (`_hinweise_zeigen()`).
