@@ -737,6 +737,58 @@ class TestEnterSpringtWeiter(unittest.TestCase):
         self._tippen(letzte, SPALTE_BEZEICHNUNG, "Ende")
         self.assertEqual(self.tabelle.currentIndex().row(), letzte)
 
+    def _enter(self, ziel):
+        for art in (self.QEvent.Type.KeyPress, self.QEvent.Type.KeyRelease):
+            ANWENDUNG.sendEvent(
+                ziel,
+                self.QKeyEvent(art, Qt.Key.Key_Return,
+                               Qt.KeyboardModifier.NoModifier),
+            )
+
+    def test_enter_geht_auch_ohne_eingabe_eine_zeile_tiefer(self):
+        """Wer die Tabelle durchgeht, kommt so von Zeile zu Zeile.
+
+        Bisher tat Enter auf der blanken Tabelle nichts: ohne Editor gab
+        es keine Eingabe, die haette weiterspringen koennen.
+        """
+        self.tabelle.setCurrentIndex(
+            self.ansicht.modell.index(0, SPALTE_BEZEICHNUNG)
+        )
+        self._enter(self.tabelle)
+        self.assertEqual(self.tabelle.currentIndex().row(), 1)
+        self.assertEqual(self.tabelle.currentIndex().column(), SPALTE_BEZEICHNUNG)
+        self._enter(self.tabelle)
+        self.assertEqual(self.tabelle.currentIndex().row(), 2)
+
+    def test_enter_im_leeren_editor_geht_auch_weiter(self):
+        """Nichts getippt ist auch eine Eingabe - die leere."""
+        index = self.ansicht.modell.index(0, SPALTE_BEMERKUNG)
+        self.tabelle.setCurrentIndex(index)
+        self.tabelle.edit(index)
+        self._enter(self.tabelle.focusWidget())
+        self.assertEqual(self.tabelle.currentIndex().row(), 1)
+
+    def test_in_der_letzten_zeile_bleibt_enter_ohne_eingabe_stehen(self):
+        letzte = self.ansicht.modell.rowCount() - 1
+        self.tabelle.setCurrentIndex(
+            self.ansicht.modell.index(letzte, SPALTE_BEZEICHNUNG)
+        )
+        self._enter(self.tabelle)
+        self.assertEqual(self.tabelle.currentIndex().row(), letzte)
+
+    def test_entf_leert_weiterhin(self):
+        """Der gemeinsame Tastenfilter darf das Alte nicht verlieren."""
+        ader = self.ansicht.modell._leiste.stift(1).ader("a")
+        ader.bezeichnung = "Probe"
+        index = self.ansicht.modell.index(0, SPALTE_BEZEICHNUNG)
+        self.tabelle.setCurrentIndex(index)
+        ANWENDUNG.sendEvent(
+            self.tabelle,
+            self.QKeyEvent(self.QEvent.Type.KeyPress, Qt.Key.Key_Delete,
+                           Qt.KeyboardModifier.NoModifier),
+        )
+        self.assertEqual(ader.bezeichnung, "")
+
     def test_nach_einer_abgelehnten_eingabe_bleibt_sie_stehen(self):
         """Eine unlesbare Rangierung ist dort zu richten, wo sie steht."""
         self._tippen(2, SPALTE_RANGIERUNG, "kein Ziel")

@@ -237,7 +237,10 @@ in den Projektdaten öffnet deren Dialog. Gesucht wird im Modell, nicht in der
 Anzeige: `suche.py` kennt kein Qt und ist ohne Oberfläche prüfbar.
 
 In der Leistenansicht schließt **Enter** die Eingabe und geht
-**eine Zeile tiefer**, wie in einer Tabellenkalkulation; wurde die Eingabe
+**eine Zeile tiefer**, wie in einer Tabellenkalkulation — **auch ohne
+Eingabe**: auf der blanken Tabelle fängt der Tastenfilter der Ansicht die
+Taste ab und rückt die Marke weiter (`_zeile_weiter`), beim Bearbeiten tut es
+der Editor über `weiter` → `_eine_zeile_tiefer`. Wurde eine Eingabe
 nicht angenommen — eine unlesbare Rangierung etwa —, bleibt die Marke stehen.
 Aus einer geteilten Zelle geht es ebenso geradewegs nach unten, auch
 aus dem rechten Feld heraus — und ist die Zelle darunter ebenfalls geteilt,

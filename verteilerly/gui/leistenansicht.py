@@ -1201,13 +1201,27 @@ class LeistenAnsicht(QWidget):
         Bearbeiten selbst greift das nicht: dann liegt die Taste beim
         Eingabefeld, und dort loescht sie Zeichen.
         """
-        if (
+        tastendruck = (
             gegenstand is self.tabelle
             and ereignis.type() == QEvent.Type.KeyPress
-            and ereignis.key() == Qt.Key.Key_Delete
             and not self.tabelle.state() == QTableView.State.EditingState
-        ):
+        )
+        if tastendruck and ereignis.key() == Qt.Key.Key_Delete:
             if self._zellen_leeren():
+                return True
+        # Enter geht eine Zeile tiefer, auch ohne dass etwas getippt
+        # wurde: wer die Tabelle durchgeht, kommt so von Zeile zu Zeile -
+        # wie in einer Tabellenkalkulation. Beim Bearbeiten greift das
+        # nicht, dann liegt die Taste beim Editor; der uebernimmt die
+        # Eingabe und springt selbst weiter.
+        if (
+            tastendruck
+            and ereignis.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter)
+            and not ereignis.modifiers() & Qt.KeyboardModifier.AltModifier
+        ):
+            marke = self.tabelle.currentIndex()
+            if marke.isValid():
+                self._zeile_weiter(marke.row(), marke.column())
                 return True
         return super().eventFilter(gegenstand, ereignis)
 
@@ -1245,6 +1259,14 @@ class LeistenAnsicht(QWidget):
         """
         if not self.modell.eingabe_angenommen:
             return
+        self._zeile_weiter(zeile, spalte, haelfte)
+
+    def _zeile_weiter(self, zeile: int, spalte: int, haelfte: int = 0) -> None:
+        """Eine Zeile tiefer - ohne zu fragen, ob etwas eingetragen wurde.
+
+        Diesen Weg geht Enter auf der blanken Tabelle: dort gibt es keine
+        Eingabe, die angenommen oder abgelehnt werden koennte.
+        """
         naechste = self.modell.index(zeile + 1, spalte)
         if not naechste.isValid():
             # Ans Ende gekommen: die Marke gehoert zurueck auf die Zelle,
