@@ -381,6 +381,30 @@ class TestSchriftgroessen(unittest.TestCase):
             with self.subTest(wort=wort):
                 self.assertIn(wort, text)
 
+    def test_in_der_kabelspalte_geht_notfalls_eine_dritte_zeile(self):
+        """Lieber drei Zeilen als ein Name, von dem nichts bleibt.
+
+        Zwei sind die Regel; passt der Name auch bei kleinster Schrift
+        nicht in zwei, gibt der Deckel um eine Zeile nach.
+        """
+        from verteilerly.layout import Text, leistenblatt, textzeilen
+
+        lang = "Melderkreis Erdgeschoss West Treppenhaus Nord"
+        v = Verteiler.aus_geometrie(1, 2, 10, name="Muster")
+        v.kabel_anlegen(lang, 1, 1, 1)
+        blatt = leistenblatt(Projekt(verteiler=v), 1)
+        feld = next(
+            e for e in blatt.elemente if isinstance(e, Text) and e.text == lang
+        )
+        groesse, zeilen = textzeilen(feld)
+        self.assertEqual(len(zeilen), 3)
+        self.assertEqual(" ".join(zeilen), lang)
+        for zeile in zeilen:
+            self.assertLessEqual(
+                stringWidth(zeile, SCHRIFT, groesse),
+                feld.zeilenlaenge * PT_JE_MM,
+            )
+
     def test_nur_die_kabelspalte_bleibt_bei_zwei_zeilen(self):
         """Der Deckel gilt der schmalen Spalte, nicht dem breiten Block.
 

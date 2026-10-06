@@ -1680,13 +1680,30 @@ class TestUmbruch(unittest.TestCase):
         self.assertLess(groesse, ohne[0])         # dafuer eine Stufe kleiner
         self.assertLessEqual(max(self.misst(z, groesse) for z in zeilen), 12)
 
-    def test_was_in_zwei_zeilen_nicht_passt_endet_mit_punkten(self):
-        """Der Deckel gilt auch, wenn die kleinste Schrift nicht reicht."""
+    def test_eine_dritte_zeile_geht_vor_dem_kuerzen(self):
+        """Der Deckel gibt nach, bevor ein Name verloren geht.
+
+        Zwei Zeilen sind die Regel - geht der Text auch bei kleinster
+        Schrift nicht hinein, ist eine dritte Zeile das kleinere Uebel:
+        sie ist zu lesen, ein Rest mit Punkten nicht.
+        """
+        lang = "Wohnzimmer Nord Erdgeschoss Treppenhaus Ost"
+        groesse, zeilen = self.einpassen(
+            lang, 12, 20, 3.0, 1.0, 0.25, self.misst, hoechstens=2,
+        )
+        self.assertEqual(len(zeilen), 3)
+        self.assertEqual(" ".join(zeilen), lang)
+        self.assertLessEqual(max(self.misst(z, groesse) for z in zeilen), 12)
+
+    def test_auch_die_dritte_zeile_hat_ein_ende(self):
+        """Irgendwann bleibt nur das Kuerzen - dann nach drei Zeilen."""
+        from verteilerly.layout import ZEILEN_NOTFALLS
+
         groesse, zeilen = self.einpassen(
             "Ein sehr langer Kabelname ueber viele Zeilen", 4, 20, 3.0, 1.0,
             0.25, self.misst, hoechstens=2,
         )
-        self.assertEqual(len(zeilen), 2)
+        self.assertEqual(len(zeilen), 2 + ZEILEN_NOTFALLS)
         self.assertTrue(zeilen[-1].endswith("…"))
 
     def test_leerer_text_bleibt_leer(self):

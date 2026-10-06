@@ -459,8 +459,10 @@ Platz zu fressen, den Bezeichnung und Bemerkung besser brauchen können.
 Steuern lässt sich das je Blattvorlage über `kabel_gedreht`; die Vorlage
 *Knapp* hat eine breite Kabelspalte und lässt den Namen waagerecht. Weil die
 Spalte schmal ist, bleibt es dort bei `zeilen_kabel` Zeilen (Vorgabe 2) —
-darunter wird die Schrift kleiner. Auf der Verteilerbelegung gilt der Deckel
-nicht, ihr Block ist breit.
+darunter wird die Schrift kleiner. **Der Deckel gibt nach, bevor ein Name
+verloren geht**: geht der Text auch bei kleinster Schrift nicht in zwei Zeilen,
+erlaubt `ZEILEN_NOTFALLS` eine dritte; gekürzt wird erst danach. Auf der
+Verteilerbelegung gilt der Deckel gar nicht, ihr Block ist breit.
 
 **Firma und Kunde tragen eine Anschrift, keine Zeile.** Im
 Projektdatendialog sind beide Felder mehrzeilig; Name, Straße und Ort stehen auf dem

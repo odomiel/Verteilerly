@@ -59,6 +59,12 @@ PUNKT_IN_MM = 25.4 / 72.0
 # Wie weit die Grundlinien eines umgebrochenen Textes auseinanderliegen,
 # gemessen an der Schriftgroesse.
 ZEILENABSTAND = 1.15
+# Geht der Text auch bei kleinster Schrift nicht in die erlaubten Zeilen,
+# darf er so viele Zeilen mehr nehmen, bevor gekuerzt wird. Der Deckel
+# gilt der Form - einen Namen zu verlieren waere teurer als eine dritte
+# Zeile: in der schmalen Kabelspalte sind zwei Zeilen die Regel, eine
+# dritte die Ausnahme, und ein Rest mit Punkten gar nichts.
+ZEILEN_NOTFALLS = 1
 # Womit eine Zeile endet, die auch dann nicht passt.
 KUERZUNG = "…"
 # So weit darf eine Schrift schrumpfen, damit ein Text in sein Feld
@@ -407,7 +413,9 @@ def umbruch_einpassen(
 
     ``hoechstens`` deckelt die Zahl der Zeilen; 0 heisst: so viele, wie
     in den Kasten gehen. Mehr Zeilen stehen im Feld wie ein Absatz -
-    darunter wird lieber die Schrift kleiner.
+    darunter wird lieber die Schrift kleiner. Geht es auch bei kleinster
+    Schrift nicht auf, gibt der Deckel um ``ZEILEN_NOTFALLS`` nach: ein
+    Name auf drei Zeilen ist zu lesen, ein abgeschnittener nicht.
     """
     text = str(text)
     if not text.strip() or breite <= 0 or hoehe <= 0:
@@ -443,7 +451,10 @@ def umbruch_einpassen(
 
     passen = max(1, int(hoehe / (kleinste * ZEILENABSTAND)))
     if hoechstens:
-        passen = min(passen, hoechstens)
+        # Hier ist die kleinste Schrift schon erreicht: der Deckel hat
+        # seinen Zweck verfehlt, und statt den Namen abzuschneiden gibt
+        # es eine Zeile mehr - soweit der Kasten sie traegt.
+        passen = min(passen, hoechstens + ZEILEN_NOTFALLS)
     if len(zeilen) > passen:
         zeilen = zeilen[:passen]
         zeilen[-1] = _gekuerzt(
