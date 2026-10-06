@@ -693,6 +693,96 @@ class TestEntfLeertZellen(unittest.TestCase):
         self.assertEqual(self.ader.bezeichnung, "Bleibt")
 
 
+class TestZoomInDenArbeitsansichten(unittest.TestCase):
+    """Verteilerbelegung und Leiste lassen sich vergrößern."""
+
+    def setUp(self):
+        from verteilerly.gui.hauptfenster import Hauptfenster
+
+        verteiler = Verteiler.aus_geometrie(1, 4, 10, name="Probe")
+        verteiler.kabel_anlegen("Halle Ost", 1, 1, 2)
+        self.fenster = Hauptfenster()
+        self.addCleanup(self.fenster.close)
+        self.fenster._projekt_setzen(Projekt(verteiler=verteiler), None)
+        self.uebersicht = self.fenster.uebersicht
+        self.ansicht = self.fenster.leistenansicht
+
+    def test_die_uebersicht_waechst_mit_zellen_und_schrift(self):
+        klein = (self.uebersicht.zelle_b, self.uebersicht.zelle_h)
+        flaeche = self.uebersicht.sizeHint().width()
+        schrift = self.uebersicht.font().pointSizeF()
+
+        self.fenster.uebersichtszoom.zoom_setzen(2.0)
+        self.assertEqual(
+            (self.uebersicht.zelle_b, self.uebersicht.zelle_h),
+            (klein[0] * 2, klein[1] * 2),
+        )
+        self.assertGreater(self.uebersicht.sizeHint().width(), flaeche)
+        self.assertGreater(self.uebersicht.font().pointSizeF(), schrift)
+
+    def test_die_uebersicht_trifft_die_zelle_auch_vergroessert(self):
+        """Wer auf eine Doppelader klickt, muss sie auch treffen."""
+        self.fenster.uebersichtszoom.zoom_setzen(2.0)
+        kasten = self.uebersicht._kaesten[1]
+        mitte_da3 = kasten.left() + 2 * self.uebersicht.zelle_b + 5
+        self.assertEqual(
+            self.uebersicht._zelle_bei(mitte_da3, kasten.top() + 5), (1, 3)
+        )
+
+    def test_die_leiste_waechst_in_schrift_und_zeilenhoehe(self):
+        hoehe = self.ansicht.tabelle.verticalHeader().defaultSectionSize()
+        schrift = self.ansicht.tabelle.font().pointSizeF()
+
+        self.ansicht.zoomleiste.zoom_setzen(1.5)
+        self.assertGreater(
+            self.ansicht.tabelle.verticalHeader().defaultSectionSize(), hoehe
+        )
+        self.assertGreater(self.ansicht.tabelle.font().pointSizeF(), schrift)
+        # Auch die eigene Schrift einer Zelle waechst mit - sonst bliebe
+        # die Rangierspalte stehen, waehrend alles andere groesser wird.
+        self.assertEqual(self.ansicht.modell.zoom, 1.5)
+
+    def test_kleiner_geht_auch(self):
+        self.ansicht.zoomleiste.zoom_setzen(0.5)
+        self.fenster.uebersichtszoom.zoom_setzen(0.5)
+        self.assertLess(self.ansicht.tabelle.font().pointSizeF(), 9.0)
+        self.assertLess(self.uebersicht.zelle_b, 38)
+
+    def test_an_den_enden_sind_die_knoepfe_aus(self):
+        from verteilerly.gui.zoom import STUFEN
+
+        leiste = self.fenster.uebersichtszoom
+        leiste.zoom_setzen(STUFEN[0])
+        self.assertFalse(leiste.kleiner.isEnabled())
+        self.assertTrue(leiste.groesser.isEnabled())
+        leiste.zoom_setzen(STUFEN[-1])
+        self.assertTrue(leiste.kleiner.isEnabled())
+        self.assertFalse(leiste.groesser.isEnabled())
+
+    def test_strg_und_rad_schalten_eine_stufe(self):
+        from PySide6.QtCore import QPoint, QPointF
+        from PySide6.QtGui import QWheelEvent
+
+        def rad(strg):
+            return QWheelEvent(
+                QPointF(10, 10), QPointF(10, 10), QPoint(0, 0), QPoint(0, 120),
+                Qt.MouseButton.NoButton,
+                Qt.KeyboardModifier.ControlModifier if strg
+                else Qt.KeyboardModifier.NoModifier,
+                Qt.ScrollPhase.NoScrollPhase, False,
+            )
+
+        vorher = self.fenster.uebersichtszoom.zoom()
+        self.uebersicht.wheelEvent(rad(strg=True))
+        self.assertGreater(self.fenster.uebersichtszoom.zoom(), vorher)
+        # Ohne Strg bleibt das Ereignis liegen - sonst rollt nichts mehr.
+        jetzt = self.fenster.uebersichtszoom.zoom()
+        ereignis = rad(strg=False)
+        self.uebersicht.wheelEvent(ereignis)
+        self.assertEqual(self.fenster.uebersichtszoom.zoom(), jetzt)
+        self.assertFalse(ereignis.isAccepted())
+
+
 class TestZellenZwischenablage(unittest.TestCase):
     """Ausschneiden, Kopieren und Einfügen in der Leistenansicht."""
 

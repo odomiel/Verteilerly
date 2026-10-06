@@ -640,6 +640,18 @@ Die Blätter entstehen in `layout.py` als Zeichenanweisungen in Millimetern
 QPainter, die PDF-Ausgabe mit ReportLab: eine einzige Quelle für das
 Blattbild, Vorschau und Ausdruck können nicht auseinanderlaufen.
 
+**Vergrößern gibt es in allen drei Ansichten**, mit demselben Bedienteil:
+`gui/zoom.py` hält die `Zoomleiste` (−, Auswahl, +) und `rad_ist_zoom()` für
+Strg mit dem Mausrad. Die **Verteilerübersicht** rechnet ihre Maße als
+Eigenschaften (`zelle_b`, `zelle_h`, `label_b` …) aus den Konstanten mal
+`zoom` und setzt die Schrift dazu; der Rollbereich um sie herum zeigt seine
+Balken von selbst, weil `sizeHint()` mitwächst. Die **Leistenansicht** setzt
+Schrift und `defaultSectionSize` der Zeilen — gesetzt, nicht gemessen: der
+Delegat käme mit seinen Polstern unter seiner Mindesthöhe nicht herunter. Dass
+auch `LeistenModell` den Zoom kennt, hat einen Grund: es gibt manchen Zellen
+eine **eigene** Schrift (einfarbige Spalten, fett, kursiv), und die bliebe
+sonst stehen, während alles andere wächst.
+
 **Die Vorschau lässt sich vergrößern**: neben der Blattvorlage stehen `−`,
 eine Auswahl und `+`. *Einpassen* legt das Blatt ins Fenster (so fängt sie an),
 die Stufen von 50 % bis 400 % zeigen es in wahrer Größe — bei 100 % ist ein

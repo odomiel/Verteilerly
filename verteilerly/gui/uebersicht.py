@@ -21,6 +21,7 @@ from PySide6.QtWidgets import QApplication, QMenu, QWidget
 
 from ..modell import LEISTEN_ZAHLEN, Kabel, Verteiler, leistenname
 from .thema import HELL, Farben
+from .zoom import rad_ist_zoom
 from ..sprachen import u
 
 #: Woran ein gezogenes Kabel zu erkennen ist. Ein eigener Typ: fremde
@@ -37,6 +38,9 @@ LABEL_B = 36
 RAND = 14
 ABSTAND_LEISTEN = 9
 ABSTAND_BUCHTEN = 30
+#: So klein und so gross laesst sich die Uebersicht ziehen.
+ZOOM_KLEINSTENS = 0.5
+ZOOM_GROESSTENS = 3.0
 
 
 class Uebersicht(QWidget):
@@ -52,6 +56,8 @@ class Uebersicht(QWidget):
     #: Leiste, DA). Auch das fuehrt das Fenster aus - es haelt die
     #: Ablage, und es weiss, was ein Umzug am Verteiler bedeutet.
     kabel_zwischenablage = Signal(str, object, int, int)
+    #: Strg und Mausrad: eine Stufe hinauf oder hinab.
+    zoom_gerollt = Signal(int)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -71,6 +77,10 @@ class Uebersicht(QWidget):
         self._gezogen: Kabel | None = None
         #: Schreibgeschuetzt: anschauen ja, umlegen und auflegen nein.
         self.schreibgeschuetzt = False
+        #: Wie gross gezeichnet wird. Die Masse unten rechnen damit, die
+        #: Schrift waechst mit - so bleibt das Bild in sich stimmig.
+        self.zoom = 1.0
+        self._grundschrift = QFont(self.font())
         self.setMouseTracking(True)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setAcceptDrops(True)
@@ -148,6 +158,55 @@ class Uebersicht(QWidget):
         menue.addAction(self.aktion_einfuegen)
         menue.exec(ereignis.globalPos())
 
+    # -- Masse: sie wachsen mit dem Zoom -----------------------------------
+
+    @property
+    def zelle_b(self) -> int:
+        return max(6, round(ZELLE_B * self.zoom))
+
+    @property
+    def zelle_h(self) -> int:
+        return max(8, round(ZELLE_H * self.zoom))
+
+    @property
+    def label_b(self) -> int:
+        return max(10, round(LABEL_B * self.zoom))
+
+    @property
+    def rand(self) -> int:
+        return max(4, round(RAND * self.zoom))
+
+    @property
+    def abstand_leisten(self) -> int:
+        return max(2, round(ABSTAND_LEISTEN * self.zoom))
+
+    @property
+    def abstand_buchten(self) -> int:
+        return max(6, round(ABSTAND_BUCHTEN * self.zoom))
+
+    def zoom_setzen(self, faktor: float) -> None:
+        """Vergroessert die Uebersicht - Masse und Schrift zusammen.
+
+        Die Flaeche waechst mit; sie steht in einem Rollbereich, der
+        seine Balken von selbst zeigt, sobald sie nicht mehr hineingeht.
+        """
+        self.zoom = max(ZOOM_KLEINSTENS, min(ZOOM_GROESSTENS, float(faktor)))
+        schrift = QFont(self._grundschrift)
+        schrift.setPointSizeF(
+            max(5.0, self._grundschrift.pointSizeF() * self.zoom)
+        )
+        self.setFont(schrift)
+        self._neu_vermessen()
+
+    def wheelEvent(self, ereignis) -> None:  # noqa: N802 - Qt-Name
+        """Strg und Mausrad vergroessern, sonst rollt der Bereich."""
+        richtung = rad_ist_zoom(ereignis)
+        if richtung:
+            self.zoom_gerollt.emit(richtung)
+            ereignis.accept()
+            return
+        ereignis.ignore()
+
     def schreibschutz_setzen(self, an: bool) -> None:
         """Kein Auflegen per Doppelklick und kein Umlegen per Ziehen."""
         self.schreibgeschuetzt = bool(an)
@@ -184,16 +243,16 @@ class Uebersicht(QWidget):
         if self.verteiler is None:
             return kaesten
 
-        x = RAND
+        x = self.rand
         for bucht in self.verteiler.buchten:
             breiteste = max((l.da_anzahl for l in bucht.leisten), default=0)
-            y = RAND
+            y = self.rand
             for leiste in bucht.leisten:
                 kaesten[leiste.nummer] = QRect(
-                    x + LABEL_B, y, leiste.da_anzahl * ZELLE_B, ZELLE_H
+                    x + self.label_b, y, leiste.da_anzahl * self.zelle_b, self.zelle_h
                 )
-                y += ZELLE_H + ABSTAND_LEISTEN
-            x += LABEL_B + breiteste * ZELLE_B + ABSTAND_BUCHTEN
+                y += self.zelle_h + self.abstand_leisten
+            x += self.label_b + breiteste * self.zelle_b + self.abstand_buchten
         return kaesten
 
     def sizeHint(self) -> QSize:
@@ -201,7 +260,7 @@ class Uebersicht(QWidget):
             return QSize(360, 180)
         rechts = max(k.right() for k in self._kaesten.values())
         unten = max(k.bottom() for k in self._kaesten.values())
-        return QSize(rechts + RAND, unten + RAND)
+        return QSize(rechts + self.rand, unten + self.rand)
 
     def minimumSizeHint(self) -> QSize:
         return self.sizeHint()
@@ -209,12 +268,12 @@ class Uebersicht(QWidget):
     def _zelle_bei(self, x: int, y: int) -> tuple[int, int] | None:
         for nummer, kasten in self._kaesten.items():
             if kasten.contains(x, y):
-                return nummer, (x - kasten.left()) // ZELLE_B + 1
+                return nummer, (x - kasten.left()) // self.zelle_b + 1
         return None
 
     def _zellrechteck(self, leiste: int, da: int) -> QRect:
         kasten = self._kaesten[leiste]
-        return QRect(kasten.left() + (da - 1) * ZELLE_B, kasten.top(), ZELLE_B, ZELLE_H)
+        return QRect(kasten.left() + (da - 1) * self.zelle_b, kasten.top(), self.zelle_b, self.zelle_h)
 
     # -- Maus --------------------------------------------------------------
 
@@ -412,8 +471,8 @@ class Uebersicht(QWidget):
             return
         anzahl = self._gezogen.da_aufgelegt
         kasten = self._kaesten[leiste]
-        links = kasten.left() + (start - 1) * ZELLE_B
-        umriss = QRect(links, kasten.top(), anzahl * ZELLE_B, ZELLE_H)
+        links = kasten.left() + (start - 1) * self.zelle_b
+        umriss = QRect(links, kasten.top(), anzahl * self.zelle_b, self.zelle_h)
         maler.setPen(QPen(
             self.farben.q("akzent" if passt else "warnung"), 2,
             Qt.PenStyle.SolidLine if passt else Qt.PenStyle.DashLine,
@@ -437,7 +496,7 @@ class Uebersicht(QWidget):
             maler.setFont(nummernschrift)
             maler.setPen(self.farben.q("schrift_leise"))
             maler.drawText(
-                QRect(kasten.left() - LABEL_B, kasten.top(), LABEL_B - 6, ZELLE_H),
+                QRect(kasten.left() - self.label_b, kasten.top(), self.label_b - 6, self.zelle_h),
                 Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter,
                 str(nummer),
             )
@@ -446,9 +505,9 @@ class Uebersicht(QWidget):
 
             # Feine Linie je Doppelader, kraeftige Linie um die Leiste.
             maler.setPen(QPen(self.farben.q("linie"), 1))
-            zellen = kasten.width() // ZELLE_B
+            zellen = kasten.width() // self.zelle_b
             for i in range(1, zellen):
-                x = kasten.left() + i * ZELLE_B
+                x = kasten.left() + i * self.zelle_b
                 maler.drawLine(x, kasten.top() + 1, x, kasten.bottom() - 1)
             maler.setPen(QPen(self.farben.q("linie_kraeftig"), 1))
             maler.drawRect(kasten)
@@ -459,7 +518,7 @@ class Uebersicht(QWidget):
                 continue
             anfang = self._zellrechteck(abschnitt.leiste, abschnitt.start_da)
             block = QRect(
-                anfang.left(), anfang.top(), abschnitt.anzahl_da * ZELLE_B, ZELLE_H
+                anfang.left(), anfang.top(), abschnitt.anzahl_da * self.zelle_b, self.zelle_h
             )
             maler.fillRect(block.adjusted(1, 1, 0, 0), self.farben.q("akzent_leise"))
             maler.setPen(QPen(self.farben.q("akzent"), 1))
@@ -505,7 +564,7 @@ class Uebersicht(QWidget):
         if self.auswahl is None or self.auswahl[0] not in self._kaesten:
             return
         leiste, da = self.auswahl
-        if da > self._kaesten[leiste].width() // ZELLE_B:
+        if da > self._kaesten[leiste].width() // self.zelle_b:
             return
         maler.setPen(QPen(self.farben.q("akzent"), 2))
         maler.setBrush(Qt.BrushStyle.NoBrush)

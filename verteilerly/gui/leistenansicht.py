@@ -79,6 +79,7 @@ from ..modell import (
 )
 from ..schreibweisen import Schreibweise
 from .thema import HELL, Farben
+from .zoom import Zoomleiste, rad_ist_zoom
 from ..sprachen import u
 
 SPALTE_STIFT = 0
@@ -157,6 +158,10 @@ AENDERBAR = {
 }
 
 
+#: So klein und so gross laesst sich die Tabelle ziehen.
+ZOOM_KLEINSTENS = 0.5
+ZOOM_GROESSTENS = 3.0
+
 #: Woran die eigene Fracht in der Zwischenablage zu erkennen ist.
 #: Daneben steht immer der schlichte Text - fuer Excel und fuer alle
 #: anderen; die eigene Fracht traegt zusaetzlich die geteilten Zellen.
@@ -183,6 +188,9 @@ class LeistenModell(QAbstractTableModel):
         self.freitext_erlaubt = False
         # Schreibgeschuetzt: zu sehen, aber nicht zu aendern.
         self.schreibgeschuetzt = False
+        #: Wie gross die Tabelle gezeichnet wird - die eigenen Schriften
+        #: der Zellen muessen es wissen.
+        self.zoom = 1.0
         # Waehrend eines Sammelvorgangs (Einfuegen, Leeren) wird nicht
         # einzeln gemeldet: sonst entstuende je Zelle ein eigener Schritt
         # zum Zuruecknehmen, und ein Einfuegen waere zwanzigmal zurueck.
@@ -190,6 +198,15 @@ class LeistenModell(QAbstractTableModel):
         # Ob die letzte Eingabe angenommen wurde - danach richtet sich,
         # ob Enter eine Zeile weiterspringt.
         self.eingabe_angenommen = True
+
+    def zoom_setzen(self, faktor: float) -> None:
+        """Merkt die Groesse fuer die Schriften der Zellen."""
+        self.zoom = float(faktor)
+        if self.rowCount():
+            self.dataChanged.emit(
+                self.index(0, 0),
+                self.index(self.rowCount() - 1, self.columnCount() - 1),
+            )
 
     def melden(self) -> None:
         """Sagt, dass sich am Verteiler etwas geaendert hat.
@@ -425,8 +442,14 @@ class LeistenModell(QAbstractTableModel):
             return int(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
 
         if rolle == Qt.ItemDataRole.FontRole:
+            # Mit dem Zoom der Ansicht: eine eigene Schrift fuer die
+            # Zelle muesste sonst in ihrer Grundgroesse stehenbleiben,
+            # waehrend alles andere waechst - und die Zeilenhoehe folgte
+            # ihr, nicht der Tabelle.
             schrift = QFont()
-            eigen = False
+            if self.zoom != 1.0:
+                schrift.setPointSizeF(max(5.0, schrift.pointSizeF() * self.zoom))
+            eigen = self.zoom != 1.0
             if spalte in (SPALTE_STIFT, SPALTE_ADER, SPALTE_FARBE, *RANGIERSPALTEN):
                 schrift.setStyleHint(QFont.StyleHint.Monospace)
                 schrift.setFamilies(["IBM Plex Mono", "DejaVu Sans Mono", "monospace"])
@@ -882,6 +905,8 @@ class LeistenAnsicht(QWidget):
 
     belegung_geaendert = Signal()
     fehler_gemeldet = Signal(str)
+    #: Strg und Mausrad: eine Stufe hinauf oder hinab.
+    zoom_gerollt = Signal(int)
     leiste_gewechselt = Signal(int)
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -941,10 +966,15 @@ class LeistenAnsicht(QWidget):
         self.schreibschutz.setVisible(False)
         kopf.addSpacing(8)
         kopf.addWidget(self.schreibschutz)
+        # Ganz rechts die Zoomleiste - festes Chrom, das nicht mit dem
+        # Verteiler waechst (siehe minimumSizeHint).
+        kopf.addStretch(1)
+        self.zoomleiste = Zoomleiste()
+        self.zoomleiste.gewaehlt.connect(self.zoom_setzen)
+        kopf.addWidget(self.zoomleiste)
         # Was hier steht, ist Chrom und waechst nicht mit dem Verteiler:
         # ein Text, der die Kabel der Leiste aufzaehlte, hat die Vorschau
         # aus dem Fenster geschoben (siehe minimumSizeHint).
-        kopf.addStretch(1)
         self.kopfleiste = kopf
 
         self.tabelle = QTableView()
@@ -960,6 +990,7 @@ class LeistenAnsicht(QWidget):
         self.tabelle.setAlternatingRowColors(False)
         # Entf leert die gewaehlten Zellen, ohne sie erst zu oeffnen.
         self.tabelle.installEventFilter(self)
+        self.tabelle.viewport().installEventFilter(self)
         # Ausschneiden, Kopieren, Einfuegen - per Rechtsklick und mit den
         # gewohnten Kuerzeln. Sie haengen an der Tabelle selbst
         # (WidgetShortcut): liegt ein Editor offen, gehoert Strg+C dem
@@ -970,6 +1001,10 @@ class LeistenAnsicht(QWidget):
         )
         self.tabelle.customContextMenuRequested.connect(self._zellenmenue_zeigen)
 
+        # Grundschrift und Zeilenhoehe merken, bevor der Zoom daran dreht.
+        self.zoom = 1.0
+        self._grundschrift = QFont(self.tabelle.font())
+        self._grundzeilenhoehe = self.tabelle.verticalHeader().defaultSectionSize()
         self.delegat = EingabeDelegat(self.tabelle)
         self.tabelle.setItemDelegate(self.delegat)
         self.delegat.weiter.connect(self._eine_zeile_tiefer)
@@ -1257,6 +1292,16 @@ class LeistenAnsicht(QWidget):
         )
         if tastendruck and ereignis.key() == Qt.Key.Key_Delete:
             if self._zellen_leeren():
+                return True
+        # Strg und Mausrad vergroessern; ohne Strg bleibt das Ereignis
+        # liegen, sonst rollte die Tabelle nicht mehr.
+        if (
+            gegenstand is self.tabelle.viewport()
+            and ereignis.type() == QEvent.Type.Wheel
+        ):
+            richtung = rad_ist_zoom(ereignis)
+            if richtung:
+                self.zoom_gerollt.emit(richtung)
                 return True
         # Enter geht eine Zeile tiefer, auch ohne dass etwas getippt
         # wurde: wer die Tabelle durchgeht, kommt so von Zeile zu Zeile -
@@ -1558,6 +1603,35 @@ class LeistenAnsicht(QWidget):
         if haelfte and teilung is not None and teilung.geteilt:
             self.delegat.haelfte_beim_oeffnen = haelfte
             self.tabelle.edit(naechste)
+
+    def zoom_setzen(self, faktor: float) -> None:
+        """Vergroessert die Tabelle - Schrift und Zeilenhoehen zusammen.
+
+        Die Tabelle rollt ohnehin; was nicht mehr hineingeht, erreicht
+        man mit den Balken, die sie selbst mitbringt.
+        """
+        self.zoom = max(ZOOM_KLEINSTENS, min(ZOOM_GROESSTENS, float(faktor)))
+        schrift = QFont(self._grundschrift)
+        schrift.setPointSizeF(
+            max(5.0, self._grundschrift.pointSizeF() * self.zoom)
+        )
+        self.tabelle.setFont(schrift)
+        self.tabelle.horizontalHeader().setFont(schrift)
+        # Das Modell gibt manchen Zellen eine eigene Schrift (einfarbig
+        # gesetzte Spalten, fett, kursiv) - die muss mitwachsen.
+        self.modell.zoom_setzen(self.zoom)
+        # Die Zeilenhoehe wird gesetzt, nicht gemessen: der Delegat
+        # rechnet mit Polstern und kaeme unter seiner eigenen
+        # Mindesthoehe nicht herunter - die Tabelle saehe dann bei 50 %
+        # aus wie bei 100 %, nur mit kleinerer Schrift.
+        kopf = self.tabelle.verticalHeader()
+        kopf.setDefaultSectionSize(
+            max(
+                kopf.minimumSectionSize(),
+                round(self._grundzeilenhoehe * self.zoom),
+            )
+        )
+        self.tabelle.viewport().update()
 
     def farben_setzen(self, farben) -> None:
         self.modell.farben_setzen(farben)

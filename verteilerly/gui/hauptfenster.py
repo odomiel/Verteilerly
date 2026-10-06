@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QSplitter,
     QToolBar,
     QToolButton,
+    QHBoxLayout,
     QVBoxLayout,
     QWidget,
 )
@@ -89,6 +90,7 @@ from .symbol import symbol_icon
 from .thema import SAETZE, anwenden
 from .uebersicht import Uebersicht
 from .vorschau import Vorschau
+from .zoom import Zoomleiste
 from ..sprachen import u
 
 # Wohin das Über-Fenster für die Lizenztexte verweist. Das Programm
@@ -306,18 +308,36 @@ class Hauptfenster(QMainWindow):
         self.uebersicht.kabel_umgelegt.connect(self._kabel_umlegen)
         self.uebersicht.kabel_zwischenablage.connect(self._kabel_ablage)
 
+        self.uebersicht.zoom_gerollt.connect(
+            lambda richtung: self.uebersichtszoom.stufen_gehen(richtung)
+        )
+
         rollbereich = QScrollArea()
         rollbereich.setWidget(self.uebersicht)
         rollbereich.setWidgetResizable(True)
         rollbereich.setFrameShape(QScrollArea.Shape.NoFrame)
 
+        # Die Zoomleiste steht ueber der Belegung - wie die der Vorschau
+        # ueber dem Blatt. Rechts, damit sie nicht ins Auge springt.
+        self.uebersichtszoom = Zoomleiste()
+        self.uebersichtszoom.gewaehlt.connect(self.uebersicht.zoom_setzen)
+        zoomzeile = QHBoxLayout()
+        zoomzeile.setContentsMargins(0, 0, 0, 4)
+        zoomzeile.addWidget(QLabel(u("Verteilerbelegung")))
+        zoomzeile.addStretch(1)
+        zoomzeile.addWidget(self.uebersichtszoom)
+
         oben = QWidget()
         obenaufbau = QVBoxLayout(oben)
         obenaufbau.setContentsMargins(0, 0, 0, 0)
+        obenaufbau.addLayout(zoomzeile)
         obenaufbau.addWidget(rollbereich)
         self.uebersichtsbereich = oben
 
         self.leistenansicht = LeistenAnsicht()
+        self.leistenansicht.zoom_gerollt.connect(
+            lambda richtung: self.leistenansicht.zoomleiste.stufen_gehen(richtung)
+        )
         self.leistenansicht.belegung_geaendert.connect(self._belegung_geaendert)
         self.leistenansicht.fehler_gemeldet.connect(self._fehler_zeigen)
         self.leistenansicht.leiste_gewechselt.connect(self._leiste_gewechselt)
