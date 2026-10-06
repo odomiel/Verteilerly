@@ -389,6 +389,16 @@ Leiste {0}, DA {1}: Strip {0}, pair {1}
 Wie das Blatt aussieht — Spalten, Schriftgrößen, Ränder. Zu ändern unter Einstellungen ▸ Blattvorlage.: How
   the sheet looks — columns, font sizes, margins. To be changed under Settings ▸ Sheet template.
 Keine Vorschau.: No preview.
+Ausschneiden: Cut
+Kopieren: Copy
+Einfügen: Paste
+Leitung ausschneiden: Cut line
+Leitung kopieren: Copy line
+Leitung einfügen: Paste line
+'Kopiert: {0} — zum Einfügen eine freie Stelle wählen': 'Copied: {0} — choose a free spot to paste it'
+'Ausgeschnitten: {0} — beim Einfügen zieht die Leitung um': 'Cut: {0} — on pasting the line moves there'
+Es liegt keine Leitung in der Ablage: There is no line on the clipboard
+Die Leitung in der Ablage gibt es nicht mehr: The line on the clipboard no longer exists
 (schreibgeschützt): (read-only)
 schreibgeschützt: read-only
 Ansehen, ohne die Datei zu überschreiben: Look at it without overwriting the file

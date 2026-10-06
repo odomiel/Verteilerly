@@ -7,6 +7,8 @@ Kabelspalte rechts zeigt, welches Kabel die Doppelader belegt.
 
 from __future__ import annotations
 
+from contextlib import contextmanager
+
 from dataclasses import replace
 
 from PySide6.QtCore import (
@@ -20,6 +22,7 @@ from PySide6.QtCore import (
     Signal,
 )
 from PySide6.QtGui import (
+    QAction,
     QColor,
     QFont,
     QIcon,
@@ -37,6 +40,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QHeaderView,
     QLabel,
+    QMenu,
     QPushButton,
     QLineEdit,
     QSpinBox,
@@ -170,9 +174,36 @@ class LeistenModell(QAbstractTableModel):
         self.freitext_erlaubt = False
         # Schreibgeschuetzt: zu sehen, aber nicht zu aendern.
         self.schreibgeschuetzt = False
+        # Waehrend eines Sammelvorgangs (Einfuegen, Leeren) wird nicht
+        # einzeln gemeldet: sonst entstuende je Zelle ein eigener Schritt
+        # zum Zuruecknehmen, und ein Einfuegen waere zwanzigmal zurueck.
+        self._sammelt = False
         # Ob die letzte Eingabe angenommen wurde - danach richtet sich,
         # ob Enter eine Zeile weiterspringt.
         self.eingabe_angenommen = True
+
+    def melden(self) -> None:
+        """Sagt, dass sich am Verteiler etwas geaendert hat.
+
+        Waehrend eines Sammelvorgangs schweigt sie: dort meldet der
+        Aufrufer einmal, wenn er fertig ist.
+        """
+        if not self._sammelt:
+            self.belegung_geaendert.emit()
+
+    @contextmanager
+    def gesammelt(self):
+        """Mehrere Aenderungen, eine Meldung.
+
+        Wer zwanzig Zellen auf einmal fuellt, will sie auch mit einem
+        Griff zuruecknehmen - gemeldet wird darum erst danach, und nur
+        vom Aufrufer, wenn wirklich etwas geschehen ist.
+        """
+        vorher, self._sammelt = self._sammelt, True
+        try:
+            yield
+        finally:
+            self._sammelt = vorher
 
     def freitext_erlauben(self, an: bool) -> None:
         """Darf ins Rangierfeld auch etwas anderes als ein Ziel?"""
@@ -270,7 +301,7 @@ class LeistenModell(QAbstractTableModel):
         links = self.index(index.row(), 0)
         rechts = self.index(index.row(), self.columnCount() - 1)
         self.dataChanged.emit(links, rechts)
-        self.belegung_geaendert.emit()
+        self.melden()
         return True
 
     # -- Geteilte Zellen -------------------------------------------
@@ -300,7 +331,7 @@ class LeistenModell(QAbstractTableModel):
             return False
         ader.teilung_setzen(feld, teilung)
         self.dataChanged.emit(index, index)
-        self.belegung_geaendert.emit()
+        self.melden()
         return True
 
     def zweittext_setzen(self, index: QModelIndex, text: str) -> bool:
@@ -424,7 +455,7 @@ class LeistenModell(QAbstractTableModel):
             self.index(0, SPALTE_KABEL),
             self.index(self.rowCount() - 1, SPALTE_KABEL),
         )
-        self.belegung_geaendert.emit()
+        self.melden()
         return True
 
     def _belegung(self, adresse: Aderadresse) -> list[tuple[str, object]]:
@@ -497,7 +528,7 @@ class LeistenModell(QAbstractTableModel):
             return False
 
         self.dataChanged.emit(index, index)
-        self.belegung_geaendert.emit()
+        self.melden()
         return True
 
     def _rangierung_setzen(self, zeile: int, spalte: int, text: str) -> bool:
@@ -560,7 +591,7 @@ class LeistenModell(QAbstractTableModel):
             self.index(0, RANGIERSPALTEN[0]),
             self.index(self.rowCount() - 1, RANGIERSPALTEN[-1]),
         )
-        self.belegung_geaendert.emit()
+        self.melden()
         return True
 
 
@@ -920,6 +951,15 @@ class LeistenAnsicht(QWidget):
         self.tabelle.setAlternatingRowColors(False)
         # Entf leert die gewaehlten Zellen, ohne sie erst zu oeffnen.
         self.tabelle.installEventFilter(self)
+        # Ausschneiden, Kopieren, Einfuegen - per Rechtsklick und mit den
+        # gewohnten Kuerzeln. Sie haengen an der Tabelle selbst
+        # (WidgetShortcut): liegt ein Editor offen, gehoert Strg+C dem
+        # Eingabefeld und nicht der Tabelle.
+        self.zellenmenue_aktionen = self._zwischenablage_aktionen()
+        self.tabelle.setContextMenuPolicy(
+            Qt.ContextMenuPolicy.CustomContextMenu
+        )
+        self.tabelle.customContextMenuRequested.connect(self._zellenmenue_zeigen)
 
         self.delegat = EingabeDelegat(self.tabelle)
         self.tabelle.setItemDelegate(self.delegat)
@@ -1224,6 +1264,133 @@ class LeistenAnsicht(QWidget):
                 self._zeile_weiter(marke.row(), marke.column())
                 return True
         return super().eventFilter(gegenstand, ereignis)
+
+    # -- Zwischenablage ----------------------------------------------------
+
+    def _zwischenablage_aktionen(self) -> list:
+        """Die drei Handlungen samt Kuerzeln, an der Tabelle angemeldet."""
+        self.aktion_ausschneiden = QAction(u("Ausschneiden"), self)
+        self.aktion_ausschneiden.setShortcut(QKeySequence.StandardKey.Cut)
+        self.aktion_ausschneiden.triggered.connect(self.zellen_ausschneiden)
+        self.aktion_kopieren = QAction(u("Kopieren"), self)
+        self.aktion_kopieren.setShortcut(QKeySequence.StandardKey.Copy)
+        self.aktion_kopieren.triggered.connect(self.zellen_kopieren)
+        self.aktion_einfuegen = QAction(u("Einfügen"), self)
+        self.aktion_einfuegen.setShortcut(QKeySequence.StandardKey.Paste)
+        self.aktion_einfuegen.triggered.connect(self.zellen_einfuegen)
+        handlungen = [
+            self.aktion_ausschneiden, self.aktion_kopieren, self.aktion_einfuegen
+        ]
+        for handlung in handlungen:
+            handlung.setShortcutContext(Qt.ShortcutContext.WidgetShortcut)
+            self.tabelle.addAction(handlung)
+        return handlungen
+
+    def _zellenmenue_zeigen(self, stelle) -> None:
+        """Das Rechtsklickmenue - was gerade geht, steht offen."""
+        unter_der_maus = self.tabelle.indexAt(stelle)
+        gewaehlt = self.tabelle.selectionModel().selectedIndexes()
+        # Ein Rechtsklick neben die Markierung nimmt die Zelle unter der
+        # Maus - wie ueberall. Innerhalb der Markierung bleibt sie.
+        if unter_der_maus.isValid() and unter_der_maus not in gewaehlt:
+            self.tabelle.setCurrentIndex(unter_der_maus)
+        self.zellenmenue_auffrischen()
+        menue = QMenu(self)
+        menue.addActions(self.zellenmenue_aktionen)
+        menue.exec(self.tabelle.viewport().mapToGlobal(stelle))
+
+    def zellenmenue_auffrischen(self) -> None:
+        """Graut aus, was gerade nicht geht.
+
+        Steht neben dem Zeigen des Menues, nicht darin: so laesst es
+        sich pruefen, ohne ein Menue aufzumachen - ein offenes Menue
+        haelt die Testreihe an.
+        """
+        darf = not self.modell.schreibgeschuetzt
+        self.aktion_ausschneiden.setEnabled(darf and bool(self._beschreibbare()))
+        self.aktion_kopieren.setEnabled(
+            bool(self._gewaehlte(lambda spalte: spalte))
+        )
+        self.aktion_einfuegen.setEnabled(
+            darf and bool(QApplication.clipboard().text())
+        )
+
+    def _beschreibbare(self) -> list:
+        """Die markierten Zellen, die sich beschreiben lassen."""
+        return [
+            index for index in self._gewaehlte(lambda spalte: spalte)
+            if self.modell.flags(index) & Qt.ItemFlag.ItemIsEditable
+        ]
+
+    def zellentext(self) -> str:
+        """Die markierten Zellen als Text - Spalten mit Tabulator getrennt.
+
+        Genommen wird der **Block** von der obersten linken bis zur
+        untersten rechten markierten Zelle, mitsamt dem, was
+        dazwischenliegt. Nur so steht das Eingefuegte wieder in
+        denselben Spalten: wer zwei Spalten mit einer Luecke markiert
+        und das Kopierte zusammenschoebe, traefe beim Einfuegen die
+        Nachbarspalte. Das Format ist das der Tabellenkalkulation -
+        Tabulator zwischen den Spalten, Zeilenumbruch zwischen den
+        Zeilen -, also laesst es sich auch dort einfuegen.
+        """
+        gewaehlt = self._gewaehlte(lambda spalte: spalte)
+        if not gewaehlt:
+            return ""
+        zeilen = [index.row() for index in gewaehlt]
+        spalten = [index.column() for index in gewaehlt]
+        return "\n".join(
+            "\t".join(
+                str(self.modell.index(zeile, spalte).data(
+                    Qt.ItemDataRole.EditRole
+                ) or "")
+                for spalte in range(min(spalten), max(spalten) + 1)
+            )
+            for zeile in range(min(zeilen), max(zeilen) + 1)
+        )
+
+    def zellen_kopieren(self) -> None:
+        text = self.zellentext()
+        if text:
+            QApplication.clipboard().setText(text)
+
+    def zellen_ausschneiden(self) -> None:
+        """Erst kopieren, dann leeren - beides auf einen Griff."""
+        if self.modell.schreibgeschuetzt:
+            return
+        self.zellen_kopieren()
+        self._zellen_leeren()
+
+    def zellen_einfuegen(self) -> int:
+        """Setzt den Text der Zwischenablage ab der Marke ein.
+
+        Gefuellt wird nach unten und nach rechts, so weit der Text und
+        die Tabelle reichen. Zellen, die sich nicht beschreiben lassen -
+        Stift, Ader, eine Kabelspalte ohne Kabel -, werden dabei
+        uebergangen; der Text daneben rutscht deswegen nicht.
+        """
+        if self.modell.schreibgeschuetzt:
+            return 0
+        text = QApplication.clipboard().text()
+        marke = self.tabelle.currentIndex()
+        if not text or not marke.isValid():
+            return 0
+        gesetzt = 0
+        with self.modell.gesammelt():
+            for zeile, stueck in enumerate(text.rstrip("\n").split("\n")):
+                for spalte, wert in enumerate(stueck.split("\t")):
+                    index = self.modell.index(
+                        marke.row() + zeile, marke.column() + spalte
+                    )
+                    if not index.isValid():
+                        continue
+                    if not self.modell.flags(index) & Qt.ItemFlag.ItemIsEditable:
+                        continue
+                    if self.modell.setData(index, wert, Qt.ItemDataRole.EditRole):
+                        gesetzt += 1
+        if gesetzt:
+            self.modell.melden()
+        return gesetzt
 
     def _zellen_leeren(self) -> int:
         """Leert jede gewaehlte Zelle, die sich beschreiben laesst."""

@@ -242,6 +242,21 @@ Eingabe**: auf der blanken Tabelle fängt der Tastenfilter der Ansicht die
 Taste ab und rückt die Marke weiter (`_zeile_weiter`), beim Bearbeiten tut es
 der Editor über `weiter` → `_eine_zeile_tiefer`. Wurde eine Eingabe
 nicht angenommen — eine unlesbare Rangierung etwa —, bleibt die Marke stehen.
+**Ausschneiden, Kopieren, Einfügen** gibt es an beiden Stellen, an denen
+gearbeitet wird. In der Leistenansicht über ein Rechtsklickmenü an der Tabelle
+und die gewohnten Kürzel (`WidgetShortcut`, damit sie bei offenem Eingabefeld
+dem Text gehören): kopiert wird der **Block** von der obersten linken bis zur
+untersten rechten markierten Zelle samt allem dazwischen — sonst stünde das
+Eingefügte eine Spalte daneben —, und zwar als Tabulatortext, wie ihn eine
+Tabellenkalkulation versteht. Eingefügt wird ab der Marke; was sich nicht
+beschreiben lässt, bleibt stehen. Ein Einfügen ist **ein** Schritt zum
+Zurücknehmen: `LeistenModell.gesammelt()` hält die Meldung zurück, bis alles
+steht. In der Verteilerübersicht gilt dasselbe für **Leitungen**: die
+Übersicht meldet nur (`kabel_zwischenablage`), das Fenster hält die Ablage.
+Kopieren legt ein zweites Kabel an (ohne Rangierungen), Ausschneiden nimmt es
+nicht gleich weg — es **zieht beim Einfügen um**, mit Adern und Rangierungen,
+denn `kabel_verschieben()` kann das, ein Entfernen-und-neu-Auflegen nicht.
+
 Aus einer geteilten Zelle geht es ebenso geradewegs nach unten, auch
 aus dem rechten Feld heraus — und ist die Zelle darunter ebenfalls geteilt,
 steht die Eingabemarke dort gleich wieder im rechten Feld, sodass sich eine

@@ -254,6 +254,17 @@ nothing to change is simply skipped. In the last row the cursor stays. If an
 entry was not accepted — an unreadable jumper, say — it stays as well: there is
 something to put right.</p>
 
+<p><b>Cut, copy, paste</b> — a <b>right click</b> in the table opens the menu
+for it; the usual shortcuts <b>Ctrl+X</b>, <b>Ctrl+C</b> and <b>Ctrl+V</b> do
+the same as long as no field is open for typing (there they belong to the
+text). What is copied is the <b>block</b> from the topmost left to the
+bottommost right selected cell — including what lies between, so that what is
+pasted stands in the same columns again. Pasting goes from the cursor downwards
+and to the right; cells that cannot be written — <i>pin</i>, <i>wire</i>, a
+cable column without a cable — stay as they are. The format is that of a
+spreadsheet, so a column can be carried to Excel and back. One paste is
+<b>one</b> step to undo, even if it fills twenty cells.</p>
+
 <p>Out of a <b>split cell</b> it goes straight down as well — out of the right
 field too. If the cell below is split as well, the cursor lands in its right
 field again: a column of extensions can be typed from top to bottom without
@@ -311,6 +322,17 @@ sheet no longer fits the window, <b>scroll bars</b> appear; without Ctrl the
 wheel only scrolls. The chosen size stays when the sheet is changed.</p>
 
 <h2><a name="kabel"></a>4 &nbsp; Cables</h2>
+
+<p><b>Cutting, copying and pasting a line</b> — in the <b>frame overview</b> a
+right click on a cable opens the menu: <i>Cut line</i>, <i>Copy line</i>,
+<i>Paste line</i>. It is pasted where the right click was. <b>Copying</b> lays
+a second cable of the same kind — with its wires, but without the jumpers,
+since a connection exists exactly once; it can be pasted several times.
+<b>Cutting</b> does not take the cable away at once: it stays and <b>moves on
+pasting</b> — with wires <i>and</i> jumpers. Removing it and laying it anew
+later would lose them. If it does not fit at the target or something lies
+there already, the status bar says so and it stays where it is. <b>Dragging
+with the mouse</b> does the same, by the way (with Ctrl: copy).</p>
 
 <p><b>Terminating</b> — <b>Edit ▸ Terminate cable…</b> (Ctrl+K) or a double
 click on a free pair. Label, cable type and size are to be given; <i>strip</i>

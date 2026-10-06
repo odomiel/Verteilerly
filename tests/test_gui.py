@@ -693,6 +693,213 @@ class TestEntfLeertZellen(unittest.TestCase):
         self.assertEqual(self.ader.bezeichnung, "Bleibt")
 
 
+class TestZellenZwischenablage(unittest.TestCase):
+    """Ausschneiden, Kopieren und Einfügen in der Leistenansicht."""
+
+    def setUp(self):
+        from PySide6.QtWidgets import QApplication
+        from verteilerly.gui.leistenansicht import LeistenAnsicht
+
+        verteiler = Verteiler.aus_geometrie(1, 2, 10)
+        leiste = verteiler.leiste(1)
+        leiste.stift(1).ader("a").bezeichnung = "Melder 1"
+        leiste.stift(1).ader("a").bemerkung = "geprüft"
+        leiste.stift(2).ader("a").bezeichnung = "Melder 2"
+        self.ansicht = LeistenAnsicht()
+        self.addCleanup(self.ansicht.close)
+        self.ansicht.verteiler_setzen(verteiler)
+        self.ansicht.leiste_zeigen(1)
+        self.modell = self.ansicht.modell
+        self.tabelle = self.ansicht.tabelle
+        self.ablage = QApplication.clipboard()
+        self.gemeldet = []
+        self.ansicht.belegung_geaendert.connect(lambda: self.gemeldet.append(1))
+
+    def _markieren(self, zeilen, spalten):
+        from PySide6.QtCore import QItemSelectionModel
+
+        # Erst die Marke, dann markieren: setCurrentIndex wirft die
+        # Markierung sonst wieder weg.
+        self.tabelle.setCurrentIndex(self.modell.index(zeilen[0], spalten[0]))
+        wahl = self.tabelle.selectionModel()
+        wahl.clearSelection()
+        for zeile in zeilen:
+            for spalte in spalten:
+                wahl.select(
+                    self.modell.index(zeile, spalte),
+                    QItemSelectionModel.SelectionFlag.Select,
+                )
+
+    def _wert(self, zeile, spalte):
+        return self.modell.data(self.modell.index(zeile, spalte))
+
+    def test_kopiert_wird_der_ganze_block(self):
+        """Mit dem, was dazwischenliegt - sonst verrutschen die Spalten."""
+        self._markieren([0, 2], [SPALTE_BEZEICHNUNG, SPALTE_BEMERKUNG])
+        self.ansicht.zellen_kopieren()
+        zeilen = self.ablage.text().split("\n")
+        self.assertEqual(len(zeilen), 3)
+        self.assertTrue(zeilen[0].startswith("Melder 1\t"))
+        self.assertTrue(zeilen[0].endswith("\tgeprüft"))
+        self.assertEqual(
+            len(zeilen[0].split("\t")), SPALTE_BEMERKUNG - SPALTE_BEZEICHNUNG + 1
+        )
+
+    def test_eingefuegt_steht_es_in_denselben_spalten(self):
+        self._markieren([0], [SPALTE_BEZEICHNUNG, SPALTE_BEMERKUNG])
+        self.ansicht.zellen_kopieren()
+        self.tabelle.setCurrentIndex(self.modell.index(5, SPALTE_BEZEICHNUNG))
+        self.ansicht.zellen_einfuegen()
+        self.assertEqual(self._wert(5, SPALTE_BEZEICHNUNG), "Melder 1")
+        self.assertEqual(self._wert(5, SPALTE_BEMERKUNG), "geprüft")
+
+    def test_ein_einfuegen_ist_ein_schritt_zum_zuruecknehmen(self):
+        """Zwanzig Zellen sollen nicht zwanzigmal zurueckzunehmen sein."""
+        self._markieren([0, 1], [SPALTE_BEZEICHNUNG, SPALTE_BEMERKUNG])
+        self.ansicht.zellen_kopieren()
+        self.tabelle.setCurrentIndex(self.modell.index(5, SPALTE_BEZEICHNUNG))
+        self.gemeldet.clear()
+        gesetzt = self.ansicht.zellen_einfuegen()
+        self.assertGreater(gesetzt, 1)
+        self.assertEqual(len(self.gemeldet), 1)
+
+    def test_ausschneiden_kopiert_und_leert(self):
+        self._markieren([0], [SPALTE_BEZEICHNUNG])
+        self.ansicht.zellen_ausschneiden()
+        self.assertEqual(self.ablage.text(), "Melder 1")
+        self.assertEqual(self._wert(0, SPALTE_BEZEICHNUNG), "")
+
+    def test_was_sich_nicht_beschreiben_laesst_bleibt(self):
+        """Stift und Ader stehen fest - dorthin wird nichts eingefuegt."""
+        self.ablage.setText("Unfug")
+        vorher = self._wert(3, SPALTE_STIFT)
+        self.tabelle.setCurrentIndex(self.modell.index(3, SPALTE_STIFT))
+        self.assertEqual(self.ansicht.zellen_einfuegen(), 0)
+        self.assertEqual(self._wert(3, SPALTE_STIFT), vorher)
+
+    def test_schreibgeschuetzt_geht_nur_kopieren(self):
+        self.ansicht.schreibschutz_setzen(True, "Probe")
+        self._markieren([0], [SPALTE_BEZEICHNUNG])
+        self.ansicht.zellen_kopieren()
+        self.assertEqual(self.ablage.text(), "Melder 1")
+        self.ansicht.zellen_ausschneiden()
+        self.assertEqual(self._wert(0, SPALTE_BEZEICHNUNG), "Melder 1")
+        self.ablage.setText("Fremd")
+        self.tabelle.setCurrentIndex(self.modell.index(5, SPALTE_BEZEICHNUNG))
+        self.assertEqual(self.ansicht.zellen_einfuegen(), 0)
+
+    def test_das_menue_graut_aus_was_nicht_geht(self):
+        self.ablage.clear()
+        self._markieren([0], [SPALTE_BEZEICHNUNG])
+        self.ansicht.zellenmenue_auffrischen()
+        self.assertTrue(self.ansicht.aktion_kopieren.isEnabled())
+        self.assertTrue(self.ansicht.aktion_ausschneiden.isEnabled())
+        self.assertFalse(self.ansicht.aktion_einfuegen.isEnabled())
+
+        self.ablage.setText("Etwas")
+        self.ansicht.zellenmenue_auffrischen()
+        self.assertTrue(self.ansicht.aktion_einfuegen.isEnabled())
+
+        self.ansicht.schreibschutz_setzen(True, "Probe")
+        self.ansicht.zellenmenue_auffrischen()
+        self.assertFalse(self.ansicht.aktion_ausschneiden.isEnabled())
+        self.assertFalse(self.ansicht.aktion_einfuegen.isEnabled())
+        self.assertTrue(self.ansicht.aktion_kopieren.isEnabled())
+
+
+class TestLeitungsZwischenablage(unittest.TestCase):
+    """Leitungen in der Verteilerbelegung ausschneiden und einfügen."""
+
+    def setUp(self):
+        from verteilerly.gui import hauptfenster
+        from verteilerly.gui.hauptfenster import Hauptfenster
+
+        verteiler = Verteiler.aus_geometrie(1, 4, 10, name="Probe")
+        self.kabel = verteiler.kabel_anlegen("Halle Ost", 1, 1, 2)
+        verteiler.ader(Aderadresse(1, 1, "a")).bezeichnung = "Melder 1"
+        verteiler.rangierung_anlegen(
+            Aderadresse(1, 1, "a"), Aderadresse(2, 1, "a")
+        )
+        self.fenster = Hauptfenster()
+        # Ein geaendertes Projekt fragt beim Schliessen nach - und ein
+        # unbeantworteter Dialog haengt die Testreihe auf.
+        verwerfen = mock.patch.object(
+            hauptfenster, "frage",
+            return_value=QMessageBox.StandardButton.Discard,
+        )
+        verwerfen.start()
+        self.addCleanup(verwerfen.stop)
+        self.addCleanup(self.fenster.close)
+        self.fenster._projekt_setzen(Projekt(verteiler=verteiler), None)
+        self.verteiler = verteiler
+
+    def _plaetze(self):
+        return {
+            kabel.beschriftung: (
+                kabel.abschnitte[0].leiste, kabel.abschnitte[0].start_da
+            )
+            for kabel in self.verteiler.kabel
+        }
+
+    def test_kopieren_legt_ein_zweites_kabel(self):
+        self.fenster._kabel_ablage("kopieren", self.kabel, 1, 1)
+        self.assertTrue(self.fenster.uebersicht.ablage_voll)
+        self.fenster._kabel_ablage("einfuegen", None, 2, 1)
+        self.assertEqual(self._plaetze()["Halle Ost"], (1, 1))
+        self.assertEqual(self._plaetze()["Halle Ost (Kopie)"], (2, 1))
+        # Kopiert wird mehrfach - die Ablage bleibt voll.
+        self.assertTrue(self.fenster.uebersicht.ablage_voll)
+
+    def test_ausschneiden_zieht_erst_beim_einfuegen_um(self):
+        """Mit Adern und Rangierungen - darum zieht es um, statt neu zu entstehen."""
+        self.fenster._kabel_ablage("ausschneiden", self.kabel, 1, 1)
+        self.assertEqual(self._plaetze()["Halle Ost"], (1, 1))
+        self.fenster._kabel_ablage("einfuegen", None, 3, 5)
+        self.assertEqual(self._plaetze()["Halle Ost"], (3, 5))
+        self.assertEqual(
+            self.verteiler.ader(Aderadresse(3, 5, "a")).bezeichnung, "Melder 1"
+        )
+        self.assertEqual(len(self.verteiler.rangierungen), 1)
+        # Einmal eingefuegt ist die Ablage leer.
+        self.assertFalse(self.fenster.uebersicht.ablage_voll)
+
+    def test_ohne_ablage_sagt_es_die_statuszeile(self):
+        self.fenster._kabel_ablage("einfuegen", None, 2, 1)
+        self.assertIn("keine Leitung", self.fenster.statusBar().currentMessage())
+
+    def test_ein_entferntes_kabel_wird_nicht_eingefuegt(self):
+        self.fenster._kabel_ablage("kopieren", self.kabel, 1, 1)
+        self.verteiler.kabel_entfernen(self.kabel)
+        self.fenster._kabel_ablage("einfuegen", None, 2, 1)
+        self.assertIn("gibt es nicht mehr", self.fenster.statusBar().currentMessage())
+        self.assertFalse(self.fenster.uebersicht.ablage_voll)
+
+    def test_schreibgeschuetzt_bleibt_die_belegung_wie_sie_ist(self):
+        self.fenster.schreibschutz_setzen(True, "Probe")
+        self.fenster._kabel_ablage("ausschneiden", self.kabel, 1, 1)
+        self.assertFalse(self.fenster.uebersicht.ablage_voll)
+        # Kopieren geht, Einfuegen nicht.
+        self.fenster.schreibschutz_setzen(False)
+        self.fenster._kabel_ablage("kopieren", self.kabel, 1, 1)
+        self.fenster.schreibschutz_setzen(True, "Probe")
+        self.fenster._kabel_ablage("einfuegen", None, 2, 1)
+        self.assertEqual(len(self.verteiler.kabel), 1)
+
+    def test_das_menue_zeigt_nur_was_geht(self):
+        uebersicht = self.fenster.uebersicht
+        uebersicht.menue_auffrischen(self.kabel)
+        self.assertTrue(uebersicht.aktion_kopieren.isEnabled())
+        self.assertTrue(uebersicht.aktion_ausschneiden.isEnabled())
+        self.assertFalse(uebersicht.aktion_einfuegen.isEnabled())
+
+        uebersicht.menue_auffrischen(None)
+        self.assertFalse(uebersicht.aktion_kopieren.isEnabled())
+
+        self.fenster._kabel_ablage("kopieren", self.kabel, 1, 1)
+        uebersicht.menue_auffrischen(None)
+        self.assertTrue(uebersicht.aktion_einfuegen.isEnabled())
+
+
 class TestEnterSpringtWeiter(unittest.TestCase):
     """Enter schließt die Eingabe und geht eine Zeile tiefer."""
 

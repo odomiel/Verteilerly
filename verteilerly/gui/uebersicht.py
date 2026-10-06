@@ -8,8 +8,16 @@ Mustertabellen. Buchten stehen nebeneinander.
 from __future__ import annotations
 
 from PySide6.QtCore import QMimeData, QPoint, QRect, QSize, Qt, Signal
-from PySide6.QtGui import QDrag, QFont, QFontMetrics, QPainter, QPen
-from PySide6.QtWidgets import QApplication, QWidget
+from PySide6.QtGui import (
+    QAction,
+    QDrag,
+    QFont,
+    QFontMetrics,
+    QKeySequence,
+    QPainter,
+    QPen,
+)
+from PySide6.QtWidgets import QApplication, QMenu, QWidget
 
 from ..modell import LEISTEN_ZAHLEN, Kabel, Verteiler, leistenname
 from .thema import HELL, Farben
@@ -40,6 +48,10 @@ class Uebersicht(QWidget):
     #: Ein Kabel wurde woandershin gezogen: (Kabel, Leiste, Start-DA,
     #: kopieren). Das Fenster fuehrt es aus - die Uebersicht zeigt nur.
     kabel_umgelegt = Signal(object, int, int, bool)
+    #: Ausschneiden, Kopieren, Einfuegen: (Handlung, Kabel oder None,
+    #: Leiste, DA). Auch das fuehrt das Fenster aus - es haelt die
+    #: Ablage, und es weiss, was ein Umzug am Verteiler bedeutet.
+    kabel_zwischenablage = Signal(str, object, int, int)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -62,8 +74,79 @@ class Uebersicht(QWidget):
         self.setMouseTracking(True)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setAcceptDrops(True)
+        #: Ob in der Ablage des Fensters etwas liegt - danach richtet
+        #: sich, ob "Einfuegen" im Menue offen steht.
+        self.ablage_voll = False
+        self._menueaktionen()
 
     # -- Zustand -----------------------------------------------------------
+
+    # -- Rechtsklickmenue ---------------------------------------------------
+
+    def _menueaktionen(self) -> None:
+        """Die drei Handlungen samt Kuerzeln, am Bild angemeldet."""
+        self.aktion_ausschneiden = QAction(u("Leitung ausschneiden"), self)
+        self.aktion_ausschneiden.setShortcut(QKeySequence.StandardKey.Cut)
+        self.aktion_kopieren = QAction(u("Leitung kopieren"), self)
+        self.aktion_kopieren.setShortcut(QKeySequence.StandardKey.Copy)
+        self.aktion_einfuegen = QAction(u("Leitung einfügen"), self)
+        self.aktion_einfuegen.setShortcut(QKeySequence.StandardKey.Paste)
+        for handlung, was in (
+            (self.aktion_ausschneiden, "ausschneiden"),
+            (self.aktion_kopieren, "kopieren"),
+            (self.aktion_einfuegen, "einfuegen"),
+        ):
+            handlung.setShortcutContext(Qt.ShortcutContext.WidgetShortcut)
+            handlung.triggered.connect(
+                lambda _an=False, handlung=was: self._ablage_melden(handlung)
+            )
+            self.addAction(handlung)
+
+    def _ablage_melden(self, was: str, stelle=None) -> None:
+        """Meldet die Handlung ans Fenster - mit Kabel und Platz."""
+        stelle = stelle or self.auswahl
+        if stelle is None or self.verteiler is None:
+            return
+        leiste, da = stelle
+        kabel = self.verteiler.kabel_an(leiste, da)
+        if was != "einfuegen" and kabel is None:
+            return
+        self.kabel_zwischenablage.emit(was, kabel, leiste, da)
+
+    def menue_auffrischen(self, kabel) -> None:
+        """Graut aus, was an dieser Stelle nicht geht.
+
+        Steht neben dem Zeigen des Menues: ein offenes Menue haelt die
+        Testreihe an, dieser Teil laesst sich ohne eines pruefen.
+        """
+        darf = not self.schreibgeschuetzt
+        self.aktion_ausschneiden.setEnabled(darf and kabel is not None)
+        self.aktion_kopieren.setEnabled(kabel is not None)
+        self.aktion_einfuegen.setEnabled(darf and self.ablage_voll)
+
+    def contextMenuEvent(self, ereignis) -> None:  # noqa: N802 - Qt-Name
+        """Rechtsklick auf eine Doppelader: ausschneiden, kopieren, einfuegen.
+
+        Angefasst wird, worauf geklickt wurde - nicht, was vorher
+        markiert war: ein Rechtsklick waehlt die Stelle mit aus, wie
+        ueberall.
+        """
+        stelle = self._zelle_bei(
+            int(ereignis.pos().x()), int(ereignis.pos().y())
+        )
+        if stelle is None or self.verteiler is None:
+            return
+        self.auswahl = stelle
+        self.auswahl_geaendert.emit(stelle)
+        self.update()
+        leiste, da = stelle
+        self.menue_auffrischen(self.verteiler.kabel_an(leiste, da))
+        menue = QMenu(self)
+        menue.addAction(self.aktion_ausschneiden)
+        menue.addAction(self.aktion_kopieren)
+        menue.addSeparator()
+        menue.addAction(self.aktion_einfuegen)
+        menue.exec(ereignis.globalPos())
 
     def schreibschutz_setzen(self, an: bool) -> None:
         """Kein Auflegen per Doppelklick und kein Umlegen per Ziehen."""

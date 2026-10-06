@@ -262,18 +262,34 @@ class TestGegenDieMenues(unittest.TestCase):
         return gefunden
 
     def test_kein_kuerzel_ist_doppelt_vergeben(self):
-        """Zwei Einträge auf derselben Taste heben sich gegenseitig auf."""
+        """Zwei Einträge auf derselben Taste heben sich gegenseitig auf.
+
+        Gezählt wird je **Geltungsbereich**: ein Kürzel am Fenster gilt
+        überall und darf nur einmal vorkommen. Eines, das an einem
+        Bauteil hängt (``WidgetShortcut``), gilt nur, solange dieses
+        Bauteil die Eingabe hat — Strg+C in der Tabelle und Strg+C in
+        der Übersicht stehen sich darum nicht im Weg.
+        """
+        from PySide6.QtCore import Qt
         from PySide6.QtGui import QAction
 
-        belegt: dict[str, str] = {}
+        belegt: dict[tuple, str] = {}
         doppelt = []
         for handlung in self.fenster.findChildren(QAction):
             kuerzel = handlung.shortcut().toString()
             if not kuerzel:
                 continue
-            if kuerzel in belegt:
-                doppelt.append(f"{kuerzel}: {belegt[kuerzel]} / {handlung.text()}")
-            belegt[kuerzel] = handlung.text()
+            kontext = handlung.shortcutContext()
+            if kontext in (
+                Qt.ShortcutContext.WidgetShortcut,
+                Qt.ShortcutContext.WidgetWithChildrenShortcut,
+            ):
+                marke = (kuerzel, kontext, id(handlung.parent()))
+            else:
+                marke = (kuerzel,)
+            if marke in belegt:
+                doppelt.append(f"{kuerzel}: {belegt[marke]} / {handlung.text()}")
+            belegt[marke] = handlung.text()
         self.assertEqual(doppelt, [])
 
 

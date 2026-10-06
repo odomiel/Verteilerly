@@ -167,6 +167,11 @@ class Hauptfenster(QMainWindow):
         #: "Speichern unter".
         self.schreibgeschuetzt = False
         self.schreibschutz_grund = ""
+        #: Was in der Leitungsablage liegt: (Kabel, als Kopie). Ein
+        #: ausgeschnittenes Kabel bleibt liegen, bis es eingefuegt wird -
+        #: dann zieht es um und nimmt seine Rangierungen mit. Wer es
+        #: gleich entfernte und spaeter neu anlegte, verloere sie.
+        self._kabelablage: tuple | None = None
         # Die Staende fuer das Zuruecknehmen: was war, was rueckgaengig
         # gemacht wurde, und der Stand seit der letzten Aenderung.
         #: Soll die Vorschau beim naechsten Auffrischen die
@@ -299,6 +304,7 @@ class Hauptfenster(QMainWindow):
         self.uebersicht.kabel_aktiviert.connect(self._kabel_angeklickt)
         self.uebersicht.auswahl_geaendert.connect(self._auswahl_gemeldet)
         self.uebersicht.kabel_umgelegt.connect(self._kabel_umlegen)
+        self.uebersicht.kabel_zwischenablage.connect(self._kabel_ablage)
 
         rollbereich = QScrollArea()
         rollbereich.setWidget(self.uebersicht)
@@ -1832,6 +1838,58 @@ class Hauptfenster(QMainWindow):
         )
         if antwort == QMessageBox.StandardButton.Yes:
             self._kabel_abnehmen(kabel)
+
+    def _kabel_ablage(self, was: str, kabel, leiste: int, start_da: int) -> None:
+        """Ausschneiden, Kopieren und Einfuegen einer Leitung.
+
+        Ausgeschnitten wird nicht sofort entfernt: das Kabel bleibt
+        liegen, bis es eingefuegt wird, und **zieht dann um** - mit
+        seinen Adern und seinen Rangierungen. Entfernen und spaeter neu
+        auflegen verloere die Rangierungen, denn die haengen an der
+        Ader, nicht am Kabel.
+        """
+        if self.projekt is None:
+            return
+        if was in ("ausschneiden", "kopieren"):
+            if kabel is None or (was == "ausschneiden" and self.schreibgeschuetzt):
+                return
+            self._kabelablage = (kabel, was == "kopieren")
+            self.uebersicht.ablage_voll = True
+            name = kabel.beschriftung or u("ohne Beschriftung")
+            self.statusBar().showMessage(
+                u("Kopiert: {0} — zum Einfügen eine freie Stelle wählen")
+                .format(name)
+                if was == "kopieren"
+                else u("Ausgeschnitten: {0} — beim Einfügen zieht die Leitung "
+                       "um").format(name),
+                8000,
+            )
+            return
+        if self.schreibgeschuetzt:
+            return
+        if self._kabelablage is None:
+            self.statusBar().showMessage(
+                u("Es liegt keine Leitung in der Ablage"), 6000
+            )
+            return
+        kabel, als_kopie = self._kabelablage
+        if kabel not in self.projekt.verteiler.kabel:
+            # Zwischenzeitlich entfernt oder ein anderes Projekt.
+            self._kabelablage_leeren()
+            self.statusBar().showMessage(
+                u("Die Leitung in der Ablage gibt es nicht mehr"), 6000
+            )
+            return
+        self._kabel_umlegen(kabel, leiste, start_da, als_kopie)
+        if not als_kopie:
+            # Ausgeschnitten wird einmal eingefuegt - danach ist die
+            # Ablage leer, sonst zoege dasselbe Kabel beim naechsten
+            # Einfuegen noch einmal um.
+            self._kabelablage_leeren()
+
+    def _kabelablage_leeren(self) -> None:
+        self._kabelablage = None
+        self.uebersicht.ablage_voll = False
 
     def _kabel_umlegen(self, kabel, leiste: int, start_da: int, kopieren: bool) -> None:
         """Ein Kabel wurde woandershin gezogen: verschieben oder kopieren.
