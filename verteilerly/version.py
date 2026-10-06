@@ -19,7 +19,7 @@ import datetime as _datetime
 import re
 from typing import Iterable, NamedTuple
 
-VERSION = "2026.10.06b3"
+VERSION = "2026.10.06b4"
 
 _MUSTER = re.compile(r"^(\d{4})\.(\d{2})\.(\d{2})(?:b(\d+))?$")
 
