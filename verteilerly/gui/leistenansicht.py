@@ -7,12 +7,14 @@ Kabelspalte rechts zeigt, welches Kabel die Doppelader belegt.
 
 from __future__ import annotations
 
+import json
 from contextlib import contextmanager
 
 from dataclasses import replace
 
 from PySide6.QtCore import (
     QAbstractTableModel,
+    QMimeData,
     QEvent,
     QModelIndex,
     QPersistentModelIndex,
@@ -54,6 +56,7 @@ from PySide6.QtWidgets import (
 )
 
 from .. import schreibweisen
+from ..layout import zellentext
 from ..modell import (
     ANTEIL_MAX,
     ANTEIL_MIN,
@@ -152,6 +155,12 @@ AENDERBAR = {
     # Beschriftung steht. Das prueft flags() Zelle fuer Zelle.
     SPALTE_KABEL,
 }
+
+
+#: Woran die eigene Fracht in der Zwischenablage zu erkennen ist.
+#: Daneben steht immer der schlichte Text - fuer Excel und fuer alle
+#: anderen; die eigene Fracht traegt zusaetzlich die geteilten Zellen.
+ZELLENFRACHT = "application/x-verteilerly-zellen"
 
 
 class LeistenModell(QAbstractTableModel):
@@ -1341,18 +1350,68 @@ class LeistenAnsicht(QWidget):
         spalten = [index.column() for index in gewaehlt]
         return "\n".join(
             "\t".join(
-                str(self.modell.index(zeile, spalte).data(
-                    Qt.ItemDataRole.EditRole
-                ) or "")
+                self._text_von(self.modell.index(zeile, spalte))
                 for spalte in range(min(spalten), max(spalten) + 1)
             )
             for zeile in range(min(zeilen), max(zeilen) + 1)
         )
 
+    def _text_von(self, index) -> str:
+        """Der Text einer Zelle - eine geteilte hintereinander.
+
+        Dasselbe tun CSV und Mappe (``layout.zellentext``): ein Raster
+        kennt keine halbe Spalte. Die eigene Fracht traegt die Teilung
+        daneben, fuer das Einfuegen im Programm selbst.
+        """
+        wert = str(index.data(Qt.ItemDataRole.EditRole) or "")
+        teilung = self.modell.teilung(index)
+        return wert if teilung is None else zellentext(wert, teilung)
+
+    def zellenfracht(self) -> list:
+        """Die markierten Zellen als Liste von Zeilen - mit ihrer Teilung.
+
+        Der schlichte Text kann eine geteilte Zelle nur hintereinander
+        wiedergeben; wer sie *als* geteilte Zelle einfuegen will,
+        braucht beide Felder und den Anteil. Darum reist beides: der
+        Text fuer alle anderen, diese Fracht fuer uns selbst.
+        """
+        gewaehlt = self._gewaehlte(lambda spalte: spalte)
+        if not gewaehlt:
+            return []
+        zeilen = [index.row() for index in gewaehlt]
+        spalten = [index.column() for index in gewaehlt]
+        fracht = []
+        for zeile in range(min(zeilen), max(zeilen) + 1):
+            stueck = []
+            for spalte in range(min(spalten), max(spalten) + 1):
+                index = self.modell.index(zeile, spalte)
+                teilung = self.modell.teilung(index)
+                stueck.append({
+                    "text": str(index.data(Qt.ItemDataRole.EditRole) or ""),
+                    "teilung": None if teilung is None else {
+                        "geteilt": bool(teilung.geteilt),
+                        "anteil": int(teilung.anteil),
+                        "text": teilung.text,
+                    },
+                })
+            fracht.append(stueck)
+        return fracht
+
     def zellen_kopieren(self) -> None:
-        text = self.zellentext()
-        if text:
-            QApplication.clipboard().setText(text)
+        """Legt die Zellen ab - als Text und als eigene Fracht.
+
+        Auch eine leere Zelle wird abgelegt: wer sie einfuegt, leert
+        damit die Zielzelle - genau wie in einer Tabellenkalkulation.
+        """
+        fracht = self.zellenfracht()
+        if not fracht:
+            return
+        daten = QMimeData()
+        daten.setText(self.zellentext())
+        daten.setData(
+            ZELLENFRACHT, json.dumps({"zeilen": fracht}).encode("utf-8")
+        )
+        QApplication.clipboard().setMimeData(daten)
 
     def zellen_ausschneiden(self) -> None:
         """Erst kopieren, dann leeren - beides auf einen Griff."""
@@ -1361,24 +1420,54 @@ class LeistenAnsicht(QWidget):
         self.zellen_kopieren()
         self._zellen_leeren()
 
-    def zellen_einfuegen(self) -> int:
-        """Setzt den Text der Zwischenablage ab der Marke ein.
+    def _abgelegte_zellen(self) -> list:
+        """Was in der Ablage liegt, als Liste von Zeilen.
 
-        Gefuellt wird nach unten und nach rechts, so weit der Text und
+        Die eigene Fracht geht vor: sie traegt die geteilten Zellen.
+        Liegt sie nicht da - etwa weil anderswo kopiert wurde -, wird
+        der schlichte Text gelesen, Tabulator fuer Tabulator.
+        """
+        ablage = QApplication.clipboard().mimeData()
+        if ablage is not None and ablage.hasFormat(ZELLENFRACHT):
+            try:
+                inhalt = json.loads(
+                    bytes(ablage.data(ZELLENFRACHT)).decode("utf-8")
+                )
+                zeilen = inhalt["zeilen"]
+            except (ValueError, KeyError, TypeError, UnicodeDecodeError):
+                zeilen = None
+            if isinstance(zeilen, list):
+                return zeilen
+        text = QApplication.clipboard().text()
+        if not text:
+            return []
+        return [
+            [{"text": wert, "teilung": None} for wert in stueck.split("\t")]
+            for stueck in text.rstrip("\n").split("\n")
+        ]
+
+    def zellen_einfuegen(self) -> int:
+        """Setzt ab der Marke ein, was in der Ablage liegt.
+
+        Gefuellt wird nach unten und nach rechts, so weit die Ablage und
         die Tabelle reichen. Zellen, die sich nicht beschreiben lassen -
         Stift, Ader, eine Kabelspalte ohne Kabel -, werden dabei
-        uebergangen; der Text daneben rutscht deswegen nicht.
+        uebergangen; was daneben steht, rutscht deswegen nicht.
+
+        Eine **geteilte Zelle** kommt ganz mit: beide Felder und der
+        Anteil. War die kopierte Zelle ungeteilt, wird die Teilung am
+        Ziel aufgehoben - eingefuegt wird, was kopiert wurde.
         """
         if self.modell.schreibgeschuetzt:
             return 0
-        text = QApplication.clipboard().text()
         marke = self.tabelle.currentIndex()
-        if not text or not marke.isValid():
+        zeilen = self._abgelegte_zellen()
+        if not zeilen or not marke.isValid():
             return 0
         gesetzt = 0
         with self.modell.gesammelt():
-            for zeile, stueck in enumerate(text.rstrip("\n").split("\n")):
-                for spalte, wert in enumerate(stueck.split("\t")):
+            for zeile, stueck in enumerate(zeilen):
+                for spalte, zelle in enumerate(stueck):
                     index = self.modell.index(
                         marke.row() + zeile, marke.column() + spalte
                     )
@@ -1386,11 +1475,35 @@ class LeistenAnsicht(QWidget):
                         continue
                     if not self.modell.flags(index) & Qt.ItemFlag.ItemIsEditable:
                         continue
-                    if self.modell.setData(index, wert, Qt.ItemDataRole.EditRole):
+                    if self.modell.setData(
+                        index, zelle.get("text", ""), Qt.ItemDataRole.EditRole
+                    ):
+                        gesetzt += 1
+                    if self._teilung_einsetzen(index, zelle.get("teilung")):
                         gesetzt += 1
         if gesetzt:
             self.modell.melden()
         return gesetzt
+
+    def _teilung_einsetzen(self, index, abgelegt) -> bool:
+        """Setzt die Teilung der kopierten Zelle am Ziel.
+
+        Nur dort, wo sich ueberhaupt teilen laesst; steht in der Ablage
+        nichts dazu (fremder Text), bleibt die Teilung des Ziels, wie
+        sie ist.
+        """
+        ziel = self.modell.teilung(index)
+        if ziel is None or not isinstance(abgelegt, dict):
+            return False
+        neu = replace(
+            ziel,
+            geteilt=bool(abgelegt.get("geteilt", False)),
+            anteil=int(abgelegt.get("anteil", ziel.anteil)),
+            text=str(abgelegt.get("text", "")),
+        )
+        if neu == ziel:
+            return False
+        return self.modell.teilung_setzen(index, neu)
 
     def _zellen_leeren(self) -> int:
         """Leert jede gewaehlte Zelle, die sich beschreiben laesst."""

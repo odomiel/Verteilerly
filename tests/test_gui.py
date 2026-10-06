@@ -788,6 +788,60 @@ class TestZellenZwischenablage(unittest.TestCase):
         self.tabelle.setCurrentIndex(self.modell.index(5, SPALTE_BEZEICHNUNG))
         self.assertEqual(self.ansicht.zellen_einfuegen(), 0)
 
+    def _teilen(self, zeile, spalte, anteil, rechts):
+        from verteilerly.modell import Zellenteilung
+
+        self.modell.teilung_setzen(
+            self.modell.index(zeile, spalte),
+            Zellenteilung(anteil=anteil, text=rechts, geteilt=True),
+        )
+
+    def test_eine_geteilte_zelle_kommt_ganz_mit(self):
+        """Beide Felder und der Anteil - nicht nur die linke Hälfte."""
+        self._teilen(0, SPALTE_BEZEICHNUNG, 35, "EG 12")
+        self._markieren([0], [SPALTE_BEZEICHNUNG])
+        self.ansicht.zellen_kopieren()
+        self.tabelle.setCurrentIndex(self.modell.index(5, SPALTE_BEZEICHNUNG))
+        self.ansicht.zellen_einfuegen()
+
+        ziel = self.modell.index(5, SPALTE_BEZEICHNUNG)
+        teilung = self.modell.teilung(ziel)
+        self.assertEqual(self.modell.data(ziel), "Melder 1")
+        self.assertTrue(teilung.geteilt)
+        self.assertEqual(teilung.anteil, 35)
+        self.assertEqual(teilung.text, "EG 12")
+
+    def test_der_schlichte_text_traegt_beide_felder_hintereinander(self):
+        """Fuer Excel und CSV: ein Raster kennt keine halbe Spalte."""
+        self._teilen(0, SPALTE_BEZEICHNUNG, 35, "EG 12")
+        self._markieren([0], [SPALTE_BEZEICHNUNG])
+        self.ansicht.zellen_kopieren()
+        self.assertEqual(self.ablage.text(), "Melder 1 EG 12")
+
+    def test_eine_ungeteilte_zelle_hebt_die_teilung_am_ziel_auf(self):
+        """Eingefuegt wird, was kopiert wurde - auch die Ungeteiltheit."""
+        self._teilen(5, SPALTE_BEZEICHNUNG, 50, "bleibt nicht")
+        # Zeile 2 ist Stift 2, Ader a - dort steht "Melder 2", ungeteilt.
+        self._markieren([2], [SPALTE_BEZEICHNUNG])
+        self.ansicht.zellen_kopieren()
+        self.tabelle.setCurrentIndex(self.modell.index(5, SPALTE_BEZEICHNUNG))
+        self.ansicht.zellen_einfuegen()
+        teilung = self.modell.teilung(self.modell.index(5, SPALTE_BEZEICHNUNG))
+        self.assertFalse(teilung.geteilt)
+        self.assertEqual(teilung.text, "")
+
+    def test_fremder_text_laesst_die_teilung_in_ruhe(self):
+        """Von aussen kommt nur Text - ueber die Teilung sagt er nichts."""
+        self._teilen(5, SPALTE_BEZEICHNUNG, 40, "bleibt")
+        self.ablage.setText("Von außen")
+        self.tabelle.setCurrentIndex(self.modell.index(5, SPALTE_BEZEICHNUNG))
+        self.ansicht.zellen_einfuegen()
+        ziel = self.modell.index(5, SPALTE_BEZEICHNUNG)
+        self.assertEqual(self.modell.data(ziel), "Von außen")
+        teilung = self.modell.teilung(ziel)
+        self.assertTrue(teilung.geteilt)
+        self.assertEqual(teilung.text, "bleibt")
+
     def test_das_menue_graut_aus_was_nicht_geht(self):
         self.ablage.clear()
         self._markieren([0], [SPALTE_BEZEICHNUNG])

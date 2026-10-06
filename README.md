@@ -249,7 +249,11 @@ dem Text gehören): kopiert wird der **Block** von der obersten linken bis zur
 untersten rechten markierten Zelle samt allem dazwischen — sonst stünde das
 Eingefügte eine Spalte daneben —, und zwar als Tabulatortext, wie ihn eine
 Tabellenkalkulation versteht. Eingefügt wird ab der Marke; was sich nicht
-beschreiben lässt, bleibt stehen. Ein Einfügen ist **ein** Schritt zum
+beschreiben lässt, bleibt stehen. **Eine geteilte Zelle reist ganz**: neben dem
+Text liegt eine eigene Fracht (`ZELLENFRACHT`, JSON) mit beiden Feldern und dem
+Anteil — der schlichte Text kann sie nur hintereinander wiedergeben
+(`layout.zellentext`, wie CSV und Mappe). Fremder Text lässt die Teilung am
+Ziel darum in Ruhe, eigener setzt sie genau so, wie sie kopiert wurde. Ein Einfügen ist **ein** Schritt zum
 Zurücknehmen: `LeistenModell.gesammelt()` hält die Meldung zurück, bis alles
 steht. In der Verteilerübersicht gilt dasselbe für **Leitungen**: die
 Übersicht meldet nur (`kabel_zwischenablage`), das Fenster hält die Ablage.
