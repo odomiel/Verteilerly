@@ -1133,7 +1133,11 @@ def belegungsmasse(
     label_b = vorlage.leistenlabel * min(faktor, 1.5)
     luft_l = vorlage.abstand_leisten * faktor
     luft_r = vorlage.abstand_buchten * faktor
-    schrift = vorlage.schrift_klein if faktor < 1.4 else vorlage.schrift_normal
+    # Steht in der Vorlage eine eigene Groesse fuer die Leistenbeschriftung,
+    # gilt die; sonst waechst sie in zwei Stufen mit dem Blatt mit.
+    schrift = vorlage.schrift_leiste or (
+        vorlage.schrift_klein if faktor < 1.4 else vorlage.schrift_normal
+    )
 
     # Bleibt in der Breite etwas uebrig, weil die Hoehe das Mass setzt,
     # duerfen die Zellen breiter werden - bis zum Doppelten. Eine etwas

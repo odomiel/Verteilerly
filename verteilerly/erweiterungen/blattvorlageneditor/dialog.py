@@ -74,6 +74,7 @@ ZAHLEN = (
         ("schrift_mittel", "Mittel", "pt", 4.0, 30.0, 0.5),
         ("schrift_normal", "Normal", "pt", 3.0, 20.0, 0.5),
         ("schrift_klein", "Klein", "pt", 3.0, 20.0, 0.5),
+        ("schrift_leiste", "Leiste", "pt", 0.0, 40.0, 0.5),
     )),
     ("Verteilerbelegung", (
         ("zelle_breite", "Zellenbreite", "mm", 2.0, 30.0, 0.5),
@@ -85,6 +86,9 @@ ZAHLEN = (
         ("polster_kabel", "Polster um den Kabelnamen", "mm", 0.0, 5.0, 0.1),
     )),
 )
+#: Felder, bei denen die Null etwas anderes heisst als "null Millimeter".
+SONDERWERT = {"schrift_leiste": "automatisch"}
+
 # Die Hoehe des Schriftfeldes steht bei seinen Bloecken, nicht beim Blatt.
 SCHRIFTFELDHOEHE = ("schriftfeld_hoehe", "Höhe", "mm", 10.0, 80.0, 0.5)
 SCHALTER = (
@@ -185,6 +189,10 @@ class EditorDialog(PassenderDialog):
                 wert.setDecimals(0 if schritt >= 1 else 2)
                 if einheit:
                     wert.setSuffix(f" {einheit}")
+                # Wo die Null "wie die uebrigen" heisst, soll das auch
+                # dastehen - "0,0 pt" liest sich wie eine Groesse.
+                if feld in SONDERWERT:
+                    wert.setSpecialValueText(u(SONDERWERT[feld]))
                 wert.valueChanged.connect(self._geaendert)
                 formular.addRow(u(beschriftung) + ":", wert)
                 self.zahlen[feld] = wert

@@ -565,6 +565,7 @@ Holt die mitgelieferten Blattvorlagen zurück, so wie sie ausgeliefert wurden. E
 mitgelieferte Blattvorlagen wiederhergestellt: supplied sheet templates restored
 '{0}: fuellgrad_kabel liegt zwischen 0,1 und 1': '{0}: fuellgrad_kabel is between 0.1 and 1'
 '{0}: zeilen_kabel muss mindestens 1 sein': '{0}: zeilen_kabel must be at least 1'
+'{0}: schrift leiste liegt zwischen 3 und 40 Punkt (0 heißt: wie die übrigen)': '{0}: schrift leiste is between 3 and 40 points (0 means: like the others)'
 '{0}: polster_kabel darf nicht negativ sein': '{0}: polster_kabel must not be negative'
 '{0}: eigene_felder ist eine Liste von Feldnamen': '{0}: eigene_felder is a list of field names'
 '{0}: eigene_felder_auf ist eine Liste von Blattarten': '{0}: eigene_felder_auf is a list of sheet kinds'
@@ -794,6 +795,7 @@ Zeilenhöhe höchstens: Row height at most
 Zeilenhöhe mindestens: Row height at least
 Zellenbreite: Cell width
 Zellenhöhe: Cell height
+automatisch: automatic
 links: left
 mittig: centered
 rechts: right

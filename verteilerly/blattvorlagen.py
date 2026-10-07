@@ -48,7 +48,7 @@ BLATTSCHLUESSEL = (
     "buchten_je_blatt", "da_nummern",
     "kabel_gedreht", "zeilen_kabel", "belegung",
 )
-SCHRIFTSCHLUESSEL = ("gross", "mittel", "normal", "klein")
+SCHRIFTSCHLUESSEL = ("gross", "mittel", "normal", "klein", "leiste")
 BELEGUNGSSCHLUESSEL = (
     "zelle_breite", "zelle_hoehe", "leistenlabel",
     "abstand_leisten", "abstand_buchten",
@@ -209,6 +209,12 @@ class Blattvorlage:
     schrift_mittel: float = 11.0
     schrift_normal: float = 8.5
     schrift_klein: float = 7.0
+    # Die Beschriftung links neben jeder Leiste auf der
+    # Verteilerbelegung. 0 heisst: wie bisher - "klein", und erst bei
+    # stark vergroesserter Belegung "normal". Wer sie fuer sich haben
+    # will, setzt hier eine Groesse; die anderen Schriften bleiben dann
+    # unberuehrt.
+    schrift_leiste: float = 0.0
 
     spalten: tuple[Spalte, ...] = STANDARDSPALTEN
     # Die Bloecke des Schriftfeldes. Eine blosse Marke darf dabeistehen,
@@ -421,6 +427,7 @@ def blattvorlage_aus_yaml(
         schrift_mittel=_zahl(schrift, "mittel", STANDARD.schrift_mittel, wo),
         schrift_normal=_zahl(schrift, "normal", STANDARD.schrift_normal, wo),
         schrift_klein=_zahl(schrift, "klein", STANDARD.schrift_klein, wo),
+        schrift_leiste=_zahl(schrift, "leiste", STANDARD.schrift_leiste, wo),
         spalten=(
             _spalten_aus_yaml(inhalt["spalten"], wo, hinweise)
             if inhalt.get("spalten")
@@ -480,6 +487,11 @@ def blattvorlage_aus_yaml(
         )
     if vorlage.polster_kabel < 0:
         raise BlattvorlagenFehler(u("{0}: polster_kabel darf nicht negativ sein").format(wo))
+    if vorlage.schrift_leiste and not 3.0 <= vorlage.schrift_leiste <= 40.0:
+        raise BlattvorlagenFehler(
+            u("{0}: schrift leiste liegt zwischen 3 und 40 Punkt (0 heißt: "
+              "wie die übrigen)").format(wo)
+        )
     if vorlage.zeilen_kabel < 1:
         raise BlattvorlagenFehler(
             u("{0}: zeilen_kabel muss mindestens 1 sein").format(wo)

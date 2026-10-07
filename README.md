@@ -414,6 +414,14 @@ dort wird auf die einzelne Doppelader geklickt. Die Zellen sind dort
 Kabel über eine einzige Doppelader seinen Namen zeigt: `namenslage()` bricht
 ihn um, solange die Zeilen in den Block passen, und schneidet erst dann ab.
 
+**Die Beschriftung der Leisten** (*Leiste 1*, *Leiste 2* …) steht links neben
+jedem Kasten, in einer Flucht mit dem Schriftfeld darunter. Ihre Größe folgt
+`schrift.leiste` der Blattvorlage; **0** — die Vorgabe — heißt *wie die
+übrigen*: dann gilt `klein`, und erst bei stark vergrößerter Belegung (Faktor
+ab 1,4) `normal`. Wer sie für sich haben will, setzt eine Zahl, ohne
+Tabellentext und Schriftfeld mitzuziehen. Die **Breite** ihrer Spalte ist
+`leistenlabel` im Block `belegung`.
+
 Der **Kabelname steht mitten im Block**, waagerecht wie senkrecht, und so
 groß, wie dieser ihn trägt (höchstens `schrift_mittel` der Blattvorlage;
 `kabelbeschriftung_groesse()` rechnet es aus, Blatt und Mappe fragen

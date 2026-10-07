@@ -9,6 +9,7 @@ from verteilerly.blattvorlagen import (
     Blattvorlage,
     Blattvorlagen,
     BlattvorlagenFehler,
+    blattvorlage_als_yaml,
     blattvorlage_aus_yaml,
 )
 from verteilerly.layout import Rechteck, Text, blaetter, leistenblatt
@@ -634,6 +635,47 @@ class TestWirkungAufDasBlatt(unittest.TestCase):
         self.assertNotIn(
             "Standard", _texte(blaetter(self.projekt, STANDARD)[0])
         )
+
+
+class TestSchriftDerLeistenbeschriftung(unittest.TestCase):
+    """Die Beschriftung „Leiste 1“ laesst sich eigens einstellen."""
+
+    def _schrift(self, vorlage):
+        from verteilerly.layout import belegungsmasse
+
+        verteiler = Verteiler.aus_geometrie(2, 6, 10)
+        return belegungsmasse(verteiler.buchten, vorlage).schrift
+
+    def test_ohne_angabe_bleibt_es_wie_bisher(self):
+        """Dann gilt „klein“ - und bei stark vergrößerter Belegung „normal“."""
+        self.assertEqual(STANDARD.schrift_leiste, 0.0)
+        self.assertIn(
+            self._schrift(STANDARD),
+            (STANDARD.schrift_klein, STANDARD.schrift_normal),
+        )
+
+    def test_eine_eigene_groesse_gilt(self):
+        vorlage = STANDARD.mit(schrift_leiste=13.0)
+        self.assertEqual(self._schrift(vorlage), 13.0)
+        # Die uebrigen Schriften bleiben unberuehrt.
+        self.assertEqual(vorlage.schrift_klein, STANDARD.schrift_klein)
+        self.assertEqual(vorlage.schrift_normal, STANDARD.schrift_normal)
+
+    def test_sie_steht_im_schriftblock_der_datei(self):
+        inhalt = {"id": "eigen", "name": "Eigen", "schrift": {"leiste": 12}}
+        vorlage = blattvorlage_aus_yaml(inhalt, "eigen.yaml", [])
+        self.assertEqual(vorlage.schrift_leiste, 12)
+        geschrieben = blattvorlage_als_yaml(vorlage)
+        self.assertEqual(geschrieben["schrift"]["leiste"], 12)
+
+    def test_eine_unsinnige_groesse_wird_abgewiesen(self):
+        for wert in (1, 99):
+            with self.subTest(wert=wert):
+                with self.assertRaises(BlattvorlagenFehler):
+                    blattvorlage_aus_yaml(
+                        {"id": "x", "name": "X", "schrift": {"leiste": wert}},
+                        "x.yaml", [],
+                    )
 
 
 if __name__ == "__main__":

@@ -653,10 +653,14 @@ the cable column may wrap at most; below that the type gets smaller. On the
 frame layout the limit does not apply.</td><td>2</td></tr>
 </table>
 
-<p>The four font sizes stand in points under <code>schrift</code>:
+<p>The font sizes stand in points under <code>schrift</code>:
 <code>gross</code> (20) for the cover sheet, <code>mittel</code> (11) for
 headings and cable names, <code>normal</code> (8.5) for the table,
-<code>klein</code> (7) for labels.</p>
+<code>klein</code> (7) for labels. In addition there is <code>leiste</code> for
+the label <i>Leiste 1</i>, <i>Leiste 2</i> … to the left of each strip on the
+frame layout: <b>0</b> (the default) means <i>like the others</i> — then
+<code>klein</code> applies, and <code>normal</code> on a strongly enlarged
+layout. A number there fixes the size without touching the other types.</p>
 
 <h4>The columns of the strip sheet</h4>
 
