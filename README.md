@@ -338,6 +338,15 @@ der beiden Felder, bleibt darin stehen und wird **nicht gespiegelt** —
 er gehört der Ader und steht als deren Feld in der Projektdatei. Was
 sich als Ziel lesen lässt, bleibt ein Ziel.
 
+**Was schon dasteht, darf stehen bleiben**: bis 2026.10.07b3 nahm das
+Rangierfeld jeden freien Text an, und solche Vermerke bleiben erhalten — sie
+werden geladen, gezeigt, gedruckt, gespeichert und lassen sich unverändert
+bestätigen, auch wenn keine Vorlage sie kennt
+(`LeistenModell._vermerk_von`). Nur **neuer** Text muss eine Vorlage sein.
+Beim Öffnen nennt die Statuszeile die Vermerke, die in keiner Vorlage stehen
+(`modell.fremde_vermerke`, die ersten fünf) — wer sie weiter braucht, nimmt sie
+in die Liste auf.
+
 **Ein aufgelegtes Kabel lässt sich umlegen** — in der Verteilerübersicht mit
 der Maus an eine andere Stelle ziehen. Es nimmt mit, was daran hängt: die
 Adern samt Farben, Bezeichnungen, Bemerkungen, Vermerken und Textstilen, und

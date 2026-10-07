@@ -238,6 +238,15 @@ class LeistenModell(QAbstractTableModel):
             str(v).strip() for v in vorlagen if str(v).strip()
         )
 
+    def _vermerk_von(self, adresse) -> str:
+        """Der Vermerk, der an dieser Ader schon steht."""
+        if self.verteiler is None:
+            return ""
+        try:
+            return self.verteiler.ader(adresse).vermerk
+        except ModellFehler:
+            return ""
+
     def vorlage_passt(self, text: str) -> str:
         """Die Vorlage zu diesem Text - oder "" fuer keine.
 
@@ -597,6 +606,11 @@ class LeistenModell(QAbstractTableModel):
             neue = adressen_lesen(text)
         except ModellFehler as fehler:
             vermerk = self.vorlage_passt(text)
+            if not vermerk and self._vermerk_von(adresse) == text.strip():
+                # Was schon dasteht, darf stehen bleiben: ein Verteiler
+                # aus der Zeit des freien Textes laesst sich sonst nicht
+                # einmal unveraendert bestaetigen.
+                vermerk = text.strip()
             if not vermerk:
                 self.fehler_gemeldet.emit(
                     u("{0} — zugelassen sind Ziele und die Vorlagen: {1}")

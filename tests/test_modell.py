@@ -2,11 +2,13 @@
 
 import unittest
 
-from verteilerly import schreibweisen
+from verteilerly import modell, schreibweisen
 from verteilerly.modell import (
+    RANGIERVORLAGEN,
     Aderadresse,
     Kabelabschnitt,
     ModellFehler,
+    Projekt,
     UeberlaufFehler,
     Verteiler,
     adressen_lesen,
@@ -313,6 +315,41 @@ class TestVermerk(unittest.TestCase):
             self.v.rangiereintraege(self.a, schreibweisen.MIT_STRICH),
             ["L3-2a", "extern"],
         )
+
+
+class TestFremdeVermerke(unittest.TestCase):
+    """Welche Vermerke in keiner Vorlage stehen."""
+
+    def setUp(self):
+        self.projekt = Projekt(verteiler=Verteiler.aus_geometrie(1, 2, 10))
+        self.v = self.projekt.verteiler
+
+    def _vermerk(self, adresse, text):
+        self.v.vermerk_setzen(Aderadresse.parse(adresse), text)
+
+    def test_nur_was_keine_vorlage_kennt(self):
+        self._vermerk("1 1a", "direkt")
+        self._vermerk("1 2a", "zur Klemmleiste")
+        self.assertEqual(
+            modell.fremde_vermerke(self.projekt, RANGIERVORLAGEN),
+            ["zur Klemmleiste"],
+        )
+
+    def test_gross_und_klein_sind_dieselbe_vorlage(self):
+        self._vermerk("1 1a", "Direkt")
+        self.assertEqual(modell.fremde_vermerke(self.projekt, RANGIERVORLAGEN), [])
+
+    def test_jeder_text_steht_nur_einmal(self):
+        self._vermerk("1 1a", "n.b.")
+        self._vermerk("1 2b", "n.b.")
+        self._vermerk("2 3a", "extern")
+        self.assertEqual(
+            modell.fremde_vermerke(self.projekt, RANGIERVORLAGEN),
+            ["n.b.", "extern"],
+        )
+
+    def test_ohne_vermerke_ist_nichts_zu_melden(self):
+        self.assertEqual(modell.fremde_vermerke(self.projekt, RANGIERVORLAGEN), [])
 
 
 class TestRangierungenSetzen(unittest.TestCase):

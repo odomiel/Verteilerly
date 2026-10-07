@@ -59,12 +59,16 @@ from ..modell import (
     Projekt,
     UeberlaufFehler,
     Verteiler,
+    fremde_vermerke,
     leistenname,
     mehrzahl,
 )
 from .. import URHEBER
 from ..version import VERSION
 from ..vorlagen import Vorlagen
+
+#: Wie viele fremde Vermerke die Statuszeile beim Oeffnen aufzaehlt.
+VERMERKE_GEZEIGT = 5
 
 #: Wie die Leisten heissen koennen - Kennung, Beispiel und Erklaerung.
 #: Die Woerter gehen beim Anzeigen durch die Uebersetzung.
@@ -1481,11 +1485,35 @@ class Hauptfenster(QMainWindow):
         self._projekt_setzen(
             projekt, pfad, schreibgeschuetzt=schreibgeschuetzt, grund=grund
         )
-        self.statusBar().showMessage(
+        meldung = (
             u("Schreibgeschützt geöffnet: {0}").format(pfad) if schreibgeschuetzt
             else u("Geöffnet: {0}").format(pfad)
         )
+        fremde = self._fremde_vermerke()
+        if fremde:
+            # Die Statuszeile hat nur eine Zeile: ein Verteiler voller
+            # alter Vermerke nennt die ersten, nicht alle.
+            gezeigt = ", ".join(fremde[:VERMERKE_GEZEIGT])
+            if len(fremde) > VERMERKE_GEZEIGT:
+                gezeigt += " …"
+            meldung += u(" — {0} stehen nicht in den Vorlagen: {1}").format(
+                mehrzahl(len(fremde), "Vermerk", "Vermerke"), gezeigt
+            )
+        self.statusBar().showMessage(meldung)
         return True
+
+    def _fremde_vermerke(self) -> list[str]:
+        """Vermerke des offenen Projekts, die keine Vorlage kennt.
+
+        Ein Verteiler aus der Zeit des freien Textes kann beliebige
+        Vermerke tragen. Sie bleiben stehen und lassen sich auch
+        bestaetigen; damit sie nicht unbemerkt die einzigen ihrer Art
+        bleiben, sagt das Oeffnen, welche es sind - wer sie braucht,
+        nimmt sie in die Vorlagen auf.
+        """
+        if self.projekt is None:
+            return []
+        return fremde_vermerke(self.projekt, self.rangiervorlagen)
 
     def speichern(self) -> bool:
         if self.projekt is None:

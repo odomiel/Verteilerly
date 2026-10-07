@@ -337,6 +337,7 @@ unbekannt: unknown
   will already be filled in for the next new frame'
 Öffnen fehlgeschlagen: Opening failed
 'Geöffnet: {0}': 'Opened: {0}'
+' — {0} stehen nicht in den Vorlagen: {1}': ' — {0} are not among the templates: {1}'
 Speichern fehlgeschlagen: Saving failed
 'Gespeichert: {0}': 'Saved: {0}'
 Ausgabe fehlgeschlagen: Output failed
@@ -500,6 +501,8 @@ Treffer: match
 Treffern: matches
 Vorlage: template
 Vorlagen: templates
+Vermerk: note
+Vermerke: notes
 DA: pairs
 Stift: Pin
 Farbe: Color

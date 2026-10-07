@@ -3808,6 +3808,52 @@ class TestMenuezustaende(unittest.TestCase):
             f.rangiervorlagen_bearbeiten()
         self.assertEqual(f.rangiervorlagen, vorher)
 
+    def test_alte_freitexte_werden_beim_oeffnen_gemeldet(self):
+        """Ein Verteiler aus der Zeit des freien Textes sagt, was fremd ist."""
+        from verteilerly import projektdatei
+        from verteilerly.modell import Aderadresse
+
+        f = self.fenster
+        verteiler = Verteiler.aus_geometrie(1, 2, 10)
+        verteiler.ader(Aderadresse(1, 3, "a")).vermerk = "zur Klemmleiste"
+        verteiler.ader(Aderadresse(1, 4, "a")).vermerk = "direkt"
+        pfad = pathlib.Path(self.ordner.name) / "alt.vtly"
+        projektdatei.speichern(Projekt(verteiler=verteiler), pfad)
+
+        self.assertTrue(f.datei_oeffnen(pfad))
+        meldung = f.statusBar().currentMessage()
+        self.assertIn("1 Vermerk", meldung)
+        self.assertIn("zur Klemmleiste", meldung)
+        # Was in den Vorlagen steht, ist kein Fund.
+        self.assertNotIn("direkt", meldung)
+
+    def test_ein_alter_vermerk_laesst_sich_bestaetigen(self):
+        """Was dasteht, bleibt - neuer freier Text kommt nicht hinzu."""
+        from verteilerly.gui.leistenansicht import RANGIERSPALTEN
+        from verteilerly.modell import Aderadresse
+
+        f = self.fenster
+        verteiler = Verteiler.aus_geometrie(1, 2, 10)
+        verteiler.ader(Aderadresse(1, 3, "a")).vermerk = "zur Klemmleiste"
+        f._projekt_setzen(Projekt(verteiler=verteiler), None)
+        tabelle = f.leistenansicht.modell
+        zeile = next(
+            z for z in range(tabelle.rowCount())
+            if tabelle.adresse(z) == Aderadresse(1, 3, "a")
+        )
+        feld = tabelle.index(zeile, RANGIERSPALTEN[0])
+        self.assertEqual(tabelle.data(feld), "zur Klemmleiste")
+
+        fehler = []
+        tabelle.fehler_gemeldet.connect(fehler.append)
+        self.assertTrue(tabelle.setData(feld, "zur Klemmleiste"))
+        self.assertEqual(fehler, [])
+        self.assertFalse(tabelle.setData(feld, "an die Wand"))
+        self.assertEqual(len(fehler), 1)
+        self.assertEqual(
+            verteiler.ader(Aderadresse(1, 3, "a")).vermerk, "zur Klemmleiste"
+        )
+
     def test_leere_auswahlfelder_sind_aus(self):
         f = self.fenster
         self.assertFalse(f.leistenansicht.auswahl.isEnabled())

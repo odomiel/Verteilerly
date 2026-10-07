@@ -80,6 +80,26 @@ LEISTEN_SCHREIBWEISEN = (LEISTEN_ZAHLEN, LEISTEN_BUCHSTABEN)
 RANGIERVORLAGEN = ("direkt", "defekt", "12k")
 
 
+def fremde_vermerke(projekt, vorlagen) -> list[str]:
+    """Vermerke des Verteilers, die in keiner Vorlage stehen.
+
+    Ein Verteiler aus der Zeit des freien Textes kann beliebige Vermerke
+    tragen. Sie bleiben, wo sie sind - aber wer sie kennt, kann sie in
+    die Vorlagen aufnehmen; dafuer sagt das Programm beim Oeffnen, dass
+    es welche gibt. Jeder Text steht nur einmal in der Liste.
+    """
+    bekannt = {str(v).strip().casefold() for v in vorlagen}
+    gefunden: list[str] = []
+    for leiste in projekt.verteiler.alle_leisten:
+        for stift in leiste.stifte:
+            for seite in ("a", "b"):
+                vermerk = stift.ader(seite).vermerk.strip()
+                if vermerk and vermerk.casefold() not in bekannt:
+                    if vermerk not in gefunden:
+                        gefunden.append(vermerk)
+    return gefunden
+
+
 def leistenname(nummer: int, schreibweise: str = LEISTEN_ZAHLEN) -> str:
     """Wie die Leiste heisst: "3" oder "C" - ab der 27. dann "AA", "AB".
 
