@@ -456,6 +456,16 @@ class Kabel:
     def gekuerzt(self) -> bool:
         return self.da_gesamt is not None and self.da_gesamt > self.da_aufgelegt
 
+    def erste_da(self, leiste: int) -> int | None:
+        """Die kleinste Doppelader, die das Kabel auf dieser Leiste belegt.
+
+        Ein Kabel kann ueber mehrere Leisten laufen und auf einer Leiste
+        auch in mehreren Abschnitten liegen; gefragt ist, wo es dort
+        anfaengt. Liegt es gar nicht auf der Leiste, kommt None.
+        """
+        starts = [a.start_da for a in self.abschnitte if a.leiste == leiste]
+        return min(starts) if starts else None
+
     def positionen(self) -> list[tuple[int, int, int]]:
         """(Kabel-DA, Leiste, Leisten-DA) fuer jede aufgelegte Doppelader.
 

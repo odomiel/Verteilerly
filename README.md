@@ -192,7 +192,13 @@ und legt die ausgelieferten Vorlagen erneut hin — geänderte eingeschlossen,
 eigene bleiben unberührt.
 
 Der Editor zeigt links die Verteilerübersicht und rechts die Belegung der
-gewählten Leiste. Neben dem Aufklappmenü stehen zwei Pfeile, die Leiste
+gewählten Leiste. **Ein Klick auf ein Kabel springt an seinen Anfang**: die
+Leistenansicht schaltet auf die Leiste und stellt die Marke auf die
+Bezeichnung der **ersten Doppelader**, die das Kabel dort belegt
+(`Kabel.erste_da()`, `LeistenAnsicht.stelle_zeigen()`) — gleich welche seiner
+Zellen angeklickt wurde; läuft es über mehrere Leisten, zählt die angeklickte.
+Eine freie Doppelader schaltet weiter nur die Leiste um, dort ist nichts zu
+bearbeiten. Neben dem Aufklappmenü stehen zwei Pfeile, die Leiste
 für Leiste weiterschalten (Alt+← und Alt+→); am ersten und letzten
 Eintrag ist der jeweilige Pfeil aus. Daneben nehmen die Pfeile ↶ und ↷ die
 letzte Änderung am Verteiler zurück und holen sie wieder her — dasselbe tun

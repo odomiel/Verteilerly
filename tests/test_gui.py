@@ -37,7 +37,13 @@ try:
 except ImportError:  # ohne Qt laufen wenigstens die uebrigen Tests
     ANWENDUNG = None
 
-from verteilerly.modell import BRIEFKOPF_FELDER, Aderadresse, Projekt, Verteiler
+from verteilerly.modell import (
+    BRIEFKOPF_FELDER,
+    Aderadresse,
+    Kabelabschnitt,
+    Projekt,
+    Verteiler,
+)
 from verteilerly.vorlagen import Vorlage, Vorlagen
 
 
@@ -1724,6 +1730,52 @@ class TestKabelZiehen(unittest.TestCase):
         self.uebersicht.kabel_umgelegt.connect(lambda *a: gemeldet.append(a))
         self.uebersicht.dropEvent(self._Fracht(self._punkt(3, 3), 0))
         self.assertEqual(gemeldet, [])
+
+
+class TestSprungZumKabel(unittest.TestCase):
+    """Ein Klick in die Verteilerbelegung stellt die Marke aufs Kabel."""
+
+    def setUp(self):
+        from verteilerly.gui.hauptfenster import Hauptfenster
+
+        self.fenster = Hauptfenster()
+        self.addCleanup(self.fenster.close)
+        self.verteiler = Verteiler.aus_geometrie(1, 3, 10, name="Probe")
+        self.verteiler.kabel_anlegen("Haus 7", 2, 4, 4)
+        self.verteiler.kabel_anlegen_mehrteilig(
+            "Überlauf", [Kabelabschnitt(1, 8, 3), Kabelabschnitt(2, 1, 3)]
+        )
+        self.fenster._projekt_setzen(Projekt(verteiler=self.verteiler), None)
+
+    def _klick(self, leiste, da):
+        """Was die Übersicht beim Anklicken einer Zelle meldet."""
+        self.fenster.uebersicht.auswahl = (leiste, da)
+        self.fenster._auswahl_gemeldet((leiste, da))
+        tabelle = self.fenster.leistenansicht.tabelle
+        stelle = tabelle.currentIndex()
+        return (
+            self.fenster.leistenansicht.modell.leiste_nr,
+            self.fenster.leistenansicht.modell.adresse(stelle.row())
+            if stelle.isValid() else None,
+            stelle.column(),
+        )
+
+    def test_mitten_im_kabel_angeklickt_springt_an_seinen_anfang(self):
+        from verteilerly.gui.leistenansicht import SPALTE_BEZEICHNUNG
+
+        leiste, adresse, spalte = self._klick(2, 6)
+        self.assertEqual(leiste, 2)
+        self.assertEqual(adresse, Aderadresse(2, 4, "a"))
+        self.assertEqual(spalte, SPALTE_BEZEICHNUNG)
+
+    def test_ueber_zwei_leisten_zaehlt_die_angeklickte(self):
+        """Das Kabel fängt auf jeder Leiste woanders an."""
+        self.assertEqual(self._klick(1, 9)[1], Aderadresse(1, 8, "a"))
+        self.assertEqual(self._klick(2, 2)[1], Aderadresse(2, 1, "a"))
+
+    def test_eine_freie_stelle_schaltet_nur_die_leiste(self):
+        """Dort ist nichts zu bearbeiten - die Marke bleibt, wo sie ist."""
+        self.assertEqual(self._klick(3, 2)[0], 3)
 
 
 class TestVorschau(unittest.TestCase):

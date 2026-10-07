@@ -54,6 +54,7 @@ from ..modell import (
     LEISTEN_BUCHSTABEN,
     LEISTEN_ZAHLEN,
     RANGIERVORLAGEN,
+    Aderadresse,
     Kabelabschnitt,
     ModellFehler,
     Projekt,
@@ -952,8 +953,16 @@ class Hauptfenster(QMainWindow):
         if stelle is None or self.projekt is None:
             return
         leiste, da = stelle
-        self.leistenansicht.leiste_zeigen(leiste)
         kabel = self.projekt.verteiler.kabel_an(leiste, da)
+        erste = kabel.erste_da(leiste) if kabel is not None else None
+        if erste is not None:
+            # Wer ein Kabel anklickt, will seine Adern bearbeiten: die
+            # Marke springt auf die erste Doppelader, die es auf dieser
+            # Leiste belegt - nicht auf die angeklickte Zelle. Ueber
+            # mehrere Leisten hinweg zaehlt die angeklickte.
+            self.leistenansicht.stelle_zeigen(Aderadresse(leiste, erste, "a"))
+        else:
+            self.leistenansicht.leiste_zeigen(leiste)
         if kabel is not None:
             self.statusBar().showMessage(u("Leiste {0}, DA {1} — {2}").format(
                 self._leistenname(leiste), da, kabel.beschriftung))

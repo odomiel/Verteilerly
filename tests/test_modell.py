@@ -6,6 +6,7 @@ from verteilerly import modell, schreibweisen
 from verteilerly.modell import (
     RANGIERVORLAGEN,
     Aderadresse,
+    Kabel,
     Kabelabschnitt,
     ModellFehler,
     Projekt,
@@ -315,6 +316,32 @@ class TestVermerk(unittest.TestCase):
             self.v.rangiereintraege(self.a, schreibweisen.MIT_STRICH),
             ["L3-2a", "extern"],
         )
+
+
+class TestErsteDaDesKabels(unittest.TestCase):
+    """Wo ein Kabel auf einer Leiste anfaengt."""
+
+    def setUp(self):
+        self.v = Verteiler.aus_geometrie(1, 3, 10)
+        self.kabel = self.v.kabel_anlegen("Haus 7", 2, 4, 4)
+        self.lang = self.v.kabel_anlegen_mehrteilig(
+            "Ueberlauf", [Kabelabschnitt(1, 8, 3), Kabelabschnitt(2, 1, 3)]
+        )
+
+    def test_der_anfang_des_abschnitts(self):
+        self.assertEqual(self.kabel.erste_da(2), 4)
+
+    def test_je_leiste_ein_anderer_anfang(self):
+        self.assertEqual(self.lang.erste_da(1), 8)
+        self.assertEqual(self.lang.erste_da(2), 1)
+
+    def test_auf_einer_fremden_leiste_nichts(self):
+        self.assertIsNone(self.kabel.erste_da(1))
+
+    def test_mehrere_abschnitte_auf_einer_leiste(self):
+        """Gefragt ist der kleinste Anfang, nicht der erste in der Liste."""
+        kabel = Kabel("Zwei Stuecke", [Kabelabschnitt(3, 7, 2), Kabelabschnitt(3, 2, 2)])
+        self.assertEqual(kabel.erste_da(3), 2)
 
 
 class TestFremdeVermerke(unittest.TestCase):
