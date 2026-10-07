@@ -420,9 +420,16 @@ Dialog, was mit dem Rest geschehen soll: auf einer anderen Leiste fortsetzen
 bleibt <i>ein</i> Kabel mit mehreren Abschnitten.</p>
 
 <p><b>Gekürzt</b> — liegt ein Kabel mit weniger Doppeladern auf, als es hat,
-steht hinter seinem Namen <i>(gekürzt)</i>; die Verteilerbelegung nennt dazu
+steht hinter seinem Namen <i>(gekürzt)</i>; das Leistenblatt nennt dazu
 <i>gekürzt: 4 von 6 DA</i>. So ist auf dem Blatt zu sehen, dass Adern übrig
 sind.</p>
+
+<p><b>Einstellungen ▸ Kürzung am Kabel anzeigen</b> schaltet diesen Zusatz ab.
+Dann steht in der Kabelspalte und auf der Verteilerbelegung nur noch der Name,
+und ihm gehört der ganze Block. Am Kabel selbst ändert das nichts; dass es gekürzt ist, bleibt in der
+Datei, in den Datenlisten und in der Übersicht zu sehen. Die Einstellung gilt
+dem Programm, nicht dem Verteiler — sie steht in der
+<code>Verteilerly.conf</code> und wirkt auf jedes geöffnete Projekt.</p>
 
 <p><b>Adernfarben</b> — der Kabeltyp füllt die Farbspalte selbst: J-Y(St)Y
 und der VDE-Farbcode für Fernmeldekabel lagenweise, Sternvierer paarweise,
@@ -860,8 +867,10 @@ Buchstaben und nie mitten in einer Zahl. Gekürzt wird zuletzt. <b>Vorschau, PDF
 dabei dieselben Zeilen</b> — was am Bildschirm zweizeilig steht, steht es auch
 im Ausdruck und in der Mappe.</li>
 <li>Auf dem <b>Leistenblatt</b> gilt dasselbe für die Kabelspalte: die
-Zeilenstriche enden davor, das Kabel steht als Block über seine Zeilen, und
-auch dort bricht der Name um, bevor er kleiner wird. Quer gelesen stehen die
+Zeilenstriche enden davor, das Kabel steht als Block über seine Zeilen, und der
+Name <b>füllt diesen Block</b> — er wird so groß gesetzt, wie der Block ihn
+trägt (höchstens die mittlere Schrift der Blattvorlage), statt klein in viel
+Weiß zu stehen. Auch dort bricht er um, bevor er kleiner wird. Quer gelesen stehen die
 Zeilen <b>nebeneinander</b> — die erste links, die zweite rechts daneben. Dort
 ist die Spalte schmal, darum bleibt es bei <b>zwei Zeilen</b>
 (<code>zeilen_kabel</code> in der Blattvorlage); reicht das nicht, wird die
@@ -1271,6 +1280,7 @@ und sie lässt sich unter <i>Erweiterungen verwalten</i> ausschalten.</p>
 <tr><td>Schreibweise der Rangierungen</td><td></td></tr>
 <tr><td>Leisten beschriften</td><td></td></tr>
 <tr><td>Verteilerbelegung umkehren</td><td></td></tr>
+<tr><td>Kürzung am Kabel anzeigen</td><td></td></tr>
 <tr><td>Freitext im Rangierfeld zulassen</td><td></td></tr>
 <tr><td rowspan="4"><b>Ansicht</b></td><td>Dunkles Erscheinungsbild</td><td>Strg+D</td></tr>
 <tr><td>Verteilerübersicht anzeigen</td><td>F7</td></tr>

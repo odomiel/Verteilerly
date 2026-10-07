@@ -588,6 +588,20 @@ class Hauptfenster(QMainWindow):
         )
         self.aktion_belegung_umgekehrt.triggered.connect(self.belegung_umkehren)
         einstellungen.addAction(self.aktion_belegung_umgekehrt)
+        # Dass ein Kabel gekuerzt aufliegt, steht am Kabel selbst und in
+        # den Datenlisten; auf dem Blatt ist es eine Anzeigesache - und
+        # wer es dort nicht braucht, bekommt den Platz fuer den Namen.
+        self.aktion_kuerzung = QAction(u("&Kürzung am Kabel anzeigen"), self)
+        self.aktion_kuerzung.setCheckable(True)
+        self.aktion_kuerzung.setChecked(
+            self.einstellungen.value("kuerzung_zeigen", True, type=bool)
+        )
+        self.aktion_kuerzung.setStatusTip(
+            u("„gekürzt: 3 von 4 DA“ am Kabel — ohne diesen Zusatz steht der "
+              "Name dort größer")
+        )
+        self.aktion_kuerzung.triggered.connect(self.kuerzung_zeigen)
+        einstellungen.addAction(self.aktion_kuerzung)
         einstellungen.addAction(self.aktion_freitext)
 
         # Wie die Vorschau lassen sich Verteileruebersicht und Leistenansicht
@@ -984,6 +998,25 @@ class Hauptfenster(QMainWindow):
         self.aktionen_auffrischen()
         self._vorschau_anstossen()
 
+    def kuerzung_zeigen(self, an: bool) -> None:
+        """Schaltet den Zusatz am gekuerzten Kabel ein und aus.
+
+        Eine Anzeigesache wie die Schreibweise der Rangierungen: sie
+        steht in der ``Verteilerly.conf``, nicht in der Projektdatei -
+        am Kabel aendert sich nichts, nur am Blatt.
+        """
+        self.einstellungen.setValue("kuerzung_zeigen", bool(an))
+        if self.projekt is not None:
+            self.projekt.kuerzung_zeigen = bool(an)
+        self.leistenansicht.aktualisieren()
+        self._vorschau_anstossen()
+        self.statusBar().showMessage(
+            u("Kürzung am Kabel wird angezeigt") if an
+            else u("Kürzung am Kabel wird nicht angezeigt — der Name steht "
+                   "dort größer"),
+            6000,
+        )
+
     def _blattvorlage_gemerkt(self, kennung: str) -> None:
         self.einstellungen.setValue("blattvorlage", kennung)
         self.statusBar().showMessage(
@@ -1072,6 +1105,7 @@ class Hauptfenster(QMainWindow):
         verteiler = projekt.verteiler if projekt else None
         if projekt is not None:
             projekt.rangierung_schreibweise = self.schreibweise.id
+            projekt.kuerzung_zeigen = self.aktion_kuerzung.isChecked()
         self.uebersicht.verteiler_setzen(verteiler)
         self.leistenansicht.verteiler_setzen(verteiler)
         self.leistenansicht.schreibweise_setzen(self.schreibweise)

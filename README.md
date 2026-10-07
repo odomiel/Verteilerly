@@ -274,7 +274,19 @@ auch am liegenden Kabel ändern: es **wächst und schrumpft am Ende**, der
 Anfang bleibt. Was frei wird, ist wieder frei, samt der Adernfarben, die die
 Automatik dort gesetzt hat; reicht die Leiste nicht, fragt der Überlaufdialog
 wie beim Auflegen. Leiste und Startpunkt stehen fest — wer die Lage
-ändern will, nimmt das Kabel ab und legt es neu auf. Die Farbfolge gehört dem Kabel: ändert sich Kabeltyp
+ändern will, zieht das Kabel in der Übersicht um oder schneidet es dort aus.
+
+**Der Zusatz am gekürzten Kabel ist abschaltbar** (*Einstellungen ▸ Kürzung am
+Kabel anzeigen*, Conf-Schlüssel `kuerzung_zeigen`): eine Anzeigesache wie die
+Schreibweise der Rangierungen, darum in der `Verteilerly.conf` und nicht in der
+Projektdatei; das Fenster legt sie als `Projekt.kuerzung_zeigen` ans Projekt,
+damit `layout` und `mappe` sie sehen. Ohne den Zusatz gehört dem Namen der ganze
+Block. **Gesetzt wird er ohnehin so groß, wie der Block ihn trägt**
+(`kabelbeschriftung_groesse()`, wie auf der Verteilerbelegung, höchstens
+`schrift_mittel`) — vorher stand jeder Name in `schrift_klein` und damit klein
+in viel Weiß. Steht der Zusatz dabei, bekommt er die letzten zwei Zeilen des
+Blocks; passt er dort nicht mehr (ein Kabel über eine einzige Doppelader),
+hängt er in Klammern am Namen, statt aus dem Block zu rutschen. Die Farbfolge gehört dem Kabel: ändert sich Kabeltyp
 oder Größe, ziehen die Farben nach, und beim Abnehmen gehen sie mit — Maßstab
 ist, was die Automatik gesetzt hat. Von Hand Eingetragenes bleibt stehen, nur
 ein ausdrücklicher Haken überschreibt auch das. Die Beschriftung ist außerdem direkt in der Kabelspalte der

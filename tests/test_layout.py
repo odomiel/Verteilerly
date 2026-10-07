@@ -807,6 +807,100 @@ if __name__ == "__main__":
     unittest.main()
 
 
+class TestKuerzungAnzeigen(unittest.TestCase):
+    """Der Zusatz am gekürzten Kabel lässt sich abschalten."""
+
+    def _projekt(self, zeigen: bool) -> Projekt:
+        v = Verteiler.aus_geometrie(1, 2, 10)
+        v.kabel_anlegen("Halle Ost", 1, 1, 3, da_gesamt=6)
+        projekt = Projekt(verteiler=v)
+        projekt.kuerzung_zeigen = zeigen
+        return projekt
+
+    def _kabeltext(self, projekt, vorlage=STANDARD):
+        blatt = leistenblatt(projekt, 1, vorlage)
+        return [
+            e for e in blatt.elemente
+            if isinstance(e, Text) and ("Halle" in e.text or "gekürzt" in e.text)
+        ]
+
+    def test_angezeigt_steht_der_zusatz_dabei(self):
+        texte = self._kabeltext(self._projekt(True))
+        self.assertEqual(len(texte), 1)
+        self.assertIn("gekürzt: 3 von 6 DA", texte[0].text)
+
+    def test_abgeschaltet_steht_nur_noch_der_name(self):
+        """Ohne den Zusatz bleibt mehr Platz fuer den Namen."""
+        from verteilerly.layout import textzeilen
+
+        mit = self._kabeltext(self._projekt(True))[0]
+        ohne = self._kabeltext(self._projekt(False))
+        self.assertEqual(len(ohne), 1)
+        self.assertEqual(ohne[0].text, "Halle Ost")
+        # Gesetzt wird er mindestens so gross wie mit dem Zusatz - und
+        # weil er kuerzer ist, braucht er weniger Zeilen.
+        self.assertGreaterEqual(textzeilen(ohne[0])[0], textzeilen(mit)[0])
+        self.assertLessEqual(len(textzeilen(ohne[0])[1]), len(textzeilen(mit)[1]))
+
+    def test_der_name_nimmt_die_groesse_die_der_block_traegt(self):
+        """Ein kurzer Name stand sonst winzig in viel Weiss."""
+        from verteilerly.layout import kabelbeschriftung_groesse
+
+        v = Verteiler.aus_geometrie(1, 2, 10)
+        v.kabel_anlegen("Halle Ost", 1, 1, 4)
+        text = next(
+            e for e in leistenblatt(Projekt(verteiler=v), 1).elemente
+            if isinstance(e, Text) and "Halle" in e.text
+        )
+        self.assertGreater(text.groesse, STANDARD.schrift_klein)
+        self.assertEqual(
+            text.groesse, kabelbeschriftung_groesse(text.breite - 3, STANDARD)
+        )
+
+    def test_auch_waagerecht_bleibt_der_zusatz_weg(self):
+        vorlage = STANDARD.mit(kabel_gedreht=False)
+        mit = self._kabeltext(self._projekt(True), vorlage)
+        self.assertEqual(len(mit), 2)        # Name und Zusatz untereinander
+        ohne = self._kabeltext(self._projekt(False), vorlage)
+        self.assertEqual(len(ohne), 1)
+        # Ohne den Zusatz steht dem Namen der ganze Block offen.
+        self.assertGreater(ohne[0].hoehe, mit[0].hoehe)
+
+    def test_ein_schmaler_block_haengt_den_zusatz_an_den_namen(self):
+        """Sonst rutschte er unter den Block, in die naechste Zeile."""
+        v = Verteiler.aus_geometrie(1, 2, 10)
+        v.kabel_anlegen("Halle Ost", 1, 1, 1, da_gesamt=6)
+        projekt = Projekt(verteiler=v)
+        projekt.kuerzung_zeigen = True
+        texte = self._kabeltext(projekt, STANDARD.mit(kabel_gedreht=False))
+        self.assertEqual(len(texte), 1)
+        self.assertIn("gekürzt: 1 von 6 DA", texte[0].text)
+
+    def test_auf_der_belegung_faellt_das_wort_weg(self):
+        blatt = verteilerbelegungen(self._projekt(True))[0]
+        texte = [e.text for e in blatt.elemente if isinstance(e, Text)]
+        self.assertIn("Halle Ost (gekürzt)", texte)
+        blatt = verteilerbelegungen(self._projekt(False))[0]
+        texte = [e.text for e in blatt.elemente if isinstance(e, Text)]
+        self.assertIn("Halle Ost", texte)
+        self.assertNotIn("Halle Ost (gekürzt)", texte)
+
+    def test_ein_ungekuerztes_kabel_merkt_nichts_davon(self):
+        """Der Schalter gilt nur dort, wo der Zusatz gestanden hätte."""
+        groessen = []
+        for zeigen in (True, False):
+            v = Verteiler.aus_geometrie(1, 2, 10)
+            v.kabel_anlegen("Halle Ost", 1, 1, 3)
+            projekt = Projekt(verteiler=v)
+            projekt.kuerzung_zeigen = zeigen
+            text = next(
+                e for e in leistenblatt(projekt, 1).elemente
+                if isinstance(e, Text) and "Halle" in e.text
+            )
+            groessen.append((text.groesse, text.hoehe))
+        self.assertEqual(groessen[0], groessen[1])
+
+
 class TestKabelspalte(unittest.TestCase):
     """Schmale Kabelspalte, Beschriftung quer darin."""
 

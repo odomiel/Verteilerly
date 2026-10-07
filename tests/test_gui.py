@@ -3572,8 +3572,40 @@ class TestMenuezustaende(unittest.TestCase):
              "Sprache", "Schreibweise der Rangierungen",
             "Leisten beschriften",
             "Verteilerbelegung umkehren",
+            "Kürzung am Kabel anzeigen",
             "Freitext im Rangierfeld zulassen"],
         )
+
+    def test_die_kuerzung_laesst_sich_abschalten(self):
+        """Eine Anzeigesache - sie steht in der Conf, nicht im Projekt."""
+        from verteilerly.layout import Text, leistenblatt
+
+        f = self.fenster
+        verteiler = Verteiler.aus_geometrie(1, 2, 10, name="Probe")
+        verteiler.kabel_anlegen("Halle Ost", 1, 1, 3, da_gesamt=6)
+        f._projekt_setzen(Projekt(verteiler=verteiler), None)
+        self.assertTrue(f.aktion_kuerzung.isChecked())
+
+        def kabeltexte():
+            blatt = leistenblatt(f.projekt, 1, f.vorschau.blattvorlage)
+            return [
+                e.text for e in blatt.elemente
+                if isinstance(e, Text) and ("Halle" in e.text or "gekürzt" in e.text)
+            ]
+
+        self.assertTrue(any("gekürzt" in t for t in kabeltexte()))
+
+        from . import einstellung_bewahren
+
+        einstellung_bewahren(self, f.einstellungen, "kuerzung_zeigen")
+        self.addCleanup(f.kuerzung_zeigen, True)
+        f.aktion_kuerzung.setChecked(False)
+        f.kuerzung_zeigen(False)
+        self.assertFalse(f.projekt.kuerzung_zeigen)
+        self.assertFalse(any("gekürzt" in t for t in kabeltexte()))
+        self.assertFalse(f.einstellungen.value("kuerzung_zeigen", True, type=bool))
+        # Das Kabel selbst bleibt gekuerzt - nur das Blatt schweigt.
+        self.assertTrue(verteiler.kabel[0].gekuerzt)
 
     def test_die_belegung_laesst_sich_umkehren(self):
         """Eine Eigenschaft der Anlage - sie steht in der Projektdatei."""

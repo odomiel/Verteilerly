@@ -1192,6 +1192,10 @@ class Projekt:
     # Wie Rangierungen geschrieben werden. Eine Anzeigesache: die
     # Projektdatei haelt Adressen immer in der Grundform fest.
     rangierung_schreibweise: str = schreibweisen.STANDARD.id
+    # Ob am gekuerzten Kabel steht, wie viel von ihm aufliegt. Ebenfalls
+    # eine Anzeigesache - dass es gekuerzt ist, steht am Kabel selbst
+    # (da_gesamt), und die Datenlisten fuehren es weiter.
+    kuerzung_zeigen: bool = True
     # Wie die Leisten heissen - gezaehlt oder mit Buchstaben. Ebenfalls
     # eine Anzeigesache; im Modell traegt jede Leiste ihre Nummer.
     leisten_schreibweise: str = LEISTEN_ZAHLEN

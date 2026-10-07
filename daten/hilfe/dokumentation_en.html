@@ -399,9 +399,17 @@ strip and starting point) or let it lapse. A continued cable stays <i>one</i>
 cable with several sections.</p>
 
 <p><b>Shortened</b> — if a cable is terminated with fewer pairs than it has,
-<i>(shortened)</i> stands behind its name; the frame layout adds
+<i>(shortened)</i> stands behind its name; the strip sheet adds
 <i>shortened: 4 of 6 pairs</i>. That way the sheet shows that wires are left
 over.</p>
+
+<p><b>Settings ▸ Show shortening at the cable</b> turns that addition off. Then
+only the name stands in the cable column and on the frame layout, and the whole
+block belongs to it. At
+the cable itself nothing changes; that it is shortened stays visible in the
+file, in the data lists and in the overview. The setting belongs to the
+program, not to the frame — it is kept in <code>Verteilerly.conf</code> and
+applies to every project that is opened.</p>
 
 <p><b>Wire colors</b> — the cable type fills the color column by itself:
 J-Y(St)Y and the VDE color code for telecommunications cables layer by layer,
@@ -834,8 +842,10 @@ Shortening comes last of all. <b>Preview, PDF and Excel workbook show the
 same lines</b> — what stands on two lines on screen does so in the printout and
 in the workbook as well.</li>
 <li>On the <b>strip sheet</b> the same holds for the cable column: the row
-lines end before it, the cable stands as a block across its rows, and there too
-the name wraps before it shrinks. Read sideways the lines stand <b>next to each
+lines end before it, the cable stands as a block across its rows, and the name
+<b>fills that block</b> — it is set as large as the block carries it (at most
+the medium type of the sheet template) instead of standing small in much white.
+There too it wraps before it shrinks. Read sideways the lines stand <b>next to each
 other</b> — the first one left, the second to its right. The column is narrow,
 so it stops at <b>two lines</b> (<code>zeilen_kabel</code> in the sheet
 template); if that does not suffice, the type gets smaller. If the name does not
@@ -1237,6 +1247,7 @@ extensions</i>.</p>
 <tr><td>Notation of the jumpers</td><td></td></tr>
 <tr><td>Label the strips</td><td></td></tr>
 <tr><td>Reverse the frame layout</td><td></td></tr>
+<tr><td>Show shortening at the cable</td><td></td></tr>
 <tr><td>Allow free text in the jumper field</td><td></td></tr>
 <tr><td rowspan="4"><b>View</b></td><td>Dark appearance</td><td>Ctrl+D</td></tr>
 <tr><td>Show frame overview</td><td>F7</td></tr>

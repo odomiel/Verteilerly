@@ -1299,7 +1299,8 @@ def verteilerbelegung(
             bb = abschnitt.anzahl_da * zelle_b
             blatt.rechteck(bx, ky, bb, zelle_h, fuellung=FUELLUNG_KABEL, staerke=0.5)
             beschriftung = kabel.beschriftung
-            if kabel.gekuerzt and abschnitt is kabel.abschnitte[-1]:
+            if (kabel.gekuerzt and projekt.kuerzung_zeigen
+                    and abschnitt is kabel.abschnitte[-1]):
                 beschriftung += " (gekürzt)"
             # Mitten in den Block, so gross wie er es traegt, notfalls
             # auf mehrere Zeilen: der Kabelname ist die Auskunft dieses
@@ -1535,7 +1536,10 @@ def leistenblatt(
             )
             y += zeile_h
 
-    _kabelklammern(blatt, v, leiste_nr, oben + kopf_h, breiten, zeile_h, vorlage)
+    _kabelklammern(
+        blatt, v, leiste_nr, oben + kopf_h, breiten, zeile_h, vorlage,
+        projekt.kuerzung_zeigen,
+    )
 
     x = rand
     unten = oben + kopf_h + leiste.da_anzahl * 2 * zeile_h
@@ -1616,10 +1620,17 @@ def _kabelklammern(
     breiten: list[float],
     zeile_h: float,
     vorlage: Blattvorlage,
+    kuerzung_zeigen: bool = True,
 ) -> None:
     """Die Klammer umfasst genau die belegten Zeilen - 4 DA sind 8.
 
     Fuehrt die Vorlage keine Kabelspalte, entfaellt die Klammer.
+
+    Steht der Zusatz zur Kuerzung nicht dabei (``kuerzung_zeigen``),
+    **bekommt der Name seinen Platz**: den ganzen Block und die Groesse,
+    die dieser traegt - dieselbe Rechnung wie fuer den Kabelnamen auf
+    der Verteilerbelegung. Sonst bliebe die Zeile schlicht leer, und
+    gewonnen waere nichts.
     """
     stelle = next(
         (i for i, s in enumerate(vorlage.spalten) if s.feld == "kabel"), None
@@ -1637,34 +1648,48 @@ def _kabelklammern(
             hoehe = abschnitt.anzahl_da * 2 * zeile_h
             blatt.rechteck(x, y, breite, hoehe, fuellung=FUELLUNG_KABEL, staerke=0.4)
             beschriftung = kabel.beschriftung
-            if kabel.gekuerzt:
-                zusatz = f"gekürzt: {kabel.da_aufgelegt} von {kabel.da_gesamt} DA"
+            dabei = kabel.gekuerzt and kuerzung_zeigen
+            zusatz = (
+                f"gekürzt: {kabel.da_aufgelegt} von {kabel.da_gesamt} DA"
+                if dabei else ""
+            )
 
             if vorlage.kabel_gedreht:
                 # Quer gelesen ist die Klammer so lang wie das Kabel hoch
                 # ist - ein langer Name passt hier hinein, waagerecht
                 # muesste er in die schmale Spalte gequetscht werden.
-                if kabel.gekuerzt:
+                if dabei:
                     beschriftung = f"{beschriftung} ({zusatz})"
                 # Quer gelesen stapeln sich die Zeilen ueber die Breite
                 # der Spalte - ein langer Name ueber einer einzigen
                 # Doppelader bricht um, statt bis zur Unleserlichkeit zu
-                # schrumpfen.
+                # schrumpfen. Die Groesse richtet sich nach dem Platz:
+                # ein kurzer Name in einem hohen Block stand sonst winzig
+                # in viel Weiss.
                 blatt.text(
                     x, y + 1.5, breite, hoehe - 3, beschriftung,
-                    vorlage.schrift_klein, MITTE, drehung=90,
+                    kabelbeschriftung_groesse(breite - 3, vorlage),
+                    MITTE, drehung=90,
                     umbruch=True, zeilen_hoechstens=vorlage.zeilen_kabel,
                 )
                 continue
 
+            # Waagerecht: der Name nimmt den Block, der Zusatz die
+            # letzten zwei Zeilen. Passt der Zusatz dort nicht mehr -
+            # ein Kabel ueber eine einzige Doppelader -, haengt er wie
+            # quer in Klammern am Namen, statt aus dem Block zu rutschen.
+            zusatz_h = zeile_h * 2 if dabei and hoehe >= zeile_h * 4 else 0.0
+            if dabei and not zusatz_h:
+                beschriftung = f"{beschriftung} ({zusatz})"
+            namen_h = hoehe - zusatz_h
             blatt.text(
-                x + 1.5, y, breite - 3, min(hoehe, zeile_h * 2),
-                beschriftung, vorlage.schrift_klein,
+                x + 1.5, y, breite - 3, namen_h, beschriftung,
+                kabelbeschriftung_groesse(namen_h, vorlage),
                 umbruch=True, zeilen_hoechstens=vorlage.zeilen_kabel,
             )
-            if kabel.gekuerzt and hoehe >= zeile_h * 2:
+            if zusatz_h:
                 blatt.text(
-                    x + 1.5, y + zeile_h * 2, breite - 3, zeile_h * 2,
+                    x + 1.5, y + namen_h, breite - 3, zusatz_h,
                     zusatz, vorlage.schrift_klein, LINKS, False, TINTE_LEISE,
                 )
 

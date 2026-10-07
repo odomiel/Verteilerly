@@ -34,6 +34,10 @@ Aus Vorlage: From template
 Benutzerdefiniert: Custom
 Buchstaben statt Zahlen: Letters instead of numbers
 Verteilerbelegung umkehren: Reverse the frame layout
+'&Kürzung am Kabel anzeigen': 'Show &shortening at the cable'
+'„gekürzt: 3 von 4 DA“ am Kabel — ohne diesen Zusatz steht der Name dort größer': '“shortened: 3 of 4 pairs” at the cable — without that addition the name stands larger there'
+Kürzung am Kabel wird angezeigt: Shortening is shown at the cable
+Kürzung am Kabel wird nicht angezeigt — der Name steht dort größer: Shortening is not shown at the cable — the name stands larger there
 ? "Die Doppeladern stehen auf der Verteilerbelegung von rechts nach links. Später unter Einstellungen ▸ Verteilerbelegung umkehren zu ändern."
 : "On the frame layout the pairs run from right to left. Can be changed later under Settings ▸ Reverse the frame layout."
 ' DA': ' pairs'

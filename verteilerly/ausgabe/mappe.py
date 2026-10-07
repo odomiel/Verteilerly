@@ -443,7 +443,7 @@ def _kabelbloecke(
             von = erste + (abschnitt.start_da - 1) * 2
             bis = von + abschnitt.anzahl_da * 2 - 1
             beschriftung = kabel.beschriftung
-            if kabel.gekuerzt:
+            if kabel.gekuerzt and projekt.kuerzung_zeigen:
                 beschriftung += (
                     f" (gekürzt: {kabel.da_aufgelegt} von {kabel.da_gesamt} DA)"
                 )
