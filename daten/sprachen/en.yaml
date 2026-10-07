@@ -34,6 +34,17 @@ Aus Vorlage: From template
 Benutzerdefiniert: Custom
 Buchstaben statt Zahlen: Letters instead of numbers
 Verteilerbelegung umkehren: Reverse the frame layout
+'&Vorlagen für das Rangierfeld…': '&Templates for the jumper field…'
+Welche Vermerke das Rangierfeld neben Zielen annimmt — etwa „direkt“, „defekt“ oder „12k“: Which notes the jumper field accepts besides targets — such as “direkt”, “defekt” or “12k”
+Vorlagen: Templates
+(keine Vorlagen): (no templates)
+Vorlagen bearbeiten…: Edit templates…
+Vorlagen für das Rangierfeld: Templates for the jumper field
+' für das Rangierfeld': ' for the jumper field'
+Übernehmen: Apply
+'{0} — zugelassen sind Ziele und die Vorlagen: {1}': '{0} — allowed are targets and the templates: {1}'
+? "Was hier steht, lässt sich im Rangierfeld eintragen, ohne ein Ziel zu sein — über das Rechtsklickmenü oder getippt.\nEine Vorlage je Zeile."
+: "What stands here can be entered in the jumper field without being a target — via the right click menu or typed.\nOne template per line."
 '&Kürzung am Kabel anzeigen': 'Show &shortening at the cable'
 '„gekürzt: 3 von 4 DA“ am Kabel — ohne diesen Zusatz steht der Name dort größer': '“shortened: 3 of 4 pairs” at the cable — without that addition the name stands larger there'
 Kürzung am Kabel wird angezeigt: Shortening is shown at the cable
@@ -226,9 +237,6 @@ Kabel &entfernen: R&emove cable
 Als &Vorlage speichern…: Save as &template…
 S&uchen…: '&Search…'
 '&Projektdaten…': '&Project data…'
-'&Freitext im Rangierfeld zulassen': '&Allow free text in the jumper field'
-Erlaubt im Rangierfeld auch einen Vermerk statt eines Ziels — etwa „extern“ oder „zur Klemmleiste“: Allows
-  a note instead of a target in the jumper field — such as „external“ or „to the terminal block“
 '&Einstellungen': '&Settings'
 '&Blattvorlage…': '&Sheet template…'
 '&Verteilervorlagen…': '&Frame templates…'
@@ -301,8 +309,6 @@ Ein gesichertes Paket in den Arbeitsordner zurückholen: Bring a saved package b
 Die Sprache der Oberfläche — sie gilt nach einem Neustart: The language of the interface — it takes effect
   after a restart
 Was das Programm kann und wie es bedient wird: What the program can do and how it is used
-Freitext im Rangierfeld ist zugelassen: Free text is allowed in the jumper field
-Im Rangierfeld sind nur Ziele zugelassen: Only targets are allowed in the jumper field
 ohne Namen: unnamed
 die Einstellungen: the settings
 'Kabel aufgelegt: {0} DA': 'Cable terminated: {0} pairs'

@@ -1256,6 +1256,54 @@ class UeberlaufDialog(PassenderDialog):
         return self.FORTSETZEN, self.leiste.currentData(), self.start.value()
 
 
+class RangiervorlagenDialog(PassenderDialog):
+    """Die Vermerke, die das Rangierfeld neben Zielen annimmt.
+
+    Eine Vorlage je Zeile - mehr braucht es nicht: es sind wenige, sie
+    heissen wie das, was sie bedeuten, und eine Liste mit Knoepfen waere
+    fuer drei Woerter zu viel Apparat.
+    """
+
+    def __init__(self, vorlagen, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle(u("Vorlagen für das Rangierfeld"))
+
+        erklaerung = QLabel(
+            u("Was hier steht, lässt sich im Rangierfeld eintragen, ohne ein "
+              "Ziel zu sein — über das Rechtsklickmenü oder getippt.\n"
+              "Eine Vorlage je Zeile.")
+        )
+        erklaerung.setWordWrap(True)
+
+        self.text = QPlainTextEdit("\n".join(vorlagen))
+        self.text.setMinimumSize(360, 180)
+
+        knoepfe = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok
+            | QDialogButtonBox.StandardButton.Cancel
+        )
+        knoepfe.button(QDialogButtonBox.StandardButton.Ok).setText(u("Übernehmen"))
+        knoepfe.button(QDialogButtonBox.StandardButton.Cancel).setText(u("Abbrechen"))
+        knoepfe.accepted.connect(self.accept)
+        knoepfe.rejected.connect(self.reject)
+
+        aufbau = QVBoxLayout(self)
+        aufbau.addWidget(erklaerung)
+        aufbau.addWidget(self.text)
+        aufbau.addWidget(knoepfe)
+
+    def vorlagen(self) -> list[str]:
+        """Die Zeilen - ohne Leeres und ohne Doppeltes, in ihrer Folge."""
+        gesammelt: list[str] = []
+        for zeile in self.text.toPlainText().splitlines():
+            wert = zeile.strip()
+            if wert and not any(
+                wert.casefold() == da.casefold() for da in gesammelt
+            ):
+                gesammelt.append(wert)
+        return gesammelt
+
+
 class PruefberichtDialog(PassenderDialog):
     """Was die Pruefung einer Vorlagendatei ergab.
 

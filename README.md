@@ -323,14 +323,20 @@ für die Dialoge, die Qt selbst zeichnet — Datei öffnen, Datei speichern —
 wird beim Start Qts deutsche Übersetzung (`qtbase_de.qm`) geladen, die
 darum mit ins AppImage und in die .exe wandert.
 
-Ins Rangierfeld darf auf Wunsch auch ein **Vermerk** statt eines Ziels —
-„extern", „zur Klemmleiste", „n.b.". Freigeschaltet wird das über
-*Einstellungen ▸ Freitext im Rangierfeld zulassen* und ist zunächst aus:
-wer nur Ziele einträgt, will einen Tippfehler als Fehler gemeldet
-bekommen und nicht als Vermerk stehen haben. Ein Vermerk belegt eines
+Ins Rangierfeld darf auch ein **Vermerk** statt eines Ziels — aber nicht
+beliebiger Text, sondern eine **Vorlage**: `direkt`, `defekt`, `12k`
+(`modell.RANGIERVORLAGEN`). Nicht jede Ader führt zu einer anderen; die paar
+Fälle heißen immer gleich, und mit einer Liste bleibt ein vertipptes Ziel ein
+Fehler, statt stillschweigend zum Vermerk zu werden — die Meldung nennt dann
+die Vorlagen. Eingetragen wird eine Vorlage über das **Rechtsklickmenü ▸
+Vorlagen** oder getippt (Groß- und Kleinschreibung egal; gespeichert wird die
+Schreibweise der Vorlage). Die Liste ändert *Einstellungen ▸ Vorlagen für das
+Rangierfeld…* oder derselbe Menüpunkt im Untermenü; sie steht als Text mit
+Zeilenumbrüchen in der `Verteilerly.conf` (`rangiervorlagen`) und gehört damit
+dem Programm, nicht dem Verteiler. Ein Vermerk belegt eines
 der beiden Felder, bleibt darin stehen und wird **nicht gespiegelt** —
 er gehört der Ader und steht als deren Feld in der Projektdatei. Was
-sich als Ziel lesen lässt, bleibt auch dann ein Ziel.
+sich als Ziel lesen lässt, bleibt ein Ziel.
 
 **Ein aufgelegtes Kabel lässt sich umlegen** — in der Verteilerübersicht mit
 der Maus an eine andere Stelle ziehen. Es nimmt mit, was daran hängt: die

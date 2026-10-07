@@ -182,10 +182,11 @@ class LeistenModell(QAbstractTableModel):
         self.schreibweise: Schreibweise = schreibweisen.STANDARD
         # Wie die Leisten heissen - Rangierungen zeigen auf dieselben.
         self.leisten_schreibweise: str = LEISTEN_ZAHLEN
-        # Freitext im Rangierfeld ist abschaltbar: wer nur Ziele
-        # eintraegt, will einen Tippfehler als Fehler gemeldet bekommen
-        # und nicht als Vermerk stehen haben.
-        self.freitext_erlaubt = False
+        # Statt freiem Text stehen im Rangierfeld **Vorlagen**: wenige,
+        # immer dieselben Vermerke (direkt, defekt, 12k). Damit bleibt
+        # ein Tippfehler im Ziel ein Fehler, statt stillschweigend zum
+        # Vermerk zu werden.
+        self.vermerkvorlagen: tuple[str, ...] = ()
         # Schreibgeschuetzt: zu sehen, aber nicht zu aendern.
         self.schreibgeschuetzt = False
         #: Wie gross die Tabelle gezeichnet wird - die eigenen Schriften
@@ -231,9 +232,24 @@ class LeistenModell(QAbstractTableModel):
         finally:
             self._sammelt = vorher
 
-    def freitext_erlauben(self, an: bool) -> None:
-        """Darf ins Rangierfeld auch etwas anderes als ein Ziel?"""
-        self.freitext_erlaubt = an
+    def vorlagen_setzen(self, vorlagen) -> None:
+        """Welche Vermerke das Rangierfeld neben Zielen annimmt."""
+        self.vermerkvorlagen = tuple(
+            str(v).strip() for v in vorlagen if str(v).strip()
+        )
+
+    def vorlage_passt(self, text: str) -> str:
+        """Die Vorlage zu diesem Text - oder "" fuer keine.
+
+        Verglichen wird ohne Rucksicht auf Gross- und Kleinschreibung,
+        eingetragen wird die Schreibweise der Vorlage: wer "Direkt"
+        tippt, bekommt "direkt" wie aus dem Menue.
+        """
+        gesucht = text.strip().casefold()
+        for vorlage in self.vermerkvorlagen:
+            if vorlage.casefold() == gesucht:
+                return vorlage
+        return ""
 
     def schreibweise_setzen(self, schreibweise: Schreibweise) -> None:
         """Wie Rangierungen in den beiden Feldern stehen."""
@@ -568,18 +584,25 @@ class LeistenModell(QAbstractTableModel):
 
         Wer zwei Ziele in ein Feld tippt, bekommt sie auf beide verteilt -
         die alte Schreibweise „3 2a   5 4a“ funktioniert also weiter. Was
-        sich nicht als Ziel lesen laesst, wird bei erlaubtem Freitext zum
-        Vermerk der Ader, sonst bleibt es ein Fehler.
+        sich nicht als Ziel lesen laesst, wird zum Vermerk der Ader -
+        aber nur, wenn es eine der **Vorlagen** ist. Alles andere bleibt
+        ein Fehler: ein vertippter Zielname soll auffallen.
         """
         adresse = self.adresse(zeile)
         stelle = RANGIERSPALTEN.index(spalte)
         belegung = self._belegung(adresse)
+        vermerk = ""
 
         try:
             neue = adressen_lesen(text)
         except ModellFehler as fehler:
-            if not (self.freitext_erlaubt and text.strip()):
-                self.fehler_gemeldet.emit(str(fehler))
+            vermerk = self.vorlage_passt(text)
+            if not vermerk:
+                self.fehler_gemeldet.emit(
+                    u("{0} — zugelassen sind Ziele und die Vorlagen: {1}")
+                    .format(fehler, ", ".join(self.vermerkvorlagen))
+                    if self.vermerkvorlagen else str(fehler)
+                )
                 return False
             neue = None                       # kein Ziel, sondern Vermerk
 
@@ -587,7 +610,7 @@ class LeistenModell(QAbstractTableModel):
             belegung = [("ziel", ziel) for ziel in neue]   # beide auf einmal
         else:
             if neue is None:
-                eintrag = ("vermerk", text.strip())
+                eintrag = ("vermerk", vermerk)
             elif neue:
                 eintrag = ("ziel", neue[0])
             else:
@@ -907,6 +930,8 @@ class LeistenAnsicht(QWidget):
     fehler_gemeldet = Signal(str)
     #: Strg und Mausrad: eine Stufe hinauf oder hinab.
     zoom_gerollt = Signal(int)
+    #: „Vorlagen bearbeiten…" - der Dialog dazu gehoert dem Fenster.
+    vorlagen_gewuenscht = Signal()
     leiste_gewechselt = Signal(int)
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -1351,7 +1376,41 @@ class LeistenAnsicht(QWidget):
         self.zellenmenue_auffrischen()
         menue = QMenu(self)
         menue.addActions(self.zellenmenue_aktionen)
+        # Vorlagen nur dort, wo sie hingehoeren: im Rangierfeld.
+        if unter_der_maus.isValid() and unter_der_maus.column() in RANGIERSPALTEN:
+            menue.addSeparator()
+            menue.addMenu(self.vorlagenmenue(unter_der_maus))
         menue.exec(self.tabelle.viewport().mapToGlobal(stelle))
+
+    def vorlagenmenue(self, index) -> QMenu:
+        """Das Untermenue *Vorlagen* fuer ein Rangierfeld.
+
+        Jede Vorlage traegt sich mit einem Druck in die Zelle ein; am
+        Ende steht der Weg, die Liste zu aendern. Gebaut wird es bei
+        jedem Rechtsklick neu - die Liste darf sich ja aendern.
+        """
+        menue = QMenu(u("Vorlagen"), self)
+        darf = not self.modell.schreibgeschuetzt
+        for vorlage in self.modell.vermerkvorlagen:
+            handlung = menue.addAction(vorlage)
+            handlung.setEnabled(darf)
+            handlung.triggered.connect(
+                lambda _an=False, wert=vorlage, stelle=index:
+                self.vorlage_eintragen(stelle, wert)
+            )
+        if not self.modell.vermerkvorlagen:
+            leer = menue.addAction(u("(keine Vorlagen)"))
+            leer.setEnabled(False)
+        menue.addSeparator()
+        bearbeiten = menue.addAction(u("Vorlagen bearbeiten…"))
+        bearbeiten.triggered.connect(self.vorlagen_bearbeiten)
+        return menue
+
+    def vorlage_eintragen(self, index, wert: str) -> bool:
+        """Schreibt eine Vorlage in das Rangierfeld."""
+        if not index.isValid() or self.modell.schreibgeschuetzt:
+            return False
+        return self.modell.setData(index, wert, Qt.ItemDataRole.EditRole)
 
     def zellenmenue_auffrischen(self) -> None:
         """Graut aus, was gerade nicht geht.
@@ -1682,8 +1741,13 @@ class LeistenAnsicht(QWidget):
         self.modell.leisten_schreibweise_setzen(schreibweise)
         self._leistenliste_auffrischen()
 
-    def freitext_erlauben(self, an: bool) -> None:
-        self.modell.freitext_erlauben(an)
+    def vorlagen_setzen(self, vorlagen) -> None:
+        """Die Vermerkvorlagen des Rangierfeldes - auch fuers Menue."""
+        self.modell.vorlagen_setzen(vorlagen)
+
+    def vorlagen_bearbeiten(self) -> None:
+        """Bittet das Fenster um den Dialog - es haelt die Liste."""
+        self.vorlagen_gewuenscht.emit()
 
     def verteiler_setzen(self, verteiler: Verteiler | None) -> None:
         self.verteiler = verteiler

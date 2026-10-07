@@ -476,12 +476,26 @@ Rangierung an derselben Ader werden abgelehnt — die Meldung steht in der
 Statuszeile, und der bisherige Stand bleibt unangetastet. Was nicht durchgeht,
 wird also nicht halb übernommen.</p>
 
-<p><b>Vermerk statt Ziel</b> — <b>Einstellungen ▸ Freitext im Rangierfeld
-zulassen</b> erlaubt auch „extern", „zur Klemmleiste" oder „n.b.". Zunächst
-ist das aus: wer nur Ziele einträgt, will einen Tippfehler als Fehler gemeldet
-bekommen und nicht als Vermerk stehen haben. Ein Vermerk belegt eines der
-beiden Felder, bleibt darin stehen und wird <b>nicht gespiegelt</b> — er
-gehört der Ader. Was sich als Ziel lesen lässt, bleibt auch dann ein Ziel.</p>
+<p><b>Vermerk statt Ziel — die Vorlagen</b>. Nicht jede Ader führt zu einer
+anderen: eine geht direkt weiter, eine ist defekt, an einer sitzt der
+Abschlusswiderstand. Dafür kennt das Rangierfeld <b>Vorlagen</b> — mitgeliefert
+sind <i>direkt</i>, <i>defekt</i> und <i>12k</i>. Ein <b>Rechtsklick</b> auf
+ein Rangierfeld öffnet das Untermenü <i>Vorlagen</i>; ein Druck trägt die
+Vorlage ein. Getippt geht es auch, auf Groß- und Kleinschreibung kommt es
+dabei nicht an.</p>
+
+<p>Alles andere, was sich nicht als Ziel lesen lässt, bleibt ein <b>Fehler</b>
+— und die Meldung nennt die Vorlagen. Das ist der Zweck der Liste: ein
+vertipptes Ziel soll auffallen und nicht stillschweigend zum Vermerk werden.
+Ein Vermerk belegt eines der beiden Felder, bleibt darin stehen und wird
+<b>nicht gespiegelt</b> — er gehört der Ader. Was sich als Ziel lesen lässt,
+bleibt ein Ziel.</p>
+
+<p><b>Die Liste ändern</b> — <b>Einstellungen ▸ Vorlagen für das
+Rangierfeld…</b>, oder im selben Untermenü <i>Vorlagen bearbeiten…</i>. Eine
+Vorlage je Zeile; Leeres und Doppeltes wird beim Übernehmen weggelassen. Die
+Liste gehört dem Programm, nicht dem Verteiler: sie steht in der
+<code>Verteilerly.conf</code> und gilt für jedes Projekt.</p>
 
 <h2><a name="projektdaten"></a>6 &nbsp; Projektdaten</h2>
 
@@ -1039,7 +1053,7 @@ Namen der mitgelieferten Vorlagen bleiben deutsch: sie sind Daten im
 Arbeitsordner und dort umbenennbar.</p>
 
 <p>In der <code>Verteilerly.conf</code> stehen die Blattvorlage, die Sprache,
-die Schreibweise der Rangierungen, der Freitext-Schalter, das Erscheinungsbild,
+die Schreibweise der Rangierungen, die Vorlagen des Rangierfeldes, das Erscheinungsbild,
 die gemerkten Projektdaten und die Vorgabe, wie neue Verteiler ihre Leisten
 beschriften. Was den einzelnen Verteiler betrifft, steht
 dagegen in der Projektdatei.</p>
@@ -1286,7 +1300,7 @@ und sie lässt sich unter <i>Erweiterungen verwalten</i> ausschalten.</p>
 <tr><td>Leisten beschriften</td><td></td></tr>
 <tr><td>Verteilerbelegung umkehren</td><td></td></tr>
 <tr><td>Kürzung am Kabel anzeigen</td><td></td></tr>
-<tr><td>Freitext im Rangierfeld zulassen</td><td></td></tr>
+<tr><td>Vorlagen für das Rangierfeld…</td><td></td></tr>
 <tr><td rowspan="4"><b>Ansicht</b></td><td>Dunkles Erscheinungsbild</td><td>Strg+D</td></tr>
 <tr><td>Verteilerübersicht anzeigen</td><td>F7</td></tr>
 <tr><td>Leistenansicht anzeigen</td><td>F8</td></tr>

@@ -455,12 +455,24 @@ same wire are refused — the message stands in the status bar, and what was
 there stays untouched. So what does not go through is not half taken over
 either.</p>
 
-<p><b>A note instead of a target</b> — <b>Settings ▸ Allow free text in the
-jumper field</b> also permits „external", „to the terminal block" or „n/a". To
-begin with this is off: whoever enters targets only wants a typing mistake
-reported as a mistake, not left standing as a note. A note takes up one of the
-two fields, stays in it and is <b>not mirrored</b> — it belongs to the wire.
-What can be read as a target stays a target even then.</p>
+<p><b>A note instead of a target — the templates</b>. Not every wire leads to
+another one: one goes straight on, one is faulty, one carries the end-of-line
+resistor. For that the jumper field knows <b>templates</b> — supplied are
+<i>direkt</i>, <i>defekt</i> and <i>12k</i>. A <b>right click</b> on a jumper
+field opens the submenu <i>Templates</i>; one press enters the template. Typing
+works as well, and case does not matter.</p>
+
+<p>Everything else that cannot be read as a target stays a <b>mistake</b> — and
+the message names the templates. That is the point of the list: a mistyped
+target should be noticed instead of quietly becoming a note. A note takes up one
+of the two fields, stays in it and is <b>not mirrored</b> — it belongs to the
+wire. What can be read as a target stays a target.</p>
+
+<p><b>Changing the list</b> — <b>Settings ▸ Templates for the jumper
+field…</b>, or <i>Edit templates…</i> in the same submenu. One template per
+line; empty and duplicate lines are dropped on accepting. The list belongs to
+the program, not to the frame: it is kept in <code>Verteilerly.conf</code> and
+applies to every project.</p>
 
 <h2><a name="projektdaten"></a>6 &nbsp; Project data</h2>
 
@@ -1252,7 +1264,7 @@ extensions</i>.</p>
 <tr><td>Label the strips</td><td></td></tr>
 <tr><td>Reverse the frame layout</td><td></td></tr>
 <tr><td>Show shortening at the cable</td><td></td></tr>
-<tr><td>Allow free text in the jumper field</td><td></td></tr>
+<tr><td>Templates for the jumper field…</td><td></td></tr>
 <tr><td rowspan="4"><b>View</b></td><td>Dark appearance</td><td>Ctrl+D</td></tr>
 <tr><td>Show frame overview</td><td>F7</td></tr>
 <tr><td>Show strip view</td><td>F8</td></tr>

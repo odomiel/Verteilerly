@@ -70,6 +70,15 @@ class UeberlaufFehler(ModellFehler):
 LEISTEN_ZAHLEN, LEISTEN_BUCHSTABEN = "zahlen", "buchstaben"
 LEISTEN_SCHREIBWEISEN = (LEISTEN_ZAHLEN, LEISTEN_BUCHSTABEN)
 
+#: Was im Rangierfeld statt eines Ziels stehen darf. Nicht jede Ader
+#: fuehrt zu einer anderen: eine geht direkt weiter, eine ist defekt, an
+#: einer sitzt der Abschlusswiderstand. Solche Vermerke sind wenige und
+#: immer dieselben - darum eine Liste statt freiem Text: ein Tippfehler
+#: im Ziel bleibt damit ein Tippfehler und wird nicht stillschweigend
+#: zum Vermerk. Der Anwender aendert die Liste (Einstellungen oder das
+#: Rechtsklickmenue der Leistenansicht); diese drei stehen am Anfang.
+RANGIERVORLAGEN = ("direkt", "defekt", "12k")
+
 
 def leistenname(nummer: int, schreibweise: str = LEISTEN_ZAHLEN) -> str:
     """Wie die Leiste heisst: "3" oder "C" - ab der 27. dann "AA", "AB".

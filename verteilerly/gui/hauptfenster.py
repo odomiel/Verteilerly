@@ -10,6 +10,7 @@ import tempfile
 from PySide6.QtCore import QSettings, Qt, QTimer
 from PySide6.QtGui import QAction, QActionGroup, QKeySequence
 from PySide6.QtWidgets import (
+    QDialog,
     QFileDialog,
     QLabel,
     QMainWindow,
@@ -52,6 +53,7 @@ from ..modell import (
     BRIEFKOPF_FELDER,
     LEISTEN_BUCHSTABEN,
     LEISTEN_ZAHLEN,
+    RANGIERVORLAGEN,
     Kabelabschnitt,
     ModellFehler,
     Projekt,
@@ -80,6 +82,7 @@ from .dialoge import (
     NeuerVerteilerDialog,
     PaketDialog,
     PruefberichtDialog,
+    RangiervorlagenDialog,
     UeberlaufDialog,
     als_vorlage_speichern,
 )
@@ -189,7 +192,10 @@ class Hauptfenster(QMainWindow):
             self.einstellungen.value("schreibweise", schreibweisen.STANDARD.id)
         )
         # Freitext im Rangierfeld - aus, bis er gebraucht wird.
-        self.freitext = self.einstellungen.value("freitext", False, type=bool)
+        # Die Vermerke, die das Rangierfeld neben Zielen annimmt. Sie
+        # stehen in der Conf: eine Gewohnheit des Hauses, nicht eine
+        # Eigenschaft des Verteilers.
+        self.rangiervorlagen = self._rangiervorlagen_lesen()
         # Das zuletzt gesuchte Wort steht beim naechsten Aufruf wieder da;
         # es gehoert zur Sitzung, nicht in die Einstellungsdatei.
         self.zuletzt_gesucht = ""
@@ -340,6 +346,9 @@ class Hauptfenster(QMainWindow):
         )
         self.leistenansicht.belegung_geaendert.connect(self._belegung_geaendert)
         self.leistenansicht.fehler_gemeldet.connect(self._fehler_zeigen)
+        self.leistenansicht.vorlagen_gewuenscht.connect(
+            self.rangiervorlagen_bearbeiten
+        )
         self.leistenansicht.leiste_gewechselt.connect(self._leiste_gewechselt)
 
         self.teiler = QSplitter(Qt.Orientation.Vertical)
@@ -477,14 +486,12 @@ class Hauptfenster(QMainWindow):
                     "was im Schriftfeld jedes Blattes steht"),
         )
 
-        self.aktion_freitext = QAction(u("&Freitext im Rangierfeld zulassen"), self)
-        self.aktion_freitext.setCheckable(True)
-        self.aktion_freitext.setChecked(self.freitext)
-        self.aktion_freitext.setStatusTip(
-            u("Erlaubt im Rangierfeld auch einen Vermerk statt eines Ziels — "
-            "etwa „extern“ oder „zur Klemmleiste“")
+        self.aktion_vorlagen = QAction(u("&Vorlagen für das Rangierfeld…"), self)
+        self.aktion_vorlagen.setStatusTip(
+            u("Welche Vermerke das Rangierfeld neben Zielen annimmt — "
+            "etwa „direkt“, „defekt“ oder „12k“")
         )
-        self.aktion_freitext.triggered.connect(self.freitext_erlauben)
+        self.aktion_vorlagen.triggered.connect(self.rangiervorlagen_bearbeiten)
 
         einstellungen = self.menuBar().addMenu(u("&Einstellungen"))
         aktion(
@@ -602,7 +609,7 @@ class Hauptfenster(QMainWindow):
         )
         self.aktion_kuerzung.triggered.connect(self.kuerzung_zeigen)
         einstellungen.addAction(self.aktion_kuerzung)
-        einstellungen.addAction(self.aktion_freitext)
+        einstellungen.addAction(self.aktion_vorlagen)
 
         # Wie die Vorschau lassen sich Verteileruebersicht und Leistenansicht
         # ausblenden: wer nur tippt, gibt der Leistenansicht die ganze Hoehe,
@@ -788,20 +795,33 @@ class Hauptfenster(QMainWindow):
         except OSError:
             return []
 
-    def freitext_erlauben(self, an: bool) -> None:
-        """Schaltet den Vermerk im Rangierfeld frei.
+    def _rangiervorlagen_lesen(self) -> list[str]:
+        """Die gemerkten Vorlagen; ohne Eintrag die drei des Hauses.
 
-        Ausgeschaltet meldet ein unlesbares Ziel wieder einen Fehler -
-        wer nur Ziele eintraegt, will den Tippfehler sehen.
+        Gespeichert wird ein Text mit Zeilenumbruechen - eine Liste in
+        der Conf laese QSettings je nach Fassung als Text oder als
+        Liste zurueck, und dann stuende dort einmal „['direkt']".
         """
-        self.freitext = bool(an)
-        self.einstellungen.setValue("freitext", self.freitext)
-        self.leistenansicht.freitext_erlauben(self.freitext)
-        self.aktion_freitext.setChecked(self.freitext)
+        gemerkt = self.einstellungen.value("rangiervorlagen", None)
+        if gemerkt is None:
+            return list(RANGIERVORLAGEN)
+        if isinstance(gemerkt, str):
+            gemerkt = gemerkt.splitlines()
+        return [str(wert).strip() for wert in gemerkt if str(wert).strip()]
+
+    def rangiervorlagen_bearbeiten(self) -> None:
+        """Zeigt die Vorlagen des Rangierfeldes und merkt die Aenderung."""
+        dialog = RangiervorlagenDialog(self.rangiervorlagen, self)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        self.rangiervorlagen = dialog.vorlagen()
+        self.einstellungen.setValue(
+            "rangiervorlagen", "\n".join(self.rangiervorlagen)
+        )
+        self.leistenansicht.vorlagen_setzen(self.rangiervorlagen)
         self.statusBar().showMessage(
-            u("Freitext im Rangierfeld ist zugelassen")
-            if self.freitext
-            else u("Im Rangierfeld sind nur Ziele zugelassen"),
+            mehrzahl(len(self.rangiervorlagen), "Vorlage", "Vorlagen")
+            + u(" für das Rangierfeld"),
             6000,
         )
 
@@ -1109,7 +1129,7 @@ class Hauptfenster(QMainWindow):
         self.uebersicht.verteiler_setzen(verteiler)
         self.leistenansicht.verteiler_setzen(verteiler)
         self.leistenansicht.schreibweise_setzen(self.schreibweise)
-        self.leistenansicht.freitext_erlauben(self.freitext)
+        self.leistenansicht.vorlagen_setzen(self.rangiervorlagen)
         # Wie die Leisten heissen, bringt das Projekt mit - Menue und
         # Ansichten folgen ihm, nicht umgekehrt.
         self._leistenweise_anwenden()
@@ -1382,8 +1402,8 @@ class Hauptfenster(QMainWindow):
         self.schreibweise = schreibweisen.holen(
             self.einstellungen.value("schreibweise", self.schreibweise.id)
         )
-        self.freitext = self.einstellungen.value("freitext", self.freitext, type=bool)
-        self.aktion_freitext.setChecked(self.freitext)
+        self.rangiervorlagen = self._rangiervorlagen_lesen()
+        self.leistenansicht.vorlagen_setzen(self.rangiervorlagen)
         self._schreibweise_anwenden()
         self._leistenweise_anwenden()
         self.vorschau.aktualisieren()

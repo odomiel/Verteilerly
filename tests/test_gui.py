@@ -1265,26 +1265,37 @@ class TestLeistenModell(unittest.TestCase):
         self._setzen(0, SPALTE_RANGIERUNG, "2 1a")
         self.assertEqual(self._text(0, SPALTE_RANGIERUNG), "L2-1a")
 
-    def test_ohne_freitext_bleibt_ein_tippfehler_ein_fehler(self):
-        """Abgeschaltet meldet das Feld wieder, was es nicht lesen kann."""
+    def test_was_keine_vorlage_ist_bleibt_ein_fehler(self):
+        """Ein vertipptes Ziel soll auffallen, nicht zum Vermerk werden."""
         gemeldet = []
         self.m.fehler_gemeldet.connect(gemeldet.append)
+        self.m.vorlagen_setzen(["direkt", "defekt", "12k"])
         self.assertFalse(self._setzen(0, SPALTE_RANGIERUNG, "zur Klemmleiste"))
         self.assertEqual(self._text(0, SPALTE_RANGIERUNG), "")
         self.assertTrue(gemeldet)
+        # Die Meldung sagt, was stattdessen ginge.
+        self.assertIn("direkt", gemeldet[0])
 
-    def test_freitext_landet_als_vermerk_an_der_ader(self):
-        self.m.freitext_erlauben(True)
-        self.assertTrue(self._setzen(0, SPALTE_RANGIERUNG, "zur Klemmleiste"))
-        self.assertEqual(self._text(0, SPALTE_RANGIERUNG), "zur Klemmleiste")
-        self.assertEqual(
-            self.v.ader(Aderadresse(1, 1, "a")).vermerk, "zur Klemmleiste"
-        )
+    def test_eine_vorlage_landet_als_vermerk_an_der_ader(self):
+        self.m.vorlagen_setzen(["direkt", "defekt", "12k"])
+        self.assertTrue(self._setzen(0, SPALTE_RANGIERUNG, "direkt"))
+        self.assertEqual(self._text(0, SPALTE_RANGIERUNG), "direkt")
+        self.assertEqual(self.v.ader(Aderadresse(1, 1, "a")).vermerk, "direkt")
         # Ein Vermerk ist kein Ziel - gespiegelt wird nichts.
         self.assertEqual(self.v.rangierungen, [])
 
+    def test_gross_oder_klein_geschrieben_ist_dieselbe_vorlage(self):
+        """Eingetragen wird die Schreibweise der Vorlage."""
+        self.m.vorlagen_setzen(["direkt", "defekt", "12k"])
+        self.assertTrue(self._setzen(0, SPALTE_RANGIERUNG, "Defekt"))
+        self.assertEqual(self.v.ader(Aderadresse(1, 1, "a")).vermerk, "defekt")
+
+    def test_ohne_vorlagen_geht_nur_das_ziel(self):
+        self.m.vorlagen_setzen([])
+        self.assertFalse(self._setzen(0, SPALTE_RANGIERUNG, "direkt"))
+
     def test_vermerk_und_ziel_nebeneinander(self):
-        self.m.freitext_erlauben(True)
+        self.m.vorlagen_setzen(["extern"])
         self._setzen(0, SPALTE_RANGIERUNG, "extern")
         self._setzen(0, SPALTE_RANGIERUNG_2, "3 2a")
         # Der Vermerk bleibt in seinem Feld.
@@ -1297,23 +1308,23 @@ class TestLeistenModell(unittest.TestCase):
     def test_zweiter_vermerk_wird_abgewiesen(self):
         gemeldet = []
         self.m.fehler_gemeldet.connect(gemeldet.append)
-        self.m.freitext_erlauben(True)
+        self.m.vorlagen_setzen(["extern", "direkt"])
         self._setzen(0, SPALTE_RANGIERUNG, "extern")
-        self.assertFalse(self._setzen(0, SPALTE_RANGIERUNG_2, "auch extern"))
+        self.assertFalse(self._setzen(0, SPALTE_RANGIERUNG_2, "direkt"))
         self.assertEqual(self._text(0, SPALTE_RANGIERUNG_2), "")
         self.assertTrue(gemeldet)
 
     def test_vermerk_leeren_laesst_das_ziel_stehen(self):
-        self.m.freitext_erlauben(True)
+        self.m.vorlagen_setzen(["extern"])
         self._setzen(0, SPALTE_RANGIERUNG, "extern")
         self._setzen(0, SPALTE_RANGIERUNG_2, "3 2a")
         self._setzen(0, SPALTE_RANGIERUNG, "")
         self.assertEqual(self._text(0, SPALTE_RANGIERUNG), "3 2a")
         self.assertEqual(self.v.ader(Aderadresse(1, 1, "a")).vermerk, "")
 
-    def test_ziel_geht_dem_freitext_vor(self):
+    def test_ziel_geht_der_vorlage_vor(self):
         """Was sich als Ziel lesen lässt, bleibt ein Ziel."""
-        self.m.freitext_erlauben(True)
+        self.m.vorlagen_setzen(["direkt"])
         self._setzen(0, SPALTE_RANGIERUNG, "3 2a")
         self.assertEqual(self.v.ader(Aderadresse(1, 1, "a")).vermerk, "")
         self.assertEqual(len(self.v.rangierungen), 1)
@@ -3573,7 +3584,7 @@ class TestMenuezustaende(unittest.TestCase):
             "Leisten beschriften",
             "Verteilerbelegung umkehren",
             "Kürzung am Kabel anzeigen",
-            "Freitext im Rangierfeld zulassen"],
+            "Vorlagen für das Rangierfeld…"],
         )
 
     def test_die_kuerzung_laesst_sich_abschalten(self):
@@ -3736,21 +3747,66 @@ class TestMenuezustaende(unittest.TestCase):
         self.assertTrue(zweites.leistenansicht.isHidden())
         self.assertFalse(zweites.teiler.isHidden())
 
-    def test_freitext_wird_gemerkt_und_durchgereicht(self):
-        """Die Wahl gilt für den Editor und steht in der Conf."""
+    def test_die_rangiervorlagen_stehen_am_anfang_bereit(self):
+        """Drei Vermerke des Hauses - ohne dass jemand sie anlegt."""
+        from verteilerly.modell import RANGIERVORLAGEN
+
         f = self.fenster
         self._projekt()
-        f.freitext_erlauben(True)
-        self.assertTrue(f.leistenansicht.modell.freitext_erlaubt)
-        self.assertTrue(f.aktion_freitext.isChecked())
-        self.assertTrue(f.einstellungen.value("freitext", False, type=bool))
+        self.assertEqual(tuple(f.rangiervorlagen), RANGIERVORLAGEN)
+        self.assertEqual(
+            f.leistenansicht.modell.vermerkvorlagen, RANGIERVORLAGEN
+        )
 
-        # Auch ein danach geöffnetes Projekt erbt die Wahl.
+    def test_geaenderte_vorlagen_werden_gemerkt_und_durchgereicht(self):
+        from PySide6.QtWidgets import QDialog
+
+        from verteilerly.gui import hauptfenster
+
+        from . import einstellung_bewahren
+
+        f = self.fenster
         self._projekt()
-        self.assertTrue(f.leistenansicht.modell.freitext_erlaubt)
+        einstellung_bewahren(self, f.einstellungen, "rangiervorlagen")
 
-        f.freitext_erlauben(False)
-        self.assertFalse(f.leistenansicht.modell.freitext_erlaubt)
+        def bearbeiten(dialog):
+            dialog.text.setPlainText("extern\nzur Klemmleiste\nextern")
+            return QDialog.DialogCode.Accepted
+
+        with mock.patch.object(
+            hauptfenster.RangiervorlagenDialog, "exec", bearbeiten
+        ):
+            f.rangiervorlagen_bearbeiten()
+
+        # Doppeltes faellt weg, die Folge bleibt.
+        self.assertEqual(f.rangiervorlagen, ["extern", "zur Klemmleiste"])
+        self.assertEqual(
+            f.leistenansicht.modell.vermerkvorlagen,
+            ("extern", "zur Klemmleiste"),
+        )
+        self.assertEqual(
+            f.einstellungen.value("rangiervorlagen"), "extern\nzur Klemmleiste"
+        )
+        # Auch ein danach geöffnetes Projekt erbt sie.
+        self._projekt()
+        self.assertEqual(
+            f.leistenansicht.modell.vermerkvorlagen,
+            ("extern", "zur Klemmleiste"),
+        )
+
+    def test_ein_abgebrochener_dialog_aendert_nichts(self):
+        from PySide6.QtWidgets import QDialog
+
+        from verteilerly.gui import hauptfenster
+
+        f = self.fenster
+        vorher = list(f.rangiervorlagen)
+        with mock.patch.object(
+            hauptfenster.RangiervorlagenDialog, "exec",
+            lambda dialog: QDialog.DialogCode.Rejected,
+        ):
+            f.rangiervorlagen_bearbeiten()
+        self.assertEqual(f.rangiervorlagen, vorher)
 
     def test_leere_auswahlfelder_sind_aus(self):
         f = self.fenster
