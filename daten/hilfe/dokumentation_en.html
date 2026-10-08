@@ -1089,6 +1089,10 @@ brings it back if need be.</li>
 <li><b>Save as new template…</b> asks for a name and creates a <b>new</b>
 file; with the same name it gets a number appended. An existing template is
 never overwritten in the process.</li>
+<li><b>Reset</b> (on the left of the button row) brings the loaded template
+back — every change is dropped, and it asks first. What is meant is the state
+in the <b>file</b>, so after a save the saved one. As long as nothing is
+changed, the button is off.</li>
 </ul>
 
 <p>The file only holds what differs from the built-in default,
@@ -1107,9 +1111,19 @@ deletes that very block. Behind every entry stands a button for its
 label. The horizontal rule has none: it is a line and has nothing to align. <i>Add block</i> and <i>Remove last block</i> change
 the number of blocks; one always remains. With
 <i>Set the widths myself</i> every block gets its share of the width,
-otherwise the program divides by eye. The editor always builds a title block of blocks; the fixed
-layout of the sample tables (<code>schriftfeld_art: beispiel</code>) is not set
-there.</p>
+otherwise the program divides by eye.</p>
+
+<p><b>The kind</b> stands above the height and decides where the title block
+comes from: <i>Blocks</i> is built by the editor itself — the normal case —,
+<i>Like the sample tables</i> takes the fixed title block of the ODS templates
+(<code>schriftfeld_art: beispiel</code>): the matrix of date and name at the
+top left, the frame below it, company and customer as two boxes on the right.
+That arrangement lives in the program, not in the template; the block list is
+then <b>locked</b> and says so. The <b>height</b> and the <b>left half</b>
+remain adjustable — its share of the width, the rest belongs to the addresses
+(<code>schriftfeld_anteile</code>). Switching works both ways, and whatever is
+not drawn stays in the file: the blocks survive a trip to the sample
+tables.</p>
 
 <p>The group <b>Own fields</b> below it creates the <b>freely named rows</b> of
 the title block: <i>Add</i> puts a new one into the list (the name is typed

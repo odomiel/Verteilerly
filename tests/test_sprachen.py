@@ -151,6 +151,7 @@ class TestWortliste(unittest.TestCase):
         gebraucht |= {beschriftung for _feld, beschriftung in editor.SCHALTER}
         gebraucht |= set(editor.SONDERWERT.values())
         gebraucht.add(editor.SCHRIFTFELDHOEHE[1])
+        gebraucht |= {name for name, _kennung in editor.SCHRIFTFELDARTEN}
         from verteilerly.erweiterungen.blattvorlageneditor.schriftfeld import MARKENNAMEN
 
         gebraucht |= set(MARKENNAMEN.values())

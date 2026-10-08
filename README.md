@@ -897,9 +897,26 @@ Beispiel. Jede Änderung wird mit denselben Regeln geprüft wie eine Datei beim
 Lesen. Gespeichert wird auf zwei Wegen: *Speichern* schreibt die geladene
 Vorlage in **ihre eigene Datei** zurück — so wird eine vorhandene bearbeitet —,
 *Als neue Vorlage speichern* legt eine **neue** an und lässt jede vorhandene,
-wie sie ist (`blattvorlage_speichern()` öffnet die Datei sonst exklusiv). In
+wie sie ist (`blattvorlage_speichern()` öffnet die Datei sonst exklusiv).
+*Zurücksetzen* holt die geladene Vorlage zurück — nach Rückfrage, und nur
+solange etwas geändert ist (`zuruecksetzen()`, `basis_uebernehmen(self.basis)`);
+weil beide Speicherwege die Vorlage danach neu laden, ist der Urzustand
+immer der Stand der Datei. In
 der Datei steht nur, was von der Vorgabe abweicht (`blattvorlage_als_yaml()`,
 die Umkehrung von `blattvorlage_aus_yaml()`).
+
+Beim Schriftfeld steht über der Höhe die **Bauart**: *Blöcke* baut der Editor
+selbst, *Wie die Mustertabellen* nimmt das feste Schriftfeld der ODS-Vorlagen
+(`schriftfeld_art: beispiel`). Dessen Anordnung steht im Programm
+(`layout._schriftfeld_beispiel`), nicht in der Vorlage — die Blockliste ist
+dann gesperrt und begründet das, die Vorschau zeichnet das *wirkliche*
+Schriftfeld. Einstellbar bleiben die Höhe und die **linke Hälfte**
+(`schriftfeld_anteile`, der Rest gehört den Anschriften); alles übrige —
+Ränder, Spalten, Schriftgrößen — ohnehin. Umgeschaltet wird in beide
+Richtungen, und die Blöcke bleiben dabei in der Datei stehen. Bis
+2026.10.07b5 setzte der Editor hart `schriftfeld_art: standard`: die Vorschau
+zeigte ein Blockschriftfeld, wo das Programm die Matrix zeichnet, und ein
+Speichern verwarf Bauart und Breiten.
 
 Die zweite ist das **Protokoll**. Das Programm meldet alles dem Anwender und
 nichts einer Datei: was in der Statuszeile steht, ist nach dem Beenden weg, und

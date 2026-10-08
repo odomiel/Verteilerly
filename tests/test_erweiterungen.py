@@ -888,6 +888,157 @@ class TestSchriftfeldEditor(unittest.TestCase):
         self.assertEqual(e.werte()[1], (1.0, 3.0))
 
 
+class TestEigeneBauartImEditor(unittest.TestCase):
+    """Ein Schriftfeld, das im Programm steht, baut der Editor nicht um."""
+
+    def setUp(self):
+        from verteilerly.erweiterungen.blattvorlageneditor.dialog import EditorDialog
+
+        self._ordner = tempfile.TemporaryDirectory()
+        self.addCleanup(self._ordner.cleanup)
+        self.ordner = pathlib.Path(self._ordner.name)
+        self.dialog = EditorDialog(Programmattrappe(self.ordner))
+        self.addCleanup(self.dialog.done, 0)
+
+    def test_die_vorlage_bleibt_wie_sie_ist(self):
+        """Sonst zeigte die Vorschau ein anderes Blatt als das Programm."""
+        self.dialog.basis_uebernehmen(BEISPIELVORLAGE)
+        vorlage = self.dialog.vorlage()
+        self.assertEqual(vorlage.schriftfeld_art, "beispiel")
+        self.assertEqual(vorlage.schriftfeld, BEISPIELVORLAGE.schriftfeld)
+        self.assertEqual(
+            vorlage.schriftfeld_anteile, BEISPIELVORLAGE.schriftfeld_anteile
+        )
+
+    def test_die_bloecke_sind_gesperrt_und_begruendet(self):
+        self.dialog.basis_uebernehmen(BEISPIELVORLAGE)
+        self.assertFalse(self.dialog.schriftfeld.isEnabled())
+        self.assertFalse(self.dialog.schriftfeldhinweis.isHidden())
+        self.assertIn("beispiel", self.dialog.schriftfeldhinweis.text())
+
+    def test_die_hoehe_bleibt_einstellbar(self):
+        """Sie wirkt auch auf diese Bauart."""
+        self.dialog.basis_uebernehmen(BEISPIELVORLAGE)
+        hoehe = self.dialog.zahlen["schriftfeld_hoehe"]
+        self.assertTrue(hoehe.isEnabled())
+        hoehe.setValue(44.0)
+        self.assertEqual(self.dialog.vorlage().schriftfeld_hoehe, 44.0)
+
+    def test_eine_blockvorlage_bleibt_einstellbar(self):
+        from verteilerly.blattvorlagen import STANDARD
+
+        self.dialog.basis_uebernehmen(STANDARD)
+        self.assertTrue(self.dialog.schriftfeld.isEnabled())
+        self.assertTrue(self.dialog.schriftfeldhinweis.isHidden())
+        self.assertTrue(self.dialog.teilungszeile.isHidden())
+        self.assertEqual(self.dialog.vorlage().schriftfeld_art, "standard")
+
+    def test_die_bauart_steht_auf_der_geladenen_vorlage(self):
+        self.dialog.basis_uebernehmen(BEISPIELVORLAGE)
+        self.assertEqual(self.dialog.bauart.currentData(), "beispiel")
+        # 0.42 zu 0.58 - die linke Haelfte steht im Feld.
+        self.assertAlmostEqual(self.dialog.linke_haelfte.value(), 0.42)
+        self.assertFalse(self.dialog.teilungszeile.isHidden())
+
+    def test_die_bauart_laesst_sich_umschalten(self):
+        """Hin zu den Mustertabellen und wieder zurueck zu Bloecken."""
+        from verteilerly.blattvorlagen import STANDARD
+
+        d = self.dialog
+        d.basis_uebernehmen(STANDARD)
+        d.bauart.setCurrentIndex(d.bauart.findData("beispiel"))
+        d.linke_haelfte.setValue(0.40)
+        vorlage = d.vorlage()
+        self.assertEqual(vorlage.schriftfeld_art, "beispiel")
+        self.assertEqual(vorlage.schriftfeld_anteile, (0.4, 0.6))
+        self.assertFalse(d.schriftfeld.isEnabled())
+
+        d.bauart.setCurrentIndex(d.bauart.findData("standard"))
+        self.assertEqual(d.vorlage().schriftfeld_art, "standard")
+        self.assertTrue(d.schriftfeld.isEnabled())
+        self.assertTrue(d.schriftfeldhinweis.isHidden())
+
+    def test_die_umgeschaltete_bauart_uebersteht_die_datei(self):
+        from verteilerly.blattvorlagen import (
+            STANDARD,
+            blattvorlage_als_yaml,
+            blattvorlage_aus_yaml,
+        )
+
+        d = self.dialog
+        d.basis_uebernehmen(STANDARD)
+        d.bauart.setCurrentIndex(d.bauart.findData("beispiel"))
+        d.linke_haelfte.setValue(0.42)
+        gelesen = blattvorlage_aus_yaml(
+            blattvorlage_als_yaml(d.vorlage()), "Probe"
+        )
+        self.assertEqual(gelesen.schriftfeld_art, "beispiel")
+        self.assertEqual(gelesen.schriftfeld_anteile, (0.42, 0.58))
+
+    def test_das_blatt_ist_dasselbe_wie_aus_der_datei(self):
+        """Der Pruefstein: beide Wege zeichnen dieselben Texte."""
+        from verteilerly.layout import blaetter
+
+        self.dialog.basis_uebernehmen(BEISPIELVORLAGE)
+        texte = lambda vorlage: [
+            element.text
+            for blatt in blaetter(self.dialog.projekt, vorlage)
+            for element in blatt.elemente
+            if hasattr(element, "text")
+        ]
+        self.assertEqual(texte(self.dialog.vorlage()), texte(BEISPIELVORLAGE))
+
+
+class TestZuruecksetzenImEditor(unittest.TestCase):
+    """Wer sich verkonfiguriert hat, holt die geladene Vorlage zurück."""
+
+    def setUp(self):
+        from verteilerly.erweiterungen.blattvorlageneditor import dialog as editor
+
+        self._ordner = tempfile.TemporaryDirectory()
+        self.addCleanup(self._ordner.cleanup)
+        self.ordner = pathlib.Path(self._ordner.name)
+        self.dialog = editor.EditorDialog(Programmattrappe(self.ordner))
+        self.addCleanup(self.dialog.done, 0)
+        # Die Rueckfrage haengt sonst die Testreihe auf.
+        self.verwerfen = mock.patch.object(
+            editor, "frage", lambda *a, **k: editor.Knopf.Discard
+        )
+        self.verwerfen.start()
+        self.addCleanup(self.verwerfen.stop)
+
+    def test_ohne_aenderung_ist_der_knopf_aus(self):
+        self.assertFalse(self.dialog.zuruecksetzen_knopf.isEnabled())
+
+    def test_jede_aenderung_schaltet_ihn_an(self):
+        self.dialog.zahlen["rand"].setValue(20.0)
+        self.assertTrue(self.dialog.zuruecksetzen_knopf.isEnabled())
+
+    def test_zuruecksetzen_holt_jeden_wert_zurueck(self):
+        d = self.dialog
+        d.basis_uebernehmen(BEISPIELVORLAGE)
+        d.zahlen["rand"].setValue(30.0)
+        d.name.setText("verkonfiguriert")
+        d.bauart.setCurrentIndex(d.bauart.findData("standard"))
+
+        d.zuruecksetzen()
+        vorlage = d.vorlage()
+        self.assertEqual(vorlage.rand, BEISPIELVORLAGE.rand)
+        self.assertEqual(vorlage.name, BEISPIELVORLAGE.name)
+        self.assertEqual(vorlage.schriftfeld_art, "beispiel")
+        self.assertFalse(d.zuruecksetzen_knopf.isEnabled())
+
+    def test_eine_abgelehnte_rueckfrage_aendert_nichts(self):
+        from verteilerly.erweiterungen.blattvorlageneditor import dialog as editor
+
+        d = self.dialog
+        d.zahlen["rand"].setValue(30.0)
+        with mock.patch.object(editor, "frage", lambda *a, **k: editor.Knopf.Cancel):
+            d.zuruecksetzen()
+        self.assertEqual(d.vorlage().rand, 30.0)
+        self.assertTrue(d.zuruecksetzen_knopf.isEnabled())
+
+
 class TestEigeneFelderImEditor(unittest.TestCase):
     """Die Namen der eigenen Felder gehören der Blattvorlage."""
 
@@ -1069,17 +1220,25 @@ class TestSchriftfeldImEditor(unittest.TestCase):
         d = self.dialog
         d.basiswahl.setCurrentIndex(d.basiswahl.findData(BEISPIELVORLAGE.id))
         self.assertEqual(d.schriftfeld.werte()[0], BEISPIELVORLAGE.schriftfeld)
-        # Zwei Breiten zu drei Blöcken passen nicht - dann teilt das
-        # Programm nach Augenmaß, wie beim Lesen einer Datei.
+        # Zwei Breiten zu drei Blöcken passen nicht - der Blockeditor
+        # teilt dann nach Augenmaß, wie beim Lesen einer Datei.
         self.assertEqual(d.schriftfeld.werte()[1], ())
-        self.assertEqual(d.vorlage().schriftfeld_anteile, ())
 
     def test_der_editor_baut_nur_schriftfelder_in_bloecken(self):
-        """Die feste Aufteilung der Mustertabellen stellt er nicht ein."""
+        """Die feste Aufteilung der Mustertabellen stellt er nicht ein.
+
+        Er schreibt sie aber auch nicht um: die Vorlage behaelt ihre
+        Bauart samt Breiten, sonst zeigte die Vorschau ein anderes Blatt
+        als das Programm zeichnet.
+        """
         d = self.dialog
         d.basiswahl.setCurrentIndex(d.basiswahl.findData(BEISPIELVORLAGE.id))
         self.assertEqual(BEISPIELVORLAGE.schriftfeld_art, "beispiel")
-        self.assertEqual(d.vorlage().schriftfeld_art, "standard")
+        self.assertEqual(d.vorlage().schriftfeld_art, "beispiel")
+        self.assertEqual(
+            d.vorlage().schriftfeld_anteile, BEISPIELVORLAGE.schriftfeld_anteile
+        )
+        self.assertFalse(d.schriftfeld.isEnabled())
 
     def test_der_briefkopf_wird_gespeichert_und_wieder_gelesen(self):
         import yaml

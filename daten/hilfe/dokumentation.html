@@ -1125,6 +1125,10 @@ Mitgelieferte wiederherstellen</i> holt sie im Zweifel zurück.</li>
 <li><b>Als neue Vorlage speichern…</b> fragt nach einem Namen und legt eine
 <b>neue</b> Datei an; bei gleichem Namen bekommt sie eine Nummer angehängt.
 Eine vorhandene Vorlage wird dabei nie überschrieben.</li>
+<li><b>Zurücksetzen</b> (links in der Knopfleiste) holt die geladene Vorlage
+zurück — jede Änderung fällt weg, nachgefragt wird vorher. Gemeint ist der
+Stand, der in der <b>Datei</b> steht; nach einem Speichern also der
+gespeicherte. Solange nichts geändert ist, ist der Knopf aus.</li>
 </ul>
 
 <p>In der Datei steht nur, was von der eingebauten
@@ -1144,8 +1148,19 @@ löscht genau diesen Block. Hinter jeder Angabe steht ein Knopf für ihre
 nicht der Beschriftung. Der Querstrich hat keinen: er ist eine Linie und hat
 nichts auszurichten. <i>Block hinzufügen</i> und <i>Letzten Block
 entfernen</i> ändern die Zahl der Blöcke; einer bleibt immer stehen. Mit <i>Breiten selbst festlegen</i> bekommt jeder Block seinen Anteil
-an der Breite, sonst teilt das Programm nach Augenmaß. Der Editor baut immer ein Schriftfeld aus Blöcken; die feste Aufteilung der
-Mustertabellen (<code>schriftfeld_art: beispiel</code>) stellt er nicht ein.</p>
+an der Breite, sonst teilt das Programm nach Augenmaß.</p>
+
+<p><b>Die Bauart</b> steht über der Höhe und bestimmt, woher das Schriftfeld
+kommt: <i>Blöcke</i> baut der Editor selbst — das ist der Normalfall —, <i>Wie
+die Mustertabellen</i> nimmt das feste Schriftfeld der ODS-Vorlagen
+(<code>schriftfeld_art: beispiel</code>): links oben die Matrix aus Datum und
+Name, darunter der Verteiler, rechts Firma und Kunde als zwei Kästen. Diese
+Anordnung steht im Programm, nicht in der Vorlage; die Blockliste ist dann
+<b>gesperrt</b> und sagt es auch. Einstellbar bleiben die <b>Höhe</b> und die
+<b>linke Hälfte</b> — ihr Anteil an der Breite, der Rest gehört den
+Anschriften (<code>schriftfeld_anteile</code>). Umschalten geht in beide
+Richtungen, und was dabei nicht gezeichnet wird, bleibt in der Datei stehen:
+die Blöcke überleben einen Ausflug zu den Mustertabellen.</p>
 
 <p>Die Gruppe <b>Eigene Felder</b> darunter legt die <b>frei benannten
 Zeilen</b> des Schriftfeldes an: <i>Hinzufügen</i> setzt eine neue in die Liste

@@ -817,6 +817,15 @@ Die gewählte Angabe entfernen: Remove the chosen entry
 Eine Angabe hinzufügen: Add an entry
 Letzten Block entfernen: Remove last block
 Schriftfeld (Briefkopf): Title block (letterhead)
+? "Die Bauart „{0}“ führt ihr Schriftfeld fest im Programm — die Blöcke sind hier nicht einstellbar. Einstellbar sind die Höhe und die Teilung der beiden Hälften."
+: "The “{0}” kind keeps its title block inside the program — the blocks cannot be set here. The height and the split of the two halves can."
+Bauart: Kind
+Blöcke: Blocks
+Wie die Mustertabellen: Like the sample tables
+Linke Hälfte: Left half
+Zurücksetzen: Reset
+Stellt die Werte der geladenen Vorlage wieder her: Restores the values of the loaded template
+'Blattvorlage „{0}“ zurückgesetzt': 'Sheet template “{0}” reset'
 Welche Angaben in welchem Block stehen. Einträge lassen sich zwischen den Blöcken ziehen; der Knopf dahinter richtet den Wert aus.: Which entries stand in which block. Entries can be dragged between the blocks; the button behind one aligns its value.
 Anlage: Installation
 Erstellt: Created

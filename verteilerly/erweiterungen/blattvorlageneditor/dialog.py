@@ -53,7 +53,7 @@ from ...blattvorlagen import (
 from ...gui.passform import PassenderDialog
 from ...gui.sprache import Knopf, frage
 from ...gui.vorschau import Blattflaeche
-from ...layout import blaetter
+from ...layout import blaetter, schriftfeldanteile
 from ...modell import BLATTART_BESCHRIFTUNG, BLATTARTEN, Projekt, Verteiler
 from ...sprachen import u
 from .schriftfeld import AUSRICHTUNGSNAMEN, SchriftfeldEditor
@@ -91,6 +91,13 @@ SONDERWERT = {"schrift_leiste": "automatisch"}
 
 # Die Hoehe des Schriftfeldes steht bei seinen Bloecken, nicht beim Blatt.
 SCHRIFTFELDHOEHE = ("schriftfeld_hoehe", "Höhe", "mm", 10.0, 80.0, 0.5)
+#: Die Bauarten des Schriftfeldes - Name in der Oberflaeche, Kennung in
+#: der Datei. "beispiel" steht fest im Programm (die Aufteilung der
+#: Mustertabellen), darum gibt es dafuer keine Bloecke einzustellen.
+SCHRIFTFELDARTEN = (
+    ("Blöcke", "standard"),
+    ("Wie die Mustertabellen", "beispiel"),
+)
 SCHALTER = (
     ("da_nummern", "DA-Nummern in der Verteilerbelegung"),
     ("kabel_gedreht", "Kabelname quer in der Kabelspalte"),
@@ -129,6 +136,10 @@ def beispielprojekt() -> Projekt:
 
 class EditorDialog(PassenderDialog):
     """Eine Blattvorlage bearbeiten und die Wirkung sofort sehen."""
+
+    #: Die Knopfleiste entsteht nach den Feldern - bis dahin gibt es den
+    #: Knopf noch nicht, und _geaendert() laeuft schon.
+    zuruecksetzen_knopf = None
 
     def __init__(self, programm, parent: QWidget | None = None) -> None:
         super().__init__(parent or programm.fenster)
@@ -267,7 +278,16 @@ class EditorDialog(PassenderDialog):
         self.speichern_knopf.clicked.connect(self.speichern)
         schliessen = QPushButton(u("Schließen"))
         schliessen.clicked.connect(self.reject)
+        self.zuruecksetzen_knopf = QPushButton(u("Zurücksetzen"))
+        self.zuruecksetzen_knopf.setToolTip(
+            u("Stellt die Werte der geladenen Vorlage wieder her")
+        )
+        self.zuruecksetzen_knopf.clicked.connect(self.zuruecksetzen)
+        self.zuruecksetzen_knopf.setEnabled(False)
         knoepfe = QHBoxLayout()
+        # Links das Verwerfen, rechts das Speichern - damit das eine nicht
+        # neben dem anderen zu liegen kommt.
+        knoepfe.addWidget(self.zuruecksetzen_knopf)
         knoepfe.addStretch(1)
         knoepfe.addWidget(self.ueberschreiben_knopf)
         knoepfe.addWidget(self.speichern_knopf)
@@ -292,16 +312,70 @@ class EditorDialog(PassenderDialog):
         hoehe.setSuffix(f" {einheit}")
         hoehe.valueChanged.connect(self._geaendert)
         self.zahlen[feld] = hoehe
+
+        # Welche Bauart das Schriftfeld hat. Die Bloecke baut der Editor
+        # selbst; die Aufteilung der Mustertabellen steht im Programm -
+        # umschalten laesst sich aber beides.
+        self.bauart = QComboBox()
+        for name, kennung in SCHRIFTFELDARTEN:
+            self.bauart.addItem(u(name), kennung)
+        self.bauart.currentIndexChanged.connect(self._bauart_gewechselt)
+
         formular = QFormLayout()
+        formular.addRow(u("Bauart") + ":", self.bauart)
         formular.addRow(u(beschriftung) + ":", hoehe)
 
         self.schriftfeld = SchriftfeldEditor()
         self.schriftfeld.geaendert.connect(self._geaendert)
+        # Eine Vorlage, deren Schriftfeld im Programm steht, laesst sich
+        # hier nicht umbauen - gesagt werden muss das aber, sonst sieht
+        # die ausgegraute Liste wie ein Fehler aus.
+        self.schriftfeldhinweis = QLabel()
+        self.schriftfeldhinweis.setWordWrap(True)
+        self.schriftfeldhinweis.hide()
+
+        # Die Mustertabellen teilen ihr Schriftfeld in zwei Haelften -
+        # links der Verteiler, rechts die Anschriften. Wie breit die
+        # linke ist, steht als schriftfeld_anteile in der Vorlage; die
+        # Bloecke daneben haben damit nichts zu tun.
+        self.linke_haelfte = QDoubleSpinBox()
+        self.linke_haelfte.setRange(0.1, 0.9)
+        self.linke_haelfte.setSingleStep(0.01)
+        self.linke_haelfte.setDecimals(2)
+        self.linke_haelfte.valueChanged.connect(self._geaendert)
+        self.teilungszeile = QWidget()
+        teilung = QHBoxLayout(self.teilungszeile)
+        teilung.setContentsMargins(0, 0, 0, 0)
+        teilung.addWidget(QLabel(u("Linke Hälfte") + ":"))
+        teilung.addWidget(self.linke_haelfte)
+        teilung.addStretch(1)
+        self.teilungszeile.hide()
+
         kasten = QGroupBox(u("Schriftfeld (Briefkopf)"))
         aufbau = QVBoxLayout(kasten)
         aufbau.addLayout(formular)
+        aufbau.addWidget(self.schriftfeldhinweis)
+        aufbau.addWidget(self.teilungszeile)
         aufbau.addWidget(self.schriftfeld)
         return kasten
+
+    def _bauart_gewechselt(self, _index: int) -> None:
+        self._schriftfeldbauart_zeigen()
+        self._geaendert()
+
+    def _schriftfeldbauart_zeigen(self) -> None:
+        """Sperrt die Bloecke, wenn die Bauart sie nicht hergibt."""
+        eigene_bauart = self.bauart.currentData() != "standard"
+        self.schriftfeld.setEnabled(not eigene_bauart)
+        self.schriftfeldhinweis.setVisible(eigene_bauart)
+        self.teilungszeile.setVisible(eigene_bauart)
+        if eigene_bauart:
+            self.schriftfeldhinweis.setText(
+                u("Die Bauart „{0}“ führt ihr Schriftfeld fest im Programm — "
+                  "die Blöcke sind hier nicht einstellbar. Einstellbar sind "
+                  "die Höhe und die Teilung der beiden Hälften.").format(
+                      self.bauart.currentData())
+            )
 
     # -- Eigene Felder -------------------------------------------------------
 
@@ -517,7 +591,8 @@ class EditorDialog(PassenderDialog):
     def basis_uebernehmen(self, vorlage: Blattvorlage) -> None:
         """Stellt alle Felder auf eine vorhandene Vorlage."""
         self.basis = vorlage
-        felder = [self.name, self.beschreibung, self.buchten,
+        felder = [self.name, self.beschreibung, self.buchten, self.bauart,
+                  self.linke_haelfte,
                   *self.zahlen.values(), *self.schalter.values()]
         for feld in felder:
             feld.blockSignals(True)
@@ -536,7 +611,16 @@ class EditorDialog(PassenderDialog):
         # sich aus ihnen, und seine Eintraege zeigen auf sie.
         self.schriftfeld.eigene_felder_setzen(vorlage.eigene_felder)
         self.schriftfeld.setzen(vorlage.schriftfeld, vorlage.schriftfeld_anteile)
+        self.bauart.setCurrentIndex(
+            max(self.bauart.findData(vorlage.schriftfeld_art), 0)
+        )
+        self.linke_haelfte.setValue(
+            schriftfeldanteile(2, vorlage.schriftfeld_anteile)[0]
+        )
+        self._schriftfeldbauart_zeigen()
         self.geaendert = False
+        if self.zuruecksetzen_knopf is not None:
+            self.zuruecksetzen_knopf.setEnabled(False)
         self._neu_zeichnen()
 
     def _basis_gewaehlt(self, _index: int) -> None:
@@ -552,13 +636,25 @@ class EditorDialog(PassenderDialog):
 
     def vorlage(self) -> Blattvorlage:
         """Die Vorlage, wie sie gerade eingestellt ist."""
-        schriftfeld, anteile = self.schriftfeld.werte()
+        # Die Bauart sagt, woher das Schriftfeld kommt: "standard" baut
+        # der Editor aus Bloecken, "beispiel" steht im Programm. Bis
+        # 2026.10.07b5 setzte diese Stelle hart "standard" - die Vorschau
+        # zeigte dann ein anderes Blatt als das Programm zeichnet, und
+        # ein Speichern verwarf die Bauart samt Breiten.
+        art = self.bauart.currentData()
+        if art != "standard":
+            # Die Bloecke bleiben, wie sie in der Datei stehen - diese
+            # Bauart zeichnet sie nicht. Einzustellen ist nur, wie sich
+            # die beiden Haelften die Breite teilen.
+            schriftfeld = self.basis.schriftfeld
+            links = round(self.linke_haelfte.value(), 2)
+            anteile = (links, round(1.0 - links, 2))
+        else:
+            schriftfeld, anteile = self.schriftfeld.werte()
         return dataclasses.replace(
             self.basis,
             standard=False,
-            # Der Editor baut nur Schriftfelder in Bloecken - die feste
-            # Aufteilung der Mustertabellen stellt er nicht ein.
-            schriftfeld_art="standard",
+            schriftfeld_art=art,
             schriftfeld=schriftfeld,
             schriftfeld_anteile=anteile,
             name=self.name.text().strip(),
@@ -578,7 +674,23 @@ class EditorDialog(PassenderDialog):
 
     def _geaendert(self, *_args) -> None:
         self.geaendert = True
+        if self.zuruecksetzen_knopf is not None:
+            self.zuruecksetzen_knopf.setEnabled(True)
         self.takt.start()
+
+    def zuruecksetzen(self) -> None:
+        """Holt die geladene Vorlage zurueck - jede Aenderung faellt weg.
+
+        Gemeint ist der Stand, der in der Datei steht: nach dem Speichern
+        ist das der gespeicherte, denn beide Speicherwege laden die
+        Vorlage danach neu.
+        """
+        if not self.geaendert or not self._verwerfen_erlaubt():
+            return
+        self.basis_uebernehmen(self.basis)
+        self.programm.meldung(
+            u("Blattvorlage „{0}“ zurückgesetzt").format(self.basis.name)
+        )
 
     def _neu_zeichnen(self) -> None:
         """Prueft die Vorlage wie eine Datei und zeichnet die Blaetter neu."""
