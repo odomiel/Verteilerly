@@ -268,7 +268,19 @@ QPushButton:default {{
 
 
 def anwenden(anwendung: QApplication, farben: Farben) -> None:
-    """Legt Palette, Stilblatt und die eigenen Pfeile auf die Anwendung."""
+    """Legt Palette, Stilblatt und die eigenen Pfeile auf die Anwendung.
+
+    **Ein Satz, der schon anliegt, wird nicht neu angelegt.** `setStyle`
+    und `setStyleSheet` gehen jedes Widget der Anwendung noch einmal
+    durch; das kostet mit jedem Fenster mehr. Im Betrieb gibt es ein
+    Fenster, und der Satz wechselt nur, wenn jemand ihn umschaltet - in
+    der Testreihe entstehen hunderte Fenster, und jedes legte denselben
+    Satz neu auf alle vorherigen. Ihre Laufzeit wuchs damit quadratisch:
+    das 60. Fenster brauchte 1,4 Sekunden statt 0,04.
+    """
+    if getattr(anwendung, "_farbsatz", None) == farben:
+        return
+    anwendung._farbsatz = farben
     stil = PfeilStil(farben)
     # Qt uebernimmt den Stil, aber ein Verweis schadet nicht: ohne ihn
     # haengt er allein am C++-Objekt.

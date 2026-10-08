@@ -809,6 +809,14 @@ und Exportdialoge (zurück, vor, eine Ebene höher) wären darauf kaum zu
 erkennen. `PfeilStil`, ein `QProxyStyle` um Fusion, malt sie deshalb selbst,
 in der Schriftfarbe des Satzes.
 
+**Ein Satz, der schon anliegt, wird nicht neu angelegt** (`thema.anwenden`
+merkt ihn als `_farbsatz` an der Anwendung). `setStyle` und `setStyleSheet`
+gehen **jedes** Widget der Anwendung noch einmal durch; im Betrieb mit einem
+Fenster ist das billig, in der Testreihe entstehen hunderte, und jedes legte
+denselben Satz über alle vorherigen. Ihre Laufzeit wuchs damit quadratisch —
+das 60. Fenster brauchte 1,4 Sekunden statt 0,04, die ganze Reihe 52 statt
+5 Minuten.
+
 **Deutsch oder Englisch** (`sprachen.py`). *Einstellungen ▸ Sprache*
 stellt die Oberfläche um — Menüs, Dialoge, Knöpfe, Hinweise, Meldungen und
 Spaltenköpfe. Die Wahl steht in der `Verteilerly.conf` und gilt **nach einem
