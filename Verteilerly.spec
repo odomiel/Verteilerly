@@ -58,7 +58,7 @@ if os.path.isdir(_sprachen):
 
 # README und Lizenzen mit hinein - eine weitergegebene .exe soll sagen koennen,
 # was sie ist und unter welchen Bedingungen sie weitergegeben werden darf.
-for beigabe in ("README.md", "LICENSE"):
+for beigabe in ("README.md", "README.en.md", "LICENSE"):
     pfad = os.path.join(_wurzel, beigabe)
     if os.path.exists(pfad):
         datas.append((pfad, "."))

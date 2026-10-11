@@ -1,5 +1,7 @@
 # Verteilerly
 
+*English version: [README.en.md](README.en.md)*
+
 Dokumentation für **LSA+-Verteiler** in der Fernmeldetechnik: Deckblatt,
 Verteilerbelegung und Leistenblätter entstehen aus **einem Datenmodell** statt
 aus kopierten Tabellenblättern.
@@ -150,6 +152,20 @@ Tages mit `b2`, `b3` …). Gesetzt wird sie aus den Git-Tags:
 .venv/bin/python3 werkzeuge/release.py --setzen   # schreiben, committen, taggen
 ```
 
+## Handbuch
+
+Das Benutzerhandbuch ist die Dokumentation, die das Programm unter *Hilfe ▸
+Dokumentation* zeigt. Als PDF gesetzt wird sie mit:
+
+```bash
+.venv/bin/python3 werkzeuge/handbuch.py              # deutsch und englisch
+.venv/bin/python3 werkzeuge/handbuch.py --sprache en # nur eine Sprache
+```
+
+Die Dateien landen in `auslieferung/` — `Verteilerly-Handbuch-<version>.pdf`
+und `Verteilerly-Manual-<version>.pdf`, mit Titelblatt, Inhaltsverzeichnis und
+Seitenzahlen.
+
 ## Tests
 
 Geprüft wird mit `unittest`, ohne Bildschirm (die GUI-Tests laufen offscreen).
@@ -161,6 +177,8 @@ Die ganze Reihe braucht etwa zwei Minuten:
 ```
 
 ## Lizenz
+
+Große Teile des Projekts wurden mitthilfe von KI (Claude Code) erstellt.
 
 Verteilerly steht unter der **GPL-3.0-or-later** (`LICENSE`). Die
 mitgelieferten Bestandteile stehen unter LGPL, BSD, MIT und PSF; ihre Texte
