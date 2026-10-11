@@ -178,7 +178,7 @@ Die ganze Reihe braucht etwa zwei Minuten:
 
 ## Lizenz
 
-Große Teile des Projekts wurden mitthilfe von KI (Claude Code) erstellt.
+Große Teile des Projekts wurden mithilfe von KI (Claude Code) erstellt.
 
 Verteilerly steht unter der **GPL-3.0-or-later** (`LICENSE`). Die
 mitgelieferten Bestandteile stehen unter LGPL, BSD, MIT und PSF; ihre Texte
