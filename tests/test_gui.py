@@ -1732,6 +1732,104 @@ class TestKabelZiehen(unittest.TestCase):
         self.assertEqual(gemeldet, [])
 
 
+class TestKabelspalte(unittest.TestCase):
+    """Die Kabelbeschriftung steht über dem ganzen Block und bricht um."""
+
+    def setUp(self):
+        from verteilerly.gui.hauptfenster import Hauptfenster
+
+        from verteilerly.gui import hauptfenster
+
+        # Ein Test beschriftet ein Kabel - beim Schliessen fragt das
+        # Fenster sonst nach und die Reihe bliebe daran stehen.
+        verwerfen = mock.patch.object(
+            hauptfenster, "frage",
+            lambda *a, **k: QMessageBox.StandardButton.Discard,
+        )
+        verwerfen.start()
+        self.addCleanup(verwerfen.stop)
+        self.fenster = Hauptfenster()
+        self.addCleanup(self.fenster.close)
+        self.verteiler = Verteiler.aus_geometrie(1, 2, 10, name="Probe")
+        self.verteiler.kabel_anlegen("Haus 7 Erdgeschoss Technikraum", 1, 3, 4)
+        self.verteiler.kabel_anlegen("K2", 1, 8, 1)
+        self.verteiler.kabel_anlegen_mehrteilig(
+            "Überlauf", [Kabelabschnitt(1, 9, 2), Kabelabschnitt(2, 1, 3)]
+        )
+        self.fenster._projekt_setzen(Projekt(verteiler=self.verteiler), None)
+        self.ansicht = self.fenster.leistenansicht
+
+    def test_je_abschnitt_ein_block_mit_zwei_zeilen_je_doppelader(self):
+        self.assertEqual(
+            self.ansicht.modell.kabelbloecke(),
+            [(4, 8), (14, 2), (16, 4)],
+        )
+
+    def test_eine_andere_leiste_hat_ihre_eigenen_bloecke(self):
+        """Das mehrteilige Kabel fängt auf Leiste 2 bei DA 1 an."""
+        self.ansicht.leiste_zeigen(2)
+        self.assertEqual(self.ansicht.modell.kabelbloecke(), [(0, 6)])
+
+    def test_die_zellen_des_blocks_sind_zusammengefasst(self):
+        from verteilerly.gui.leistenansicht import SPALTE_KABEL
+
+        tabelle = self.ansicht.tabelle
+        self.assertEqual(tabelle.rowSpan(4, SPALTE_KABEL), 8)
+        self.assertEqual(tabelle.rowSpan(14, SPALTE_KABEL), 2)
+        # Eine freie Doppelader bleibt eine Zelle.
+        self.assertEqual(tabelle.rowSpan(0, SPALTE_KABEL), 1)
+
+    def test_der_leistenwechsel_raeumt_die_alten_zusammenfassungen_weg(self):
+        from verteilerly.gui.leistenansicht import SPALTE_KABEL
+
+        self.ansicht.leiste_zeigen(2)
+        tabelle = self.ansicht.tabelle
+        self.assertEqual(tabelle.rowSpan(0, SPALTE_KABEL), 6)
+        # Wo auf Leiste 1 ein Block lag, liegt hier keiner mehr.
+        self.assertEqual(tabelle.rowSpan(8, SPALTE_KABEL), 1)
+        self.assertEqual(tabelle.rowSpan(14, SPALTE_KABEL), 1)
+
+    def test_beschriften_geht_weiter(self):
+        """Die zusammengefasste Zelle bleibt die Eingabestelle."""
+        from verteilerly.gui.leistenansicht import SPALTE_KABEL
+
+        modell = self.ansicht.modell
+        feld = modell.index(4, SPALTE_KABEL)
+        self.assertTrue(modell.setData(feld, "Haus 7 neu"))
+        self.assertEqual(self.verteiler.kabel[0].beschriftung, "Haus 7 neu")
+
+    def test_umbrochen_wird_an_wortgrenzen(self):
+        """Mitten im Wort nur, wenn ein Wort allein zu breit ist."""
+        from PySide6.QtGui import QFont, QFontMetrics
+
+        from verteilerly.gui.leistenansicht import EingabeDelegat
+
+        metrik = QFontMetrics(QFont())
+        breite = metrik.horizontalAdvance("Haus 7 Erdgeschoss")
+        wortweise = EingabeDelegat.umbruchflaggen(
+            "Haus 7 Erdgeschoss Technikraum", breite, metrik
+        )
+        self.assertTrue(wortweise & int(Qt.TextFlag.TextWordWrap))
+        self.assertFalse(wortweise & int(Qt.TextFlag.TextWrapAnywhere))
+
+        # Ein einziges langes Wort passt nirgends - dann reisst es.
+        mittendrin = EingabeDelegat.umbruchflaggen(
+            "Hauptverteilerzuleitung-Technikgeschoss", 40, metrik
+        )
+        self.assertTrue(mittendrin & int(Qt.TextFlag.TextWrapAnywhere))
+
+    def test_ohne_text_keine_flaggen_ohne_sinn(self):
+        from PySide6.QtGui import QFont, QFontMetrics
+
+        from verteilerly.gui.leistenansicht import EingabeDelegat
+
+        metrik = QFontMetrics(QFont())
+        self.assertEqual(
+            EingabeDelegat.umbruchflaggen("", 50, metrik),
+            int(Qt.TextFlag.TextWordWrap),
+        )
+
+
 class TestSprungZumKabel(unittest.TestCase):
     """Ein Klick in die Verteilerbelegung stellt die Marke aufs Kabel."""
 

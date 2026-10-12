@@ -543,6 +543,26 @@ class LeistenModell(QAbstractTableModel):
         )
         return kabel if beginnt_hier else None
 
+    def kabelbloecke(self) -> list[tuple[int, int]]:
+        """Je Kabelabschnitt dieser Leiste: erste Zeile und Zeilenzahl.
+
+        Die Beschriftung steht in der ersten Zeile des Blocks. Ueber den
+        ganzen Block zusammengefasst, traegt die Zelle auch einen langen
+        Namen - umgebrochen, statt hinter drei Punkten zu verschwinden.
+        """
+        if self.verteiler is None or self.leiste_nr is None:
+            return []
+        bloecke: list[tuple[int, int]] = []
+        for kabel in self.verteiler.kabel:
+            for abschnitt in kabel.abschnitte:
+                if abschnitt.leiste != self.leiste_nr:
+                    continue
+                # Je Doppelader zwei Zeilen - die a- und die b-Ader.
+                bloecke.append(
+                    ((abschnitt.start_da - 1) * 2, abschnitt.anzahl_da * 2)
+                )
+        return bloecke
+
     def _kabeltext(self, stift_nr: int, seite: str) -> str:
         """Die Beschriftung steht nur an der ersten Zeile des Kabelblocks."""
         kabel = self._kabelanfang(stift_nr, seite)
@@ -753,7 +773,63 @@ class EingabeDelegat(QStyledItemDelegate):
         )
         return links, rechts
 
+    @staticmethod
+    def umbruchflaggen(text: str, breite: int, metrik) -> int:
+        """Wie der Kabelname umbrochen wird.
+
+        An Wortgrenzen, immer. Mitten im Wort nur dann, wenn ein
+        einzelnes Wort ohnehin nicht in die Spalte geht - sonst risse Qt
+        auch dort, wo die Zeile gerade noch gereicht haette.
+        """
+        flaggen = int(Qt.TextFlag.TextWordWrap)
+        laengstes = max(text.split(), key=len, default="")
+        if laengstes and metrik.horizontalAdvance(laengstes) > breite:
+            flaggen |= int(Qt.TextFlag.TextWrapAnywhere)
+        return flaggen
+
+    def _kabel_zeichnen(self, maler, option, index) -> None:
+        """Die Kabelbeschriftung umbricht, statt gekuerzt zu werden.
+
+        Die Zelle ist ueber den ganzen Kabelblock zusammengefasst
+        (``LeistenAnsicht._kabelbloecke_spannen``) und damit hoch genug
+        fuer mehrere Zeilen. Qts eigener Zeichner kuerzt dagegen jeden
+        Text auf eine Zeile mit drei Punkten - und ein Kabelname, von
+        dem nur „Haus 7 Erdge…" zu lesen ist, nuetzt niemandem.
+        """
+        lage = QStyleOptionViewItem(option)
+        self.initStyleOption(lage, index)
+        text = lage.text
+        # Den Hintergrund samt Auswahl zeichnet der Stil, den Text nicht.
+        lage.text = ""
+        stil = lage.widget.style() if lage.widget else None
+        if stil is not None:
+            stil.drawControl(
+                QStyle.ControlElement.CE_ItemViewItem, lage, maler, lage.widget
+            )
+        if not text:
+            return
+        maler.save()
+        gewaehlt = bool(lage.state & QStyle.StateFlag.State_Selected)
+        maler.setPen(
+            lage.palette.color(
+                QPalette.ColorGroup.Normal,
+                QPalette.ColorRole.HighlightedText if gewaehlt
+                else QPalette.ColorRole.Text,
+            )
+        )
+        maler.setFont(lage.font)
+        flaggen = int(lage.displayAlignment) or int(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+        )
+        innen = lage.rect.adjusted(4, 2, -4, -2)
+        flaggen |= self.umbruchflaggen(text, innen.width(), maler.fontMetrics())
+        maler.drawText(innen, flaggen, text)
+        maler.restore()
+
     def paint(self, maler, option, index) -> None:
+        if index.column() == SPALTE_KABEL:
+            self._kabel_zeichnen(maler, option, index)
+            return
         teilung = self._teilung(index)
         if teilung is None:
             super().paint(maler, option, index)
@@ -975,6 +1051,8 @@ class LeistenAnsicht(QWidget):
         self.modell = LeistenModell(self)
         self.modell.belegung_geaendert.connect(self.belegung_geaendert)
         self.modell.fehler_gemeldet.connect(self.fehler_gemeldet)
+        # Jede neue Leiste bringt andere Kabelbloecke mit.
+        self.modell.modelReset.connect(self._kabelbloecke_spannen)
 
         kopf = QHBoxLayout()
         kopf.setContentsMargins(0, 0, 0, 6)
@@ -1822,6 +1900,20 @@ class LeistenAnsicht(QWidget):
         self.tabelle.scrollTo(index)
         self.tabelle.setFocus()
         return True
+
+    def _kabelbloecke_spannen(self) -> None:
+        """Fasst die Zeilen eines Kabels in der Kabelspalte zusammen.
+
+        Die Beschriftung steht dann in **einer** Zelle ueber dem ganzen
+        Block und hat damit Platz fuer mehrere Zeilen; gezeichnet wird
+        sie umgebrochen (``EingabeDelegat._kabel_zeichnen``). Vorher
+        stand ein langer Kabelname in einer Zeilenhoehe und war nach
+        einem Dutzend Zeichen zu Ende.
+        """
+        self.tabelle.clearSpans()
+        for erste, zeilen in self.modell.kabelbloecke():
+            if zeilen > 1:
+                self.tabelle.setSpan(erste, SPALTE_KABEL, zeilen, 1)
 
     def aktualisieren(self) -> None:
         self.modell.setzen(self.verteiler, self.modell.leiste_nr)
