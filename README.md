@@ -62,6 +62,11 @@ Angaben auf.
 **Excel-Mappe** im Blattbild samt Datenlisten und **CSV**-Listen für die
 Weiterverarbeitung.
 
+**Einmal am Tag nach Updates sehen** (*Einstellungen*, abschaltbar): das
+Programm fragt die öffentliche Releaseliste und sagt in der Statuszeile
+Bescheid, wenn eine neuere Fassung da ist. Heruntergeladen wird nichts,
+gesendet nichts außer der Anfrage; abgeschaltet geht es **nie** ins Netz.
+
 **Dazu im Alltag.** Suchen über den ganzen Verteiler, Zurücknehmen und
 Wiederherstellen der letzten fünfzig Schritte, **schreibgeschützt öffnen**,
 helles und dunkles Erscheinungsbild, Sichern und Einspielen aller Vorlagen und

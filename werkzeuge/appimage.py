@@ -301,15 +301,19 @@ def programm_einbauen() -> None:
 # und dazu die Bibliotheken, an denen sie haengen. readline und gdbm
 # stehen unter der GPL-3: sie hier zu lassen hiesse, ihren Quelltext
 # mit anbieten zu muessen, und das Programm ruft sie nie auf. Tcl/Tk
-# geht mit tkinter denselben Weg, nur aus Platzgruenden.
-# _ssl und _hashlib kommen dazu, weil das Programm nie ins Netz geht
-# und hashlib ohne OpenSSL weiterrechnet - md5, sha1 und sha256
-# stecken als eigene Module in Python. _sqlite3 braucht hier niemand:
-# ein Verteiler ist eine Datei, keine Datenbank.
+# geht mit tkinter denselben Weg, nur aus Platzgruenden. _sqlite3
+# braucht hier niemand: ein Verteiler ist eine Datei, keine Datenbank.
+#
+# **_ssl und _hashlib bleiben drin** (mit libssl und libcrypto, rund
+# 7 MB roh): seit 2026.10.12 sieht das Programm einmal am Tag nach, ob
+# es eine neuere Fassung gibt, und das geht nur ueber HTTPS. OpenSSL
+# steht unter der Apache-2.0 - vertraeglich mit der GPL-3 -, der Text
+# liegt als OpenSSL.txt bei. Zertifikate bringt es keine mit: die holt
+# `aktualisierung.zertifikatsspeicher()` vom Rechner.
 UNNOETIGE_MODULE = ("_gdbm", "_dbm", "readline", "_tkinter",
-                    "_ssl", "_hashlib", "_sqlite3", "_curses", "_curses_panel")
+                    "_sqlite3", "_curses", "_curses_panel")
 UNNOETIGE_BIBLIOTHEKEN = ("libgdbm", "libgdbm_compat", "libreadline",
-                          "libtcl", "libtk", "libssl", "libcrypto",
+                          "libtcl", "libtk",
                           "libsqlite3", "libncursesw", "libpanelw", "libtinfo",
                           "libXft", "libXrender")
 # Was die Python-AppImage selbst mitbringt und das Programm nie aufruft:

@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import datetime
 import os
 import pathlib
 import shutil
 import tempfile
+import threading
 
-from PySide6.QtCore import QSettings, Qt, QTimer
+from PySide6.QtCore import QSettings, Qt, QTimer, Signal
 from PySide6.QtGui import QAction, QActionGroup, QKeySequence
 from PySide6.QtWidgets import (
     QDialog,
@@ -27,6 +29,7 @@ from PySide6.QtWidgets import (
 
 from .. import einstellungen as einstellungsspeicher
 from .. import (
+    aktualisierung,
     bestand,
     erweiterungen,
     paket,
@@ -147,6 +150,11 @@ RUECKGAENGIG_SCHRITTE = 50
 
 
 class Hauptfenster(QMainWindow):
+    #: Eine neuere Fassung ist zu haben. Das Signal kommt aus dem Faden
+    #: der Nachfrage - gezeichnet wird daraufhin im Fenster, dort wo Qt
+    #: es erwartet.
+    update_gefunden = Signal(object)
+
     def __init__(self) -> None:
         super().__init__()
         # Was beim Lesen der Einstellungen und der Vorlagen auffiel, kommt
@@ -389,6 +397,11 @@ class Hauptfenster(QMainWindow):
         self.statusBar().showMessage(u("Bereit"))
         self.resize(1320, 820)
 
+        # Erst das Fenster, dann die Nachfrage: sie laeuft nebenher und
+        # meldet sich nur, wenn es etwas Neueres gibt.
+        self.update_gefunden.connect(self._update_melden)
+        QTimer.singleShot(2000, self._update_anstossen)
+
     def _aktionen_bauen(self) -> None:
         datei = self.menuBar().addMenu(u("&Datei"))
         werkzeuge = QToolBar(u("Werkzeuge"))
@@ -630,6 +643,19 @@ class Hauptfenster(QMainWindow):
         )
         self.aktion_belegung_waechst.triggered.connect(self.belegung_wachsen)
         einstellungen.addAction(self.aktion_belegung_waechst)
+        # Einmal am Tag nachsehen, ob es eine neuere Fassung gibt. Wer
+        # das nicht will, schaltet es hier ab - dann geht das Programm
+        # nie ins Netz.
+        self.aktion_updates = QAction(u("Einmal am Tag nach &Updates sehen"), self)
+        self.aktion_updates.setCheckable(True)
+        self.aktion_updates.setChecked(
+            self.einstellungen.value("update_pruefen", True, type=bool)
+        )
+        self.aktion_updates.setStatusTip(
+            u("Fragt die öffentliche Releaseliste; heruntergeladen wird nichts")
+        )
+        self.aktion_updates.triggered.connect(self.updates_pruefen)
+        einstellungen.addAction(self.aktion_updates)
         # Die Uebersicht steht schon; was in der Conf stand, gilt ab jetzt.
         self.uebersicht.wachsen_setzen(self.aktion_belegung_waechst.isChecked())
         einstellungen.addAction(self.aktion_vorlagen)
@@ -1052,6 +1078,56 @@ class Hauptfenster(QMainWindow):
         self._titel_setzen()
         self.aktionen_auffrischen()
         self._vorschau_anstossen()
+
+    def updates_pruefen(self, an: bool) -> None:
+        """Schaltet die taegliche Nachfrage nach einer neueren Fassung."""
+        self.einstellungen.setValue("update_pruefen", bool(an))
+        self.statusBar().showMessage(
+            u("Einmal am Tag wird nach einer neueren Fassung gesehen") if an
+            else u("Es wird nicht mehr nach Updates gesehen"),
+            6000,
+        )
+        if an:
+            self._update_anstossen()
+
+    def _update_anstossen(self) -> None:
+        """Sieht nach, wenn es dran ist - in einem eigenen Faden.
+
+        Der Start soll daran nicht haengen: die Anfrage laeuft neben dem
+        Fenster her, und was dabei herauskommt, meldet ein Signal. Geht
+        etwas schief, kommt nichts - gemeldet wird nur ein Fund.
+        """
+        if not self.aktion_updates.isChecked() or not aktualisierung.erlaubt():
+            return
+        if not aktualisierung.faellig(
+            str(self.einstellungen.value("update_geprueft", "") or "")
+        ):
+            return
+        # Gemerkt wird vor der Anfrage: ohne Netz soll es nicht bei jedem
+        # Start aufs Neue versucht werden.
+        self.einstellungen.setValue(
+            "update_geprueft", datetime.date.today().isoformat()
+        )
+
+        def nachsehen():
+            gefunden = aktualisierung.neuere_fassung()
+            if not gefunden:
+                return
+            try:
+                self.update_gefunden.emit(gefunden)
+            except RuntimeError:
+                pass        # Fenster ist inzwischen zu - dann eben nicht
+
+        threading.Thread(target=nachsehen, daemon=True).start()
+
+    def _update_melden(self, gefunden: dict) -> None:
+        """Sagt in der Statuszeile, dass es etwas Neueres gibt."""
+        self.statusBar().showMessage(
+            u("Neuere Fassung {0} ist verfügbar: {1}").format(
+                gefunden.get("fassung", ""), gefunden.get("seite", "")
+            ),
+            30000,
+        )
 
     def belegung_wachsen(self, an: bool) -> None:
         """Duerfen die Felder der Verteilerbelegung fuer lange Namen wachsen?

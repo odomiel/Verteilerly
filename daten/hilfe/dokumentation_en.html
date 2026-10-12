@@ -1306,6 +1306,7 @@ extensions</i>.</p>
 <tr><td>Reverse the frame layout</td><td></td></tr>
 <tr><td>Show shortening at the cable</td><td></td></tr>
 <tr><td>Fit the layout to long names</td><td></td></tr>
+<tr><td>Look for updates once a day</td><td></td></tr>
 <tr><td>Templates for the jumper field…</td><td></td></tr>
 <tr><td rowspan="4"><b>View</b></td><td>Dark appearance</td><td>Ctrl+D</td></tr>
 <tr><td>Show frame overview</td><td>F7</td></tr>
@@ -1331,6 +1332,20 @@ status hint that appears in the grayed-out state as well and says what it is
 for.</p>
 
 <h2><a name="ueber"></a>13 &nbsp; Information about the program</h2>
+
+<p><b>Is there anything newer?</b> — <b>Settings ▸ Look for updates once a
+day</b>. With the check mark set, Verteilerly asks the project's public
+release list <b>once a day</b> and says so in the status bar if a newer
+version is there — with the address where to get it. <b>Nothing is
+downloaded</b>, and nothing is sent beyond the request itself. The look
+happens alongside the program: it does not hold up the start, and without a
+network it stays silent.</p>
+
+<p>Without the check mark the program <b>never</b> goes online. Only the day
+of the last look is remembered (in <code>Verteilerly.conf</code>), so that it
+really stays at once a day. Verification uses the <b>certificate store of the
+machine</b>; where none is found, the look is skipped — Verteilerly brings no
+root certificates of its own, they would only go stale.</p>
 
 <p><b>Help ▸ Documentation</b> (F1) opens this page: on the left the table of
 contents, on the right the text.</p>

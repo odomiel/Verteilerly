@@ -87,6 +87,16 @@ zstd                                     BSD-3-Clause
     Text: zstd.txt
     Quelltext: https://github.com/facebook/zstd
 
+OpenSSL 3 (libssl, libcrypto)            Apache-2.0
+    Traegt die Python-Module _ssl und _hashlib. Gebraucht fuer die
+    taegliche Nachfrage, ob eine neuere Fassung veroeffentlicht ist -
+    sie laeuft ueber HTTPS. Im AppImage aus der Python-AppImage, in der
+    .exe von PyInstaller mitgenommen. Wurzelzertifikate bringt
+    Verteilerly keine mit: geprueft wird gegen den Speicher des
+    Rechners.
+    Text: OpenSSL.txt
+    Quelltext: https://www.openssl.org/source/
+
 
 Nur im AppImage (Linux)
 =======================

@@ -56,6 +56,11 @@ outdated entries.
 the sheet layout together with data lists, and **CSV** lists for further
 processing.
 
+**A look for updates once a day** (*Settings*, switchable): the program asks
+the public release list and says in the status bar when a newer version is
+out. Nothing is downloaded, nothing is sent beyond the request; switched off
+it **never** goes online.
+
 **And for everyday work.** Searching across the whole frame, undo and redo of
 the last fifty steps, **opening read-only**, a light and a dark appearance,
 backup and restore of all templates and settings, and a log that says what the

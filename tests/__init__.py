@@ -25,6 +25,11 @@ atexit.register(shutil.rmtree, _TESTHEIM, True)
 # wird das Laden fremder Erweiterungen an eigenen Ordnern.
 os.environ.setdefault("VERTEILERLY_OHNE_FREMDE_ERWEITERUNGEN", "1")
 
+# Und die Testreihe geht nicht ins Netz: die taegliche Nachfrage nach
+# einer neueren Fassung bleibt aus. Eine Reihe, die an einer fremden
+# Antwort haengt, prueft das Wetter und nicht das Programm.
+os.environ.setdefault("VERTEILERLY_OHNE_UPDATEPRUEFUNG", "1")
+
 
 def einstellung_bewahren(test, einstellungen, schluessel: str) -> None:
     """Stellt nach dem Test den Wert zurueck, der vorher in der Conf stand.

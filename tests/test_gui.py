@@ -1706,6 +1706,77 @@ class TestBelegungWaechst(unittest.TestCase):
         self.assertGreater(ansicht.zelle_b, 2 * ZELLE_B * 0.9)
 
 
+class TestUpdatepruefung(unittest.TestCase):
+    """Einmal am Tag nachsehen - und abschaltbar."""
+
+    def setUp(self):
+        from verteilerly.gui.hauptfenster import Hauptfenster
+
+        from . import einstellung_bewahren
+
+        self.fenster = Hauptfenster()
+        self.addCleanup(self.fenster.close)
+        for schluessel in ("update_pruefen", "update_geprueft"):
+            einstellung_bewahren(self, self.fenster.einstellungen, schluessel)
+
+    def test_der_schalter_steht_an(self):
+        self.assertTrue(self.fenster.aktion_updates.isChecked())
+
+    def test_abgeschaltet_wird_gemerkt_und_nichts_gefragt(self):
+        from verteilerly import aktualisierung
+
+        f = self.fenster
+        f.aktion_updates.setChecked(False)
+        f.updates_pruefen(False)
+        self.assertFalse(
+            f.einstellungen.value("update_pruefen", True, type=bool)
+        )
+        with mock.patch.object(aktualisierung, "neuere_fassung") as gefragt:
+            f._update_anstossen()
+            gefragt.assert_not_called()
+
+    def test_die_testreihe_fragt_auch_eingeschaltet_nicht(self):
+        """VERTEILERLY_OHNE_UPDATEPRUEFUNG steht in tests/__init__."""
+        from verteilerly import aktualisierung
+
+        f = self.fenster
+        f.aktion_updates.setChecked(True)
+        with mock.patch.object(aktualisierung, "neuere_fassung") as gefragt:
+            f._update_anstossen()
+            gefragt.assert_not_called()
+
+    def test_zweimal_am_tag_wird_nicht_gefragt(self):
+        """Das Datum wird vor der Anfrage gemerkt - auch ohne Netz."""
+        import datetime
+
+        from verteilerly import aktualisierung
+
+        f = self.fenster
+        f.aktion_updates.setChecked(True)
+        heute = datetime.date.today().isoformat()
+        f.einstellungen.setValue("update_geprueft", "")
+        with mock.patch.object(aktualisierung, "erlaubt", return_value=True), \
+                mock.patch.object(aktualisierung, "neuere_fassung",
+                                  return_value=None) as gefragt, \
+                mock.patch("threading.Thread") as faden:
+            faden.side_effect = lambda target, daemon: mock.Mock(
+                start=lambda: target()
+            )
+            f._update_anstossen()
+            self.assertEqual(gefragt.call_count, 1)
+            self.assertEqual(f.einstellungen.value("update_geprueft"), heute)
+            f._update_anstossen()           # gleich noch einmal
+            self.assertEqual(gefragt.call_count, 1)
+
+    def test_ein_fund_steht_in_der_statuszeile(self):
+        self.fenster._update_melden(
+            {"fassung": "2099.01.01", "seite": "https://example.invalid/r"}
+        )
+        meldung = self.fenster.statusBar().currentMessage()
+        self.assertIn("2099.01.01", meldung)
+        self.assertIn("example.invalid", meldung)
+
+
 class TestBelegungWaechstSofort(unittest.TestCase):
     """Ein neuer Name wirkt gleich - ohne den Verteiler neu zu laden."""
 
@@ -3871,6 +3942,7 @@ class TestMenuezustaende(unittest.TestCase):
             "Verteilerbelegung umkehren",
             "Kürzung am Kabel anzeigen",
             "Belegung an lange Namen anpassen",
+            "Einmal am Tag nach Updates sehen",
             "Vorlagen für das Rangierfeld…"],
         )
 

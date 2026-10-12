@@ -137,10 +137,9 @@ excludes = [
     "PIL.AvifImagePlugin",
     "PIL.WebPImagePlugin",
     "sqlite3",
-    # Das Programm geht nie ins Netz - ohne _ssl und _hashlib bleiben auch
-    # OpenSSLs DLLs draussen. hashlib rechnet mit Pythons eigenen Modulen.
-    "_ssl",
-    "_hashlib",
+    # _ssl und _hashlib bleiben: das Programm sieht einmal am Tag nach
+    # einer neueren Fassung, und das geht nur ueber HTTPS. Den
+    # Zertifikatspeicher stellt Windows.
     # PIL/Pillow NICHT ausschliessen: reportlab.lib.utils importiert es beim
     # Laden von reportlab.lib.colors - ohne Pillow bricht die .exe beim ersten
     # Import des Hauptfensters ab (ModuleNotFoundError: No module named 'PIL').

@@ -1346,6 +1346,7 @@ und sie lässt sich unter <i>Erweiterungen verwalten</i> ausschalten.</p>
 <tr><td>Verteilerbelegung umkehren</td><td></td></tr>
 <tr><td>Kürzung am Kabel anzeigen</td><td></td></tr>
 <tr><td>Belegung an lange Namen anpassen</td><td></td></tr>
+<tr><td>Einmal am Tag nach Updates sehen</td><td></td></tr>
 <tr><td>Vorlagen für das Rangierfeld…</td><td></td></tr>
 <tr><td rowspan="4"><b>Ansicht</b></td><td>Dunkles Erscheinungsbild</td><td>Strg+D</td></tr>
 <tr><td>Verteilerübersicht anzeigen</td><td>F7</td></tr>
@@ -1371,6 +1372,21 @@ Eintrag trägt einen Statushinweis, der auch im ausgegrauten Zustand erscheint
 und sagt, wofür er da ist.</p>
 
 <h2><a name="ueber"></a>13 &nbsp; Auskunft über das Programm</h2>
+
+<p><b>Gibt es etwas Neueres?</b> — <b>Einstellungen ▸ Einmal am Tag nach
+Updates sehen</b>. Steht der Haken, fragt Verteilerly <b>einmal am Tag</b> die
+öffentliche Releaseliste des Projekts und sagt in der Statuszeile Bescheid,
+wenn dort eine neuere Fassung liegt — mit der Adresse, unter der sie zu holen
+ist. <b>Heruntergeladen wird nichts</b>, und gesendet wird nichts außer der
+Anfrage selbst. Die Nachfrage läuft neben dem Programm her: sie hält den Start
+nicht auf, und ohne Netz bleibt sie still.</p>
+
+<p>Ohne den Haken geht das Programm <b>nie</b> ins Netz. Gemerkt wird nur der
+Tag der letzten Nachfrage (in der <code>Verteilerly.conf</code>), damit es
+wirklich bei einmal am Tag bleibt. Geprüft wird gegen den
+<b>Zertifikatspeicher des Rechners</b>; findet sich keiner, unterbleibt die
+Nachfrage — eigene Wurzelzertifikate bringt Verteilerly nicht mit, die
+veralteten nur.</p>
 
 <p><b>Hilfe ▸ Dokumentation</b> (F1) öffnet diese Seite: links das
 Verzeichnis, rechts der Text.</p>

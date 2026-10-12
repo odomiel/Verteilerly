@@ -129,12 +129,12 @@ class TestSpec(unittest.TestCase):
                 self.assertIn(modul, heraus)
         self.assertNotIn("PySide6.QtWidgets", heraus)
 
-    def test_openssl_bleibt_draussen(self):
-        """Ohne _ssl und _hashlib kommen auch OpenSSLs DLLs nicht mit."""
+    def test_openssl_kommt_mit(self):
+        """Die Nachfrage nach einer neueren Fassung laeuft ueber HTTPS."""
         heraus = self.aufrufe["analysis"]["excludes"]
-        for modul in ("_ssl", "_hashlib"):
+        for modul in ("_ssl", "_hashlib", "ssl"):
             with self.subTest(modul=modul):
-                self.assertIn(modul, heraus)
+                self.assertNotIn(modul, heraus)
 
     def test_die_gpl_tastatur_bleibt_draussen(self):
         """Qt Virtual Keyboard steht nur unter der GPL-3 - samt Anhang raus."""
@@ -282,16 +282,33 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual(gefahr, [])
         self.assertNotIn("pillow.libs/libjpeg-*.so*", appimage.PILLOW_WEG)
 
-    def test_openssl_und_sqlite_bleiben_draussen(self):
-        """Das Programm geht nie ins Netz und führt keine Datenbank."""
+    def test_openssl_kommt_mit_sqlite_nicht(self):
+        """Seit der Updatepruefung braucht das Programm HTTPS.
+
+        Eine Datenbank dagegen fuehrt es weiterhin nicht: ein Verteiler
+        ist eine Datei.
+        """
         import appimage
 
-        for modul in ("_ssl", "_hashlib", "_sqlite3"):
+        for modul in ("_ssl", "_hashlib"):
             with self.subTest(modul=modul):
-                self.assertIn(modul, appimage.UNNOETIGE_MODULE)
-        for lib in ("libcrypto", "libssl", "libsqlite3"):
+                self.assertNotIn(modul, appimage.UNNOETIGE_MODULE)
+        for lib in ("libcrypto", "libssl"):
             with self.subTest(bibliothek=lib):
-                self.assertIn(lib, appimage.UNNOETIGE_BIBLIOTHEKEN)
+                self.assertNotIn(lib, appimage.UNNOETIGE_BIBLIOTHEKEN)
+        self.assertIn("_sqlite3", appimage.UNNOETIGE_MODULE)
+        self.assertIn("libsqlite3", appimage.UNNOETIGE_BIBLIOTHEKEN)
+
+    def test_certifi_bleibt_trotzdem_draussen(self):
+        """Geprueft wird gegen den Zertifikatspeicher des Rechners.
+
+        Ein eigener Satz Wurzelzertifikate im Abbild veraltete und
+        muesste gepflegt werden - certifi steht ausserdem unter der
+        MPL-2.0.
+        """
+        import appimage
+
+        self.assertIn("certifi", appimage.BASIS_WEG)
 
     def test_was_die_python_basis_mitbringt_bleibt_draussen(self):
         """certifi steht unter der MPL-2.0 und wird nie gebraucht."""

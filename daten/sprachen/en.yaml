@@ -47,6 +47,11 @@ Vorlagen für das Rangierfeld: Templates for the jumper field
 : "What stands here can be entered in the jumper field without being a target — via the right click menu or typed.\nOne template per line."
 '&Kürzung am Kabel anzeigen': 'Show &shortening at the cable'
 Belegung an lange &Namen anpassen: Fit the layout to long &names
+Einmal am Tag nach &Updates sehen: Look for &updates once a day
+Fragt die öffentliche Releaseliste; heruntergeladen wird nichts: Asks the public release list; nothing is downloaded
+Einmal am Tag wird nach einer neueren Fassung gesehen: A look for a newer version happens once a day
+Es wird nicht mehr nach Updates gesehen: No more looking for updates
+'Neuere Fassung {0} ist verfügbar: {1}': 'A newer version {0} is available: {1}'
 ? "Passt ein Kabelname auch umgebrochen nicht in seinen Block, werden die Felder der Verteilerbelegung größer"
 : "Where a cable name does not fit into its block even wrapped, the cells of the frame layout grow"
 Die Belegung passt sich langen Kabelnamen an: The layout adapts to long cable names
