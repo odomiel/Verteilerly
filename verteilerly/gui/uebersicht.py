@@ -41,6 +41,16 @@ ABSTAND_BUCHTEN = 30
 #: So klein und so gross laesst sich die Uebersicht ziehen.
 ZOOM_KLEINSTENS = 0.5
 ZOOM_GROESSTENS = 3.0
+#: Ein Name darf **einmal** umbrechen. Reicht das nicht, wachsen die
+#: Zellen - bis hierher, in diesen Schritten. Der Deckel muss sein:
+#: ein langer Name auf einer einzigen Doppelader blaehte sonst den
+#: ganzen Verteiler auf.
+#: Wie der Name in seinem Block steht - und wie er umbricht.
+LAGE = Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+UMBRUCH = LAGE | Qt.TextFlag.TextWordWrap
+ZEILEN_HOECHSTENS = 2
+WACHSTUM_HOECHSTENS = 2.5
+WACHSTUM_SCHRITT = 0.05
 
 
 class Uebersicht(QWidget):
@@ -80,6 +90,11 @@ class Uebersicht(QWidget):
         #: Wie gross gezeichnet wird. Die Masse unten rechnen damit, die
         #: Schrift waechst mit - so bleibt das Bild in sich stimmig.
         self.zoom = 1.0
+        #: Duerfen die Zellen wachsen, wenn ein Kabelname auch
+        #: umgebrochen nicht hineingeht? Und um wie viel tun sie es
+        #: gerade (1.0 = gar nicht).
+        self.waechst = True
+        self.wachstum = 1.0
         self._grundschrift = QFont(self.font())
         self.setMouseTracking(True)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
@@ -162,11 +177,17 @@ class Uebersicht(QWidget):
 
     @property
     def zelle_b(self) -> int:
-        return max(6, round(ZELLE_B * self.zoom))
+        return self._zellenbreite(self.wachstum)
 
     @property
     def zelle_h(self) -> int:
-        return max(8, round(ZELLE_H * self.zoom))
+        return self._zellenhoehe(self.wachstum)
+
+    def _zellenbreite(self, wachstum: float) -> int:
+        return max(6, round(ZELLE_B * self.zoom * wachstum))
+
+    def _zellenhoehe(self, wachstum: float) -> int:
+        return max(8, round(ZELLE_H * self.zoom * wachstum))
 
     @property
     def label_b(self) -> int:
@@ -230,7 +251,72 @@ class Uebersicht(QWidget):
     def aktualisieren(self) -> None:
         self._neu_vermessen()
 
+    def wachsen_setzen(self, an: bool) -> None:
+        """Duerfen die Zellen fuer lange Kabelnamen wachsen?"""
+        self.waechst = bool(an)
+        self._neu_vermessen()
+
+    # -- Wachsen: erst umbrechen, dann groessere Felder --------------------
+
+    def _kabelnamen(self) -> list[tuple[str, int]]:
+        """Je Kabelabschnitt: sein Name und wie viele Doppeladern er hat."""
+        if self.verteiler is None:
+            return []
+        gefunden: list[tuple[str, int]] = []
+        for kabel in self.verteiler.kabel:
+            name = kabel.beschriftung.strip()
+            if not name:
+                continue
+            for abschnitt in kabel.abschnitte:
+                gefunden.append((name, abschnitt.anzahl_da))
+        return gefunden
+
+    def name_passt(self, name: str, da_zahl: int, wachstum: float) -> bool:
+        """Geht der Name bei diesem Wachstum in seinen Block - mit **einem**
+        Umbruch?
+
+        Gefragt sind drei Dinge: nicht breiter als der Block, nicht hoeher
+        als er, und hoechstens ``ZEILEN_HOECHSTENS`` Zeilen. Das dritte
+        ist der eigentliche Massstab - ohne es waere jeder Name
+        irgendwann untergebracht, nur eben siebenzeilig.
+        """
+        block = QRect(
+            0, 0,
+            self._zellenbreite(wachstum) * max(1, da_zahl),
+            self._zellenhoehe(wachstum),
+        )
+        platz = block.adjusted(4, 2, -3, -2)
+        masse = QFontMetrics(self.font())
+        gebraucht = masse.boundingRect(platz, UMBRUCH, name)
+        zeilen = max(1, round(gebraucht.height() / max(1, masse.lineSpacing())))
+        return (
+            zeilen <= ZEILEN_HOECHSTENS
+            and gebraucht.width() <= platz.width()
+            and gebraucht.height() <= platz.height()
+        )
+
+    def wachstum_suchen(self) -> float:
+        """Der kleinste Faktor, mit dem jeder Kabelname hineingeht.
+
+        Gesucht wird in Schritten von unten: der erste Faktor, bei dem
+        alle Namen passen, gewinnt. Keiner tut es bis zum Deckel, bleibt
+        es beim Deckel - was dann noch zu lang ist, bricht weiter um oder
+        wird abgeschnitten, wie bisher.
+        """
+        if not self.waechst:
+            return 1.0
+        namen = self._kabelnamen()
+        if not namen:
+            return 1.0
+        faktor = 1.0
+        while faktor < WACHSTUM_HOECHSTENS:
+            if all(self.name_passt(name, da, faktor) for name, da in namen):
+                return faktor
+            faktor = round(faktor + WACHSTUM_SCHRITT, 2)
+        return WACHSTUM_HOECHSTENS
+
     def _neu_vermessen(self) -> None:
+        self.wachstum = self.wachstum_suchen()
         self._kaesten = self._layout()
         self.updateGeometry()
         self.update()
@@ -551,8 +637,8 @@ class Uebersicht(QWidget):
         bleibt es bei einer Zeile mit Auslassungszeichen.
         """
         masse = QFontMetrics(self.font())
-        lage = Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
-        umbruch = lage | Qt.TextFlag.TextWordWrap
+        lage = LAGE
+        umbruch = UMBRUCH
         if masse.boundingRect(platz, umbruch, name).height() <= platz.height():
             return name, umbruch
         return (

@@ -1633,6 +1633,79 @@ class TestKabelnamenInDerUebersicht(unittest.TestCase):
         self.uebersicht.render(bild)
 
 
+class TestBelegungWaechst(unittest.TestCase):
+    """Erst umbrechen, dann groessere Felder - und abschaltbar."""
+
+    def setUp(self):
+        from verteilerly.gui.uebersicht import Uebersicht
+
+        self.uebersicht = Uebersicht()
+        self.addCleanup(self.uebersicht.close)
+
+    def _mit(self, name, da=2, start=3):
+        verteiler = Verteiler.aus_geometrie(1, 2, 10)
+        verteiler.kabel_anlegen(name, 1, start, da)
+        self.uebersicht.verteiler_setzen(verteiler)
+        return self.uebersicht
+
+    def test_ein_kurzer_name_laesst_alles_wie_es_war(self):
+        from verteilerly.gui.uebersicht import ZELLE_B, ZELLE_H
+
+        ansicht = self._mit("K1")
+        self.assertEqual(ansicht.wachstum, 1.0)
+        self.assertEqual((ansicht.zelle_b, ansicht.zelle_h), (ZELLE_B, ZELLE_H))
+
+    def test_ein_langer_name_laesst_die_zellen_wachsen(self):
+        from verteilerly.gui.uebersicht import ZELLE_B
+
+        ansicht = self._mit("Haus 7 Erdgeschoss Technikraum")
+        self.assertGreater(ansicht.wachstum, 1.0)
+        self.assertGreater(ansicht.zelle_b, ZELLE_B)
+        # Gewachsen wird nur so weit, bis es passt.
+        self.assertTrue(
+            ansicht.name_passt("Haus 7 Erdgeschoss Technikraum", 2, ansicht.wachstum)
+        )
+
+    def test_gewachsen_wird_nicht_ohne_ende(self):
+        from verteilerly.gui.uebersicht import WACHSTUM_HOECHSTENS
+
+        ansicht = self._mit("Hauptverteilerzuleitung Technikgeschoss Nordseite", 1)
+        self.assertLessEqual(ansicht.wachstum, WACHSTUM_HOECHSTENS)
+
+    def test_zwei_zeilen_sind_genug_drei_nicht(self):
+        """Der Massstab ist der eine Umbruch, nicht blosses Hineinpassen."""
+        ansicht = self._mit("Haus 7 Erdgeschoss Technikraum")
+        lang = "Haus 7 Erdgeschoss Technikraum"
+        self.assertFalse(ansicht.name_passt(lang, 2, 1.0))
+        self.assertTrue(ansicht.name_passt(lang, 2, ansicht.wachstum))
+
+    def test_abgeschaltet_bleibt_das_raster(self):
+        from verteilerly.gui.uebersicht import ZELLE_B
+
+        ansicht = self._mit("Haus 7 Erdgeschoss Technikraum")
+        ansicht.wachsen_setzen(False)
+        self.assertEqual(ansicht.wachstum, 1.0)
+        self.assertEqual(ansicht.zelle_b, ZELLE_B)
+        # Und wieder an: es waechst erneut.
+        ansicht.wachsen_setzen(True)
+        self.assertGreater(ansicht.zelle_b, ZELLE_B)
+
+    def test_ein_kabel_ohne_namen_laesst_nichts_wachsen(self):
+        ansicht = self._mit("")
+        self.assertEqual(ansicht.wachstum, 1.0)
+
+    def test_der_zoom_kommt_obendrauf(self):
+        from verteilerly.gui.uebersicht import ZELLE_B
+
+        ansicht = self._mit("Haus 7 Erdgeschoss Technikraum")
+        ohne_zoom = ansicht.zelle_b
+        ansicht.zoom_setzen(2.0)
+        # Die Schrift waechst mit, das Wachstum wird neu gesucht - die
+        # Zelle ist aber in jedem Fall deutlich groesser als die Vorgabe.
+        self.assertGreater(ansicht.zelle_b, ohne_zoom)
+        self.assertGreater(ansicht.zelle_b, 2 * ZELLE_B * 0.9)
+
+
 class TestKabelZiehen(unittest.TestCase):
     """Ein Kabel in der Übersicht woandershin ziehen."""
 
@@ -3734,6 +3807,7 @@ class TestMenuezustaende(unittest.TestCase):
             "Leisten beschriften",
             "Verteilerbelegung umkehren",
             "Kürzung am Kabel anzeigen",
+            "Belegung an lange Namen anpassen",
             "Vorlagen für das Rangierfeld…"],
         )
 

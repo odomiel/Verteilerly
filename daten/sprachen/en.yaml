@@ -46,6 +46,12 @@ Vorlagen für das Rangierfeld: Templates for the jumper field
 ? "Was hier steht, lässt sich im Rangierfeld eintragen, ohne ein Ziel zu sein — über das Rechtsklickmenü oder getippt.\nEine Vorlage je Zeile."
 : "What stands here can be entered in the jumper field without being a target — via the right click menu or typed.\nOne template per line."
 '&Kürzung am Kabel anzeigen': 'Show &shortening at the cable'
+Belegung an lange &Namen anpassen: Fit the layout to long &names
+? "Passt ein Kabelname auch umgebrochen nicht in seinen Block, werden die Felder der Verteilerbelegung größer"
+: "Where a cable name does not fit into its block even wrapped, the cells of the frame layout grow"
+Die Belegung passt sich langen Kabelnamen an: The layout adapts to long cable names
+? "Die Belegung behält ihre Feldgröße — lange Namen werden gekürzt"
+: "The layout keeps its cell size — long names are shortened"
 '„gekürzt: 3 von 4 DA“ am Kabel — ohne diesen Zusatz steht der Name dort größer': '“shortened: 3 of 4 pairs” at the cable — without that addition the name stands larger there'
 Kürzung am Kabel wird angezeigt: Shortening is shown at the cable
 Kürzung am Kabel wird nicht angezeigt — der Name steht dort größer: Shortening is not shown at the cable — the name stands larger there

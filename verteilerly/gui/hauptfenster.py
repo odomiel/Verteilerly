@@ -614,6 +614,24 @@ class Hauptfenster(QMainWindow):
         )
         self.aktion_kuerzung.triggered.connect(self.kuerzung_zeigen)
         einstellungen.addAction(self.aktion_kuerzung)
+        # Lange Kabelnamen in der Verteilerbelegung: erst umbrechen, dann
+        # groessere Felder. Wer die gewohnte Rastergroesse will, schaltet
+        # es ab und nimmt den gekuerzten Namen in Kauf.
+        self.aktion_belegung_waechst = QAction(
+            u("Belegung an lange &Namen anpassen"), self
+        )
+        self.aktion_belegung_waechst.setCheckable(True)
+        self.aktion_belegung_waechst.setChecked(
+            self.einstellungen.value("belegung_waechst", True, type=bool)
+        )
+        self.aktion_belegung_waechst.setStatusTip(
+            u("Passt ein Kabelname auch umgebrochen nicht in seinen Block, "
+              "werden die Felder der Verteilerbelegung größer")
+        )
+        self.aktion_belegung_waechst.triggered.connect(self.belegung_wachsen)
+        einstellungen.addAction(self.aktion_belegung_waechst)
+        # Die Uebersicht steht schon; was in der Conf stand, gilt ab jetzt.
+        self.uebersicht.wachsen_setzen(self.aktion_belegung_waechst.isChecked())
         einstellungen.addAction(self.aktion_vorlagen)
 
         # Wie die Vorschau lassen sich Verteileruebersicht und Leistenansicht
@@ -1030,6 +1048,22 @@ class Hauptfenster(QMainWindow):
         self._titel_setzen()
         self.aktionen_auffrischen()
         self._vorschau_anstossen()
+
+    def belegung_wachsen(self, an: bool) -> None:
+        """Duerfen die Felder der Verteilerbelegung fuer lange Namen wachsen?
+
+        Eine Anzeigesache des Bearbeitungsfensters: sie steht in der
+        ``Verteilerly.conf`` und ruehrt weder das Projekt noch das Blatt
+        an - auf dem Blatt entscheidet die Blattvorlage ueber die Groesse.
+        """
+        self.einstellungen.setValue("belegung_waechst", bool(an))
+        self.uebersicht.wachsen_setzen(bool(an))
+        self.statusBar().showMessage(
+            u("Die Belegung passt sich langen Kabelnamen an") if an
+            else u("Die Belegung behält ihre Feldgröße — lange Namen werden "
+                   "gekürzt"),
+            6000,
+        )
 
     def kuerzung_zeigen(self, an: bool) -> None:
         """Schaltet den Zusatz am gekuerzten Kabel ein und aus.
