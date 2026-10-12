@@ -16,7 +16,7 @@ umgelegtes Kabel nimmt seine Adern und Rangierungen mit.
 
 Das Programm läuft unter **Linux und Windows ohne Installation**, speichert in
 eine einzelne Projektdatei und gibt **PDF**, **Excel-Mappe** und **CSV** aus.
-Die Oberfläche ist deutsch, auf Wunsch englisch. Lizenz:
+Das Programm ist auf Deutsch und English verfügbar. Lizenz:
 **GPL-3.0-or-later**.
 
 ## Was es kann
