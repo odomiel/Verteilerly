@@ -1044,7 +1044,11 @@ class Hauptfenster(QMainWindow):
     def _belegung_geaendert(self) -> None:
         self._stand_merken()
         self.veraendert = True
-        self.uebersicht.update()
+        # Neu vermessen, nicht nur neu zeichnen: ein frisch getippter
+        # Kabelname kann die Felder der Belegung wachsen lassen, und das
+        # soll sofort zu sehen sein - nicht erst, wenn der Verteiler das
+        # naechste Mal geladen wird.
+        self.uebersicht.aktualisieren()
         self._titel_setzen()
         self.aktionen_auffrischen()
         self._vorschau_anstossen()

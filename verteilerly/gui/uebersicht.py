@@ -95,6 +95,8 @@ class Uebersicht(QWidget):
         #: gerade (1.0 = gar nicht).
         self.waechst = True
         self.wachstum = 1.0
+        #: Woraus das Wachstum gerechnet wurde - Namen, Zoom, Schalter.
+        self._wachstumsschluessel: tuple | None = None
         self._grundschrift = QFont(self.font())
         self.setMouseTracking(True)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
@@ -316,7 +318,13 @@ class Uebersicht(QWidget):
         return WACHSTUM_HOECHSTENS
 
     def _neu_vermessen(self) -> None:
-        self.wachstum = self.wachstum_suchen()
+        # Gesucht wird nur, wenn sich etwas daran geaendert hat: beim
+        # Tippen laeuft das hier nach jedem angenommenen Zeichen durch,
+        # und die Namen stehen dabei meist still.
+        schluessel = (tuple(self._kabelnamen()), self.zoom, self.waechst)
+        if schluessel != self._wachstumsschluessel:
+            self._wachstumsschluessel = schluessel
+            self.wachstum = self.wachstum_suchen()
         self._kaesten = self._layout()
         self.updateGeometry()
         self.update()

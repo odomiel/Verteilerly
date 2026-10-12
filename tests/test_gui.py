@@ -1706,6 +1706,69 @@ class TestBelegungWaechst(unittest.TestCase):
         self.assertGreater(ansicht.zelle_b, 2 * ZELLE_B * 0.9)
 
 
+class TestBelegungWaechstSofort(unittest.TestCase):
+    """Ein neuer Name wirkt gleich - ohne den Verteiler neu zu laden."""
+
+    def setUp(self):
+        from verteilerly.gui.hauptfenster import Hauptfenster
+        from verteilerly.gui import hauptfenster
+
+        verwerfen = mock.patch.object(
+            hauptfenster, "frage",
+            lambda *a, **k: QMessageBox.StandardButton.Discard,
+        )
+        verwerfen.start()
+        self.addCleanup(verwerfen.stop)
+        self.fenster = Hauptfenster()
+        self.addCleanup(self.fenster.close)
+        self.verteiler = Verteiler.aus_geometrie(1, 2, 10, name="Probe")
+        self.verteiler.kabel_anlegen("K1", 1, 3, 2)
+        self.fenster._projekt_setzen(Projekt(verteiler=self.verteiler), None)
+
+    def _umbenennen(self, name):
+        from verteilerly.gui.leistenansicht import SPALTE_KABEL
+
+        tabelle = self.fenster.leistenansicht.modell
+        zeile = next(
+            z for z in range(tabelle.rowCount())
+            if tabelle.adresse(z) == Aderadresse(1, 3, "a")
+        )
+        self.assertTrue(tabelle.setData(tabelle.index(zeile, SPALTE_KABEL), name))
+
+    def test_der_getippte_name_laesst_die_belegung_sofort_wachsen(self):
+        uebersicht = self.fenster.uebersicht
+        vorher = uebersicht.zelle_b
+        self.assertEqual(uebersicht.wachstum, 1.0)
+
+        self._umbenennen("Haus 7 Erdgeschoss Technikraum")
+        self.assertGreater(uebersicht.wachstum, 1.0)
+        self.assertGreater(uebersicht.zelle_b, vorher)
+
+    def test_ein_wieder_kurzer_name_laesst_sie_schrumpfen(self):
+        uebersicht = self.fenster.uebersicht
+        self._umbenennen("Haus 7 Erdgeschoss Technikraum")
+        self._umbenennen("K1")
+        self.assertEqual(uebersicht.wachstum, 1.0)
+
+    def test_ein_neu_aufgelegtes_kabel_wirkt_ebenso(self):
+        uebersicht = self.fenster.uebersicht
+        self.verteiler.kabel_anlegen("Hauptverteilerzuleitung Nord", 2, 1, 2)
+        self.fenster._belegung_geaendert()
+        self.assertGreater(uebersicht.wachstum, 1.0)
+
+    def test_gesucht_wird_nur_wenn_sich_die_namen_aendern(self):
+        """Beim Tippen laeuft das Vermessen nach jedem Zeichen durch."""
+        uebersicht = self.fenster.uebersicht
+        with mock.patch.object(
+            uebersicht, "wachstum_suchen", wraps=uebersicht.wachstum_suchen
+        ) as gesucht:
+            self.fenster._belegung_geaendert()
+            self.fenster._belegung_geaendert()
+            self.assertEqual(gesucht.call_count, 0)
+            self._umbenennen("Haus 7 Erdgeschoss Technikraum")
+            self.assertEqual(gesucht.call_count, 1)
+
+
 class TestKabelZiehen(unittest.TestCase):
     """Ein Kabel in der Übersicht woandershin ziehen."""
 
