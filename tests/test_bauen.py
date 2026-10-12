@@ -386,7 +386,11 @@ class TestLizenztexte(unittest.TestCase):
         treffer = re.search(r"^Qt-Fassung: (\d+\.\d+)", text, re.MULTILINE)
         self.assertIsNotNone(treffer)
         self.assertEqual(treffer.group(1), ".".join(qVersion().split(".")[:2]))
-        for teil in ("PCRE2", "HarfBuzz-NG", "LibJPEG-turbo", "Freetype 2", "XSVG"):
+        # Was in Core, Gui und Widgets steckt, steht immer darin. XSVG
+        # stand hier bis Qt 6.11: in qtsvg 6.12 gibt es keine einzige
+        # qt_attribution.json mehr, die Komponente ist aus dem Modul
+        # verschwunden - geprueft am Quelltext, nicht geraten.
+        for teil in ("PCRE2", "HarfBuzz-NG", "LibJPEG-turbo", "Freetype 2"):
             with self.subTest(teil=teil):
                 self.assertIn(teil, text)
 

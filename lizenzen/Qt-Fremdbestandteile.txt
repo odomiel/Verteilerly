@@ -1,22 +1,22 @@
-Qt 6.11.2 - Fremdbestandteile
+Qt 6.12.0 - Fremdbestandteile
 ===========================
 
-Qt-Fassung: 6.11.2
+Qt-Fassung: 6.12.0
 
 Qt selbst steht unter der LGPL-3.0 (LGPL-3.0.txt, GPL-3.0.txt). Die
 folgenden Bestandteile anderer Projekte sind in die mitgelieferten
 Qt-Bibliotheken eingebaut und stehen unter ihren eigenen Lizenzen.
 Zusammengestellt aus den Dateien qt_attribution.json des Quelltextes
-(qtbase und qtsvg 6.11.2) mit werkzeuge/qt_fremdbestandteile.py.
+(qtbase und qtsvg 6.12.0) mit werkzeuge/qt_fremdbestandteile.py.
 
 ------------------------------------------------------------------------
-D3D12 Memory Allocator f128d39b7a95b4235bd228d231646278dc6c24b2
+D3D12 Memory Allocator v3.1.0
 Verwendung: Memory management for the D3D12 backend of QRhi.
 Lizenz: MIT License (MIT)
 Homepage: https://github.com/GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator
-Copyright (c) 2019-2022 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2019-2026 Advanced Micro Devices, Inc. All rights reserved.
 
-Copyright (c) 2019-2022 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2019-2026 Advanced Micro Devices, Inc. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -37,7 +37,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 ------------------------------------------------------------------------
-Vulkan Memory Allocator 3.2.1
+Vulkan Memory Allocator 3.3.0
 Verwendung: Memory management for the Vulkan backend of QRhi.
 Lizenz: MIT License (MIT)
 Homepage: https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator
@@ -1222,7 +1222,7 @@ used in advertising or otherwise to promote the sale, use or other dealings
 in this Software without prior written authorization from The Open Group.
 
 ------------------------------------------------------------------------
-HarfBuzz-NG 14.3.0
+HarfBuzz-NG 14.5.0
 Verwendung: Optionally used in Qt GUI. Configure with -system-harfbuzz to force the use of the system library, or -qt-harfbuzz to link statically to the library that is bundled with your Qt version.
 Lizenz: MIT License (MIT)
 Homepage: http://harfbuzz.org
@@ -1703,7 +1703,7 @@ Written by Colin Plumb in 1993, no copyright is claimed. Ian Jackson <ian@chiark
 Lizenztext: CC0-1.0 - siehe "Allgemeine Lizenztexte" am Ende.
 
 ------------------------------------------------------------------------
-PCRE2 10.47
+PCRE2 10.48
 Verwendung: Used in Qt Core (QRegularExpression).
 Lizenz: BSD 3-clause "New" or "Revised" License with PCRE2 binary-like Packages Exception (LicenseRef-BSD-3-Clause-with-PCRE2-Binary-Like-Packages-Exception)
 Homepage: http://www.pcre.org/
@@ -1817,7 +1817,7 @@ includes package A, the condition is not imposed on package B unless it uses
 PCRE2 independently.
 
 ------------------------------------------------------------------------
-PCRE2 - Stack-less Just-In-Time Compiler 10.47
+PCRE2 - Stack-less Just-In-Time Compiler 10.48
 Verwendung: Used in Qt Core (QRegularExpression).
 Lizenz: BSD 2-clause "Simplified" License (BSD-2-Clause)
 Homepage: http://www.pcre.org/
@@ -2717,35 +2717,6 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
-------------------------------------------------------------------------
-XSVG
-Verwendung: Used in the Qt SVG library.
-Lizenz: Historical Permission Notice and Disclaimer - sell variant (HPND-sell-variant)
-Copyright 2002 USC/Information Sciences Institute
-
-Copyright  2002 USC/Information Sciences Institute
-
-Permission to use, copy, modify, distribute, and sell this software
-and its documentation for any purpose is hereby granted without
-fee, provided that the above copyright notice appear in all copies
-and that both that copyright notice and this permission notice
-appear in supporting documentation, and that the name of
-Information Sciences Institute not be used in advertising or
-publicity pertaining to distribution of the software without
-specific, written prior permission.  Information Sciences Institute
-makes no representations about the suitability of this software for
-any purpose.  It is provided "as is" without express or implied
-warranty.
-
-INFORMATION SCIENCES INSTITUTE DISCLAIMS ALL WARRANTIES WITH REGARD
-TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL INFORMATION SCIENCES
-INSTITUTE BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
-DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA
-OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
-TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
 
 ------------------------------------------------------------------------
 Allgemeine Lizenztexte
@@ -3897,32 +3868,6 @@ EVENT SHALL <copyright holder> BE LIABLE FOR ANY SPECIAL, INDIRECT OR
 CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
 USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
 OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-
-------------------------------------------------------------------------
-HPND-sell-variant
-
-Copyright  2002 USC/Information Sciences Institute
-
-Permission to use, copy, modify, distribute, and sell this software
-and its documentation for any purpose is hereby granted without
-fee, provided that the above copyright notice appear in all copies
-and that both that copyright notice and this permission notice
-appear in supporting documentation, and that the name of
-Information Sciences Institute not be used in advertising or
-publicity pertaining to distribution of the software without
-specific, written prior permission.  Information Sciences Institute
-makes no representations about the suitability of this software for
-any purpose.  It is provided "as is" without express or implied
-warranty.
-
-INFORMATION SCIENCES INSTITUTE DISCLAIMS ALL WARRANTIES WITH REGARD
-TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL INFORMATION SCIENCES
-INSTITUTE BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
-DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA
-OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
-TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 PERFORMANCE OF THIS SOFTWARE.
 
 ------------------------------------------------------------------------
