@@ -152,6 +152,22 @@ Tages mit `b2`, `b3` …). Gesetzt wird sie aus den Git-Tags:
 .venv/bin/python3 werkzeuge/release.py --setzen   # schreiben, committen, taggen
 ```
 
+Ein **Release** entsteht aus den gebauten Dateien. Wo das Repo gespiegelt
+wird, überträgt der Spiegel nur Zweige und Tags — Releases und ihre Anhänge
+legt `werkzeuge/github_release.py` nach:
+
+```bash
+python3 werkzeuge/github_release.py --probe auslieferung/Verteilerly-*   # erst zeigen
+python3 werkzeuge/github_release.py auslieferung/Verteilerly-*           # dann anlegen
+```
+
+Es wartet, bis der Tag drüben ist, legt das Release an (oder nimmt ein
+vorhandenes), lädt die Dateien hoch und prüft jede per SHA256 gegen.
+Repo-Kennung und Token stehen **außerhalb** des Repos — in
+`$VERTEILERLY_GITHUB_SLUG` und `$GITHUB_TOKEN` oder als `github_repo` und
+`github_token` im Arbeitsordner; der Token braucht nur *Contents: Read and
+write*.
+
 ## Handbuch
 
 Das Benutzerhandbuch ist die Dokumentation, die das Programm unter *Hilfe ▸

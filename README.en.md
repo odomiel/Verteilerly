@@ -143,6 +143,21 @@ day with `b2`, `b3` …). It is set from the git tags:
 .venv/bin/python3 werkzeuge/release.py --setzen   # write, commit, tag
 ```
 
+A **release** is made from the built files. Where the repository is mirrored,
+the mirror only carries branches and tags — releases and their attachments are
+added by `werkzeuge/github_release.py`:
+
+```bash
+python3 werkzeuge/github_release.py --probe auslieferung/Verteilerly-*   # show first
+python3 werkzeuge/github_release.py auslieferung/Verteilerly-*           # then create
+```
+
+It waits until the tag has arrived, creates the release (or takes an existing
+one), uploads the files and verifies each by SHA256. The repository slug and
+the token live **outside** the repository — in `$VERTEILERLY_GITHUB_SLUG` and
+`$GITHUB_TOKEN` or as `github_repo` and `github_token` in the working folder;
+the token only needs *Contents: Read and write*.
+
 ## Manual
 
 The user manual is the documentation the program shows under *Help ▸
