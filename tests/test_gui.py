@@ -1768,6 +1768,77 @@ class TestUpdatepruefung(unittest.TestCase):
             f._update_anstossen()           # gleich noch einmal
             self.assertEqual(gefragt.call_count, 1)
 
+    def test_von_hand_sagt_auch_wenn_alles_aktuell_ist(self):
+        """Die taegliche Nachfrage schweigt dann - der Knopf nicht."""
+        from verteilerly import aktualisierung
+
+        f = self.fenster
+        gezeigt = []
+        with mock.patch.object(aktualisierung, "erlaubt", return_value=True), \
+                mock.patch.object(QMessageBox, "information",
+                                  lambda *a, **k: gezeigt.append(a[2])), \
+                mock.patch("threading.Thread") as faden:
+            faden.side_effect = lambda target, daemon: mock.Mock(
+                start=lambda: target()
+            )
+            with mock.patch.object(aktualisierung, "stand",
+                                   return_value=(aktualisierung.AKTUELL,
+                                                 {"fassung": "1", "seite": "x"})):
+                f.update_jetzt_suchen()
+        self.assertEqual(len(gezeigt), 1)
+        self.assertIn("neueste", gezeigt[0])
+
+    def test_von_hand_zeigt_den_fund_mit_adresse(self):
+        from verteilerly import aktualisierung
+
+        f = self.fenster
+        gezeigt = []
+        with mock.patch.object(aktualisierung, "erlaubt", return_value=True), \
+                mock.patch.object(QMessageBox, "information",
+                                  lambda *a, **k: gezeigt.append(a[2])), \
+                mock.patch("threading.Thread") as faden:
+            faden.side_effect = lambda target, daemon: mock.Mock(
+                start=lambda: target()
+            )
+            with mock.patch.object(
+                aktualisierung, "stand",
+                return_value=(aktualisierung.NEUER,
+                              {"fassung": "2099.01.01",
+                               "seite": "https://example.invalid/r"}),
+            ):
+                f.update_jetzt_suchen()
+        self.assertIn("2099.01.01", gezeigt[0])
+        self.assertIn("example.invalid", gezeigt[0])
+
+    def test_von_hand_sagt_auch_wenn_nichts_zu_erreichen_war(self):
+        from verteilerly import aktualisierung
+
+        f = self.fenster
+        gezeigt = []
+        with mock.patch.object(aktualisierung, "erlaubt", return_value=True), \
+                mock.patch.object(QMessageBox, "information",
+                                  lambda *a, **k: gezeigt.append(a[2])), \
+                mock.patch("threading.Thread") as faden:
+            faden.side_effect = lambda target, daemon: mock.Mock(
+                start=lambda: target()
+            )
+            with mock.patch.object(
+                aktualisierung, "stand",
+                return_value=(aktualisierung.UNERREICHBAR, None),
+            ):
+                f.update_jetzt_suchen()
+        self.assertIn("nicht zu erreichen", gezeigt[0])
+        # Der Eintrag ist danach wieder zu haben.
+        self.assertTrue(f.aktion_update_jetzt.isEnabled())
+
+    def test_abgeschaltet_sagt_der_knopf_das_auch(self):
+        f = self.fenster
+        gezeigt = []
+        with mock.patch.object(QMessageBox, "information",
+                               lambda *a, **k: gezeigt.append(a[2])):
+            f.update_jetzt_suchen()     # Testreihe: Nachfrage gesperrt
+        self.assertIn("abgeschaltet", gezeigt[0])
+
     def test_ein_fund_steht_in_der_statuszeile(self):
         self.fenster._update_melden(
             {"fassung": "2099.01.01", "seite": "https://example.invalid/r"}

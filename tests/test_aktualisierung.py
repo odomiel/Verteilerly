@@ -106,6 +106,35 @@ class TestNachsehen(unittest.TestCase):
             )
 
 
+class TestStand(unittest.TestCase):
+    """Fuer die Nachfrage von Hand: drei Ausgaenge statt eines."""
+
+    def setUp(self):
+        frei = mock.patch.dict("os.environ", {aktualisierung.OHNE_PRUEFUNG: ""})
+        frei.start()
+        self.addCleanup(frei.stop)
+
+    def test_neuer(self):
+        with mock.patch.object(aktualisierung, "nachsehen",
+                               return_value={"fassung": "2099.01.01", "seite": "x"}):
+            wie, gefunden = aktualisierung.stand()
+        self.assertEqual(wie, aktualisierung.NEUER)
+        self.assertEqual(gefunden["fassung"], "2099.01.01")
+
+    def test_aktuell(self):
+        with mock.patch.object(aktualisierung, "nachsehen",
+                               return_value={"fassung": VERSION, "seite": "x"}):
+            wie, gefunden = aktualisierung.stand()
+        self.assertEqual(wie, aktualisierung.AKTUELL)
+        self.assertIsNotNone(gefunden)
+
+    def test_unerreichbar(self):
+        with mock.patch.object(aktualisierung, "nachsehen", return_value=None):
+            wie, gefunden = aktualisierung.stand()
+        self.assertEqual(wie, aktualisierung.UNERREICHBAR)
+        self.assertIsNone(gefunden)
+
+
 class TestAbschaltbar(unittest.TestCase):
     def test_die_testreihe_geht_nicht_ins_netz(self):
         """tests/__init__ setzt die Sperre - hier steht sie zur Probe."""

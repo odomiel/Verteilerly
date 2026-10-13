@@ -52,6 +52,16 @@ Fragt die öffentliche Releaseliste; heruntergeladen wird nichts: Asks the publi
 Einmal am Tag wird nach einer neueren Fassung gesehen: A look for a newer version happens once a day
 Es wird nicht mehr nach Updates gesehen: No more looking for updates
 'Neuere Fassung {0} ist verfügbar: {1}': 'A newer version {0} is available: {1}'
+'&Nach Updates sehen…': 'Look for &updates…'
+Fragt jetzt, ob eine neuere Fassung veröffentlicht ist: Asks right now whether a newer version has been published
+Nach Updates sehen: Look for updates
+Die Nachfrage ist an diesem Platz abgeschaltet.: The look-up is switched off on this machine.
+Sehe nach, ob es etwas Neueres gibt…: Looking for something newer…
+? "Neuere Fassung {0} ist verfügbar.\n\n{1}"
+: "A newer version {0} is available.\n\n{1}"
+'Diese Fassung ist die neueste: {0}': 'This is the newest version: {0}'
+? "Die Releaseliste war nicht zu erreichen. Bitte prüfen Sie die Internetverbindung."
+: "The release list could not be reached. Please check your internet connection."
 ? "Passt ein Kabelname auch umgebrochen nicht in seinen Block, werden die Felder der Verteilerbelegung größer"
 : "Where a cable name does not fit into its block even wrapped, the cells of the frame layout grow"
 Die Belegung passt sich langen Kabelnamen an: The layout adapts to long cable names

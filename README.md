@@ -66,6 +66,8 @@ Weiterverarbeitung.
 Programm fragt die öffentliche Releaseliste und sagt in der Statuszeile
 Bescheid, wenn eine neuere Fassung da ist. Heruntergeladen wird nichts,
 gesendet nichts außer der Anfrage; abgeschaltet geht es **nie** ins Netz.
+*Hilfe ▸ Nach Updates sehen…* fragt auf Knopfdruck und sagt in jedem Fall, was
+herauskam.
 
 **Dazu im Alltag.** Suchen über den ganzen Verteiler, Zurücknehmen und
 Wiederherstellen der letzten fünfzig Schritte, **schreibgeschützt öffnen**,

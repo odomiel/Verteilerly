@@ -154,6 +154,8 @@ class Hauptfenster(QMainWindow):
     #: der Nachfrage - gezeichnet wird daraufhin im Fenster, dort wo Qt
     #: es erwartet.
     update_gefunden = Signal(object)
+    #: Ergebnis der Nachfrage von Hand: (Stand, Fund oder None).
+    update_geantwortet = Signal(str, object)
 
     def __init__(self) -> None:
         super().__init__()
@@ -400,6 +402,7 @@ class Hauptfenster(QMainWindow):
         # Erst das Fenster, dann die Nachfrage: sie laeuft nebenher und
         # meldet sich nur, wenn es etwas Neueres gibt.
         self.update_gefunden.connect(self._update_melden)
+        self.update_geantwortet.connect(self._update_antwort)
         QTimer.singleShot(2000, self._update_anstossen)
 
     def _aktionen_bauen(self) -> None:
@@ -731,6 +734,12 @@ class Hauptfenster(QMainWindow):
         aktion(u("&Dokumentation"), self.dokumentation, "F1", menue=hilfe,
                hinweis=u("Was das Programm kann und wie es bedient wird"))
         hilfe.addSeparator()
+        # Von Hand nachsehen - unabhaengig davon, ob die taegliche
+        # Nachfrage eingeschaltet ist. Wer hier drueckt, will es wissen.
+        self.aktion_update_jetzt = aktion(
+            u("&Nach Updates sehen…"), self.update_jetzt_suchen, menue=hilfe,
+            hinweis=u("Fragt jetzt, ob eine neuere Fassung veröffentlicht ist"),
+        )
         aktion(u("Ü&ber Verteilerly"), self.ueber, menue=hilfe)
 
     # -- Darstellung -------------------------------------------------------
@@ -1119,6 +1128,53 @@ class Hauptfenster(QMainWindow):
                 pass        # Fenster ist inzwischen zu - dann eben nicht
 
         threading.Thread(target=nachsehen, daemon=True).start()
+
+    def update_jetzt_suchen(self) -> None:
+        """Sieht jetzt nach - und sagt in jedem Fall, was herauskam."""
+        if not aktualisierung.erlaubt():
+            QMessageBox.information(
+                self, u("Nach Updates sehen"),
+                u("Die Nachfrage ist an diesem Platz abgeschaltet."),
+            )
+            return
+        self.aktion_update_jetzt.setEnabled(False)
+        self.statusBar().showMessage(u("Sehe nach, ob es etwas Neueres gibt…"))
+        self.einstellungen.setValue(
+            "update_geprueft", datetime.date.today().isoformat()
+        )
+
+        def nachsehen():
+            wie, gefunden = aktualisierung.stand()
+            try:
+                self.update_geantwortet.emit(wie, gefunden)
+            except RuntimeError:
+                pass        # Fenster ist inzwischen zu
+
+        threading.Thread(target=nachsehen, daemon=True).start()
+
+    def _update_antwort(self, wie: str, gefunden: object) -> None:
+        """Zeigt, was die Nachfrage von Hand ergeben hat."""
+        self.aktion_update_jetzt.setEnabled(True)
+        self.statusBar().clearMessage()
+        titel = u("Nach Updates sehen")
+        if wie == aktualisierung.NEUER and isinstance(gefunden, dict):
+            QMessageBox.information(
+                self, titel,
+                u("Neuere Fassung {0} ist verfügbar.\n\n{1}").format(
+                    gefunden.get("fassung", ""), gefunden.get("seite", "")
+                ),
+            )
+        elif wie == aktualisierung.AKTUELL:
+            QMessageBox.information(
+                self, titel,
+                u("Diese Fassung ist die neueste: {0}").format(VERSION),
+            )
+        else:
+            QMessageBox.information(
+                self, titel,
+                u("Die Releaseliste war nicht zu erreichen. Bitte prüfen "
+                  "Sie die Internetverbindung."),
+            )
 
     def _update_melden(self, gefunden: dict) -> None:
         """Sagt in der Statuszeile, dass es etwas Neueres gibt."""

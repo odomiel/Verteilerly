@@ -136,6 +136,26 @@ def nachsehen(wartezeit: float = WARTEZEIT) -> dict | None:
     return {"fassung": fassung, "seite": inhalt.get("html_url") or SEITE}
 
 
+#: Was beim Nachsehen herauskommen kann.
+NEUER = "neuer"
+AKTUELL = "aktuell"
+UNERREICHBAR = "unerreichbar"
+
+
+def stand(wartezeit: float = WARTEZEIT) -> tuple[str, dict | None]:
+    """Fuer die Nachfrage von Hand: was ist, mit Begruendung.
+
+    Die taegliche Nachfrage meldet nur einen Fund und schweigt sonst -
+    wer dagegen selbst auf den Knopf drueckt, will auch hoeren, dass
+    alles aktuell oder nichts zu erreichen ist. Darum drei Ausgaenge
+    statt eines.
+    """
+    gefunden = nachsehen(wartezeit)
+    if gefunden is None:
+        return UNERREICHBAR, None
+    return (NEUER if neuer_als(gefunden["fassung"]) else AKTUELL), gefunden
+
+
 def neuere_fassung(wartezeit: float = WARTEZEIT) -> dict | None:
     """Nur melden, was wirklich neuer ist als das laufende Programm."""
     gefunden = nachsehen(wartezeit)
