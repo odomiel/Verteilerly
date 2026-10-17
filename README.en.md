@@ -97,8 +97,14 @@ The basic equipment is inside it; on first start the program puts it into a
 folder `daten` **next to** the file, where it can be changed. For the stick
 there is the PortableApps edition with its launcher.
 
-Project files (`.vtly`) can be associated with the program in the file
-manager; *Tools ▸ Associate project files…* says which file to enter for that.
+Project files (`.vtly`) are linked by *Tools ▸ Link project files…* at the
+press of a button — for the signed-in user only, without elevated rights. What
+is registered is the **launcher**, not the program behind it: that is why the
+link survives an update. The plain `.exe` carries its version in its name —
+where the registered file is gone after an update, the start carries the link
+over by itself; where it is still there, the start only reports it and the
+dialog offers *Renew the link*. Where someone has chosen “Open with ▸ Always use this
+app”, that choice still wins — it cannot be set from outside.
 
 ### From the source tree
 

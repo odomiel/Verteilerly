@@ -3438,12 +3438,13 @@ class TestMenuezustaende(unittest.TestCase):
             self.assertEqual(f.projekt.verteiler.name, "Probe")
 
     def test_der_dialog_sagt_welche_datei_zu_verknuepfen_ist(self):
-        """Er trägt nichts mehr ein - er gibt Auskunft."""
+        """Auskunft steht oben, die Knöpfe darunter."""
         from verteilerly import verknuepfung
         from verteilerly.gui import hauptfenster as modul
 
         f = self.fenster
         self.assertEqual(f.aktion_verknuepfen.isEnabled(), verknuepfung.moeglich())
+        kaesten = []
         with mock.patch.object(
             modul.verknuepfung, "zu_verknuepfen",
             return_value=pathlib.Path("/stick/VerteilerlyPortable.exe"),
@@ -3451,9 +3452,12 @@ class TestMenuezustaende(unittest.TestCase):
             modul.verknuepfung, "angemeldeter_aufruf", return_value=""
         ), mock.patch.object(
             modul.verknuepfung, "angemeldet", return_value=False
-        ), mock.patch.object(QMessageBox, "information") as gezeigt:
+        ), mock.patch.object(
+            # Ein Kasten, der nicht beantwortet wird, haengt die Reihe auf.
+            QMessageBox, "exec", lambda kasten: kaesten.append(kasten) or 0
+        ):
             f.verknuepfung_zeigen()
-        gemeldet = gezeigt.call_args[0][2]
+        gemeldet = kaesten[0].text()
         self.assertIn("/stick/VerteilerlyPortable.exe", gemeldet)
         self.assertIn("nichts eingetragen", gemeldet)
         self.assertIn("PortableApps", gemeldet)
@@ -3536,6 +3540,36 @@ class TestMenuezustaende(unittest.TestCase):
                                return_value=""), \
              mock.patch.object(modul.verknuepfung, "aufgehoben",
                                return_value=False):
+            f.statusBar().clearMessage()
+            f._zuordnung_pruefen()
+        self.assertEqual(f.statusBar().currentMessage(), "")
+
+    def test_der_start_zieht_eine_verwaiste_verknuepfung_nach(self):
+        """Die reine .exe heißt nach dem Update anders - der Eintrag wandert mit."""
+        from verteilerly.gui import hauptfenster as modul
+
+        f = self.fenster
+        with mock.patch.object(modul.pfade, "gepackt", return_value=True), \
+             mock.patch.object(modul.verknuepfung, "nachziehen_faellig",
+                               return_value=True), \
+             mock.patch.object(modul.verknuepfung, "eintragen") as getan, \
+             mock.patch.object(modul.verknuepfung, "anderes_programm",
+                               return_value=""):
+            f.statusBar().clearMessage()
+            f._zuordnung_pruefen()
+        self.assertTrue(getan.called)
+        self.assertIn("nachgezogen", f.statusBar().currentMessage())
+
+        # Geht das Schreiben schief, bleibt es beim Erneuern von Hand -
+        # ein Start haelt daran nicht an.
+        with mock.patch.object(modul.pfade, "gepackt", return_value=True), \
+             mock.patch.object(modul.verknuepfung, "nachziehen_faellig",
+                               return_value=True), \
+             mock.patch.object(
+                 modul.verknuepfung, "eintragen",
+                 side_effect=modul.verknuepfung.VerknuepfungFehler("nein")), \
+             mock.patch.object(modul.verknuepfung, "anderes_programm",
+                               return_value=""):
             f.statusBar().clearMessage()
             f._zuordnung_pruefen()
         self.assertEqual(f.statusBar().currentMessage(), "")

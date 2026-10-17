@@ -114,14 +114,14 @@ Prozentangabe der geteilten Zelle ein rotes <b>schreibgeschützt</b>.</p>
 
 <p><b>Doppelklick in der Dateiverwaltung</b> — eine Projektdatei
 (<code>.vtly</code>) öffnet Verteilerly, sobald sie in der Dateiverwaltung mit
-der richtigen ausführbaren Datei verknüpft ist. <b>Verknüpft wird von Hand</b>,
-dort, wo die Wahl hingehört: Rechtsklick auf eine Projektdatei ▸ <i>Öffnen
-mit</i> ▸ <i>Andere App</i> ▸ <i>Immer diese App</i> (Windows) oder ▸ <i>Öffnen
-mit</i> ▸ <i>Andere Anwendung</i> (Linux). Den Weg über die Kommandozeile gibt
-es auch: <code>Verteilerly &lt;datei&gt;</code>.</p>
+der richtigen ausführbaren Datei verknüpft ist. Unter <b>Windows</b> trägt
+Verteilerly das auf Wunsch selbst ein; unter <b>Linux</b> geschieht es in der
+Dateiverwaltung: Rechtsklick auf eine Projektdatei ▸ <i>Öffnen mit</i> ▸
+<i>Andere Anwendung</i>. Den Weg über die Kommandozeile gibt es auch:
+<code>Verteilerly &lt;datei&gt;</code>.</p>
 
-<p><b>Tools ▸ Projektdateien verknüpfen…</b> sagt Ihnen dafür alles, was Sie
-wissen müssen, und ändert selbst nichts:</p>
+<p><b>Tools ▸ Projektdateien verknüpfen…</b> sagt, wie es steht, und bietet
+unter Windows die beiden Knöpfe dazu:</p>
 
 <ul>
 <li><b>welche Datei</b> zu verknüpfen ist — bei der <b>PortableApps-Ausgabe</b>
@@ -134,14 +134,37 @@ Projektdateien zurzeit öffnet. Gefragt wird, was die Dateiverwaltung
 <b>tut</b>: unter Windows zählt zuerst die Wahl des Anwenders
 (<code>FileExts\.vtly\UserChoice</code>, gesetzt von „Öffnen mit ▸ Immer"),
 unter Linux die <code>mimeapps.list</code> samt weggenommenen Zuordnungen;</li>
-<li><b>wie</b> es einzustellen ist.</li>
+<li><b>wie</b> es einzustellen ist — unter Windows mit <i>Jetzt
+verknüpfen</i> bzw. <i>Verknüpfung aufheben</i> gleich an Ort und Stelle.</li>
 </ul>
 
-<p>Das Programm hat das eine Weile selbst eingetragen. Verlässlich war es
-nicht: die Wahl des Anwenders geht jeder Eintragung vor, und eine Ausgabe mit
-Starter kann sich ohnehin nicht selbst verknüpfen — eingetragen würde die innere
-Datei. Darum jetzt die Auskunft statt des Eingriffs. Zeigt die Zuordnung auf ein
-anderes Programm, sagt Verteilerly das beim Start auch in der Statuszeile.</p>
+<p><b>Die Verknüpfung übersteht ein Update.</b> Eingetragen wird die Datei von
+oben — bei der PortableApps-Ausgabe also der <b>Starter</b>, der seinen Namen
+und seinen Platz behält, während das Programm dahinter ausgetauscht wird.
+Geschrieben wird nur unter <code>HKEY_CURRENT_USER</code>: das braucht keine
+erhöhten Rechte und gilt für den, der es anstößt.</p>
+
+<p><b>Nachgesehen wird bei jedem Start.</b> Zieht das Programm um oder wird es
+umbenannt, zeigt der Eintrag ins Leere; der Dialog nennt das dann
+<i>veraltet</i> und bietet <i>Verknüpfung erneuern</i> an, und die Statuszeile
+sagt es beim Start. Dasselbe gilt, wenn ein anderes Programm die
+Projektdateien übernommen hat.</p>
+
+<p><b>Die reine .exe trägt ihre Fassung im Namen</b>
+(<code>Verteilerly_2026.10.13.exe</code>) — ein Update ist dort also eine
+andere Datei, und der Eintrag zeigt weiter auf die alte. Ist die eingetragene
+Datei beim Start <b>nicht mehr da</b>, zieht Verteilerly die Verknüpfung
+stillschweigend auf die laufende Fassung nach und sagt es in der Statuszeile.
+Liegt die alte Datei dagegen noch da, stehen zwei Ausgaben nebeneinander —
+eine auf dem Stick, eine im Download-Ordner —, und dann wird nur gesagt, was
+ist: sonst risse die zuletzt gestartete Kopie die Verknüpfung an sich. Mit
+<i>Verknüpfung erneuern</i> ist das jederzeit zu entscheiden.</p>
+
+<p><b>Die Wahl des Anwenders bleibt unberührt.</b> Hat jemand unter Windows
+schon „Öffnen mit ▸ Immer diese App" gewählt, gilt weiter diese Wahl — sie
+steht unter <code>FileExts\.vtly\UserChoice</code> und lässt sich von außen
+nicht setzen, auch nicht von uns. Unsere Einträge sind dann die Grundlage,
+auf der <i>Öffnen mit</i> Verteilerly überhaupt anbietet.</p>
 
 <h2><a name="editor"></a>3 &nbsp; Der Editor</h2>
 

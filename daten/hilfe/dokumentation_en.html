@@ -108,14 +108,13 @@ cell.</p>
 
 <p><b>Double click in the file manager</b> — a project file
 (<code>.vtly</code>) opens Verteilerly as soon as it is linked with the right
-executable in the file manager. <b>Linking is done by hand</b>, where that
-choice belongs: right-click a project file ▸ <i>Open with</i> ▸ <i>Choose
-another app</i> ▸ <i>Always use this app</i> (Windows), or ▸ <i>Open with</i> ▸
-<i>Other application</i> (Linux). The command line works too:
-<code>Verteilerly &lt;file&gt;</code>.</p>
+executable in the file manager. On <b>Windows</b> Verteilerly enters this
+itself on request; on <b>Linux</b> it is done in the file manager: right-click
+a project file ▸ <i>Open with</i> ▸ <i>Other application</i>. The command line
+works too: <code>Verteilerly &lt;file&gt;</code>.</p>
 
-<p><b>Tools ▸ Link project files…</b> tells you everything you need for that
-and changes nothing itself:</p>
+<p><b>Tools ▸ Link project files…</b> says how things stand and, on Windows,
+offers the two buttons for it:</p>
 
 <ul>
 <li><b>which file</b> is to be linked — with the <b>PortableApps edition</b>
@@ -129,14 +128,36 @@ the project files. What counts is what the file manager <b>does</b>: on Windows
 the user's own choice comes first (<code>FileExts\.vtly\UserChoice</code>, set
 by „Open with ▸ Always"), on Linux the <code>mimeapps.list</code> including
 removed associations;</li>
-<li><b>how</b> to set it.</li>
+<li><b>how</b> to set it — on Windows with <i>Link now</i> or <i>Remove the
+link</i> right there.</li>
 </ul>
 
-<p>The program used to register this itself. It was not dependable: the user's
-own choice comes before any registration, and an edition with a launcher cannot
-register itself at all — what would be registered is the inner file. Hence the
-information instead of the intervention. If the association points at another
-program, Verteilerly also says so in the status bar at startup.</p>
+<p><b>The link survives an update.</b> What is registered is the file named
+above — with the PortableApps edition the <b>launcher</b>, which keeps its name
+and its place while the program behind it is replaced. Writing happens under
+<code>HKEY_CURRENT_USER</code> only: that needs no elevated rights and applies
+to whoever asks for it.</p>
+
+<p><b>It is checked at every start.</b> If the program is moved or renamed, the
+entry points nowhere; the dialog then calls it <i>outdated</i> and offers
+<i>Renew the link</i>, and the status bar says so at startup. The same goes for
+another program having taken over the project files.</p>
+
+<p><b>The plain .exe carries its version in its name</b>
+(<code>Verteilerly_2026.10.13.exe</code>) — an update is a different file
+there, and the entry still points at the old one. If the registered file is
+<b>gone</b> at startup, Verteilerly carries the link over to the running
+version silently and says so in the status bar. If the old file is still
+there, two editions stand side by side — one on the stick, one in the
+downloads folder — and then it is only reported: otherwise the copy started
+last would quietly take the link for itself. <i>Renew the link</i> settles it
+either way.</p>
+
+<p><b>The user's own choice stays untouched.</b> Where someone on Windows has
+already chosen “Open with ▸ Always use this app”, that choice still wins — it
+lives under <code>FileExts\.vtly\UserChoice</code> and cannot be set from
+outside, not even by us. Our entries are then the basis on which <i>Open
+with</i> offers Verteilerly at all.</p>
 
 <h2><a name="editor"></a>3 &nbsp; The editor</h2>
 

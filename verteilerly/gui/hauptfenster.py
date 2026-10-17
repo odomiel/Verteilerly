@@ -6,6 +6,7 @@ import datetime
 import os
 import pathlib
 import shutil
+import sys
 import tempfile
 import threading
 
@@ -252,11 +253,30 @@ class Hauptfenster(QMainWindow):
         mit deren eigener Conf. Das sah bisher aus wie verlorene
         Einstellungen. Gefragt wird nur im **gepackten** Programm: aus dem
         Quellbaum wechselt der Aufruf mit jedem Python, das waere Laerm.
-        Und nur gesagt, nicht getan - angemeldet wird auf Wunsch.
+        Und nur gesagt, nicht getan - angemeldet wird auf Wunsch. Die
+        eine Ausnahme ist `nachziehen_faellig()`: ist die eingetragene
+        Datei weg, war es ein Update, und der Eintrag wird stillschweigend
+        nachgezogen (die reine .exe traegt ihre Fassung im Namen, ein
+        Update ist dort also eine andere Datei).
         """
         if not pfade.gepackt():
             return
+        nachgezogen = self._verknuepfung_nachziehen()
+        if verknuepfung.zustand() == verknuepfung.VERALTET:
+            self.statusBar().showMessage(
+                u("Die Verknüpfung der Projektdateien zeigt auf einen anderen "
+                  "Pfad — erneuern unter Tools"),
+                15000,
+            )
+            return
         fremd = verknuepfung.anderes_programm()
+        if nachgezogen and not fremd:
+            self.statusBar().showMessage(
+                u("Die Verknüpfung der Projektdateien wurde auf diese Fassung "
+                  "nachgezogen"),
+                12000,
+            )
+            return
         if fremd:
             self.statusBar().showMessage(
                 u("Ein Doppelklick auf eine Projektdatei öffnet zurzeit {0} — "
@@ -271,6 +291,21 @@ class Hauptfenster(QMainWindow):
                   "nicht mehr — nachsehen unter Tools"),
                 15000,
             )
+
+    def _verknuepfung_nachziehen(self) -> bool:
+        """Zieht den eigenen Eintrag auf diese Fassung - wenn das ansteht.
+
+        Gefragt wird `verknuepfung.nachziehen_faellig()`: nur wenn die
+        eingetragene Datei nicht mehr da ist. Geht es schief, ist nichts
+        verloren - der Dialog bietet das Erneuern weiter von Hand an.
+        """
+        if not verknuepfung.nachziehen_faellig():
+            return False
+        try:
+            verknuepfung.eintragen()
+        except verknuepfung.VerknuepfungFehler:
+            return False
+        return True
 
     # -- Einstellungen oeffnen ---------------------------------------------
 
@@ -2354,18 +2389,52 @@ class Hauptfenster(QMainWindow):
             )
 
     def verknuepfung_zeigen(self) -> None:
-        """Sagt, welche Datei zu verknuepfen ist und wer gerade oeffnet.
+        """Sagt, wie es um die Verknuepfung steht - und bietet an, sie zu setzen.
 
-        Eingetragen wird **nichts**: die Wahl des Anwenders geht jeder
-        Anmeldung vor, und eine Ausgabe mit Starter kann sich ohnehin nicht
-        selbst eintragen. Also die Auskunft, die man braucht, um es in der
-        Dateiverwaltung selbst zu tun - und der Weg dorthin.
+        Unter **Windows** traegt das Programm sie auf Wunsch selbst ein
+        (nur fuer diesen Benutzer, ohne erhoehte Rechte). Unter Linux
+        bleibt es bei der Auskunft: dort wird in der Dateiverwaltung
+        verknuepft.
         """
         if not verknuepfung.moeglich():
             return
-        QMessageBox.information(
-            self, u("Projektdateien verknüpfen"), self._verknuepfungstext()
-        )
+        titel = u("Projektdateien verknüpfen")
+        kasten = QMessageBox(self)
+        kasten.setWindowTitle(titel)
+        kasten.setText(self._verknuepfungstext())
+        schliessen = kasten.addButton(QMessageBox.StandardButton.Close)
+        eintragen = aufheben = None
+        if sys.platform.startswith("win") and verknuepfung.zu_verknuepfen():
+            stand = verknuepfung.zustand()
+            eintragen = kasten.addButton(
+                u("Verknüpfung erneuern") if stand == verknuepfung.VERALTET
+                else u("Jetzt verknüpfen"),
+                QMessageBox.ButtonRole.AcceptRole,
+            )
+            if verknuepfung.eigene_eintraege():
+                aufheben = kasten.addButton(
+                    u("Verknüpfung aufheben"), QMessageBox.ButtonRole.DestructiveRole
+                )
+            kasten.setDefaultButton(eintragen)
+        else:
+            kasten.setDefaultButton(schliessen)
+        kasten.exec()
+        gedrueckt = kasten.clickedButton()
+        if eintragen is not None and gedrueckt is eintragen:
+            self._verknuepfung_setzen(verknuepfung.eintragen, titel,
+                                      u("Projektdateien öffnen jetzt Verteilerly"))
+        elif aufheben is not None and gedrueckt is aufheben:
+            self._verknuepfung_setzen(verknuepfung.aufheben, titel,
+                                      u("Die Verknüpfung ist aufgehoben"))
+
+    def _verknuepfung_setzen(self, tun, titel: str, meldung: str) -> None:
+        """Traegt ein oder hebt auf - und sagt, was dabei herauskam."""
+        try:
+            tun()
+        except verknuepfung.VerknuepfungFehler as fehler:
+            QMessageBox.warning(self, titel, str(fehler))
+            return
+        self.statusBar().showMessage(meldung, 8000)
 
     def _verknuepfungstext(self) -> str:
         """Der ganze Auskunftstext - Datei, Zustand und der Weg dorthin."""
@@ -2387,7 +2456,15 @@ class Hauptfenster(QMainWindow):
               "VerteilerlyPortable.exe, nicht das Programm in "
               "App\\Verteilerly; als AppImage die Abbilddatei selbst.")
         )
-        if verknuepfung.angemeldet():
+        if verknuepfung.zustand() == verknuepfung.VERALTET:
+            teile.append(
+                u("Verknüpft: veraltet — eingetragen ist Verteilerly, aber "
+                  "unter einem anderen Pfad:\n{0}\n\nDas passiert, wenn das "
+                  "Programm umgezogen oder umbenannt wurde. Ein Update an "
+                  "derselben Stelle ändert nichts daran.").format(
+                      verknuepfung.eingetragener_befehl() or eingetragen)
+            )
+        elif verknuepfung.angemeldet():
             teile.append(u("Verknüpft: ja — Projektdateien öffnen Verteilerly."))
         elif eingetragen == verknuepfung.KEINE:
             teile.append(
@@ -2402,12 +2479,19 @@ class Hauptfenster(QMainWindow):
             )
         else:
             teile.append(u("Verknüpft: nein — es ist nichts eingetragen."))
-        teile.append(
-            u("So wird verknüpft: Rechtsklick auf eine Projektdatei ▸ Öffnen "
-              "mit ▸ Andere App ▸ Immer diese App (Windows) oder ▸ Öffnen mit "
-              "▸ Andere Anwendung (Linux) — und dort die Datei von oben "
-              "wählen.")
-        )
+        if sys.platform.startswith("win"):
+            teile.append(
+                u("Unter Windows trägt Verteilerly das auf Wunsch selbst ein "
+                  "— nur für diesen Benutzer, ohne erhöhte Rechte. Hat jemand "
+                  "schon „Öffnen mit ▸ Immer diese App“ gewählt, gilt weiter "
+                  "diese Wahl: sie lässt sich von außen nicht setzen.")
+            )
+        else:
+            teile.append(
+                u("So wird verknüpft: Rechtsklick auf eine Projektdatei ▸ "
+                  "Öffnen mit ▸ Andere Anwendung — und dort die Datei von "
+                  "oben wählen.")
+            )
         return "\n\n".join(teile)
 
     def erweiterungen_verwalten(self) -> None:

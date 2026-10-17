@@ -106,9 +106,15 @@ Start legt das Programm sie in einen Ordner `daten` **neben** der Datei, wo sie
 änderbar ist. Für den Stick gibt es die PortableApps-Fassung mit ihrem
 Starter.
 
-Projektdateien (`.vtly`) lassen sich in der Dateiverwaltung mit dem Programm
-verknüpfen; *Tools ▸ Projektdateien verknüpfen…* sagt, welche Datei dafür
-einzutragen ist.
+Projektdateien (`.vtly`) verknüpft *Tools ▸ Projektdateien verknüpfen…* auf
+Knopfdruck — nur für den angemeldeten Benutzer, ohne erhöhte Rechte.
+Eingetragen wird der **Starter**, nicht das Programm dahinter: darum übersteht
+die Verknüpfung ein Update. Die reine `.exe` trägt ihre Fassung im Namen —
+ist die eingetragene Datei nach einem Update weg, zieht der Start die
+Verknüpfung selbst nach; liegt sie noch da, meldet er es nur und der Dialog
+bietet *Verknüpfung erneuern* an. Hat jemand „Öffnen mit ▸ Immer
+diese App" gewählt, gilt weiter diese Wahl — sie lässt sich von außen nicht
+setzen.
 
 ### Aus dem Quellbaum
 

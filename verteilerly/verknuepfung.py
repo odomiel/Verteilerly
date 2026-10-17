@@ -224,9 +224,34 @@ def _linux_desktopdatei_finden(name: str):
 # -- Windows ---------------------------------------------------------------
 
 
+def _wie_windows(befehlszeile: str) -> str:
+    """Zum Vergleichen: ohne Anfuehrungszeichen, klein geschrieben.
+
+    Dieselbe Datei steht in der Registrierung mal mit, mal ohne
+    Anfuehrungszeichen und in beliebiger Schreibweise - Windows nimmt es
+    damit nicht genau, und ein Vergleich Zeichen fuer Zeichen meldete
+    sonst Unterschiede, die keine sind.
+    """
+    return _ohne_platzhalter(befehlszeile).replace('"', "").strip().casefold()
+
+
 def _windows_angemeldet() -> bool:
+    """Oeffnet der Doppelklick dieses Programm?
+
+    Verglichen wird mit **zwei** Dateien: dem laufenden Programm und der,
+    die zu verknuepfen waere. Bei einer Ausgabe mit Starter sind das
+    verschiedene - eingetragen gehoert der Starter, laufen tut das
+    Programm dahinter -, und beides ist richtig.
+    """
     eingetragen = _windows_angemeldeter_aufruf()
-    return bool(eingetragen) and eingetragen != KEINE and aufruf() in eingetragen
+    if not eingetragen or eingetragen == KEINE:
+        return False
+    steht_da = _wie_windows(eingetragen)
+    ziel = zu_verknuepfen()
+    unsere = [_wie_windows(aufruf())]
+    if ziel is not None:
+        unsere.append(_wie_windows(str(ziel)))
+    return any(eigen and eigen in steht_da for eigen in unsere)
 
 
 def _windows_angemeldeter_aufruf() -> str:
@@ -300,6 +325,240 @@ def _ohne_platzhalter(befehl: str) -> str:
         if text.endswith(platzhalter):
             text = text[: -len(platzhalter)].strip()
     return text
+
+
+class VerknuepfungFehler(Exception):
+    """Das Eintragen oder Aufheben ging schief."""
+
+
+#: Wie es um die Verknuepfung steht - ``zustand()`` gibt eines davon.
+OHNE = "ohne"            # nichts eingetragen
+UNSER = "unser"          # unsere Kennung, und sie zeigt auf die richtige Datei
+VERALTET = "veraltet"    # unsere Kennung, aber sie zeigt woandershin
+FREMD = "fremd"          # ein anderes Programm oeffnet
+GESPERRT = "gesperrt"    # ausdruecklich niemand
+
+
+def befehl(datei: pathlib.Path | None = None) -> str:
+    """Der Befehl, der in die Registrierung gehoert - samt ``"%1"``.
+
+    Eingetragen wird, was ``zu_verknuepfen()`` nennt: bei einer Ausgabe
+    mit Starter der **Starter**. Das ist auch der Grund, warum die
+    Verknuepfung ein Update uebersteht - der Starter behaelt seinen Namen
+    und seinen Platz, waehrend das Programm dahinter ausgetauscht wird.
+    """
+    ziel = datei or zu_verknuepfen()
+    # Immer in Anfuehrungszeichen: ein Pfad mit Leerzeichen zerfiele sonst
+    # in zwei Stuecke, und Windows schreibt es selbst auch so.
+    return f'"{pathlib.Path(ziel)}" "%1"' if ziel else f'{aufruf()} "%1"'
+
+
+def _windows_schluessel(befehlszeile: str, symbol: str) -> tuple:
+    """Die vier Werte, die eine Verknuepfung unter Windows ausmachen."""
+    return (
+        (rf"Software\Classes\{ENDUNGEN[0]}", "", PROGRAMMKENNUNG),
+        (rf"Software\Classes\{ENDUNGEN[0]}\OpenWithProgids",
+         PROGRAMMKENNUNG, ""),
+        (rf"Software\Classes\{PROGRAMMKENNUNG}", "", "Verteilerly-Projekt"),
+        (rf"Software\Classes\{PROGRAMMKENNUNG}\DefaultIcon", "", symbol),
+        (rf"Software\Classes\{PROGRAMMKENNUNG}\shell\open\command", "",
+         befehlszeile),
+    )
+
+
+def eintragen(datei: pathlib.Path | None = None) -> list[str]:
+    """Traegt die Verknuepfung ein - nur unter Windows, nur fuer diesen Benutzer.
+
+    Geschrieben wird unter ``HKEY_CURRENT_USER``: das braucht keine
+    erhoehten Rechte und gilt fuer den, der es anstoesst.
+
+    **Die Wahl des Anwenders bleibt unberuehrt.** Steht unter
+    ``FileExts\\.vtly\\UserChoice`` etwas, gilt weiter das - diese Wahl
+    laesst sich nicht von aussen setzen (Windows sichert sie mit einem
+    Streuwert ab). Unsere Eintraege sind dann die Grundlage, auf der
+    *Öffnen mit* uns anbietet.
+    """
+    if not sys.platform.startswith("win"):
+        raise VerknuepfungFehler(
+            "Eingetragen wird nur unter Windows; unter Linux geschieht das "
+            "in der Dateiverwaltung."
+        )
+    import winreg
+
+    ziel = datei or zu_verknuepfen()
+    if ziel is None:
+        raise VerknuepfungFehler(
+            "Hier ist nichts zu verknuepfen: dieses Verteilerly laeuft aus "
+            "dem Quelltext."
+        )
+    befehlszeile = befehl(ziel)
+    symbol = f"{_gequotet(pathlib.Path(ziel))},0"
+    getan: list[str] = []
+    for schluessel, name, wert in _windows_schluessel(befehlszeile, symbol):
+        try:
+            with winreg.CreateKey(winreg.HKEY_CURRENT_USER, schluessel) as offen:
+                winreg.SetValueEx(offen, name, 0, winreg.REG_SZ, wert)
+        except OSError as fehler:
+            raise VerknuepfungFehler(
+                f"{schluessel} liess sich nicht schreiben: {fehler}"
+            ) from None
+        getan.append(rf"HKCU\{schluessel}")
+    _windows_bescheid_sagen()
+    return getan
+
+
+def aufheben() -> list[str]:
+    """Nimmt unsere Eintraege wieder heraus.
+
+    Angefasst wird nur, was uns gehoert: die Programmkennung und - wenn
+    sie auf uns zeigt - die Endung. Die Wahl des Anwenders bleibt stehen,
+    sie gehoert ihm.
+    """
+    if not sys.platform.startswith("win"):
+        raise VerknuepfungFehler(
+            "Aufgehoben wird nur unter Windows; unter Linux geschieht das "
+            "in der Dateiverwaltung."
+        )
+    import winreg
+
+    weg = [
+        rf"Software\Classes\{PROGRAMMKENNUNG}\shell\open\command",
+        rf"Software\Classes\{PROGRAMMKENNUNG}\shell\open",
+        rf"Software\Classes\{PROGRAMMKENNUNG}\shell",
+        rf"Software\Classes\{PROGRAMMKENNUNG}\DefaultIcon",
+        rf"Software\Classes\{PROGRAMMKENNUNG}",
+    ]
+    getan: list[str] = []
+    for schluessel in weg:
+        try:
+            winreg.DeleteKey(winreg.HKEY_CURRENT_USER, schluessel)
+        except OSError:
+            continue        # war nicht da - dann ist auch nichts zu tun
+        getan.append(rf"HKCU\{schluessel}")
+    if _windows_wert(rf"Software\Classes\{ENDUNGEN[0]}", "") == PROGRAMMKENNUNG:
+        try:
+            winreg.DeleteKey(winreg.HKEY_CURRENT_USER,
+                             rf"Software\Classes\{ENDUNGEN[0]}")
+            getan.append(rf"HKCU\Software\Classes\{ENDUNGEN[0]}")
+        except OSError:
+            pass
+    _windows_bescheid_sagen()
+    return getan
+
+
+def _windows_bescheid_sagen() -> None:
+    """Sagt der Oberflaeche, dass sich eine Verknuepfung geaendert hat.
+
+    Ohne das wirkt der Eintrag erst nach dem naechsten Anmelden.
+    """
+    try:
+        import ctypes
+
+        # SHCNE_ASSOCCHANGED, SHCNF_IDLIST
+        ctypes.windll.shell32.SHChangeNotify(0x08000000, 0x0000, None, None)
+    except Exception:      # noqa: BLE001 - ohne Bescheid wirkt es eben spaeter
+        pass
+
+
+def eingetragener_befehl() -> str:
+    """Was **unsere** Programmkennung gerade startet - ohne ``"%1"``.
+
+    Nicht dasselbe wie ``angemeldeter_aufruf()``: das sagt, was die
+    Dateiverwaltung tut, auch wenn das ein anderes Programm ist.
+    """
+    if not sys.platform.startswith("win"):
+        return ""
+    gefunden = _windows_wert(
+        rf"Software\Classes\{PROGRAMMKENNUNG}\shell\open\command", ""
+    )
+    return _ohne_platzhalter(gefunden) if gefunden else ""
+
+
+def stimmt() -> bool:
+    """Zeigt unser Eintrag auf die Datei, die jetzt zu verknuepfen waere?
+
+    Nach einem Update liegt dieselbe Datei am selben Platz - dann stimmt
+    es weiter. Zieht das Programm um oder wird es umbenannt, steht in der
+    Registrierung ein Pfad, den es nicht mehr gibt; dann ist der Eintrag
+    zu erneuern, und das faellt nur auf, wenn jemand nachsieht.
+    """
+    eigener = eingetragener_befehl()
+    return bool(eigener) and _wie_windows(eigener) == _wie_windows(befehl())
+
+
+def eingetragene_datei() -> pathlib.Path | None:
+    """Die Datei, auf die **unser** Eintrag zeigt - oder nichts.
+
+    Eingetragen steht immer ein einzelner Pfad in Anfuehrungszeichen:
+    ``eintragen()`` weigert sich im Quellbaum, wo ein Python mit
+    ``-m verteilerly`` stuende. Was danach nicht wie eine einzelne Datei
+    aussieht, gibt ``None`` - lieber nichts sagen als das Falsche.
+    """
+    text = eingetragener_befehl().strip().strip('"').strip()
+    if not text or " -m " in text:
+        return None
+    return pathlib.Path(text)
+
+
+def nachziehen_faellig() -> bool:
+    """Darf der Eintrag ohne Rueckfrage auf diese Fassung gezogen werden?
+
+    Die reine ``.exe`` traegt ihre Fassung im Namen
+    (``Verteilerly_2026.10.13.exe``): ein Update ist dort eine **andere
+    Datei**, und der Eintrag zeigt weiter auf die alte. Bei einer Ausgabe
+    mit Starter stellt sich die Frage nicht - der behaelt seinen Namen.
+
+    Nachgezogen wird nur, wenn die eingetragene Datei **nicht mehr da
+    ist**: dann war es ein Update, und es gibt nichts, dem etwas
+    weggenommen wuerde. Liegt sie noch da, stehen zwei Ausgaben
+    nebeneinander - eine auf dem Stick, eine im Download-Ordner -, und
+    dann wird nur gesagt, was ist: sonst risse die zuletzt gestartete
+    Kopie die Verknuepfung stillschweigend an sich.
+    """
+    if not sys.platform.startswith("win"):
+        return False
+    if zu_verknuepfen() is None or stimmt():
+        return False
+    alt = eingetragene_datei()
+    return alt is not None and not alt.exists()
+
+
+def _windows_unsere_kennung_gilt() -> bool:
+    """Zeigt die Endung - oder die Wahl des Anwenders - auf unsere Kennung?
+
+    Das ist etwas anderes als ``angemeldet()``: die Kennung kann unsere
+    sein, waehrend der Befehl dahinter auf eine Datei zeigt, die es nicht
+    mehr gibt. Genau das passiert nach einem Umzug.
+    """
+    kennung = _windows_wert(
+        rf"Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts"
+        rf"\{ENDUNGEN[0]}\UserChoice",
+        "ProgId",
+    ) or _windows_wert(rf"Software\Classes\{ENDUNGEN[0]}", "")
+    return kennung.strip().casefold() == PROGRAMMKENNUNG.casefold()
+
+
+def zustand() -> str:
+    """Wie es um die Verknuepfung steht - eines der Woerter oben.
+
+    Die Reihenfolge ist wichtig: **erst** fragen, ob die Kennung uns
+    gehoert, dann erst, ob ein anderes Programm oeffnet. Sonst hiesse ein
+    veralteter eigener Eintrag „fremd", und der Anwender suchte ein
+    fremdes Programm, das es gar nicht gibt.
+    """
+    eingetragen = angemeldeter_aufruf()
+    if eingetragen == KEINE:
+        return GESPERRT
+    if not sys.platform.startswith("win"):
+        return UNSER if angemeldet() else (FREMD if eingetragen else OHNE)
+    if _windows_unsere_kennung_gilt():
+        # Geoeffnet wird ueber unsere Kennung - fragt sich nur, womit.
+        return UNSER if stimmt() else VERALTET
+    if eingetragen:
+        # Ein anderes Programm hat den Zuschlag, auch wenn unsere
+        # Schluessel noch daliegen: die Wahl des Anwenders geht vor.
+        return FREMD
+    return VERALTET if eingetragener_befehl() else OHNE
 
 
 def angemeldeter_aufruf() -> str:

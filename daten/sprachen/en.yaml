@@ -648,6 +648,21 @@ kein Wert darin gelesen: no value read from it
 '&Tools': '&Tools'
 "&Projektdateien verknüpfen…": "&Link project files…"
 Projektdateien verknüpfen: Link project files
+Jetzt verknüpfen: Link now
+Verknüpfung erneuern: Renew the link
+Verknüpfung aufheben: Remove the link
+Projektdateien öffnen jetzt Verteilerly: Project files now open in Verteilerly
+Die Verknüpfung ist aufgehoben: The link has been removed
+? "Die Verknüpfung der Projektdateien zeigt auf einen anderen Pfad — erneuern unter Tools"
+: "The link for project files points to a different path — renew it under Tools"
+? "Die Verknüpfung der Projektdateien wurde auf diese Fassung nachgezogen"
+: "The link for project files was carried over to this version"
+? "Verknüpft: veraltet — eingetragen ist Verteilerly, aber unter einem anderen Pfad:\n{0}\n\nDas passiert, wenn das Programm umgezogen oder umbenannt wurde. Ein Update an derselben Stelle ändert nichts daran."
+: "Linked: outdated — Verteilerly is registered, but under a different path:\n{0}\n\nThat happens when the program was moved or renamed. An update in the same place does not change it."
+? "Unter Windows trägt Verteilerly das auf Wunsch selbst ein — nur für diesen Benutzer, ohne erhöhte Rechte. Hat jemand schon „Öffnen mit ▸ Immer diese App“ gewählt, gilt weiter diese Wahl: sie lässt sich von außen nicht setzen."
+: "On Windows Verteilerly enters this itself on request — for this user only, without elevated rights. Where someone has already chosen “Open with ▸ Always use this app”, that choice still wins: it cannot be set from outside."
+? "So wird verknüpft: Rechtsklick auf eine Projektdatei ▸ Öffnen mit ▸ Andere Anwendung — und dort die Datei von oben wählen."
+: "This is how to link: right-click a project file ▸ Open with ▸ Other application — and choose the file named above."
 Sagt, mit welcher Datei die Projektdateien zu verknüpfen sind und ob sie es sind: Says which file the project
   files are to be linked with, and whether they are
 ? "Ein Doppelklick auf eine Projektdatei ({0}) öffnet Verteilerly, sobald die Dateiverwaltung sie mit der richtigen Datei verknüpft hat."
@@ -662,8 +677,6 @@ Sagt, mit welcher Datei die Projektdateien zu verknüpfen sind und ob sie es sin
 : "Linked: no — the association has been taken away explicitly, nothing opens them."
 "Verknüpft: nein — geöffnet wird zurzeit:\n{0}": "Linked: no — currently opened by:\n{0}"
 "Verknüpft: nein — es ist nichts eingetragen.": "Linked: no — nothing is registered."
-? "So wird verknüpft: Rechtsklick auf eine Projektdatei ▸ Öffnen mit ▸ Andere App ▸ Immer diese App (Windows) oder ▸ Öffnen mit ▸ Andere Anwendung (Linux) — und dort die Datei von oben wählen."
-: "This is how to link them: right-click a project file ▸ Open with ▸ Choose another app ▸ Always use this app (Windows), or ▸ Open with ▸ Other application (Linux) — and pick the file named above."
 ? "Ein Doppelklick auf eine Projektdatei öffnet zurzeit {0} — nachsehen unter Tools"
 : "A double click on a project file currently opens {0} — see under Tools"
 ? "Ein Doppelklick auf eine Projektdatei öffnet Verteilerly nicht mehr — nachsehen unter Tools"
