@@ -2160,6 +2160,7 @@ class TestVorschau(unittest.TestCase):
     def setUp(self):
         self.v = Verteiler.aus_geometrie(1, 4, 10, name="Muster")
         self.vorschau = Vorschau()
+        self.addCleanup(self.vorschau.deleteLater)
         self.vorschau.projekt_setzen(Projekt(verteiler=self.v))
 
     def test_die_belegung_ist_das_zweite_blatt(self):
@@ -2316,6 +2317,7 @@ class TestVorschauVergroessern(unittest.TestCase):
         verteiler = Verteiler.aus_geometrie(1, 4, 10, name="Muster")
         verteiler.kabel_anlegen("Halle Ost", 1, 1, 2)
         self.vorschau = Vorschau()
+        self.addCleanup(self.vorschau.deleteLater)
         self.addCleanup(self.vorschau.close)
         self.vorschau.resize(520, 620)
         self.vorschau.projekt_setzen(Projekt(verteiler=verteiler))

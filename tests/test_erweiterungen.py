@@ -470,6 +470,7 @@ class TestBlattvorlagenEditor(unittest.TestCase):
         self.ordner = pathlib.Path(self._ordner.name)
         self.programm = Programmattrappe(self.ordner)
         self.dialog = EditorDialog(self.programm)
+        self.addCleanup(self.dialog.deleteLater)
         self.addCleanup(self.dialog.done, 0)
 
     def test_der_editor_ist_ein_fenster_und_laesst_sich_maximieren(self):
@@ -898,6 +899,7 @@ class TestEigeneBauartImEditor(unittest.TestCase):
         self.addCleanup(self._ordner.cleanup)
         self.ordner = pathlib.Path(self._ordner.name)
         self.dialog = EditorDialog(Programmattrappe(self.ordner))
+        self.addCleanup(self.dialog.deleteLater)
         self.addCleanup(self.dialog.done, 0)
 
     def test_die_vorlage_bleibt_wie_sie_ist(self):
@@ -999,6 +1001,7 @@ class TestZuruecksetzenImEditor(unittest.TestCase):
         self.addCleanup(self._ordner.cleanup)
         self.ordner = pathlib.Path(self._ordner.name)
         self.dialog = editor.EditorDialog(Programmattrappe(self.ordner))
+        self.addCleanup(self.dialog.deleteLater)
         self.addCleanup(self.dialog.done, 0)
         # Die Rueckfrage haengt sonst die Testreihe auf.
         self.verwerfen = mock.patch.object(
@@ -1049,6 +1052,7 @@ class TestEigeneFelderImEditor(unittest.TestCase):
         self.addCleanup(self._ordner.cleanup)
         self.ordner = pathlib.Path(self._ordner.name)
         self.dialog = EditorDialog(Programmattrappe(self.ordner))
+        self.addCleanup(self.dialog.deleteLater)
         self.addCleanup(self.dialog.done, 0)
 
     def _setzen(self, *namen):
@@ -1210,6 +1214,7 @@ class TestSchriftfeldImEditor(unittest.TestCase):
         self.addCleanup(self._ordner.cleanup)
         self.ordner = pathlib.Path(self._ordner.name)
         self.dialog = EditorDialog(Programmattrappe(self.ordner))
+        self.addCleanup(self.dialog.deleteLater)
         self.addCleanup(self.dialog.done, 0)
 
     def test_das_beispiel_hat_projektdaten(self):
