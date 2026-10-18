@@ -23,7 +23,7 @@ from verteilerly.blattvorlagen import (  # noqa: E402
 )
 from verteilerly.erweiterungen import Fund  # noqa: E402
 
-from . import BEISPIELVORLAGE  # noqa: E402
+from . import BEISPIELVORLAGE, bauteil_zurueckgeben  # noqa: E402
 
 WURZEL = pathlib.Path(__file__).resolve().parent.parent
 
@@ -259,7 +259,7 @@ class TestImHauptfenster(unittest.TestCase):
         from verteilerly.gui.hauptfenster import Hauptfenster
 
         self.fenster = Hauptfenster()
-        self.addCleanup(self.fenster.close)
+        bauteil_zurueckgeben(self, self.fenster)
 
     def _menue(self):
         return next(
@@ -470,7 +470,7 @@ class TestBlattvorlagenEditor(unittest.TestCase):
         self.ordner = pathlib.Path(self._ordner.name)
         self.programm = Programmattrappe(self.ordner)
         self.dialog = EditorDialog(self.programm)
-        self.addCleanup(self.dialog.deleteLater)
+        bauteil_zurueckgeben(self, self.dialog)
         self.addCleanup(self.dialog.done, 0)
 
     def test_der_editor_ist_ein_fenster_und_laesst_sich_maximieren(self):
@@ -773,7 +773,7 @@ class TestSchriftfeldEditor(unittest.TestCase):
         from verteilerly.erweiterungen.blattvorlageneditor.schriftfeld import SchriftfeldEditor
 
         self.editor = SchriftfeldEditor()
-        self.addCleanup(self.editor.deleteLater)
+        bauteil_zurueckgeben(self, self.editor)
         self.editor.setzen(STANDARDSCHRIFTFELD, ())
         self.gemeldet = []
         self.editor.geaendert.connect(lambda: self.gemeldet.append(True))
@@ -899,7 +899,7 @@ class TestEigeneBauartImEditor(unittest.TestCase):
         self.addCleanup(self._ordner.cleanup)
         self.ordner = pathlib.Path(self._ordner.name)
         self.dialog = EditorDialog(Programmattrappe(self.ordner))
-        self.addCleanup(self.dialog.deleteLater)
+        bauteil_zurueckgeben(self, self.dialog)
         self.addCleanup(self.dialog.done, 0)
 
     def test_die_vorlage_bleibt_wie_sie_ist(self):
@@ -1001,7 +1001,7 @@ class TestZuruecksetzenImEditor(unittest.TestCase):
         self.addCleanup(self._ordner.cleanup)
         self.ordner = pathlib.Path(self._ordner.name)
         self.dialog = editor.EditorDialog(Programmattrappe(self.ordner))
-        self.addCleanup(self.dialog.deleteLater)
+        bauteil_zurueckgeben(self, self.dialog)
         self.addCleanup(self.dialog.done, 0)
         # Die Rueckfrage haengt sonst die Testreihe auf.
         self.verwerfen = mock.patch.object(
@@ -1052,7 +1052,7 @@ class TestEigeneFelderImEditor(unittest.TestCase):
         self.addCleanup(self._ordner.cleanup)
         self.ordner = pathlib.Path(self._ordner.name)
         self.dialog = EditorDialog(Programmattrappe(self.ordner))
-        self.addCleanup(self.dialog.deleteLater)
+        bauteil_zurueckgeben(self, self.dialog)
         self.addCleanup(self.dialog.done, 0)
 
     def _setzen(self, *namen):
@@ -1214,7 +1214,7 @@ class TestSchriftfeldImEditor(unittest.TestCase):
         self.addCleanup(self._ordner.cleanup)
         self.ordner = pathlib.Path(self._ordner.name)
         self.dialog = EditorDialog(Programmattrappe(self.ordner))
-        self.addCleanup(self.dialog.deleteLater)
+        bauteil_zurueckgeben(self, self.dialog)
         self.addCleanup(self.dialog.done, 0)
 
     def test_das_beispiel_hat_projektdaten(self):

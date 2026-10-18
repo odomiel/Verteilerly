@@ -23,6 +23,8 @@ except ImportError:                              # pragma: no cover
 
 ANWENDUNG = QApplication.instance() or QApplication([]) if QApplication else None
 
+from . import bauteil_zurueckgeben  # noqa: E402
+
 
 def _sauber(text: str) -> str:
     """Ein Menüeintrag ohne Merktaste und Auslassungspunkte."""
@@ -178,7 +180,7 @@ class TestGegenDieMenues(unittest.TestCase):
         from verteilerly.gui.hauptfenster import Hauptfenster
 
         self.fenster = Hauptfenster()
-        self.addCleanup(self.fenster.close)
+        bauteil_zurueckgeben(self, self.fenster)
         self.text = _klartext(hilfe.dokumentation())
 
     def _eintraege(self):
@@ -305,7 +307,7 @@ class TestEnglischeDokumentation(unittest.TestCase):
         self.addCleanup(sprachen.sprache_setzen, sprachen.VORGABE)
         sprachen.sprache_setzen("en")
         self.fenster = Hauptfenster()
-        self.addCleanup(self.fenster.close)
+        bauteil_zurueckgeben(self, self.fenster)
         self.roh = hilfe.dokumentation()
         self.text = _klartext(self.roh)
 
@@ -422,7 +424,7 @@ class TestDokumentationDialog(unittest.TestCase):
         from verteilerly.gui.dialoge import DokumentationDialog
 
         self.dialog = DokumentationDialog()
-        self.addCleanup(self.dialog.close)
+        bauteil_zurueckgeben(self, self.dialog)
 
     def test_der_text_steht_darin(self):
         self.assertIn("Verteilerly", self.dialog.text.toPlainText())
@@ -452,7 +454,7 @@ class TestSucheInDerDokumentation(unittest.TestCase):
         from verteilerly.gui.dialoge import DokumentationDialog
 
         self.dialog = DokumentationDialog()
-        self.addCleanup(self.dialog.close)
+        bauteil_zurueckgeben(self, self.dialog)
         self.dialog.show()
         self.addCleanup(self.dialog.hide)
         ANWENDUNG.processEvents()

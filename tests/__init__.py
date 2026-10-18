@@ -31,6 +31,31 @@ os.environ.setdefault("VERTEILERLY_OHNE_FREMDE_ERWEITERUNGEN", "1")
 os.environ.setdefault("VERTEILERLY_OHNE_UPDATEPRUEFUNG", "1")
 
 
+def bauteil_zurueckgeben(test, bauteil) -> None:
+    """Gibt ein Fenster oder Bauteil nach dem Test an Qt zurueck.
+
+    Python allein raeumt es **nicht** ab: seine Lambdas haengen in
+    Qt-Verbindungen, der Kreis laeuft durch C++ und ist fuer den Sammler
+    nicht zu sehen. Gemessen an fuenf Hauptfenstern: ohne bleiben fuenf
+    liegen, mit `deleteLater()` keines.
+
+    Und `deleteLater()` allein **stellt** die Loeschung nur ein - ohne
+    Ereignisschleife arbeitet sie niemand ab. Die Reihe hat keine, also
+    wird hier gleich abgearbeitet.
+    """
+    def zurueck():
+        from PySide6.QtCore import QEvent
+        from PySide6.QtWidgets import QApplication
+
+        bauteil.close()
+        bauteil.deleteLater()
+        anwendung = QApplication.instance()
+        if anwendung is not None:
+            anwendung.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+
+    test.addCleanup(zurueck)
+
+
 def einstellung_bewahren(test, einstellungen, schluessel: str) -> None:
     """Stellt nach dem Test den Wert zurueck, der vorher in der Conf stand.
 

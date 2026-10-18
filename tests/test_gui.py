@@ -37,6 +37,7 @@ try:
 except ImportError:  # ohne Qt laufen wenigstens die uebrigen Tests
     ANWENDUNG = None
 
+from . import bauteil_zurueckgeben
 from verteilerly.modell import (
     BRIEFKOPF_FELDER,
     Aderadresse,
@@ -57,7 +58,7 @@ class TestTextknoepfe(unittest.TestCase):
         from verteilerly.gui.leistenansicht import LeistenAnsicht
 
         self.ansicht = LeistenAnsicht()
-        self.addCleanup(self.ansicht.close)
+        bauteil_zurueckgeben(self, self.ansicht)
         self.ansicht.verteiler_setzen(Verteiler.aus_geometrie(1, 2, 10))
         self.ansicht.leiste_zeigen(1)
         self.ader = self.ansicht.modell._leiste.stift(1).ader("a")
@@ -178,7 +179,7 @@ class TestZelleTeilen(unittest.TestCase):
         from verteilerly.gui.leistenansicht import LeistenAnsicht
 
         self.ansicht = LeistenAnsicht()
-        self.addCleanup(self.ansicht.close)
+        bauteil_zurueckgeben(self, self.ansicht)
         self.verteiler = Verteiler.aus_geometrie(1, 2, 10)
         self.ansicht.verteiler_setzen(self.verteiler)
         self.ansicht.leiste_zeigen(1)
@@ -292,7 +293,7 @@ class TestEnterInGeteilterZelle(unittest.TestCase):
         self.QEvent, self.QKeyEvent = QEvent, QKeyEvent
         self.Zellenteilung = Zellenteilung
         self.ansicht = LeistenAnsicht()
-        self.addCleanup(self.ansicht.close)
+        bauteil_zurueckgeben(self, self.ansicht)
         self.verteiler = Verteiler.aus_geometrie(1, 2, 10)
         self.ansicht.verteiler_setzen(self.verteiler)
         self.ansicht.leiste_zeigen(1)
@@ -420,7 +421,7 @@ class TestMehrereZellenAufEinmal(unittest.TestCase):
         self.QItemSelection = QItemSelection
         self.QItemSelectionModel = QItemSelectionModel
         self.ansicht = LeistenAnsicht()
-        self.addCleanup(self.ansicht.close)
+        bauteil_zurueckgeben(self, self.ansicht)
         self.verteiler = Verteiler.aus_geometrie(1, 2, 10)
         self.ansicht.verteiler_setzen(self.verteiler)
         self.ansicht.leiste_zeigen(1)
@@ -614,7 +615,7 @@ class TestEntfLeertZellen(unittest.TestCase):
         self.QItemSelection = QItemSelection
         self.QItemSelectionModel = QItemSelectionModel
         self.ansicht = LeistenAnsicht()
-        self.addCleanup(self.ansicht.close)
+        bauteil_zurueckgeben(self, self.ansicht)
         self.verteiler = Verteiler.aus_geometrie(1, 2, 10)
         self.verteiler.kabel_anlegen("Leitung", 1, 1, 4)
         self.ansicht.verteiler_setzen(self.verteiler)
@@ -708,7 +709,7 @@ class TestZoomInDenArbeitsansichten(unittest.TestCase):
         verteiler = Verteiler.aus_geometrie(1, 4, 10, name="Probe")
         verteiler.kabel_anlegen("Halle Ost", 1, 1, 2)
         self.fenster = Hauptfenster()
-        self.addCleanup(self.fenster.close)
+        bauteil_zurueckgeben(self, self.fenster)
         self.fenster._projekt_setzen(Projekt(verteiler=verteiler), None)
         self.uebersicht = self.fenster.uebersicht
         self.ansicht = self.fenster.leistenansicht
@@ -802,7 +803,7 @@ class TestZellenZwischenablage(unittest.TestCase):
         leiste.stift(1).ader("a").bemerkung = "geprüft"
         leiste.stift(2).ader("a").bezeichnung = "Melder 2"
         self.ansicht = LeistenAnsicht()
-        self.addCleanup(self.ansicht.close)
+        bauteil_zurueckgeben(self, self.ansicht)
         self.ansicht.verteiler_setzen(verteiler)
         self.ansicht.leiste_zeigen(1)
         self.modell = self.ansicht.modell
@@ -979,7 +980,7 @@ class TestLeitungsZwischenablage(unittest.TestCase):
         )
         verwerfen.start()
         self.addCleanup(verwerfen.stop)
-        self.addCleanup(self.fenster.close)
+        bauteil_zurueckgeben(self, self.fenster)
         self.fenster._projekt_setzen(Projekt(verteiler=verteiler), None)
         self.verteiler = verteiler
 
@@ -1060,7 +1061,7 @@ class TestEnterSpringtWeiter(unittest.TestCase):
 
         self.QEvent, self.QKeyEvent = QEvent, QKeyEvent
         self.ansicht = LeistenAnsicht()
-        self.addCleanup(self.ansicht.close)
+        bauteil_zurueckgeben(self, self.ansicht)
         self.ansicht.verteiler_setzen(Verteiler.aus_geometrie(1, 2, 10))
         self.ansicht.leiste_zeigen(1)
         self.tabelle = self.ansicht.tabelle
@@ -1585,7 +1586,7 @@ class TestKabelnamenInDerUebersicht(unittest.TestCase):
         from verteilerly.gui.uebersicht import Uebersicht
 
         self.uebersicht = Uebersicht()
-        self.addCleanup(self.uebersicht.close)
+        bauteil_zurueckgeben(self, self.uebersicht)
         self.uebersicht.verteiler_setzen(
             Verteiler.aus_geometrie(1, 2, 10, name="Probe")
         )
@@ -1640,7 +1641,7 @@ class TestBelegungWaechst(unittest.TestCase):
         from verteilerly.gui.uebersicht import Uebersicht
 
         self.uebersicht = Uebersicht()
-        self.addCleanup(self.uebersicht.close)
+        bauteil_zurueckgeben(self, self.uebersicht)
 
     def _mit(self, name, da=2, start=3):
         verteiler = Verteiler.aus_geometrie(1, 2, 10)
@@ -1715,7 +1716,7 @@ class TestUpdatepruefung(unittest.TestCase):
         from . import einstellung_bewahren
 
         self.fenster = Hauptfenster()
-        self.addCleanup(self.fenster.close)
+        bauteil_zurueckgeben(self, self.fenster)
         for schluessel in ("update_pruefen", "update_geprueft"):
             einstellung_bewahren(self, self.fenster.einstellungen, schluessel)
 
@@ -1862,7 +1863,7 @@ class TestBelegungWaechstSofort(unittest.TestCase):
         verwerfen.start()
         self.addCleanup(verwerfen.stop)
         self.fenster = Hauptfenster()
-        self.addCleanup(self.fenster.close)
+        bauteil_zurueckgeben(self, self.fenster)
         self.verteiler = Verteiler.aus_geometrie(1, 2, 10, name="Probe")
         self.verteiler.kabel_anlegen("K1", 1, 3, 2)
         self.fenster._projekt_setzen(Projekt(verteiler=self.verteiler), None)
@@ -1920,7 +1921,7 @@ class TestKabelZiehen(unittest.TestCase):
         self.verteiler = Verteiler.aus_geometrie(1, 3, 10, name="Probe")
         self.kabel = self.verteiler.kabel_anlegen("Leitung", 1, 2, 4)
         self.uebersicht = Uebersicht()
-        self.addCleanup(self.uebersicht.close)
+        bauteil_zurueckgeben(self, self.uebersicht)
         self.uebersicht.verteiler_setzen(self.verteiler)
         self.uebersicht.resize(self.uebersicht.sizeHint())
 
@@ -2027,7 +2028,7 @@ class TestKabelspalte(unittest.TestCase):
         verwerfen.start()
         self.addCleanup(verwerfen.stop)
         self.fenster = Hauptfenster()
-        self.addCleanup(self.fenster.close)
+        bauteil_zurueckgeben(self, self.fenster)
         self.verteiler = Verteiler.aus_geometrie(1, 2, 10, name="Probe")
         self.verteiler.kabel_anlegen("Haus 7 Erdgeschoss Technikraum", 1, 3, 4)
         self.verteiler.kabel_anlegen("K2", 1, 8, 1)
@@ -2115,7 +2116,7 @@ class TestSprungZumKabel(unittest.TestCase):
         from verteilerly.gui.hauptfenster import Hauptfenster
 
         self.fenster = Hauptfenster()
-        self.addCleanup(self.fenster.close)
+        bauteil_zurueckgeben(self, self.fenster)
         self.verteiler = Verteiler.aus_geometrie(1, 3, 10, name="Probe")
         self.verteiler.kabel_anlegen("Haus 7", 2, 4, 4)
         self.verteiler.kabel_anlegen_mehrteilig(
@@ -2160,7 +2161,7 @@ class TestVorschau(unittest.TestCase):
     def setUp(self):
         self.v = Verteiler.aus_geometrie(1, 4, 10, name="Muster")
         self.vorschau = Vorschau()
-        self.addCleanup(self.vorschau.deleteLater)
+        bauteil_zurueckgeben(self, self.vorschau)
         self.vorschau.projekt_setzen(Projekt(verteiler=self.v))
 
     def test_die_belegung_ist_das_zweite_blatt(self):
@@ -2317,8 +2318,7 @@ class TestVorschauVergroessern(unittest.TestCase):
         verteiler = Verteiler.aus_geometrie(1, 4, 10, name="Muster")
         verteiler.kabel_anlegen("Halle Ost", 1, 1, 2)
         self.vorschau = Vorschau()
-        self.addCleanup(self.vorschau.deleteLater)
-        self.addCleanup(self.vorschau.close)
+        bauteil_zurueckgeben(self, self.vorschau)
         self.vorschau.resize(520, 620)
         self.vorschau.projekt_setzen(Projekt(verteiler=verteiler))
         self.vorschau.show()
@@ -2553,7 +2553,7 @@ class TestSchreibschutz(unittest.TestCase):
         )
         verwerfen.start()
         self.addCleanup(verwerfen.stop)
-        self.addCleanup(self.fenster.close)
+        bauteil_zurueckgeben(self, self.fenster)
 
     def _hinweis(self):
         return self.fenster.leistenansicht.schreibschutz
@@ -4338,7 +4338,7 @@ class TestDatumEinsetzen(unittest.TestCase):
         from verteilerly.gui.dialoge import ProjektdatenFelder
 
         self.felder = ProjektdatenFelder({"firma": "Musterfirma"})
-        self.addCleanup(self.felder.deleteLater)
+        bauteil_zurueckgeben(self, self.felder)
 
     def test_nur_dieses_feld_und_sein_haken(self):
         import datetime
@@ -5136,7 +5136,7 @@ class TestSprachwahlImMenue(unittest.TestCase):
         self.sprachen = sprachen
         self.addCleanup(sprachen.sprache_setzen, sprachen.VORGABE)
         self.fenster = Hauptfenster()
-        self.addCleanup(self.fenster.close)
+        bauteil_zurueckgeben(self, self.fenster)
         from . import einstellung_bewahren
 
         einstellung_bewahren(self, self.fenster.einstellungen, "sprache")
@@ -5223,7 +5223,7 @@ class TestSuchDialog(unittest.TestCase):
         ader.teilung_setzen("bezeichnung", Zellenteilung(35, "Nst. 17"))
         self.verteiler.ader(Aderadresse(1, 2, "a")).bemerkung = "Amtsleitung"
         self.dialog = SuchDialog(self.projekt)
-        self.addCleanup(self.dialog.close)
+        bauteil_zurueckgeben(self, self.dialog)
 
     def _suchen(self, wort):
         self.dialog.suchfeld.setText(wort)
@@ -5283,7 +5283,7 @@ class TestSucheImHauptfenster(unittest.TestCase):
         from verteilerly.modell import Zellenteilung
 
         self.fenster = Hauptfenster()
-        self.addCleanup(self.fenster.close)
+        bauteil_zurueckgeben(self, self.fenster)
         verteiler = Verteiler.aus_geometrie(2, 3, 10, name="Keller")
         self.projekt = Projekt(
             verteiler=verteiler, briefkopf={"kunde": "Firma Meier"}
@@ -5566,7 +5566,7 @@ class TestToolsMenue(unittest.TestCase):
         from verteilerly.gui.hauptfenster import Hauptfenster
 
         self.fenster = Hauptfenster()
-        self.addCleanup(self.fenster.close)
+        bauteil_zurueckgeben(self, self.fenster)
         self.ordner = tempfile.TemporaryDirectory()
         self.addCleanup(self.ordner.cleanup)
         self.ziel = pathlib.Path(self.ordner.name)
