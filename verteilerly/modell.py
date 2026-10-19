@@ -1072,6 +1072,153 @@ class Verteiler:
 
 
 # --------------------------------------------------------------------------
+# Restleitungen
+# --------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Restplatz:
+    """Wohin der Rest einer gekuerzten Leitung kommen soll.
+
+    ``leiste`` und ``start_da`` sind ``None``, wenn kein Stueck freier
+    Leiste mehr gross genug ist. Der Eintrag bleibt dann in der Liste -
+    wer den Verteiler vor sich hat, soll sehen, was uebrig bleibt, und
+    nicht raten, warum eine Leitung fehlt.
+    """
+
+    kabel: Kabel
+    rest: int
+    leiste: int | None = None
+    start_da: int | None = None
+
+    @property
+    def passt(self) -> bool:
+        return self.leiste is not None
+
+    @property
+    def fortsetzung(self) -> bool:
+        """Schliesst der Platz unmittelbar an die Leitung an?
+
+        Dann waechst ihr letzter Abschnitt, statt dass ein zweiter
+        daneben entsteht - zwei aneinanderliegende Abschnitte waeren
+        derselbe Strang, wuerden aber als zwei Bloecke gezeichnet.
+        """
+        if not self.passt or not self.kabel.abschnitte:
+            return False
+        letzter = self.kabel.abschnitte[-1]
+        return (
+            self.leiste == letzter.leiste
+            and self.start_da == letzter.end_da + 1
+        )
+
+
+def restleitungen_planen(verteiler: Verteiler) -> list[Restplatz]:
+    """Sagt fuer jede gekuerzte Leitung, wo ihr Rest aufliegen koennte.
+
+    Geplant wird in der Reihenfolge, in der die Leitungen am Verteiler
+    liegen, und **ohne etwas zu aendern**: erst wenn der Plan angenommen
+    ist, wird aufgelegt. Jeder vergebene Platz gilt dabei als besetzt,
+    sonst schickte der Plan zwei Reste auf dieselben Doppeladern.
+
+    Gesucht wird in **zwei Durchgaengen**: erst bekommt jede Leitung den
+    Platz unmittelbar hinter sich, falls er frei ist - dort gehoert ihre
+    Fortsetzung hin -, und nur was so nicht unterkommt, nimmt danach das
+    erste freie Stueck. Andernfalls nahm die erste Leitung der zweiten
+    ihre eigene Fortsetzung weg, bloss weil sie weiter vorne liegt.
+    Zerteilt wird ein Rest nicht: ein Strang, der ueber drei Leisten
+    verstreut liegt, ist auf dem Blatt nicht mehr zu verfolgen.
+    """
+    vergeben: set[tuple[int, int]] = set()
+
+    def frei(leiste: int, da: int) -> bool:
+        return (
+            verteiler.kabel_an(leiste, da) is None
+            and (leiste, da) not in vergeben
+        )
+
+    def passt_ab(leiste: int, start_da: int, anzahl: int) -> bool:
+        if start_da + anzahl - 1 > verteiler.leiste(leiste).da_anzahl:
+            return False
+        return all(frei(leiste, start_da + i) for i in range(anzahl))
+
+    def belegen(leiste: int, start_da: int, anzahl: int) -> None:
+        vergeben.update((leiste, start_da + i) for i in range(anzahl))
+
+    def hinter(kabel: Kabel) -> tuple[int, int] | None:
+        """Der Platz gleich hinter der Leitung - oder nichts."""
+        if not kabel.abschnitte:
+            return None
+        letzter = kabel.abschnitte[-1]
+        return letzter.leiste, letzter.end_da + 1
+
+    gekuerzte = [
+        (kabel, (kabel.da_gesamt or 0) - kabel.da_aufgelegt)
+        for kabel in sorted(verteiler.kabel, key=_kabellage)
+        if kabel.gekuerzt
+    ]
+
+    # Erster Durchgang: die eigene Fortsetzung.
+    gefunden: dict[int, tuple[int, int]] = {}
+    for kabel, rest in gekuerzte:
+        anschluss = hinter(kabel)
+        if anschluss and passt_ab(anschluss[0], anschluss[1], rest):
+            gefunden[id(kabel)] = anschluss
+            belegen(anschluss[0], anschluss[1], rest)
+
+    # Zweiter Durchgang: das erste freie Stueck, das den Rest ganz traegt.
+    for kabel, rest in gekuerzte:
+        if id(kabel) in gefunden:
+            continue
+        for leiste in verteiler.alle_leisten:
+            for start_da in range(1, leiste.da_anzahl + 1):
+                if passt_ab(leiste.nummer, start_da, rest):
+                    gefunden[id(kabel)] = (leiste.nummer, start_da)
+                    belegen(leiste.nummer, start_da, rest)
+                    break
+            if id(kabel) in gefunden:
+                break
+
+    return [
+        Restplatz(kabel, rest, *gefunden.get(id(kabel), (None, None)))
+        for kabel, rest in gekuerzte
+    ]
+
+
+def _kabellage(kabel: Kabel) -> tuple[int, int]:
+    """Wo eine Leitung am Verteiler anfaengt - zum Sortieren."""
+    if not kabel.abschnitte:
+        return (0, 0)
+    erster = kabel.abschnitte[0]
+    return (erster.leiste, erster.start_da)
+
+
+def restplaetze_auflegen(
+    verteiler: Verteiler, plan: list[Restplatz]
+) -> list[Restplatz]:
+    """Legt die geplanten Reste auf; gibt zurueck, was aufgelegt wurde.
+
+    Uebergangen wird, was keinen Platz hat und was inzwischen nicht mehr
+    gekuerzt ist. Ein Platz, der sich zwischen Planen und Auflegen
+    belegt hat, wird gemeldet (``ModellFehler``) - stillschweigend
+    daneben zu legen waere schlimmer.
+    """
+    aufgelegt: list[Restplatz] = []
+    for platz in plan:
+        if not platz.passt or not platz.kabel.gekuerzt:
+            continue
+        if platz.fortsetzung:
+            verteiler.kabel_auflegen_aendern(
+                platz.kabel, platz.kabel.da_aufgelegt + platz.rest
+            )
+        else:
+            verteiler.kabel_verlaengern(
+                platz.kabel, platz.leiste, platz.start_da, platz.rest
+            )
+        aufgelegt.append(platz)
+    return aufgelegt
+
+
+# --------------------------------------------------------------------------
 # Rangierungen als Text
 # --------------------------------------------------------------------------
 

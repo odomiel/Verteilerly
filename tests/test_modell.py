@@ -911,3 +911,149 @@ class TestKabelUmlegen(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestRestleitungen(unittest.TestCase):
+    """Was von gekuerzten Leitungen uebrig ist, auf die freien DA legen."""
+
+    def setUp(self):
+        self.v = Verteiler.aus_geometrie(1, 2, 10)
+
+    def _plan(self):
+        return modell.restleitungen_planen(self.v)
+
+    def test_ohne_gekuerzte_leitung_ist_nichts_zu_tun(self):
+        self.v.kabel_anlegen("voll", 1, 1, 4, da_gesamt=4)
+        self.assertEqual(self._plan(), [])
+
+    def test_eine_leitung_ohne_groessenangabe_gilt_nicht_als_gekuerzt(self):
+        # Ohne da_gesamt ist unbekannt, wie gross das Kabel ist - dann
+        # gibt es auch keinen Rest.
+        self.v.kabel_anlegen("ohne Angabe", 1, 1, 4)
+        self.assertEqual(self._plan(), [])
+
+    def test_der_rest_ist_die_luecke_zwischen_groesse_und_aufgelegtem(self):
+        self.v.kabel_anlegen("K12", 1, 1, 4, da_gesamt=6)
+        (platz,) = self._plan()
+        self.assertEqual(platz.rest, 2)
+        self.assertTrue(platz.passt)
+
+    def test_der_platz_hinter_der_leitung_geht_vor(self):
+        kabel = self.v.kabel_anlegen("K12", 1, 1, 4, da_gesamt=6)
+        (platz,) = self._plan()
+        self.assertEqual((platz.leiste, platz.start_da), (1, 5))
+        self.assertTrue(platz.fortsetzung)
+        self.assertIs(platz.kabel, kabel)
+
+    def test_sonst_das_erste_freie_stueck_das_den_rest_ganz_traegt(self):
+        # Hinter K12 ist belegt, auf Leiste 1 bleibt nur eine einzelne DA
+        # frei - der Rest von zwei DA muss also auf Leiste 2.
+        self.v.kabel_anlegen("K12", 1, 1, 4, da_gesamt=6)
+        self.v.kabel_anlegen("Nachbar", 1, 6, 5)
+        (platz,) = self._plan()
+        self.assertEqual((platz.leiste, platz.start_da), (2, 1))
+        self.assertFalse(platz.fortsetzung)
+
+    def test_jede_leitung_behaelt_ihre_eigene_fortsetzung(self):
+        """Die vordere Leitung nimmt der hinteren nicht ihren Anschluss.
+
+        Darum wird in zwei Durchgaengen geplant: erst die Fortsetzungen,
+        dann alles Weitere.
+        """
+        self.v.kabel_anlegen("vorn", 1, 1, 4, da_gesamt=6)      # Rest 2
+        self.v.kabel_anlegen_mehrteilig(
+            "hinten",
+            [Kabelabschnitt(1, 5, 6), Kabelabschnitt(2, 1, 2)],
+            da_gesamt=10,
+        )                                                        # Rest 2
+        vorn, hinten = self._plan()
+        self.assertEqual(hinten.kabel.beschriftung, "hinten")
+        self.assertEqual((hinten.leiste, hinten.start_da), (2, 3))
+        self.assertTrue(hinten.fortsetzung)
+        # "vorn" kommt dahinter, nicht auf denselben Platz.
+        self.assertEqual((vorn.leiste, vorn.start_da), (2, 5))
+
+    def test_zwei_reste_kommen_nicht_auf_dieselben_doppeladern(self):
+        self.v.kabel_anlegen("a", 1, 1, 10, da_gesamt=12)         # Rest 2
+        self.v.kabel_anlegen("b", 2, 1, 2, da_gesamt=4)           # Rest 2
+        plaetze = {(p.leiste, p.start_da, p.rest) for p in self._plan()}
+        belegt = [
+            (leiste, start + i)
+            for leiste, start, rest in plaetze
+            for i in range(rest)
+        ]
+        self.assertEqual(len(belegt), len(set(belegt)))
+
+    def test_ohne_platz_bleibt_die_zeile_stehen(self):
+        """Gemeldet wird auch, was nicht unterkommt - nicht verschwiegen."""
+        eng = Verteiler.aus_geometrie(1, 1, 4)
+        eng.kabel_anlegen("K7", 1, 1, 4, da_gesamt=8)
+        (platz,) = modell.restleitungen_planen(eng)
+        self.assertEqual(platz.rest, 4)
+        self.assertFalse(platz.passt)
+        self.assertIsNone(platz.leiste)
+        self.assertFalse(platz.fortsetzung)
+
+    def test_ein_rest_wird_nicht_zerteilt(self):
+        """Lieber kein Platz als ein Strang ueber drei Leisten verstreut."""
+        # Je Leiste bleiben nur zwei DA frei, der Rest braucht drei.
+        self.v.kabel_anlegen("a", 1, 1, 8, da_gesamt=11)
+        self.v.kabel_anlegen("b", 2, 1, 8)
+        (platz,) = self._plan()
+        self.assertEqual(platz.rest, 3)
+        self.assertFalse(platz.passt)
+
+    def test_das_planen_aendert_nichts(self):
+        kabel = self.v.kabel_anlegen("K12", 1, 1, 4, da_gesamt=6)
+        self._plan()
+        self.assertEqual(kabel.da_aufgelegt, 4)
+        self.assertTrue(kabel.gekuerzt)
+
+    def test_die_fortsetzung_waechst_im_abschnitt_statt_daneben(self):
+        """Zwei aneinanderliegende Abschnitte waeren zwei Bloecke."""
+        kabel = self.v.kabel_anlegen("K12", 1, 1, 4, da_gesamt=6)
+        plan = self._plan()
+        modell.restplaetze_auflegen(self.v, plan)
+        self.assertEqual(len(kabel.abschnitte), 1)
+        self.assertEqual(kabel.da_aufgelegt, 6)
+        self.assertFalse(kabel.gekuerzt)
+
+    def test_ein_rest_woanders_wird_ein_zweiter_abschnitt(self):
+        kabel = self.v.kabel_anlegen("K12", 1, 1, 4, da_gesamt=6)
+        self.v.kabel_anlegen("Nachbar", 1, 6, 5)
+        modell.restplaetze_auflegen(self.v, self._plan())
+        self.assertEqual(
+            [(a.leiste, a.start_da, a.anzahl_da) for a in kabel.abschnitte],
+            [(1, 1, 4), (2, 1, 2)],
+        )
+        self.assertFalse(kabel.gekuerzt)
+
+    def test_aufgelegt_wird_nur_was_platz_hat(self):
+        eng = Verteiler.aus_geometrie(1, 1, 6)
+        klein = eng.kabel_anlegen("passt", 1, 1, 2, da_gesamt=4)
+        gross = eng.kabel_anlegen("passt nicht", 1, 5, 2, da_gesamt=9)
+        plan = modell.restleitungen_planen(eng)
+        aufgelegt = modell.restplaetze_auflegen(eng, plan)
+        self.assertEqual([p.kabel for p in aufgelegt], [klein])
+        self.assertFalse(klein.gekuerzt)
+        self.assertTrue(gross.gekuerzt)
+
+    def test_der_rueckgabewert_sagt_was_aufgelegt_wurde(self):
+        self.v.kabel_anlegen("K12", 1, 1, 4, da_gesamt=6)
+        plan = self._plan()
+        self.assertEqual(len(modell.restplaetze_auflegen(self.v, plan)), 1)
+        # Zweimal dasselbe legt nichts mehr auf: nichts ist mehr gekuerzt.
+        self.assertEqual(len(modell.restplaetze_auflegen(self.v, plan)), 0)
+
+    def test_die_adern_des_rests_bleiben_leer_bis_die_farben_kommen(self):
+        """Das Modell legt auf; die Farben zieht die Oberflaeche nach."""
+        self.v.kabel_anlegen("K12", 1, 1, 4, da_gesamt=6, kabeltyp="jystyv")
+        modell.restplaetze_auflegen(self.v, self._plan())
+        self.assertEqual(self.v.leiste(1).stift(5).a.farbe, "")
+
+    def test_die_reihenfolge_ist_die_des_verteilers(self):
+        self.v.kabel_anlegen("spaeter", 2, 1, 2, da_gesamt=3)
+        self.v.kabel_anlegen("zuerst", 1, 1, 2, da_gesamt=3)
+        self.assertEqual(
+            [p.kabel.beschriftung for p in self._plan()], ["zuerst", "spaeter"]
+        )

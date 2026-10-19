@@ -66,6 +66,9 @@ class Uebersicht(QWidget):
     #: Leiste, DA). Auch das fuehrt das Fenster aus - es haelt die
     #: Ablage, und es weiss, was ein Umzug am Verteiler bedeutet.
     kabel_zwischenablage = Signal(str, object, int, int)
+    #: Die Reste aller gekuerzten Leitungen sollen aufliegen. Geplant und
+    #: ausgefuehrt wird im Fenster - die Uebersicht meldet nur den Wunsch.
+    restleitungen_gewuenscht = Signal()
     #: Strg und Mausrad: eine Stufe hinauf oder hinab.
     zoom_gerollt = Signal(int)
 
@@ -111,7 +114,7 @@ class Uebersicht(QWidget):
     # -- Rechtsklickmenue ---------------------------------------------------
 
     def _menueaktionen(self) -> None:
-        """Die drei Handlungen samt Kuerzeln, am Bild angemeldet."""
+        """Die Handlungen des Rechtsklickmenues, am Bild angemeldet."""
         self.aktion_ausschneiden = QAction(u("Leitung ausschneiden"), self)
         self.aktion_ausschneiden.setShortcut(QKeySequence.StandardKey.Cut)
         self.aktion_kopieren = QAction(u("Leitung kopieren"), self)
@@ -128,6 +131,14 @@ class Uebersicht(QWidget):
                 lambda _an=False, handlung=was: self._ablage_melden(handlung)
             )
             self.addAction(handlung)
+
+        # Kein Kuerzel: die Handlung betrifft den ganzen Verteiler, nicht
+        # die angeklickte Stelle, und soll nicht aus Versehen auszuloesen
+        # sein.
+        self.aktion_restleitungen = QAction(u("Restleitungen auflegen…"), self)
+        self.aktion_restleitungen.triggered.connect(
+            lambda _an=False: self.restleitungen_gewuenscht.emit()
+        )
 
     def _ablage_melden(self, was: str, stelle=None) -> None:
         """Meldet die Handlung ans Fenster - mit Kabel und Platz."""
@@ -150,9 +161,17 @@ class Uebersicht(QWidget):
         self.aktion_ausschneiden.setEnabled(darf and kabel is not None)
         self.aktion_kopieren.setEnabled(kabel is not None)
         self.aktion_einfuegen.setEnabled(darf and self.ablage_voll)
+        self.aktion_restleitungen.setEnabled(darf and self.gekuerzte_leitungen > 0)
+
+    @property
+    def gekuerzte_leitungen(self) -> int:
+        """Wie viele Leitungen weniger aufliegen, als sie haben."""
+        if self.verteiler is None:
+            return 0
+        return sum(1 for kabel in self.verteiler.kabel if kabel.gekuerzt)
 
     def contextMenuEvent(self, ereignis) -> None:  # noqa: N802 - Qt-Name
-        """Rechtsklick auf eine Doppelader: ausschneiden, kopieren, einfuegen.
+        """Rechtsklick auf eine Doppelader: Ablage und Restleitungen.
 
         Angefasst wird, worauf geklickt wurde - nicht, was vorher
         markiert war: ein Rechtsklick waehlt die Stelle mit aus, wie
@@ -173,6 +192,8 @@ class Uebersicht(QWidget):
         menue.addAction(self.aktion_kopieren)
         menue.addSeparator()
         menue.addAction(self.aktion_einfuegen)
+        menue.addSeparator()
+        menue.addAction(self.aktion_restleitungen)
         menue.exec(ereignis.globalPos())
 
     # -- Masse: sie wachsen mit dem Zoom -----------------------------------

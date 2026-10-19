@@ -67,6 +67,8 @@ from ..modell import (
     fremde_vermerke,
     leistenname,
     mehrzahl,
+    restleitungen_planen,
+    restplaetze_auflegen,
 )
 from .. import URHEBER
 from ..version import VERSION
@@ -92,6 +94,7 @@ from .dialoge import (
     PaketDialog,
     PruefberichtDialog,
     RangiervorlagenDialog,
+    RestleitungenDialog,
     UeberlaufDialog,
     als_vorlage_speichern,
 )
@@ -363,6 +366,9 @@ class Hauptfenster(QMainWindow):
         self.uebersicht.auswahl_geaendert.connect(self._auswahl_gemeldet)
         self.uebersicht.kabel_umgelegt.connect(self._kabel_umlegen)
         self.uebersicht.kabel_zwischenablage.connect(self._kabel_ablage)
+        self.uebersicht.restleitungen_gewuenscht.connect(
+            self.restleitungen_auflegen
+        )
 
         self.uebersicht.zoom_gerollt.connect(
             lambda richtung: self.uebersichtszoom.stufen_gehen(richtung)
@@ -2242,6 +2248,62 @@ class Hauptfenster(QMainWindow):
              else u("Kabel verschoben: {0} nach {1}")).format(name, wohin),
             8000,
         )
+
+    def restleitungen_auflegen(self) -> None:
+        """Was von gekuerzten Leitungen uebrig ist, auf die freien DA legen.
+
+        Geplant wird im Modell, gezeigt im Dialog, aufgelegt erst nach
+        Zustimmung - und alles in **einem** Schritt zum Zuruecknehmen.
+        Die Adernfarben ziehen mit: die neuen Doppeladern setzen die
+        Folge des Kabels fort, von Hand Eingetragenes bleibt stehen.
+        """
+        if self.projekt is None or self.schreibgeschuetzt:
+            return
+        verteiler = self.projekt.verteiler
+        plan = restleitungen_planen(verteiler)
+        if not plan:
+            self.statusBar().showMessage(
+                u("Keine Leitung ist gekürzt — es liegt nichts an"), 6000
+            )
+            return
+
+        dialog = RestleitungenDialog(plan, self, leisten=self.leisten_schreibweise)
+        if dialog.exec() != RestleitungenDialog.DialogCode.Accepted:
+            return
+
+        # Der bisherige Farbplan ist der Massstab fuer das Nachziehen:
+        # was noch genau so dasteht, hat die Automatik gesetzt.
+        vorher = {
+            id(platz.kabel): farbplan(verteiler, platz.kabel, self.kabeltypen)
+            for platz in plan
+        }
+        try:
+            aufgelegt = restplaetze_auflegen(verteiler, plan)
+        except ModellFehler as fehler:
+            QMessageBox.warning(self, u("Restleitungen nicht aufgelegt"), str(fehler))
+            return
+
+        gefuellt = sum(
+            farben_eintragen(
+                verteiler, platz.kabel, self.kabeltypen,
+                statt=vorher.get(id(platz.kabel)),
+            )
+            for platz in aufgelegt
+        )
+        self._belegung_geaendert()
+        self.leistenansicht.aktualisieren()
+        self.aktionen_auffrischen()
+
+        # mehrzahl() uebersetzt seine Woerter selbst - darum ohne u(…).
+        meldung = mehrzahl(
+            len(aufgelegt), "Restleitung", "Restleitungen"
+        ) + u(" aufgelegt")
+        ohne = len(plan) - len(aufgelegt)
+        if ohne:
+            meldung += u(", {0} ohne Platz").format(ohne)
+        if gefuellt:
+            meldung += u(", {0} Adernfarben nachgezogen").format(gefuellt)
+        self.statusBar().showMessage(meldung, 8000)
 
     def _kabel_abnehmen(self, kabel) -> None:
         # Die Farbfolge gehoert zum Kabel: ist es weg, gehoert sie nicht

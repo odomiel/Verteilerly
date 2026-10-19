@@ -390,6 +390,21 @@ later would lose them. If it does not fit at the target or something lies
 there already, the status bar says so and it stays where it is. <b>Dragging
 with the mouse</b> does the same, by the way (with Ctrl: copy).</p>
 
+<p><b>Terminating remaining lines</b> — the same right-click menu carries
+<i>Terminate remaining lines…</i> at the end. The entry takes on <b>all
+shortened lines of the frame</b> at once: a dialog shows for each line what is
+terminated and where its rest would go, and only a press on <i>Terminate</i>
+carries it out. Searched first is the place <b>directly behind the line</b> —
+that is where its continuation belongs, and it grows into that section instead
+of beside it —, and only what does not fit that way takes the first free run
+that carries the rest <i>completely</i>. No rest is split up: a strand
+scattered across three strips can no longer be followed on the sheet. If there
+is nowhere enough room, the row says <i>no room</i> and the line stays as it
+was — that is reported too, rather than passed over. The <b>wire colours come
+along</b>: the new pairs continue the cable type's sequence, what was entered
+by hand stays. The whole thing is <b>one</b> step to undo. The entry is greyed
+out as long as no line is shortened or the frame is open read-only.</p>
+
 <p><b>Terminating</b> — <b>Edit ▸ Terminate cable…</b> (Ctrl+K) or a double
 click on a free pair. Label, cable type and size are to be given; <i>strip</i>
 and <i>from pin</i> come from the selection. Preset are <b>2 pairs</b> and

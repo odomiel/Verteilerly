@@ -64,6 +64,7 @@ from ..modell import (
     LEISTEN_ZAHLEN,
     Kabel,
     Projekt,
+    Restplatz,
     Verteiler,
     leistenname,
     mehrzahl,
@@ -1254,6 +1255,99 @@ class UeberlaufDialog(PassenderDialog):
         if self.verfaellt.isChecked():
             return self.VERFAELLT, 0, 0
         return self.FORTSETZEN, self.leiste.currentData(), self.start.value()
+
+
+class RestleitungenDialog(PassenderDialog):
+    """Was von gekuerzten Leitungen uebrig ist, und wohin es kommt.
+
+    Der Dialog **zeigt nur** - geplant wird im Modell
+    (``restleitungen_planen``), aufgelegt erst, wenn hier jemand
+    zustimmt. Eine Zeile je gekuerzter Leitung, auch fuer die, die
+    keinen Platz mehr findet: wer den Verteiler vor sich hat, soll
+    sehen, was uebrig bleibt.
+    """
+
+    def __init__(
+        self,
+        plan: list[Restplatz],
+        parent: QWidget | None = None,
+        leisten: str = LEISTEN_ZAHLEN,
+    ) -> None:
+        super().__init__(parent)
+        self.setWindowTitle(u("Restleitungen auflegen"))
+        self.plan = plan
+
+        erklaerung = QLabel(
+            u("Von diesen Leitungen liegen weniger Doppeladern auf, als sie "
+              "haben. Der Rest kommt auf die freien Doppeladern — jede "
+              "Leitung bleibt dabei eine Leitung.")
+        )
+        erklaerung.setWordWrap(True)
+
+        self.liste = QTableWidget(len(plan), 3)
+        self.liste.setHorizontalHeaderLabels(
+            [u("Leitung"), u("Liegt auf"), u("Rest kommt auf")]
+        )
+        self.liste.verticalHeader().setVisible(False)
+        self.liste.setSelectionMode(QTableWidget.SelectionMode.NoSelection)
+        self.liste.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        # Hier ist nichts zu bedienen - sonst sitzt der Fokusrahmen auf der
+        # ersten Zelle, als waere sie gewaehlt.
+        self.liste.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.liste.horizontalHeader().setStretchLastSection(True)
+        for zeile, platz in enumerate(plan):
+            self._zeile_setzen(zeile, platz, leisten)
+        self.liste.resizeColumnsToContents()
+
+        passend = sum(1 for platz in plan if platz.passt)
+        ohne = len(plan) - passend
+        zusammen = u("{0} von {1} werden aufgelegt").format(passend, len(plan))
+        if ohne:
+            zusammen += u(", {0} ohne Platz").format(ohne)
+        self.zaehler = QLabel(zusammen)
+
+        self.auflegen_knopf = QPushButton(u("Auflegen"))
+        self.auflegen_knopf.setDefault(True)
+        self.auflegen_knopf.setEnabled(passend > 0)
+        self.auflegen_knopf.clicked.connect(self.accept)
+        abbrechen = QPushButton(u("Abbrechen"))
+        abbrechen.clicked.connect(self.reject)
+
+        knoepfe = QHBoxLayout()
+        knoepfe.addWidget(self.zaehler)
+        knoepfe.addStretch(1)
+        knoepfe.addWidget(self.auflegen_knopf)
+        knoepfe.addWidget(abbrechen)
+
+        aufbau = QVBoxLayout(self)
+        aufbau.addWidget(erklaerung)
+        aufbau.addWidget(self.liste, 1)
+        aufbau.addLayout(knoepfe)
+        self.resize(560, 320)
+
+    def _zeile_setzen(self, zeile: int, platz: Restplatz, leisten: str) -> None:
+        """Eine Leitung: Name, was aufliegt, wohin der Rest kommt."""
+        name = platz.kabel.beschriftung or u("ohne Beschriftung")
+        liegt = u("{0} von {1} DA").format(
+            platz.kabel.da_aufgelegt, platz.kabel.da_gesamt
+        )
+        if not platz.passt:
+            ziel = u("kein Platz")
+        elif platz.fortsetzung:
+            ziel = u("Leiste {0} ab DA {1} (Fortsetzung)").format(
+                leistenname(platz.leiste, leisten), platz.start_da
+            )
+        else:
+            ziel = u("Leiste {0} ab DA {1}").format(
+                leistenname(platz.leiste, leisten), platz.start_da
+            )
+        for spalte, text in enumerate((name, liegt, ziel)):
+            eintrag = QTableWidgetItem(text)
+            if spalte == 2 and not platz.passt:
+                eintrag.setForeground(
+                    self.palette().color(QPalette.ColorRole.PlaceholderText)
+                )
+            self.liste.setItem(zeile, spalte, eintrag)
 
 
 class RangiervorlagenDialog(PassenderDialog):

@@ -16,7 +16,11 @@ try:
     from PySide6.QtCore import Qt
     from PySide6.QtWidgets import QApplication, QMessageBox
 
-    from verteilerly.gui.dialoge import DA_VORGABEN, NeuerVerteilerDialog
+    from verteilerly.gui.dialoge import (
+        DA_VORGABEN,
+        NeuerVerteilerDialog,
+        RestleitungenDialog,
+    )
     from verteilerly.gui.vorschau import Vorschau
     from verteilerly.gui.leistenansicht import (
         SPALTE_ADER,
@@ -2009,6 +2013,145 @@ class TestKabelZiehen(unittest.TestCase):
         self.uebersicht.kabel_umgelegt.connect(lambda *a: gemeldet.append(a))
         self.uebersicht.dropEvent(self._Fracht(self._punkt(3, 3), 0))
         self.assertEqual(gemeldet, [])
+
+
+class TestRestleitungenAuflegen(unittest.TestCase):
+    """Die Reste gekürzter Leitungen aus dem Rechtsklickmenü auflegen."""
+
+    def setUp(self):
+        from verteilerly.gui import hauptfenster
+        from verteilerly.gui.hauptfenster import Hauptfenster
+
+        verteiler = Verteiler.aus_geometrie(1, 2, 10, name="Probe")
+        # 4 von 6 DA - dahinter ist frei, also eine Fortsetzung.
+        self.kabel = verteiler.kabel_anlegen(
+            "K12", 1, 1, 4, da_gesamt=6, kabeltyp="jystyv"
+        )
+        self.fenster = Hauptfenster()
+        verwerfen = mock.patch.object(
+            hauptfenster, "frage",
+            return_value=QMessageBox.StandardButton.Discard,
+        )
+        verwerfen.start()
+        self.addCleanup(verwerfen.stop)
+        bauteil_zurueckgeben(self, self.fenster)
+        self.fenster._projekt_setzen(Projekt(verteiler=verteiler), None)
+        self.verteiler = verteiler
+
+    def _auflegen(self, antwort=RestleitungenDialog.DialogCode.Accepted):
+        """Loest die Handlung aus und faengt den Dialog ab.
+
+        Ein ``exec()``, das niemand beantwortet, haengt die Testreihe
+        auf - der Dialog wird darum nie gezeigt, nur gebaut.
+        """
+        gezeigt = []
+
+        def statt_exec(dialog):
+            gezeigt.append(dialog)
+            return antwort
+
+        with mock.patch.object(RestleitungenDialog, "exec", statt_exec):
+            self.fenster.uebersicht.restleitungen_gewuenscht.emit()
+        return gezeigt[0] if gezeigt else None
+
+    # -- Der Eintrag im Menue ---------------------------------------------
+
+    def test_der_eintrag_ist_da_wenn_eine_leitung_gekuerzt_ist(self):
+        self.fenster.uebersicht.menue_auffrischen(None)
+        self.assertTrue(self.fenster.uebersicht.aktion_restleitungen.isEnabled())
+
+    def test_ohne_gekuerzte_leitung_ist_der_eintrag_aus(self):
+        self.verteiler.kabel_auflegen_aendern(self.kabel, 6)
+        self.fenster.uebersicht.menue_auffrischen(None)
+        self.assertEqual(self.fenster.uebersicht.gekuerzte_leitungen, 0)
+        self.assertFalse(self.fenster.uebersicht.aktion_restleitungen.isEnabled())
+
+    def test_schreibgeschuetzt_ist_der_eintrag_aus(self):
+        self.fenster.schreibschutz_setzen(True)
+        self.fenster.uebersicht.menue_auffrischen(None)
+        self.assertFalse(self.fenster.uebersicht.aktion_restleitungen.isEnabled())
+
+    def test_schreibgeschuetzt_wird_auch_nichts_aufgelegt(self):
+        """Die Flagge allein waere zu umgehen - gesperrt wird die Handlung."""
+        self.fenster.schreibschutz_setzen(True)
+        self.assertIsNone(self._auflegen())
+        self.assertTrue(self.kabel.gekuerzt)
+
+    # -- Der Dialog -------------------------------------------------------
+
+    def test_der_dialog_zeigt_je_gekuerzte_leitung_eine_zeile(self):
+        dialog = self._auflegen()
+        self.assertEqual(dialog.liste.rowCount(), 1)
+        self.assertEqual(dialog.liste.item(0, 0).text(), "K12")
+        self.assertIn("4", dialog.liste.item(0, 1).text())
+        self.assertIn("6", dialog.liste.item(0, 1).text())
+
+    def test_der_dialog_nennt_die_fortsetzung_als_solche(self):
+        dialog = self._auflegen()
+        self.assertIn("Fortsetzung", dialog.liste.item(0, 2).text())
+
+    def test_der_dialog_sagt_wenn_kein_platz_mehr_ist(self):
+        # Alles ausser der Leitung selbst belegen.
+        self.verteiler.kabel_anlegen("Nachbar", 1, 5, 6)
+        self.verteiler.kabel_anlegen("Nachbar 2", 2, 1, 10)
+        dialog = self._auflegen()
+        self.assertEqual(dialog.liste.item(0, 2).text(), "kein Platz")
+        self.assertFalse(dialog.auflegen_knopf.isEnabled())
+
+    def test_abbrechen_legt_nichts_auf(self):
+        self._auflegen(RestleitungenDialog.DialogCode.Rejected)
+        self.assertEqual(self.kabel.da_aufgelegt, 4)
+        self.assertTrue(self.kabel.gekuerzt)
+
+    # -- Das Auflegen -----------------------------------------------------
+
+    def test_nach_dem_auflegen_ist_nichts_mehr_gekuerzt(self):
+        self._auflegen()
+        self.assertEqual(self.kabel.da_aufgelegt, 6)
+        self.assertFalse(self.kabel.gekuerzt)
+
+    def test_die_fortsetzung_bleibt_ein_abschnitt(self):
+        self._auflegen()
+        self.assertEqual(len(self.kabel.abschnitte), 1)
+
+    def test_die_adernfarben_ziehen_mit(self):
+        """Die neuen DA setzen die Farbfolge des Kabels fort."""
+        self._auflegen()
+        self.assertTrue(self.verteiler.leiste(1).stift(5).a.farbe)
+        self.assertTrue(self.verteiler.leiste(1).stift(6).b.farbe)
+
+    def test_von_hand_eingetragene_farbe_bleibt_stehen(self):
+        self.verteiler.leiste(1).stift(5).a.farbe = "eigen"
+        self._auflegen()
+        self.assertEqual(self.verteiler.leiste(1).stift(5).a.farbe, "eigen")
+
+    def test_das_ganze_ist_ein_schritt_zum_zuruecknehmen(self):
+        self._auflegen()
+        self.assertTrue(self.fenster.aktion_rueckgaengig.isEnabled())
+        self.fenster.rueckgaengig()
+        kabel = self.fenster.projekt.verteiler.kabel[0]
+        self.assertEqual(kabel.da_aufgelegt, 4)
+        self.assertTrue(kabel.gekuerzt)
+
+    def test_die_statuszeile_sagt_was_geschah(self):
+        self._auflegen()
+        meldung = self.fenster.statusBar().currentMessage()
+        self.assertIn("Restleitung", meldung)
+
+    def test_ohne_gekuerzte_leitung_kommt_kein_dialog(self):
+        self.verteiler.kabel_auflegen_aendern(self.kabel, 6)
+        self.assertIsNone(self._auflegen())
+        self.assertIn("gekürzt", self.fenster.statusBar().currentMessage())
+
+    def test_was_keinen_platz_hat_bleibt_gekuerzt(self):
+        eng = Verteiler.aus_geometrie(1, 1, 6)
+        klein = eng.kabel_anlegen("passt", 1, 1, 2, da_gesamt=4)
+        gross = eng.kabel_anlegen("passt nicht", 1, 5, 2, da_gesamt=9)
+        self.fenster._projekt_setzen(Projekt(verteiler=eng), None)
+        self._auflegen()
+        self.assertFalse(klein.gekuerzt)
+        self.assertTrue(gross.gekuerzt)
+        self.assertIn("ohne Platz", self.fenster.statusBar().currentMessage())
 
 
 class TestKabelspalte(unittest.TestCase):
