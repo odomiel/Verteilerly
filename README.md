@@ -34,8 +34,9 @@ Adernfarben gleich mit — mitgeliefert sind die üblichen Farbfolgen, eigene
 Typen sind eine YAML-Datei. In der Verteilerübersicht lässt sich ein Kabel mit
 der Maus **umlegen** (mit Strg kopieren), ausschneiden und einfügen; es nimmt
 Farben, Bezeichnungen, Bemerkungen und Rangierungen mit. *Restleitungen
-auflegen* nimmt sich alle gekürzten Leitungen auf einmal vor; wohin ihr Rest
-kommt, steht je Zeile zur Wahl — mit einem Vorschlag vorbelegt.
+auflegen* nimmt sich alle gekürzten Leitungen auf einmal vor — wohin ihr Rest
+kommt, steht je Zeile zur Wahl, mit einem Vorschlag vorbelegt; der Rechtsklick
+legt eine einzelne Leitung an genau der angeklickten Stelle auf.
 
 **Leisten beschriften.** Die Leistenansicht ist die Arbeitsfläche: Farbe,
 Bezeichnung, Rangierung und Bemerkung je Ader. Eine Zelle lässt sich in **zwei

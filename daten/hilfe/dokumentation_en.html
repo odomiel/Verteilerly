@@ -390,11 +390,15 @@ later would lose them. If it does not fit at the target or something lies
 there already, the status bar says so and it stays where it is. <b>Dragging
 with the mouse</b> does the same, by the way (with Ctrl: copy).</p>
 
-<p><b>Terminating remaining lines</b> — the same right-click menu carries
-<i>Terminate remaining lines…</i> at the end. The entry takes on <b>all
-shortened lines of the frame</b> at once: a dialog shows for each line what is
-terminated, and <b>where its rest goes is your choice</b> — <i>strip</i> and
-<i>from pair</i> can be changed in every row.</p>
+<p><b>Terminating remaining lines</b> — what a shortened line does not yet
+have terminated is its <b>rest</b>. Two ways terminate it: <b>Edit ▸ Terminate
+remaining lines…</b> takes on <b>all shortened lines of the frame</b> at once,
+the right-click menu in the <b>frame overview</b> terminates <b>one</b> line at
+exactly the place clicked.</p>
+
+<p>The <b>collective dialog</b> shows for each line what is terminated, and
+<b>where its rest goes is your choice</b> — <i>strip</i> and <i>from pair</i>
+can be changed in every row.</p>
 
 <p>Preset is a <b>proposal</b>: first the place directly behind the line —
 that is where its continuation belongs, and it then grows into that section
@@ -412,10 +416,19 @@ terminate a line at all takes out its <b>tick</b>; it then stays shortened.
 Lines for which nothing free could be found start without a tick — they too
 may be given a place by hand.</p>
 
+<p>The <b>short way</b> leads through the right-click menu: its submenu
+<i>Terminate remaining line</i> lists the shortened lines — each entry with the
+name and how many pairs are left over — and terminates the line clicked
+<b>where the right click was</b>, without a dialog. What does not fit that
+place completely is not left out but stands there <b>greyed out</b> with the
+addition <i>does not fit here</i> — otherwise one puzzles over where a line
+has gone. If the place adjoins the line directly, it grows into its section
+here too instead of beside it.</p>
+
 <p>The <b>wire colours come along</b>: the new pairs continue the cable type's
-sequence, what was entered by hand stays. The whole thing is <b>one</b> step
-to undo. The entry is greyed out as long as no line is shortened or the frame
-is open read-only.</p>
+sequence, what was entered by hand stays. Both ways are <b>one</b> step to
+undo. If no line is shortened or the frame is open read-only, the menu entry
+and the submenu are greyed out.</p>
 
 <p><b>Terminating</b> — <b>Edit ▸ Terminate cable…</b> (Ctrl+K) or a double
 click on a free pair. Label, cable type and size are to be given; <i>strip</i>
@@ -1335,11 +1348,12 @@ extensions</i>.</p>
 <tr><td>As Excel workbook…</td><td></td></tr>
 <tr><td>As CSV…</td><td></td></tr>
 <tr><td>Quit</td><td>Ctrl+Q</td></tr>
-<tr><td rowspan="8"><b>Edit</b></td><td>Undo</td><td>Ctrl+Z</td></tr>
+<tr><td rowspan="9"><b>Edit</b></td><td>Undo</td><td>Ctrl+Z</td></tr>
 <tr><td>Redo</td><td>Ctrl+Y</td></tr>
 <tr><td>Terminate cable…</td><td>Ctrl+K</td></tr>
 <tr><td>Edit cable…</td><td>Ctrl+Shift+E</td></tr>
 <tr><td>Remove cable</td><td>Ctrl+Shift+K</td></tr>
+<tr><td>Terminate remaining lines…</td><td></td></tr>
 <tr><td>Save as template…</td><td></td></tr>
 <tr><td>Search…</td><td>Ctrl+F</td></tr>
 <tr><td>Project data…</td><td>Ctrl+B</td></tr>

@@ -235,7 +235,11 @@ Leiste {0}  ({1} DA): Strip {0}  ({1} pairs)
 Das Kabel läuft über {0} Abschnitte: The cable runs across {0} sections
 'Das Kabel wird gekürzt: {0} DA bleiben unaufgelegt.': 'The cable is shortened: {0} pairs stay unterminated.'
 Restleitungen auflegen: Terminate remaining lines
-Restleitungen auflegen…: Terminate remaining lines…
+'&Restleitungen auflegen…': '&Terminate remaining lines…'
+Die Reste aller gekürzten Leitungen auf freie Doppeladern legen: Put the rests of all shortened lines onto free pairs
+Restleitung auflegen: Terminate remaining line
+'{0} ({1} übrig)': '{0} ({1} left)'
+' — passt hier nicht': ' — does not fit here'
 Restleitungen nicht aufgelegt: Remaining lines not terminated
 Von diesen Leitungen liegen weniger Doppeladern auf, als sie haben. Wohin der Rest kommt, steht zur Wahl — vorgeschlagen ist der Platz hinter der Leitung oder das erste freie Stück.: Fewer pairs of these lines are terminated than they carry. Where the rest goes is up to you — proposed is the place behind the line or the first free run.
 Leitung: Line

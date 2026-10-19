@@ -2016,7 +2016,11 @@ class TestKabelZiehen(unittest.TestCase):
 
 
 class TestRestleitungenAuflegen(unittest.TestCase):
-    """Die Reste gekürzter Leitungen aus dem Rechtsklickmenü auflegen."""
+    """Die Reste gekürzter Leitungen auflegen.
+
+    Zwei Wege: der Sammeldialog unter *Bearbeiten* und das Untermenü
+    im Rechtsklick, das an genau der angeklickten Stelle auflegt.
+    """
 
     def setUp(self):
         from verteilerly.gui import hauptfenster
@@ -2051,25 +2055,24 @@ class TestRestleitungenAuflegen(unittest.TestCase):
             return antwort
 
         with mock.patch.object(RestleitungenDialog, "exec", statt_exec):
-            self.fenster.uebersicht.restleitungen_gewuenscht.emit()
+            self.fenster.aktion_restleitungen.trigger()
         return gezeigt[0] if gezeigt else None
 
-    # -- Der Eintrag im Menue ---------------------------------------------
+    # -- Der Eintrag unter Bearbeiten -------------------------------------
 
     def test_der_eintrag_ist_da_wenn_eine_leitung_gekuerzt_ist(self):
-        self.fenster.uebersicht.menue_auffrischen(None)
-        self.assertTrue(self.fenster.uebersicht.aktion_restleitungen.isEnabled())
+        self.fenster.aktionen_auffrischen()
+        self.assertTrue(self.fenster.aktion_restleitungen.isEnabled())
 
     def test_ohne_gekuerzte_leitung_ist_der_eintrag_aus(self):
         self.verteiler.kabel_auflegen_aendern(self.kabel, 6)
-        self.fenster.uebersicht.menue_auffrischen(None)
+        self.fenster.aktionen_auffrischen()
         self.assertEqual(self.fenster.uebersicht.gekuerzte_leitungen, 0)
-        self.assertFalse(self.fenster.uebersicht.aktion_restleitungen.isEnabled())
+        self.assertFalse(self.fenster.aktion_restleitungen.isEnabled())
 
     def test_schreibgeschuetzt_ist_der_eintrag_aus(self):
         self.fenster.schreibschutz_setzen(True)
-        self.fenster.uebersicht.menue_auffrischen(None)
-        self.assertFalse(self.fenster.uebersicht.aktion_restleitungen.isEnabled())
+        self.assertFalse(self.fenster.aktion_restleitungen.isEnabled())
 
     def test_schreibgeschuetzt_wird_auch_nichts_aufgelegt(self):
         """Die Flagge allein waere zu umgehen - gesperrt wird die Handlung."""
@@ -2190,7 +2193,7 @@ class TestRestleitungenAuflegen(unittest.TestCase):
             return RestleitungenDialog.DialogCode.Accepted
 
         with mock.patch.object(RestleitungenDialog, "exec", woanders):
-            self.fenster.uebersicht.restleitungen_gewuenscht.emit()
+            self.fenster.aktion_restleitungen.trigger()
         self.assertEqual(
             [(a.leiste, a.start_da, a.anzahl_da) for a in self.kabel.abschnitte],
             [(1, 1, 4), (2, 7, 2)],
@@ -2234,6 +2237,99 @@ class TestRestleitungenAuflegen(unittest.TestCase):
         self.assertFalse(klein.gekuerzt)
         self.assertTrue(gross.gekuerzt)
         self.assertIn("ohne Platz", self.fenster.statusBar().currentMessage())
+
+    # -- Der kurze Weg: das Untermenue im Rechtsklick ---------------------
+
+    def _untermenue(self, leiste, da):
+        """Baut das Untermenue, ohne es zu zeigen.
+
+        Ein offenes ``QMenu.exec()`` wartet auf eine Maus, die hier
+        niemand fuehrt - gebaut wird es darum nur.
+        """
+        uebersicht = self.fenster.uebersicht
+        menue = uebersicht._restleitungsmenue(uebersicht, leiste, da)
+        bauteil_zurueckgeben(self, menue)
+        return menue
+
+    def test_das_untermenue_zaehlt_die_gekuerzten_leitungen_auf(self):
+        self.verteiler.kabel_anlegen("K40", 2, 1, 2, da_gesamt=4)
+        menue = self._untermenue(2, 5)
+        self.assertEqual(len(menue.actions()), 2)
+        self.assertIn("K12", menue.actions()[0].text())
+        self.assertIn("K40", menue.actions()[1].text())
+
+    def test_der_eintrag_nennt_den_rest(self):
+        menue = self._untermenue(2, 1)
+        self.assertIn("2 DA", menue.actions()[0].text())
+
+    def test_was_hier_hinpasst_ist_anklickbar(self):
+        menue = self._untermenue(2, 1)
+        self.assertTrue(menue.actions()[0].isEnabled())
+        self.assertNotIn("passt", menue.actions()[0].text())
+
+    def test_was_hier_nicht_hinpasst_steht_ausgegraut_da(self):
+        """Weggelassen waere es ein Raetsel - ausgegraut ist es eine Antwort."""
+        self.verteiler.kabel_anlegen("Sperre", 2, 1, 4)
+        menue = self._untermenue(2, 3)
+        self.assertFalse(menue.actions()[0].isEnabled())
+        self.assertIn("passt hier nicht", menue.actions()[0].text())
+
+    def test_hinter_dem_leistenende_passt_auch_nichts(self):
+        menue = self._untermenue(2, self.verteiler.leiste(2).da_anzahl)
+        self.assertFalse(menue.actions()[0].isEnabled())
+
+    def test_ohne_gekuerzte_leitung_ist_das_untermenue_aus(self):
+        self.verteiler.kabel_auflegen_aendern(self.kabel, 6)
+        menue = self._untermenue(2, 1)
+        self.assertEqual(menue.actions(), [])
+        self.assertFalse(menue.isEnabled())
+
+    def test_schreibgeschuetzt_bleibt_das_untermenue_leer(self):
+        self.fenster.schreibschutz_setzen(True)
+        self.assertEqual(self.fenster.uebersicht.restleitungen_hier(2, 1), [])
+
+    def test_ein_druck_legt_genau_an_der_angeklickten_stelle_auf(self):
+        menue = self._untermenue(2, 7)
+        menue.actions()[0].trigger()
+        self.assertEqual(
+            [(a.leiste, a.start_da, a.anzahl_da) for a in self.kabel.abschnitte],
+            [(1, 1, 4), (2, 7, 2)],
+        )
+        self.assertFalse(self.kabel.gekuerzt)
+
+    def test_der_kurze_weg_laesst_die_fortsetzung_ein_abschnitt_sein(self):
+        menue = self._untermenue(1, 5)
+        menue.actions()[0].trigger()
+        self.assertEqual(len(self.kabel.abschnitte), 1)
+        self.assertEqual(self.kabel.da_aufgelegt, 6)
+
+    def test_der_kurze_weg_zieht_die_adernfarben_nach(self):
+        menue = self._untermenue(2, 7)
+        menue.actions()[0].trigger()
+        self.assertTrue(self.verteiler.leiste(2).stift(7).a.farbe)
+        self.assertTrue(self.verteiler.leiste(2).stift(8).b.farbe)
+
+    def test_der_kurze_weg_ist_ein_schritt_zum_zuruecknehmen(self):
+        menue = self._untermenue(2, 7)
+        menue.actions()[0].trigger()
+        self.fenster.rueckgaengig()
+        kabel = self.fenster.projekt.verteiler.kabel[0]
+        self.assertEqual(kabel.da_aufgelegt, 4)
+        self.assertTrue(kabel.gekuerzt)
+
+    def test_der_kurze_weg_meldet_sich_in_der_statuszeile(self):
+        menue = self._untermenue(2, 7)
+        menue.actions()[0].trigger()
+        self.assertIn(
+            "Restleitung", self.fenster.statusBar().currentMessage()
+        )
+
+    def test_nur_die_gewaehlte_leitung_wird_aufgelegt(self):
+        zweite = self.verteiler.kabel_anlegen("K40", 2, 1, 2, da_gesamt=4)
+        menue = self._untermenue(1, 5)
+        menue.actions()[0].trigger()
+        self.assertFalse(self.kabel.gekuerzt)
+        self.assertTrue(zweite.gekuerzt)
 
 
 class TestKabelspalte(unittest.TestCase):

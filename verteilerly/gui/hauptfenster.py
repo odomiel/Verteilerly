@@ -62,6 +62,7 @@ from ..modell import (
     Kabelabschnitt,
     ModellFehler,
     Projekt,
+    Restplatz,
     UeberlaufFehler,
     Verteiler,
     fremde_vermerke,
@@ -366,9 +367,7 @@ class Hauptfenster(QMainWindow):
         self.uebersicht.auswahl_geaendert.connect(self._auswahl_gemeldet)
         self.uebersicht.kabel_umgelegt.connect(self._kabel_umlegen)
         self.uebersicht.kabel_zwischenablage.connect(self._kabel_ablage)
-        self.uebersicht.restleitungen_gewuenscht.connect(
-            self.restleitungen_auflegen
-        )
+        self.uebersicht.restleitung_hierher.connect(self._restleitung_hierher)
 
         self.uebersicht.zoom_gerollt.connect(
             lambda richtung: self.uebersichtszoom.stufen_gehen(richtung)
@@ -527,6 +526,12 @@ class Hauptfenster(QMainWindow):
         self.aktion_kabel_weg = aktion(
             u("Kabel &entfernen"), self.kabel_entfernen, "Ctrl+Shift+K", True, bearbeiten,
             hinweis=u("Erst eine Doppelader mit Kabel auswählen"),
+        )
+        self.aktion_restleitungen = aktion(
+            u("&Restleitungen auflegen…"), self.restleitungen_auflegen,
+            menue=bearbeiten,
+            hinweis=u("Die Reste aller gekürzten Leitungen auf freie "
+                      "Doppeladern legen"),
         )
         self.aktion_vorlage = aktion(
             u("Als &Vorlage speichern…"), self.vorlage_ablegen, menue=bearbeiten,
@@ -1414,6 +1419,10 @@ class Hauptfenster(QMainWindow):
         self.aktion_kabel_aendern.setEnabled(
             hat_kabel and not self.schreibgeschuetzt
         )
+        # Nur wenn es ueberhaupt etwas aufzulegen gibt.
+        self.aktion_restleitungen.setEnabled(
+            aenderbar and self.uebersicht.gekuerzte_leitungen > 0
+        )
 
     def _kabel_der_auswahl(self):
         """Das Kabel an der ausgewählten Doppelader, wenn dort eines liegt."""
@@ -2250,14 +2259,13 @@ class Hauptfenster(QMainWindow):
         )
 
     def restleitungen_auflegen(self) -> None:
-        """Was von gekuerzten Leitungen uebrig ist, auf freie DA legen.
+        """Die Reste aller gekuerzten Leitungen auf freie DA legen.
 
-        Vorgeschlagen wird im Modell, **gewaehlt im Dialog** - dort
-        stehen Leiste und Startstift je Zeile zur Wahl, und eine Zeile
-        ohne Haken bleibt gekuerzt. Aufgelegt wird erst nach Zustimmung,
-        und alles in **einem** Schritt zum Zuruecknehmen. Die Adernfarben
-        ziehen mit: die neuen Doppeladern setzen die Folge des Kabels
-        fort, von Hand Eingetragenes bleibt stehen.
+        Der Sammelweg aus dem Menue *Bearbeiten*: vorgeschlagen wird im
+        Modell, **gewaehlt im Dialog** - dort stehen Leiste und
+        Startstift je Zeile zur Wahl, und eine Zeile ohne Haken bleibt
+        gekuerzt. Wer nur **eine** Leitung an eine bestimmte Stelle
+        legen will, nimmt das Rechtsklickmenue der Uebersicht.
         """
         if self.projekt is None or self.schreibgeschuetzt:
             return
@@ -2276,8 +2284,31 @@ class Hauptfenster(QMainWindow):
             return
         # Gelegt wird, was im Dialog steht - nicht der Vorschlag: dort
         # sind Leiste und Stift je Zeile zu aendern.
-        plan = dialog.plan()
+        self._reste_auflegen(dialog.plan())
 
+    def _restleitung_hierher(self, kabel, leiste: int, da: int) -> None:
+        """Den Rest **dieser** Leitung genau hier auflegen.
+
+        Der kurze Weg aus dem Rechtsklickmenue der Uebersicht: keine
+        Rueckfrage, keine Wahl - die Stelle ist der Klick, und das Menue
+        bietet nur an, was dort auch hinpasst.
+        """
+        if self.projekt is None or self.schreibgeschuetzt or kabel is None:
+            return
+        rest = (kabel.da_gesamt or 0) - kabel.da_aufgelegt
+        if rest < 1:
+            return
+        self._reste_auflegen([Restplatz(kabel, rest, leiste, da)])
+
+    def _reste_auflegen(self, plan) -> None:
+        """Legt einen fertigen Plan auf - samt Farben und Meldung.
+
+        Der gemeinsame Teil beider Wege. Die Adernfarben ziehen mit: die
+        neuen Doppeladern setzen die Folge des Kabels fort, von Hand
+        Eingetragenes bleibt stehen. Das Ganze ist **ein** Schritt zum
+        Zuruecknehmen.
+        """
+        verteiler = self.projekt.verteiler
         # Der bisherige Farbplan ist der Massstab fuer das Nachziehen:
         # was noch genau so dasteht, hat die Automatik gesetzt.
         vorher = {
@@ -2288,6 +2319,8 @@ class Hauptfenster(QMainWindow):
             aufgelegt = restplaetze_auflegen(verteiler, plan)
         except ModellFehler as fehler:
             QMessageBox.warning(self, u("Restleitungen nicht aufgelegt"), str(fehler))
+            return
+        if not aufgelegt:
             return
 
         gefuellt = sum(

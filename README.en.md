@@ -30,8 +30,9 @@ pairs terminated). The **cable type** brings the wire colours with it — the
 usual colour sequences are supplied, your own types are a YAML file. In the
 frame overview a cable can be **moved** with the mouse (copied with Ctrl), cut
 and pasted; it takes colours, designations, remarks and jumpers along.
-*Terminate remaining lines* takes on all shortened lines at once; where each
-rest goes is up to you, prefilled with a proposal.
+*Terminate remaining lines* takes on all shortened lines at once — where each
+rest goes is up to you, prefilled with a proposal; a right click terminates a
+single line at exactly the place clicked.
 
 **Label the strips.** The strip view is the work surface: colour, designation,
 jumper and remark per wire. A cell can be **split into two labelling fields**

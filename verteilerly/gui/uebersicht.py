@@ -19,7 +19,14 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import QApplication, QMenu, QWidget
 
-from ..modell import LEISTEN_ZAHLEN, Kabel, Verteiler, leistenname
+from ..modell import (
+    LEISTEN_ZAHLEN,
+    Kabel,
+    Verteiler,
+    leistenname,
+    mehrzahl,
+    platz_frei,
+)
 from .thema import HELL, Farben
 from .zoom import rad_ist_zoom
 from ..sprachen import u
@@ -66,9 +73,9 @@ class Uebersicht(QWidget):
     #: Leiste, DA). Auch das fuehrt das Fenster aus - es haelt die
     #: Ablage, und es weiss, was ein Umzug am Verteiler bedeutet.
     kabel_zwischenablage = Signal(str, object, int, int)
-    #: Die Reste aller gekuerzten Leitungen sollen aufliegen. Geplant und
-    #: ausgefuehrt wird im Fenster - die Uebersicht meldet nur den Wunsch.
-    restleitungen_gewuenscht = Signal()
+    #: Der Rest dieser Leitung soll genau hier aufliegen (Kabel, Leiste,
+    #: DA). Ausgefuehrt wird es im Fenster - die Uebersicht meldet nur.
+    restleitung_hierher = Signal(object, int, int)
     #: Strg und Mausrad: eine Stufe hinauf oder hinab.
     zoom_gerollt = Signal(int)
 
@@ -132,13 +139,6 @@ class Uebersicht(QWidget):
             )
             self.addAction(handlung)
 
-        # Kein Kuerzel: die Handlung betrifft den ganzen Verteiler, nicht
-        # die angeklickte Stelle, und soll nicht aus Versehen auszuloesen
-        # sein.
-        self.aktion_restleitungen = QAction(u("Restleitungen auflegen…"), self)
-        self.aktion_restleitungen.triggered.connect(
-            lambda _an=False: self.restleitungen_gewuenscht.emit()
-        )
 
     def _ablage_melden(self, was: str, stelle=None) -> None:
         """Meldet die Handlung ans Fenster - mit Kabel und Platz."""
@@ -161,7 +161,6 @@ class Uebersicht(QWidget):
         self.aktion_ausschneiden.setEnabled(darf and kabel is not None)
         self.aktion_kopieren.setEnabled(kabel is not None)
         self.aktion_einfuegen.setEnabled(darf and self.ablage_voll)
-        self.aktion_restleitungen.setEnabled(darf and self.gekuerzte_leitungen > 0)
 
     @property
     def gekuerzte_leitungen(self) -> int:
@@ -169,6 +168,29 @@ class Uebersicht(QWidget):
         if self.verteiler is None:
             return 0
         return sum(1 for kabel in self.verteiler.kabel if kabel.gekuerzt)
+
+    def restleitungen_hier(self, leiste: int, da: int) -> list[tuple]:
+        """Welche Restleitung an dieser Stelle aufliegen koennte.
+
+        Eine Zeile je gekuerzter Leitung: (Kabel, Rest, passt). Was hier
+        nicht hinpasst, faellt nicht weg, sondern kommt ausgegraut ins
+        Menue - sonst raetselt man, wo eine Leitung geblieben ist.
+
+        Steht **neben** dem Zeigen des Menues: ein offenes `QMenu.exec()`
+        haelt die Testreihe an, diese Entscheidung laesst sich ohne eines
+        pruefen.
+        """
+        if self.verteiler is None or self.schreibgeschuetzt:
+            return []
+        zeilen = []
+        for kabel in self.verteiler.kabel:
+            if not kabel.gekuerzt:
+                continue
+            rest = (kabel.da_gesamt or 0) - kabel.da_aufgelegt
+            zeilen.append(
+                (kabel, rest, platz_frei(self.verteiler, leiste, da, rest))
+            )
+        return zeilen
 
     def contextMenuEvent(self, ereignis) -> None:  # noqa: N802 - Qt-Name
         """Rechtsklick auf eine Doppelader: Ablage und Restleitungen.
@@ -193,8 +215,29 @@ class Uebersicht(QWidget):
         menue.addSeparator()
         menue.addAction(self.aktion_einfuegen)
         menue.addSeparator()
-        menue.addAction(self.aktion_restleitungen)
+        menue.addMenu(self._restleitungsmenue(menue, leiste, da))
         menue.exec(ereignis.globalPos())
+
+    def _restleitungsmenue(self, eltern, leiste: int, da: int) -> QMenu:
+        """Die gekuerzten Leitungen - ein Druck legt hier auf."""
+        menue = QMenu(u("Restleitung auflegen"), eltern)
+        zeilen = self.restleitungen_hier(leiste, da)
+        menue.setEnabled(bool(zeilen))
+        for kabel, rest, passt in zeilen:
+            name = kabel.beschriftung or u("ohne Beschriftung")
+            beschriftung = u("{0} ({1} übrig)").format(
+                name, mehrzahl(rest, "DA", "DA")
+            )
+            if not passt:
+                beschriftung += u(" — passt hier nicht")
+            handlung = menue.addAction(beschriftung)
+            handlung.setEnabled(passt)
+            handlung.triggered.connect(
+                lambda _an=False, k=kabel: self.restleitung_hierher.emit(
+                    k, leiste, da
+                )
+            )
+        return menue
 
     # -- Masse: sie wachsen mit dem Zoom -----------------------------------
 
