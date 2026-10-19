@@ -260,6 +260,20 @@ Keine Leitung ist gekürzt — es liegt nichts an: No line is shortened — ther
 Restleitung: remaining line
 Restleitungen: remaining lines
 ' aufgelegt': ' terminated'
+Leitung entfernen: Remove line
+Gesamte Leitung entfernen: Remove the whole line
+Nur diesen Abschnitt entfernen: Remove only this section
+'Nur diesen &Abschnitt entfernen': 'Remove only this &section'
+' (Leiste {0}, DA {1}–{2})': ' (strip {0}, pairs {1}–{2})'
+' — liegt in einem Stück': ' — lies in one piece'
+Von einer geteilt aufgelegten Leitung nur das Stück an der Auswahl abnehmen: Take only the piece at the selection off a line terminated in several sections
+Abschnitt entfernen?: Remove section?
+"Von der Leitung „{0}“ nur das Stück auf {1} abnehmen?\nDie Leitung bleibt liegen und ist danach gekürzt — ihr Rest lässt sich wieder auflegen.": "Take only the piece on {1} off the line „{0}“?\nThe line stays terminated and is shortened afterwards — its rest can be terminated again."
+'Leiste {0}, DA {1}–{2}': 'strip {0}, pairs {1}–{2}'
+Abschnitt nicht entfernt: Section not removed
+'Abschnitt entfernt: {0} auf {1}': 'Section removed: {0} on {1}'
+Diesen Abschnitt hat die Leitung nicht: The line does not have this section
+Die Leitung liegt nur in einem Stück — dann wird sie ganz entfernt: The line lies in one piece — then it is removed completely
 nicht gefunden: not found
 'Bucht {0}: {1} zu {2} DA': 'Bay {0}: {1} of {2} pairs'
 „{0}“ kommt im Verteiler nicht vor.: „{0}“ does not appear in the frame.

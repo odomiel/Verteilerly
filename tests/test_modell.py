@@ -1061,3 +1061,74 @@ class TestRestleitungen(unittest.TestCase):
         self.assertEqual(
             [p.kabel.beschriftung for p in self._plan()], ["zuerst", "spaeter"]
         )
+
+
+class TestAbschnittEntfernen(unittest.TestCase):
+    """Von einer geteilt aufgelegten Leitung ein Stück abnehmen."""
+
+    def setUp(self):
+        self.v = Verteiler.aus_geometrie(1, 2, 10)
+        self.k = self.v.kabel_anlegen_mehrteilig(
+            "Überlauf",
+            [Kabelabschnitt(1, 9, 2), Kabelabschnitt(2, 1, 3)],
+            kabeltyp="jystyv",
+        )
+
+    def test_das_stueck_an_dieser_doppelader_ist_zu_finden(self):
+        self.assertEqual(self.v.kabel_abschnitt_an(self.k, 1, 10), 0)
+        self.assertEqual(self.v.kabel_abschnitt_an(self.k, 2, 3), 1)
+
+    def test_woanders_liegt_kein_stueck_dieser_leitung(self):
+        self.assertIsNone(self.v.kabel_abschnitt_an(self.k, 2, 4))
+
+    def test_das_stueck_kommt_herunter_die_leitung_bleibt(self):
+        self.v.kabel_abschnitt_entfernen(self.k, 1)
+        self.assertIn(self.k, self.v.kabel)
+        self.assertEqual(self.k.abschnitte, [Kabelabschnitt(1, 9, 2)])
+
+    def test_zurueck_kommt_das_abgenommene_stueck(self):
+        weg = self.v.kabel_abschnitt_entfernen(self.k, 0)
+        self.assertEqual(weg, Kabelabschnitt(1, 9, 2))
+
+    def test_die_doppeladern_sind_danach_frei(self):
+        self.v.kabel_abschnitt_entfernen(self.k, 1)
+        self.assertIsNone(self.v.kabel_an(2, 1))
+        self.assertIsNone(self.v.kabel_an(2, 3))
+
+    def test_die_leitung_ist_danach_gekuerzt(self):
+        """Das Abgenommene ist ihr Rest - nicht verschwunden."""
+        self.v.kabel_abschnitt_entfernen(self.k, 1)
+        self.assertTrue(self.k.gekuerzt)
+        self.assertEqual(self.k.da_gesamt, 5)
+        self.assertEqual(self.k.da_aufgelegt, 2)
+
+    def test_eine_offene_nenngroesse_wird_festgehalten(self):
+        """Sonst wäre der Rest nach dem Abnehmen nicht mehr zu sehen."""
+        self.k.da_gesamt = None
+        self.v.kabel_abschnitt_entfernen(self.k, 1)
+        self.assertEqual(self.k.da_gesamt, 5)
+        self.assertTrue(self.k.gekuerzt)
+
+    def test_der_rest_laesst_sich_wieder_auflegen(self):
+        self.v.kabel_abschnitt_entfernen(self.k, 1)
+        plan = modell.restleitungen_planen(self.v)
+        self.assertEqual([(p.kabel, p.rest) for p in plan], [(self.k, 3)])
+        self.assertTrue(plan[0].passt)
+
+    def test_das_letzte_stueck_bleibt_liegen(self):
+        """Eine Leitung ohne Doppelader wäre keine - dann entfernt man sie ganz."""
+        self.v.kabel_abschnitt_entfernen(self.k, 1)
+        with self.assertRaises(ModellFehler):
+            self.v.kabel_abschnitt_entfernen(self.k, 0)
+        self.assertIn(self.k, self.v.kabel)
+
+    def test_eine_nummer_die_es_nicht_gibt_wird_gemeldet(self):
+        with self.assertRaises(ModellFehler):
+            self.v.kabel_abschnitt_entfernen(self.k, 2)
+        with self.assertRaises(ModellFehler):
+            self.v.kabel_abschnitt_entfernen(self.k, -1)
+
+    def test_die_uebrigen_stuecke_bleiben_wie_sie_lagen(self):
+        self.v.kabel_abschnitt_entfernen(self.k, 0)
+        self.assertEqual(self.v.kabel_an(2, 2), self.k)
+        self.assertEqual(self.k.abschnitte, [Kabelabschnitt(2, 1, 3)])

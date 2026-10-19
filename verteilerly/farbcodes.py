@@ -12,7 +12,13 @@ from dataclasses import dataclass, field
 
 import yaml
 
-from .modell import Kabel, ModellFehler, Verteiler, unbekannte_schluessel
+from .modell import (
+    Kabel,
+    Kabelabschnitt,
+    ModellFehler,
+    Verteiler,
+    unbekannte_schluessel,
+)
 from .sprachen import u
 
 
@@ -262,18 +268,28 @@ def farben_verwaist_loeschen(
 
 
 def farben_loeschen(
-    verteiler: Verteiler, kabel: Kabel, kabeltypen: Kabeltypen
+    verteiler: Verteiler,
+    kabel: Kabel,
+    kabeltypen: Kabeltypen,
+    abschnitt: Kabelabschnitt | None = None,
 ) -> int:
     """Nimmt die Farben wieder heraus, die dieses Kabel gesetzt hat.
 
     Wird ein Kabel abgenommen, gehoert seine Farbfolge nicht mehr dorthin:
     die naechste Leitung hat eine eigene. Was jemand von Hand eingetragen
     hat, bleibt stehen - dafuer ist der Farbplan der Massstab.
+
+    ``abschnitt`` begrenzt das auf ein Stueck der Leitung: kommt nur
+    dieses herunter, bleiben die Farben der uebrigen stehen. Gerechnet
+    wird der Plan trotzdem ganz, denn die Folge laeuft ueber alle
+    Abschnitte - nur eingesammelt wird, was in diesem Stueck liegt.
     """
     geleert = 0
     for (leiste_nr, leisten_da, seite), farbe in farbplan(
         verteiler, kabel, kabeltypen
     ).items():
+        if abschnitt is not None and not abschnitt.belegt(leiste_nr, leisten_da):
+            continue
         ader = verteiler.leiste(leiste_nr).stift(leisten_da).ader(seite)
         if ader.farbe and ader.farbe == farbe:
             ader.farbe = ""

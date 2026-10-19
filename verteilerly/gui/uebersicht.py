@@ -76,6 +76,10 @@ class Uebersicht(QWidget):
     #: Der Rest dieser Leitung soll genau hier aufliegen (Kabel, Leiste,
     #: DA). Ausgefuehrt wird es im Fenster - die Uebersicht meldet nur.
     restleitung_hierher = Signal(object, int, int)
+    #: Diese Leitung soll herunter: (Kabel, Abschnittsnummer). Die Nummer
+    #: -1 heisst die ganze Leitung, sonst ist nur dieses Stueck gemeint.
+    #: Gefragt und ausgefuehrt wird im Fenster.
+    leitung_weg = Signal(object, int)
     #: Strg und Mausrad: eine Stufe hinauf oder hinab.
     zoom_gerollt = Signal(int)
 
@@ -193,7 +197,7 @@ class Uebersicht(QWidget):
         return zeilen
 
     def contextMenuEvent(self, ereignis) -> None:  # noqa: N802 - Qt-Name
-        """Rechtsklick auf eine Doppelader: Ablage und Restleitungen.
+        """Rechtsklick auf eine Doppelader: Ablage, Restleitungen, Entfernen.
 
         Angefasst wird, worauf geklickt wurde - nicht, was vorher
         markiert war: ein Rechtsklick waehlt die Stelle mit aus, wie
@@ -216,6 +220,8 @@ class Uebersicht(QWidget):
         menue.addAction(self.aktion_einfuegen)
         menue.addSeparator()
         menue.addMenu(self._restleitungsmenue(menue, leiste, da))
+        menue.addSeparator()
+        menue.addMenu(self._entfernenmenue(menue, leiste, da))
         menue.exec(ereignis.globalPos())
 
     def _restleitungsmenue(self, eltern, leiste: int, da: int) -> QMenu:
@@ -237,6 +243,55 @@ class Uebersicht(QWidget):
                     k, leiste, da
                 )
             )
+        return menue
+
+    def entfernbar_hier(self, leiste: int, da: int) -> tuple:
+        """Was ein Rechtsklick hier abnehmen kann: (Kabel, Nummer, geteilt).
+
+        ``Nummer`` ist das Stueck unter dem Zeiger, ``geteilt`` sagt, ob
+        die Leitung ueberhaupt in mehreren Stuecken liegt - nur dann ist
+        das einzelne Stueck eine eigene Wahl.
+
+        Steht **neben** dem Zeigen des Menues: ein offenes `QMenu.exec()`
+        haelt die Testreihe an, diese Entscheidung laesst sich ohne eines
+        pruefen.
+        """
+        if self.verteiler is None or self.schreibgeschuetzt:
+            return (None, None, False)
+        kabel = self.verteiler.kabel_an(leiste, da)
+        if kabel is None:
+            return (None, None, False)
+        nummer = self.verteiler.kabel_abschnitt_an(kabel, leiste, da)
+        return (kabel, nummer, len(kabel.abschnitte) > 1)
+
+    def _entfernenmenue(self, eltern, leiste: int, da: int) -> QMenu:
+        """Die Leitung herunternehmen - ganz oder nur dieses Stueck."""
+        menue = QMenu(u("Leitung entfernen"), eltern)
+        kabel, nummer, geteilt = self.entfernbar_hier(leiste, da)
+        menue.setEnabled(kabel is not None)
+        ganz = menue.addAction(u("Gesamte Leitung entfernen"))
+        ganz.setEnabled(kabel is not None)
+        ganz.triggered.connect(
+            lambda _an=False, k=kabel: self.leitung_weg.emit(k, -1)
+        )
+        # Das einzelne Stueck steht auch bei einer Leitung in einem
+        # Stueck da - ausgegraut mit dem Grund. Weggelassen waere es ein
+        # Raetsel, warum die Wahl manchmal fehlt.
+        beschriftung = u("Nur diesen Abschnitt entfernen")
+        if nummer is not None and geteilt:
+            abschnitt = kabel.abschnitte[nummer]
+            beschriftung += u(" (Leiste {0}, DA {1}–{2})").format(
+                leistenname(abschnitt.leiste, self.leisten_schreibweise),
+                abschnitt.start_da,
+                abschnitt.end_da,
+            )
+        elif kabel is not None:
+            beschriftung += u(" — liegt in einem Stück")
+        stueck = menue.addAction(beschriftung)
+        stueck.setEnabled(geteilt and nummer is not None)
+        stueck.triggered.connect(
+            lambda _an=False, k=kabel, n=nummer: self.leitung_weg.emit(k, n)
+        )
         return menue
 
     # -- Masse: sie wachsen mit dem Zoom -----------------------------------

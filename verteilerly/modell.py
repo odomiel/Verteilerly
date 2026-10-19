@@ -780,6 +780,38 @@ class Verteiler:
     def kabel_entfernen(self, kabel: Kabel) -> None:
         self.kabel.remove(kabel)
 
+    def kabel_abschnitt_an(self, kabel: Kabel, leiste: int, da: int) -> int | None:
+        """Das wievielte Stueck der Leitung liegt auf dieser Doppelader?"""
+        for nummer, abschnitt in enumerate(kabel.abschnitte):
+            if abschnitt.belegt(leiste, da):
+                return nummer
+        return None
+
+    def kabel_abschnitt_entfernen(self, kabel: Kabel, nummer: int) -> Kabelabschnitt:
+        """Nimmt ein einzelnes Stueck einer geteilt aufgelegten Leitung ab.
+
+        Die Leitung bleibt liegen und ist danach **gekuerzt**: was
+        herunterkommt, zaehlt als ihr Rest und laesst sich an anderer
+        Stelle wieder auflegen. ``da_gesamt`` bleibt darum stehen - die
+        Nenngroesse des Kabels aendert sich nicht dadurch, dass ein
+        Stueck abgenommen wird; stand sie noch offen, wird sie hier
+        festgehalten, sonst waere der Rest nicht mehr zu sehen.
+
+        Das letzte Stueck bleibt liegen: eine Leitung ohne Doppelader
+        waere keine. Wer sie ganz weg will, nimmt `kabel_entfernen`.
+        """
+        if not 0 <= nummer < len(kabel.abschnitte):
+            raise ModellFehler(
+                u("Diesen Abschnitt hat die Leitung nicht")
+            )
+        if len(kabel.abschnitte) < 2:
+            raise ModellFehler(
+                u("Die Leitung liegt nur in einem Stück — dann wird sie ganz entfernt")
+            )
+        if kabel.da_gesamt is None:
+            kabel.da_gesamt = kabel.da_aufgelegt
+        return kabel.abschnitte.pop(nummer)
+
     # -- Umlegen und kopieren ----------------------------------------
 
     def _platz_verlangen(

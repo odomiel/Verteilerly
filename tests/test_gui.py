@@ -42,6 +42,7 @@ except ImportError:  # ohne Qt laufen wenigstens die uebrigen Tests
     ANWENDUNG = None
 
 from . import bauteil_zurueckgeben
+from verteilerly.farbcodes import farben_eintragen
 from verteilerly.modell import (
     BRIEFKOPF_FELDER,
     Aderadresse,
@@ -2330,6 +2331,190 @@ class TestRestleitungenAuflegen(unittest.TestCase):
         menue.actions()[0].trigger()
         self.assertFalse(self.kabel.gekuerzt)
         self.assertTrue(zweite.gekuerzt)
+
+
+
+class TestLeitungEntfernen(unittest.TestCase):
+    """Eine Leitung herunternehmen - ganz oder nur ein Stück davon."""
+
+    def setUp(self):
+        from verteilerly.gui import hauptfenster
+        from verteilerly.gui.hauptfenster import Hauptfenster
+
+        self.hauptfenster = hauptfenster
+        verteiler = Verteiler.aus_geometrie(1, 2, 10, name="Probe")
+        self.geteilt = verteiler.kabel_anlegen_mehrteilig(
+            "Überlauf",
+            [Kabelabschnitt(1, 9, 2), Kabelabschnitt(2, 1, 3)],
+            kabeltyp="jystyv",
+        )
+        self.ganz = verteiler.kabel_anlegen("K2", 1, 1, 2, kabeltyp="jystyv")
+        self.fenster = Hauptfenster()
+        # Beim Schliessen fragt das Fenster nach dem Speichern - ohne
+        # Antwort bliebe die Reihe an dem Dialog stehen.
+        verwerfen = mock.patch.object(
+            hauptfenster, "frage",
+            return_value=QMessageBox.StandardButton.Discard,
+        )
+        verwerfen.start()
+        self.addCleanup(verwerfen.stop)
+        bauteil_zurueckgeben(self, self.fenster)
+        self.fenster._projekt_setzen(Projekt(verteiler=verteiler), None)
+        self.verteiler = verteiler
+
+    def _menue(self, leiste, da):
+        """Baut das Untermenue, ohne es zu zeigen."""
+        uebersicht = self.fenster.uebersicht
+        menue = uebersicht._entfernenmenue(uebersicht, leiste, da)
+        bauteil_zurueckgeben(self, menue)
+        return menue
+
+    def _antworten(self, antwort):
+        """Die Nachfrage beantworten - sie steht vor jedem Entfernen."""
+        return mock.patch.object(
+            self.hauptfenster, "frage", return_value=antwort
+        )
+
+    def _ja(self, handlung):
+        with self._antworten(QMessageBox.StandardButton.Yes):
+            handlung.trigger()
+
+    # -- Das Untermenue im Rechtsklick ------------------------------------
+
+    def test_das_untermenue_hat_beide_wege(self):
+        namen = [a.text() for a in self._menue(2, 2).actions()]
+        self.assertEqual(len(namen), 2)
+        self.assertIn("Gesamte Leitung", namen[0])
+        self.assertIn("Abschnitt", namen[1])
+
+    def test_bei_geteilter_leitung_steht_das_stueck_zur_wahl(self):
+        eintrag = self._menue(2, 2).actions()[1]
+        self.assertTrue(eintrag.isEnabled())
+        self.assertIn("Leiste 2, DA 1–3", eintrag.text())
+
+    def test_das_angeklickte_stueck_wird_benannt_nicht_das_erste(self):
+        self.assertIn("Leiste 1, DA 9–10", self._menue(1, 10).actions()[1].text())
+
+    def test_bei_einer_leitung_in_einem_stueck_ist_das_stueck_aus(self):
+        """Ausgegraut mit Grund - weggelassen wäre es ein Rätsel."""
+        eintrag = self._menue(1, 1).actions()[1]
+        self.assertFalse(eintrag.isEnabled())
+        self.assertIn("liegt in einem Stück", eintrag.text())
+        self.assertTrue(self._menue(1, 1).actions()[0].isEnabled())
+
+    def test_auf_freier_stelle_ist_das_untermenue_aus(self):
+        menue = self._menue(1, 5)
+        self.assertFalse(menue.isEnabled())
+        self.assertEqual([a.isEnabled() for a in menue.actions()], [False, False])
+
+    def test_schreibgeschuetzt_ist_nichts_zu_entfernen(self):
+        self.fenster.schreibschutz_setzen(True)
+        self.assertEqual(
+            self.fenster.uebersicht.entfernbar_hier(2, 2), (None, None, False)
+        )
+        self.assertFalse(self._menue(2, 2).isEnabled())
+
+    def test_die_ganze_leitung_kommt_herunter(self):
+        self._ja(self._menue(2, 2).actions()[0])
+        self.assertNotIn(self.geteilt, self.verteiler.kabel)
+
+    def test_nur_das_angeklickte_stueck_kommt_herunter(self):
+        self._ja(self._menue(2, 2).actions()[1])
+        self.assertIn(self.geteilt, self.verteiler.kabel)
+        self.assertEqual(self.geteilt.abschnitte, [Kabelabschnitt(1, 9, 2)])
+        self.assertIsNone(self.verteiler.kabel_an(2, 1))
+
+    def test_nach_dem_abnehmen_ist_die_leitung_gekuerzt(self):
+        """Das Abgenommene ist ihr Rest und lässt sich wieder auflegen."""
+        self._ja(self._menue(2, 2).actions()[1])
+        self.assertTrue(self.geteilt.gekuerzt)
+        self.assertEqual(self.fenster.uebersicht.gekuerzte_leitungen, 1)
+
+    def test_nein_entfernt_nichts(self):
+        with self._antworten(QMessageBox.StandardButton.No):
+            self._menue(2, 2).actions()[1].trigger()
+        self.assertEqual(len(self.geteilt.abschnitte), 2)
+
+    # -- Der Eintrag und der Knopf ----------------------------------------
+
+    def test_der_knopf_traegt_beide_eintraege(self):
+        self.assertEqual(
+            self.fenster.entfernen_knopf.defaultAction(),
+            self.fenster.aktion_kabel_weg,
+        )
+        self.assertEqual(
+            self.fenster.entfernenmenue.actions(),
+            [self.fenster.aktion_kabel_weg, self.fenster.aktion_abschnitt_weg],
+        )
+
+    def test_der_abschnittseintrag_folgt_der_auswahl(self):
+        self.fenster.uebersicht.auswahl = (2, 2)
+        self.fenster.aktionen_auffrischen()
+        self.assertTrue(self.fenster.aktion_abschnitt_weg.isEnabled())
+        self.fenster.uebersicht.auswahl = (1, 1)
+        self.fenster.aktionen_auffrischen()
+        self.assertFalse(self.fenster.aktion_abschnitt_weg.isEnabled())
+        self.assertTrue(self.fenster.aktion_kabel_weg.isEnabled())
+
+    def test_ohne_auswahl_ist_beides_aus(self):
+        self.fenster.uebersicht.auswahl = None
+        self.fenster.aktionen_auffrischen()
+        self.assertFalse(self.fenster.aktion_kabel_weg.isEnabled())
+        self.assertFalse(self.fenster.aktion_abschnitt_weg.isEnabled())
+
+    def test_schreibgeschuetzt_sind_beide_eintraege_aus(self):
+        self.fenster.uebersicht.auswahl = (2, 2)
+        self.fenster.schreibschutz_setzen(True)
+        self.assertFalse(self.fenster.aktion_kabel_weg.isEnabled())
+        self.assertFalse(self.fenster.aktion_abschnitt_weg.isEnabled())
+
+    def test_der_eintrag_nimmt_das_stueck_an_der_auswahl(self):
+        self.fenster.uebersicht.auswahl = (1, 10)
+        self.fenster.aktionen_auffrischen()
+        self._ja(self.fenster.aktion_abschnitt_weg)
+        self.assertEqual(self.geteilt.abschnitte, [Kabelabschnitt(2, 1, 3)])
+
+    # -- Farben, Rücknahme, Meldung ---------------------------------------
+
+    def test_die_farben_des_stuecks_kommen_mit_die_anderen_bleiben(self):
+        farben_eintragen(self.verteiler, self.geteilt, self.fenster.kabeltypen)
+        self._ja(self._menue(2, 2).actions()[1])
+        self.assertTrue(self.verteiler.leiste(1).stift(9).a.farbe)
+        self.assertEqual(self.verteiler.leiste(2).stift(1).a.farbe, "")
+
+    def test_von_hand_eingetragene_farbe_bleibt_stehen(self):
+        farben_eintragen(self.verteiler, self.geteilt, self.fenster.kabeltypen)
+        self.verteiler.leiste(2).stift(2).a.farbe = "eigen"
+        self._ja(self._menue(2, 2).actions()[1])
+        self.assertEqual(self.verteiler.leiste(2).stift(2).a.farbe, "eigen")
+
+    def test_das_abnehmen_ist_ein_schritt_zum_zuruecknehmen(self):
+        self._ja(self._menue(2, 2).actions()[1])
+        self.assertTrue(self.fenster.aktion_rueckgaengig.isEnabled())
+        self.fenster.rueckgaengig()
+        kabel = self.fenster.projekt.verteiler.kabel[0]
+        self.assertEqual(len(kabel.abschnitte), 2)
+
+    def test_die_statuszeile_sagt_welches_stueck_herunterkam(self):
+        self._ja(self._menue(2, 2).actions()[1])
+        meldung = self.fenster.statusBar().currentMessage()
+        self.assertIn("Abschnitt entfernt", meldung)
+        self.assertIn("Leiste 2, DA 1–3", meldung)
+
+    def test_das_letzte_stueck_laesst_sich_nicht_abnehmen(self):
+        """Dann wird die Leitung ganz entfernt - der andere Eintrag."""
+        self._ja(self._menue(2, 2).actions()[1])
+        self.fenster.uebersicht.auswahl = (1, 9)
+        self.fenster.aktionen_auffrischen()
+        self.assertFalse(self.fenster.aktion_abschnitt_weg.isEnabled())
+        self.assertFalse(self._menue(1, 9).actions()[1].isEnabled())
+
+    def test_schreibgeschuetzt_entfernt_auch_die_meldung_nichts(self):
+        """Die Flagge allein wäre zu umgehen - gesperrt wird der Weg."""
+        self.fenster.schreibschutz_setzen(True)
+        with self._antworten(QMessageBox.StandardButton.Yes):
+            self.fenster.uebersicht.leitung_weg.emit(self.geteilt, 1)
+        self.assertEqual(len(self.geteilt.abschnitte), 2)
 
 
 class TestKabelspalte(unittest.TestCase):

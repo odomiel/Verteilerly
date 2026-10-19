@@ -368,6 +368,7 @@ class Hauptfenster(QMainWindow):
         self.uebersicht.kabel_umgelegt.connect(self._kabel_umlegen)
         self.uebersicht.kabel_zwischenablage.connect(self._kabel_ablage)
         self.uebersicht.restleitung_hierher.connect(self._restleitung_hierher)
+        self.uebersicht.leitung_weg.connect(self._leitung_weg)
 
         self.uebersicht.zoom_gerollt.connect(
             lambda richtung: self.uebersichtszoom.stufen_gehen(richtung)
@@ -524,9 +525,17 @@ class Hauptfenster(QMainWindow):
             hinweis=u("Beschriftung, Kabeltyp und Größe eines aufgelegten Kabels ändern"),
         )
         self.aktion_kabel_weg = aktion(
-            u("Kabel &entfernen"), self.kabel_entfernen, "Ctrl+Shift+K", True, bearbeiten,
+            u("Kabel &entfernen"), self.kabel_entfernen, "Ctrl+Shift+K", False,
+            bearbeiten,
             hinweis=u("Erst eine Doppelader mit Kabel auswählen"),
         )
+        self.aktion_abschnitt_weg = aktion(
+            u("Nur diesen &Abschnitt entfernen"), self.abschnitt_entfernen,
+            menue=bearbeiten,
+            hinweis=u("Von einer geteilt aufgelegten Leitung nur das Stück "
+                      "an der Auswahl abnehmen"),
+        )
+        self._entfernenknopf_bauen(werkzeuge)
         self.aktion_restleitungen = aktion(
             u("&Restleitungen auflegen…"), self.restleitungen_auflegen,
             menue=bearbeiten,
@@ -1416,6 +1425,12 @@ class Hauptfenster(QMainWindow):
         )
         hat_kabel = self._kabel_der_auswahl() is not None
         self.aktion_kabel_weg.setEnabled(hat_kabel and not self.schreibgeschuetzt)
+        # Nur bei einer geteilt aufgelegten Leitung ist ein einzelnes
+        # Stück eine eigene Wahl.
+        self.aktion_abschnitt_weg.setEnabled(
+            self._abschnitt_der_auswahl() is not None
+            and not self.schreibgeschuetzt
+        )
         self.aktion_kabel_aendern.setEnabled(
             hat_kabel and not self.schreibgeschuetzt
         )
@@ -1430,6 +1445,28 @@ class Hauptfenster(QMainWindow):
             return None
         leiste, da = self.uebersicht.auswahl
         return self.projekt.verteiler.kabel_an(leiste, da)
+
+    def _abschnittsort(self, abschnitt) -> str:
+        """Wo ein Stück liegt - in der eingestellten Schreibweise."""
+        return u("Leiste {0}, DA {1}–{2}").format(
+            leistenname(abschnitt.leiste, self.leisten_schreibweise),
+            abschnitt.start_da,
+            abschnitt.end_da,
+        )
+
+    def _abschnitt_der_auswahl(self):
+        """Kabel und Stücknummer an der Auswahl - nur bei geteilter Leitung.
+
+        Liegt die Leitung in einem Stück, gibt es nichts einzeln
+        abzunehmen: dann wird sie ganz entfernt, und das sagt der andere
+        Eintrag.
+        """
+        kabel = self._kabel_der_auswahl()
+        if kabel is None or len(kabel.abschnitte) < 2:
+            return None
+        leiste, da = self.uebersicht.auswahl
+        nummer = self.projekt.verteiler.kabel_abschnitt_an(kabel, leiste, da)
+        return None if nummer is None else (kabel, nummer)
 
     def _darf_verwerfen(self) -> bool:
         if not self.veraendert:
@@ -1816,6 +1853,29 @@ class Hauptfenster(QMainWindow):
             str(self.einstellungen.value("exportformat", "pdf")), ausgeben=False
         )
 
+    def _entfernenknopf_bauen(self, werkzeuge) -> None:
+        """Ein Knopf mit Pfeil wie beim Export: links die ganze Leitung.
+
+        Ein Druck nimmt die Leitung ganz herunter - das ist der
+        Regelfall, und er behaelt sein Kürzel. Der Pfeil klappt dieselben
+        zwei Einträge auf, die auch unter *Bearbeiten* stehen; liegt die
+        Leitung nur in einem Stück, ist der zweite ausgegraut.
+        """
+        self.entfernenmenue = QMenu(self)
+        self.entfernenmenue.setToolTipsVisible(True)
+        self.entfernenmenue.addAction(self.aktion_kabel_weg)
+        self.entfernenmenue.addAction(self.aktion_abschnitt_weg)
+        self.entfernen_knopf = QToolButton(self)
+        self.entfernen_knopf.setDefaultAction(self.aktion_kabel_weg)
+        self.entfernen_knopf.setMenu(self.entfernenmenue)
+        self.entfernen_knopf.setPopupMode(
+            QToolButton.ToolButtonPopupMode.MenuButtonPopup
+        )
+        self.entfernen_knopf.setToolButtonStyle(
+            Qt.ToolButtonStyle.ToolButtonTextOnly
+        )
+        werkzeuge.addWidget(self.entfernen_knopf)
+
     def _ansichtsaktionen(self) -> dict[str, QAction]:
         """Die drei Bereiche des Fensters und ihre Schalter unter *Ansicht*."""
         return {
@@ -2158,8 +2218,26 @@ class Hauptfenster(QMainWindow):
     def kabel_entfernen(self) -> None:
         """Der Eintrag ist nur da anklickbar, wo wirklich ein Kabel liegt."""
         kabel = self._kabel_der_auswahl()
-        if kabel is None:
+        if kabel is not None:
+            self._kabel_weg_fragen(kabel)
+
+    def abschnitt_entfernen(self) -> None:
+        """Nur das Stück an der Auswahl - die Leitung bleibt liegen."""
+        gewaehlt = self._abschnitt_der_auswahl()
+        if gewaehlt is not None:
+            self._abschnitt_weg_fragen(*gewaehlt)
+
+    def _leitung_weg(self, kabel, nummer: int) -> None:
+        """Aus dem Rechtsklickmenü: die ganze Leitung (-1) oder ein Stück."""
+        if self.projekt is None or kabel is None or self.schreibgeschuetzt:
             return
+        if nummer < 0:
+            self._kabel_weg_fragen(kabel)
+        elif 0 <= nummer < len(kabel.abschnitte):
+            self._abschnitt_weg_fragen(kabel, nummer)
+
+    def _kabel_weg_fragen(self, kabel) -> None:
+        """Die ganze Leitung - mit Nachfrage, denn sie ist danach weg."""
         antwort = frage(
             self,
             u("Kabel entfernen?"),
@@ -2169,6 +2247,22 @@ class Hauptfenster(QMainWindow):
         )
         if antwort == QMessageBox.StandardButton.Yes:
             self._kabel_abnehmen(kabel)
+
+    def _abschnitt_weg_fragen(self, kabel, nummer: int) -> None:
+        """Ein Stück einer geteilt aufgelegten Leitung - mit Nachfrage."""
+        abschnitt = kabel.abschnitte[nummer]
+        antwort = frage(
+            self,
+            u("Abschnitt entfernen?"),
+            u("Von der Leitung „{0}“ nur das Stück auf {1} abnehmen?\nDie Leitung bleibt liegen und ist danach gekürzt — ihr Rest lässt sich wieder auflegen.").format(
+                kabel.beschriftung or u("ohne Beschriftung"),
+                self._abschnittsort(abschnitt),
+            ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if antwort == QMessageBox.StandardButton.Yes:
+            self._abschnitt_abnehmen(kabel, nummer)
 
     def _kabel_ablage(self, was: str, kabel, leiste: int, start_da: int) -> None:
         """Ausschneiden, Kopieren und Einfuegen einer Leitung.
@@ -2355,6 +2449,30 @@ class Hauptfenster(QMainWindow):
         self.leistenansicht.aktualisieren()
         self.aktionen_auffrischen()
         meldung = u("Kabel entfernt: {0}").format(kabel.beschriftung or u("ohne Beschriftung"))
+        if geleert:
+            meldung += u(", {0} Adernfarben mit entfernt").format(geleert)
+        self.statusBar().showMessage(meldung, 8000)
+
+    def _abschnitt_abnehmen(self, kabel, nummer: int) -> None:
+        """Nur dieses Stück herunter: die Leitung bleibt und ist gekürzt."""
+        abschnitt = kabel.abschnitte[nummer]
+        # Die Farben dieses Stücks gehören nicht mehr in die Leiste; die
+        # der übrigen Abschnitte bleiben, wo sie sind.
+        geleert = farben_loeschen(
+            self.projekt.verteiler, kabel, self.kabeltypen, abschnitt=abschnitt
+        )
+        try:
+            self.projekt.verteiler.kabel_abschnitt_entfernen(kabel, nummer)
+        except ModellFehler as fehler:
+            QMessageBox.warning(self, u("Abschnitt nicht entfernt"), str(fehler))
+            return
+        self._belegung_geaendert()
+        self.leistenansicht.aktualisieren()
+        self.aktionen_auffrischen()
+        meldung = u("Abschnitt entfernt: {0} auf {1}").format(
+            kabel.beschriftung or u("ohne Beschriftung"),
+            self._abschnittsort(abschnitt),
+        )
         if geleert:
             meldung += u(", {0} Adernfarben mit entfernt").format(geleert)
         self.statusBar().showMessage(meldung, 8000)

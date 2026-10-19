@@ -394,6 +394,39 @@ class TestFarbenFolgenDemKabel(unittest.TestCase):
         self.assertEqual(self.v.leiste(1).stift(2).a.farbe, "türkis")
         self.assertEqual(self.v.leiste(1).stift(2).b.farbe, "")
 
+    def test_nur_ein_abschnitt_nimmt_nur_seine_farben_mit(self):
+        """Kommt ein Stück herunter, bleiben die übrigen gefärbt."""
+        from verteilerly.modell import Kabelabschnitt
+
+        geteilt = self.v.kabel_anlegen_mehrteilig(
+            "zweiteilig",
+            [Kabelabschnitt(2, 1, 2), Kabelabschnitt(3, 1, 2)],
+            kabeltyp="jystyv",
+        )
+        farben_eintragen(self.v, geteilt, self.typen)
+        geleert = farben_loeschen(
+            self.v, geteilt, self.typen, abschnitt=geteilt.abschnitte[1]
+        )
+        self.assertEqual(geleert, 4)
+        self.assertTrue(self.v.leiste(2).stift(1).a.farbe)
+        self.assertEqual(self.v.leiste(3).stift(1).a.farbe, "")
+        self.assertEqual(self.v.leiste(3).stift(2).b.farbe, "")
+
+    def test_im_abschnitt_bleibt_von_hand_eingetragenes_stehen(self):
+        from verteilerly.modell import Kabelabschnitt
+
+        geteilt = self.v.kabel_anlegen_mehrteilig(
+            "zweiteilig",
+            [Kabelabschnitt(2, 1, 2), Kabelabschnitt(3, 1, 2)],
+            kabeltyp="jystyv",
+        )
+        farben_eintragen(self.v, geteilt, self.typen)
+        self.v.leiste(3).stift(2).a.farbe = "türkis"
+        farben_loeschen(
+            self.v, geteilt, self.typen, abschnitt=geteilt.abschnitte[1]
+        )
+        self.assertEqual(self.v.leiste(3).stift(2).a.farbe, "türkis")
+
     def test_ein_neues_kabel_faerbt_die_freien_adern(self):
         farben_loeschen(self.v, self.kabel, self.typen)
         self.v.kabel_entfernen(self.kabel)

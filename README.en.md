@@ -32,7 +32,9 @@ frame overview a cable can be **moved** with the mouse (copied with Ctrl), cut
 and pasted; it takes colours, designations, remarks and jumpers along.
 *Terminate remaining lines* takes on all shortened lines at once — where each
 rest goes is up to you, prefilled with a proposal; a right click terminates a
-single line at exactly the place clicked.
+single line at exactly the place clicked. A line is removed completely or — if
+it lies in several sections — only the piece clicked; it is shortened
+afterwards and its rest can be terminated again.
 
 **Label the strips.** The strip view is the work surface: colour, designation,
 jumper and remark per wire. A cell can be **split into two labelling fields**

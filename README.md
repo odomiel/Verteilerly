@@ -36,7 +36,9 @@ der Maus **umlegen** (mit Strg kopieren), ausschneiden und einfügen; es nimmt
 Farben, Bezeichnungen, Bemerkungen und Rangierungen mit. *Restleitungen
 auflegen* nimmt sich alle gekürzten Leitungen auf einmal vor — wohin ihr Rest
 kommt, steht je Zeile zur Wahl, mit einem Vorschlag vorbelegt; der Rechtsklick
-legt eine einzelne Leitung an genau der angeklickten Stelle auf.
+legt eine einzelne Leitung an genau der angeklickten Stelle auf. Entfernt wird
+eine Leitung ganz oder — wenn sie in mehreren Abschnitten liegt — nur das
+angeklickte Stück; sie ist danach gekürzt und ihr Rest wieder auflegbar.
 
 **Leisten beschriften.** Die Leistenansicht ist die Arbeitsfläche: Farbe,
 Bezeichnung, Rangierung und Bemerkung je Ader. Eine Zelle lässt sich in **zwei
