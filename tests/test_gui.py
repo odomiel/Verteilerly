@@ -2421,7 +2421,10 @@ class TestLeitungEntfernen(unittest.TestCase):
     def test_nur_das_angeklickte_stueck_kommt_herunter(self):
         self._ja(self._menue(2, 2).actions()[1])
         self.assertIn(self.geteilt, self.verteiler.kabel)
-        self.assertEqual(self.geteilt.abschnitte, [Kabelabschnitt(1, 9, 2)])
+        self.assertEqual(
+            [(a.leiste, a.start_da, a.anzahl_da) for a in self.geteilt.abschnitte],
+            [(1, 9, 2)],
+        )
         self.assertIsNone(self.verteiler.kabel_an(2, 1))
 
     def test_nach_dem_abnehmen_ist_die_leitung_gekuerzt(self):
@@ -2472,7 +2475,10 @@ class TestLeitungEntfernen(unittest.TestCase):
         self.fenster.uebersicht.auswahl = (1, 10)
         self.fenster.aktionen_auffrischen()
         self._ja(self.fenster.aktion_abschnitt_weg)
-        self.assertEqual(self.geteilt.abschnitte, [Kabelabschnitt(2, 1, 3)])
+        self.assertEqual(
+            [(a.leiste, a.start_da, a.anzahl_da) for a in self.geteilt.abschnitte],
+            [(2, 1, 3)],
+        )
 
     # -- Farben, Rücknahme, Meldung ---------------------------------------
 

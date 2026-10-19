@@ -1063,6 +1063,11 @@ class TestRestleitungen(unittest.TestCase):
         )
 
 
+def _lagen(kabel):
+    """Wo die Abschnitte liegen - ohne ihre Stelle im Kabel."""
+    return [(a.leiste, a.start_da, a.anzahl_da) for a in kabel.abschnitte]
+
+
 class TestAbschnittEntfernen(unittest.TestCase):
     """Von einer geteilt aufgelegten Leitung ein Stück abnehmen."""
 
@@ -1084,11 +1089,11 @@ class TestAbschnittEntfernen(unittest.TestCase):
     def test_das_stueck_kommt_herunter_die_leitung_bleibt(self):
         self.v.kabel_abschnitt_entfernen(self.k, 1)
         self.assertIn(self.k, self.v.kabel)
-        self.assertEqual(self.k.abschnitte, [Kabelabschnitt(1, 9, 2)])
+        self.assertEqual(_lagen(self.k), [(1, 9, 2)])
 
     def test_zurueck_kommt_das_abgenommene_stueck(self):
         weg = self.v.kabel_abschnitt_entfernen(self.k, 0)
-        self.assertEqual(weg, Kabelabschnitt(1, 9, 2))
+        self.assertEqual((weg.leiste, weg.start_da, weg.anzahl_da), (1, 9, 2))
 
     def test_die_doppeladern_sind_danach_frei(self):
         self.v.kabel_abschnitt_entfernen(self.k, 1)
@@ -1131,4 +1136,28 @@ class TestAbschnittEntfernen(unittest.TestCase):
     def test_die_uebrigen_stuecke_bleiben_wie_sie_lagen(self):
         self.v.kabel_abschnitt_entfernen(self.k, 0)
         self.assertEqual(self.v.kabel_an(2, 2), self.k)
-        self.assertEqual(self.k.abschnitte, [Kabelabschnitt(2, 1, 3)])
+        self.assertEqual(_lagen(self.k), [(2, 1, 3)])
+
+    def test_das_uebrige_stueck_behaelt_seine_stelle_im_kabel(self):
+        """Sonst rutschten seine Farben nach vorn - in der Leiste stehen
+        aber noch die alten."""
+        self.v.kabel_abschnitt_entfernen(self.k, 0)
+        self.assertEqual(self.k.abschnitte[0].ab_kabel_da, 3)
+        self.assertEqual(sorted(self.k.belegte_kabel_da()), [3, 4, 5])
+        self.assertFalse(self.k.lueckenlos)
+
+    def test_der_rest_kommt_in_die_luecke_nicht_hinten_dran(self):
+        """Die Lücke sind die Kabel-DA, die das abgenommene Stück hatte."""
+        self.v.kabel_abschnitt_entfernen(self.k, 0)
+        self.v.kabel_verlaengern(self.k, 2, 5, 2)
+        self.assertEqual(self.k.abschnitte[-1].ab_kabel_da, 1)
+        self.assertEqual(sorted(self.k.belegte_kabel_da()), [1, 2, 3, 4, 5])
+        self.assertTrue(self.k.lueckenlos)
+
+    def test_mit_luecke_waechst_kein_abschnitt_weiter(self):
+        """Angestückelt wird: nur ein eigener Abschnitt hat eine eigene Stelle."""
+        self.v.kabel_abschnitt_entfernen(self.k, 0)
+        self.v.kabel_auflegen_aendern(self.k, 5)
+        self.assertEqual(_lagen(self.k), [(2, 1, 3), (2, 4, 2)])
+        self.assertEqual(self.k.abschnitte[-1].ab_kabel_da, 1)
+        self.assertTrue(self.k.lueckenlos)

@@ -107,6 +107,34 @@ class TestProjektdatei(unittest.TestCase):
         self.assertEqual(len(kabel.abschnitte), 2)
         self.assertEqual(kabel.da_aufgelegt, 6)
 
+    def test_die_stelle_im_kabel_ueberlebt(self):
+        """Nach einem abgenommenen Abschnitt hängen die Farben daran."""
+        v = Verteiler.aus_geometrie(1, 4, 10)
+        kabel = v.kabel_anlegen_mehrteilig(
+            "6DA",
+            [Kabelabschnitt(1, 1, 4), Kabelabschnitt(2, 1, 2)],
+            da_gesamt=6,
+        )
+        v.kabel_abschnitt_entfernen(kabel, 0)
+        projektdatei.speichern(Projekt(verteiler=v), self.pfad)
+        geladen = projektdatei.laden(self.pfad).verteiler.kabel[0]
+        self.assertEqual(geladen.abschnitte[0].ab_kabel_da, 5)
+        self.assertEqual(sorted(geladen.belegte_kabel_da()), [5, 6])
+        self.assertFalse(geladen.lueckenlos)
+
+    def test_ohne_festgehaltene_stelle_bleibt_die_datei_wie_sie_war(self):
+        """Der Regelfall schreibt den Schlüssel nicht mit."""
+        import json
+
+        v = Verteiler.aus_geometrie(1, 4, 10)
+        v.kabel_anlegen("4DA", 1, 1, 4)
+        projektdatei.speichern(Projekt(verteiler=v), self.pfad)
+        daten = json.loads(self.pfad.read_text(encoding="utf-8"))
+        abschnitt = daten["verteiler"]["kabel"][0]["abschnitte"][0]
+        self.assertNotIn("ab_kabel_da", abschnitt)
+        geladen = projektdatei.laden(self.pfad).verteiler.kabel[0]
+        self.assertIsNone(geladen.abschnitte[0].ab_kabel_da)
+
     def test_gekuerztes_kabel_ueberlebt(self):
         """da_gesamt bleibt groesser als das Aufgelegte."""
         v = Verteiler.aus_geometrie(1, 4, 10)

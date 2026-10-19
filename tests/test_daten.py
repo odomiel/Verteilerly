@@ -427,6 +427,38 @@ class TestFarbenFolgenDemKabel(unittest.TestCase):
         )
         self.assertEqual(self.v.leiste(3).stift(2).a.farbe, "türkis")
 
+    def test_nach_einem_abgenommenen_stueck_faengt_der_rest_vorn_an(self):
+        """Der Fall aus der Praxis: 6 DA als 4+2, die 4 weg, neu aufgelegt.
+
+        Die zwei liegengebliebenen Doppeladern tragen noch ws/sw und
+        ws/bl - die wieder aufgelegten vier müssen darum bei rt/bl
+        anfangen und nicht bei der dritten Farbe.
+        """
+        from verteilerly.modell import Kabelabschnitt
+
+        v = Verteiler.aus_geometrie(1, 3, 10)
+        kabel = v.kabel_anlegen_mehrteilig(
+            "6DA",
+            [Kabelabschnitt(1, 1, 4), Kabelabschnitt(2, 1, 2)],
+            kabeltyp="jystyv",
+            da_gesamt=6,
+        )
+        farben_eintragen(v, kabel, self.typen)
+        liegen = (v.leiste(2).stift(1).a.farbe, v.leiste(2).stift(1).b.farbe)
+
+        v.kabel_abschnitt_entfernen(kabel, 0)
+        v.kabel_verlaengern(kabel, 3, 1, 4)
+        farben_eintragen(v, kabel, self.typen)
+
+        self.assertEqual(
+            (v.leiste(3).stift(1).a.farbe, v.leiste(3).stift(1).b.farbe),
+            ("rt", "bl"),
+        )
+        # Und die liegengebliebenen behalten, was in der Leiste steht.
+        self.assertEqual(
+            (v.leiste(2).stift(1).a.farbe, v.leiste(2).stift(1).b.farbe), liegen
+        )
+
     def test_ein_neues_kabel_faerbt_die_freien_adern(self):
         farben_loeschen(self.v, self.kabel, self.typen)
         self.v.kabel_entfernen(self.kabel)

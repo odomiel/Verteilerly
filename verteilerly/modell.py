@@ -421,11 +421,21 @@ class Bucht:
 
 @dataclass
 class Kabelabschnitt:
-    """Ein zusammenhaengendes Stueck eines Kabels auf einer Leiste."""
+    """Ein zusammenhaengendes Stueck eines Kabels auf einer Leiste.
+
+    ``ab_kabel_da`` ist die Nummer der Doppelader **im Kabel**, mit der
+    dieses Stueck anfaengt - daran haengt die Adernfarbe. ``None`` heisst:
+    es folgt dem vorigen Stueck, und das ist der Regelfall. Festgehalten
+    wird die Nummer erst, wenn die Reihenfolge der Abschnitte sie nicht
+    mehr hergibt: nimmt man von einer geteilt aufgelegten Leitung ein
+    Stueck ab, bleiben die uebrigen auf ihrer Stelle im Kabel stehen,
+    denn in der Leiste stehen noch ihre Farben.
+    """
 
     leiste: int
     start_da: int
     anzahl_da: int
+    ab_kabel_da: int | None = None
 
     @property
     def end_da(self) -> int:
@@ -475,12 +485,52 @@ class Kabel:
         ergebnis: list[tuple[int, int, int]] = []
         kabel_da = 1
         for abschnitt in self.abschnitte:
+            if abschnitt.ab_kabel_da is not None:
+                kabel_da = abschnitt.ab_kabel_da
             for versatz in range(abschnitt.anzahl_da):
                 ergebnis.append(
                     (kabel_da, abschnitt.leiste, abschnitt.start_da + versatz)
                 )
                 kabel_da += 1
         return ergebnis
+
+    def belegte_kabel_da(self) -> set[int]:
+        """Welche Doppeladern des Kabels aufliegen - gezaehlt im Kabel."""
+        return {kabel_da for kabel_da, _leiste, _da in self.positionen()}
+
+    @property
+    def hoechste_kabel_da(self) -> int:
+        """Die groesste aufliegende Kabel-DA - mit Luecke mehr als die Zahl."""
+        belegt = self.belegte_kabel_da()
+        return max(belegt) if belegt else 0
+
+    @property
+    def lueckenlos(self) -> bool:
+        """Zaehlen die aufliegenden Doppeladern ohne Luecke von 1 durch?
+
+        Nur dann darf am Ende einfach weitergezaehlt werden. Nach einem
+        abgenommenen Abschnitt fehlt mitten im Kabel ein Stueck, und was
+        neu dazukommt, gehoert in diese Luecke - sonst bekaeme es Farben,
+        die im Kabel schon woanders liegen.
+        """
+        belegt = self.belegte_kabel_da()
+        return belegt == set(range(1, len(belegt) + 1))
+
+    def freie_kabel_da(self, anzahl: int) -> int | None:
+        """Die erste Stelle, an der ``anzahl`` freie Kabel-DA zusammenliegen.
+
+        Gesucht wird innerhalb der Nenngroesse: mehr Doppeladern als das
+        Kabel hat, gibt es nicht. Passt nirgends ein Stueck dieser Laenge,
+        kommt None - dann zaehlt der Aufrufer wie bisher am Ende weiter.
+        """
+        if anzahl < 1:
+            return None
+        belegt = self.belegte_kabel_da()
+        grenze = self.da_gesamt or (len(belegt) + anzahl)
+        for start in range(1, max(0, grenze - anzahl) + 2):
+            if all(start + i not in belegt for i in range(anzahl)):
+                return start
+        return None
 
 
 # --------------------------------------------------------------------------
@@ -746,9 +796,25 @@ class Verteiler:
         passend, rest = self.platz_pruefen(letzter.leiste, weiter, zusatz)
         if rest:
             raise UeberlaufFehler(jetzt + passend, rest)
-        letzter.anzahl_da += zusatz
-        if kabel.da_gesamt is not None and kabel.da_gesamt < kabel.da_aufgelegt:
-            kabel.da_gesamt = kabel.da_aufgelegt
+        if kabel.lueckenlos:
+            letzter.anzahl_da += zusatz
+        else:
+            # Mit Luecke waere Weiterzaehlen falsch: die neuen
+            # Doppeladern gehoeren in die Luecke, und eine eigene Stelle
+            # im Kabel hat nur ein eigener Abschnitt.
+            kabel.abschnitte.append(
+                Kabelabschnitt(
+                    letzter.leiste,
+                    weiter,
+                    zusatz,
+                    ab_kabel_da=kabel.freie_kabel_da(zusatz),
+                )
+            )
+        if (
+            kabel.da_gesamt is not None
+            and kabel.da_gesamt < kabel.hoechste_kabel_da
+        ):
+            kabel.da_gesamt = kabel.hoechste_kabel_da
 
     def _kabel_kuerzen(self, kabel: Kabel, weniger: int) -> None:
         """Nimmt Doppeladern vom Ende weg; leere Abschnitte fallen fort."""
@@ -773,9 +839,19 @@ class Verteiler:
             raise ModellFehler(
                 u("Auf Leiste {0} ab DA {1} passen nur {2} von {3} DA").format(leiste, start_da, passend, anzahl_da)
             )
-        kabel.abschnitte.append(Kabelabschnitt(leiste, start_da, anzahl_da))
-        if kabel.da_gesamt is not None and kabel.da_gesamt < kabel.da_aufgelegt:
-            kabel.da_gesamt = kabel.da_aufgelegt
+        # Hat die Leitung eine Luecke in ihrer Zaehlung - etwa weil ein
+        # Abschnitt abgenommen wurde -, gehoert das neue Stueck dorthin
+        # und nicht hinter das letzte: so bekommt es die Farben, die im
+        # Kabel noch frei sind.
+        stelle = None if kabel.lueckenlos else kabel.freie_kabel_da(anzahl_da)
+        kabel.abschnitte.append(
+            Kabelabschnitt(leiste, start_da, anzahl_da, ab_kabel_da=stelle)
+        )
+        if (
+            kabel.da_gesamt is not None
+            and kabel.da_gesamt < kabel.hoechste_kabel_da
+        ):
+            kabel.da_gesamt = kabel.hoechste_kabel_da
 
     def kabel_entfernen(self, kabel: Kabel) -> None:
         self.kabel.remove(kabel)
@@ -810,7 +886,22 @@ class Verteiler:
             )
         if kabel.da_gesamt is None:
             kabel.da_gesamt = kabel.da_aufgelegt
+        self._stellen_festhalten(kabel)
         return kabel.abschnitte.pop(nummer)
+
+    @staticmethod
+    def _stellen_festhalten(kabel: Kabel) -> None:
+        """Schreibt jedem Abschnitt seine Stelle im Kabel fest.
+
+        Gleich danach fehlt ein Stueck, und die Reihenfolge gibt die
+        Stellen nicht mehr her: die uebrigen Abschnitte wuerden nach vorn
+        rutschen und andere Farben vorsehen, als in der Leiste stehen.
+        """
+        stelle = 1
+        for abschnitt in kabel.abschnitte:
+            if abschnitt.ab_kabel_da is None:
+                abschnitt.ab_kabel_da = stelle
+            stelle = abschnitt.ab_kabel_da + abschnitt.anzahl_da
 
     # -- Umlegen und kopieren ----------------------------------------
 
@@ -1136,6 +1227,11 @@ class Restplatz:
         derselbe Strang, wuerden aber als zwei Bloecke gezeichnet.
         """
         if not self.passt or not self.kabel.abschnitte:
+            return False
+        # Mit einer Luecke in der Zaehlung des Kabels waere das Wachsen
+        # falsch: die neuen Doppeladern gehoeren in die Luecke, nicht
+        # hinter die letzte - auch wenn die Stelle in der Leiste anschliesst.
+        if not self.kabel.lueckenlos:
             return False
         letzter = self.kabel.abschnitte[-1]
         return (

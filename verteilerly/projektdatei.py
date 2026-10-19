@@ -114,10 +114,18 @@ def _verteiler_raus(verteiler: Verteiler) -> dict[str, Any]:
                 "kabeltyp": kabel.kabeltyp,
                 "da_gesamt": kabel.da_gesamt,
                 "abschnitte": [
+                    # Die Stelle im Kabel steht nur dabei, wenn sie
+                    # festgehalten ist: sonst ergibt sie sich aus der
+                    # Reihenfolge, und die Datei bleibt, wie sie war.
                     {
                         "leiste": a.leiste,
                         "start_da": a.start_da,
                         "anzahl_da": a.anzahl_da,
+                        **(
+                            {"ab_kabel_da": a.ab_kabel_da}
+                            if a.ab_kabel_da is not None
+                            else {}
+                        ),
                     }
                     for a in kabel.abschnitte
                 ],
@@ -215,7 +223,12 @@ def _verteiler_rein(daten: dict[str, Any]) -> Verteiler:
         Kabel(
             beschriftung=eintrag.get("beschriftung", ""),
             abschnitte=[
-                Kabelabschnitt(a["leiste"], a["start_da"], a["anzahl_da"])
+                Kabelabschnitt(
+                    a["leiste"],
+                    a["start_da"],
+                    a["anzahl_da"],
+                    a.get("ab_kabel_da"),
+                )
                 for a in eintrag.get("abschnitte", [])
             ],
             kabeltyp=eintrag.get("kabeltyp"),
