@@ -393,17 +393,29 @@ with the mouse</b> does the same, by the way (with Ctrl: copy).</p>
 <p><b>Terminating remaining lines</b> — the same right-click menu carries
 <i>Terminate remaining lines…</i> at the end. The entry takes on <b>all
 shortened lines of the frame</b> at once: a dialog shows for each line what is
-terminated and where its rest would go, and only a press on <i>Terminate</i>
-carries it out. Searched first is the place <b>directly behind the line</b> —
-that is where its continuation belongs, and it grows into that section instead
-of beside it —, and only what does not fit that way takes the first free run
-that carries the rest <i>completely</i>. No rest is split up: a strand
-scattered across three strips can no longer be followed on the sheet. If there
-is nowhere enough room, the row says <i>no room</i> and the line stays as it
-was — that is reported too, rather than passed over. The <b>wire colours come
-along</b>: the new pairs continue the cable type's sequence, what was entered
-by hand stays. The whole thing is <b>one</b> step to undo. The entry is greyed
-out as long as no line is shortened or the frame is open read-only.</p>
+terminated, and <b>where its rest goes is your choice</b> — <i>strip</i> and
+<i>from pair</i> can be changed in every row.</p>
+
+<p>Preset is a <b>proposal</b>: first the place directly behind the line —
+that is where its continuation belongs, and it then grows into that section
+instead of beside it —, otherwise the first free run that carries the rest
+<i>completely</i>. No rest is split up: a strand scattered across three strips
+can no longer be followed on the sheet.</p>
+
+<p>The column <i>Room</i> says for each row where you stand: <i>2 pairs
+free</i> (with the addition <i>continuation</i> when the place adjoins
+directly), <i>occupied</i> when something lies there already, or <i>strip too
+short</i> when the strip ends before. The rows are checked <b>from top to
+bottom</b>, each against those above it — if two point at the same place, the
+upper one gets it and the lower says <i>occupied</i>. Whoever does not want to
+terminate a line at all takes out its <b>tick</b>; it then stays shortened.
+Lines for which nothing free could be found start without a tick — they too
+may be given a place by hand.</p>
+
+<p>The <b>wire colours come along</b>: the new pairs continue the cable type's
+sequence, what was entered by hand stays. The whole thing is <b>one</b> step
+to undo. The entry is greyed out as long as no line is shortened or the frame
+is open read-only.</p>
 
 <p><b>Terminating</b> — <b>Edit ▸ Terminate cable…</b> (Ctrl+K) or a double
 click on a free pair. Label, cable type and size are to be given; <i>strip</i>

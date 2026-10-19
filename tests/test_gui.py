@@ -2088,15 +2088,82 @@ class TestRestleitungenAuflegen(unittest.TestCase):
 
     def test_der_dialog_nennt_die_fortsetzung_als_solche(self):
         dialog = self._auflegen()
-        self.assertIn("Fortsetzung", dialog.liste.item(0, 2).text())
+        self.assertIn("Fortsetzung", dialog.liste.item(0, 3).text())
+
+    def test_der_dialog_schlaegt_den_gefundenen_platz_vor(self):
+        """Der Vorschlag steht in den Feldern - aendern darf man ihn."""
+        dialog = self._auflegen()
+        wahl, start, _zustand = dialog._zeilen[0]
+        self.assertEqual((wahl.currentData(), start.value()), (1, 5))
 
     def test_der_dialog_sagt_wenn_kein_platz_mehr_ist(self):
         # Alles ausser der Leitung selbst belegen.
         self.verteiler.kabel_anlegen("Nachbar", 1, 5, 6)
         self.verteiler.kabel_anlegen("Nachbar 2", 2, 1, 10)
         dialog = self._auflegen()
-        self.assertEqual(dialog.liste.item(0, 2).text(), "kein Platz")
+        # Ohne Platz faengt die Zeile ohne Haken an.
+        self.assertEqual(
+            dialog.liste.item(0, 0).checkState(), Qt.CheckState.Unchecked
+        )
+        self.assertEqual(dialog.liste.item(0, 3).text(), "bleibt gekürzt")
         self.assertFalse(dialog.auflegen_knopf.isEnabled())
+
+    # -- Die Stelle ist Wahl, nicht Vorschrift ----------------------------
+
+    def test_eine_von_hand_gewaehlte_stelle_gilt(self):
+        dialog = self._auflegen()
+        wahl, start, _zustand = dialog._zeilen[0]
+        wahl.setCurrentIndex(wahl.findData(2))
+        start.setValue(7)
+        self.assertEqual(
+            [(p.leiste, p.start_da) for p in dialog.plan()], [(2, 7)]
+        )
+
+    def test_eine_belegte_stelle_wird_gemeldet_und_nicht_gelegt(self):
+        self.verteiler.kabel_anlegen("Sperre", 2, 1, 4)
+        dialog = self._auflegen()
+        wahl, start, zustand = dialog._zeilen[0]
+        wahl.setCurrentIndex(wahl.findData(2))
+        start.setValue(3)
+        self.assertEqual(zustand.text(), "belegt")
+        self.assertFalse(dialog.auflegen_knopf.isEnabled())
+        self.assertEqual([p.leiste for p in dialog.plan()], [None])
+
+    def test_hinter_dem_leistenende_heisst_es_nicht_belegt(self):
+        """Dort liegt nichts - die Leiste ist nur vorher zu Ende."""
+        dialog = self._auflegen()
+        _wahl, start, zustand = dialog._zeilen[0]
+        start.setValue(start.maximum())
+        self.assertEqual(zustand.text(), "Leiste zu kurz")
+
+    def test_der_startstift_reicht_nur_so_weit_wie_die_leiste(self):
+        dialog = self._auflegen()
+        wahl, start, _zustand = dialog._zeilen[0]
+        wahl.setCurrentIndex(wahl.findData(2))
+        self.assertEqual(start.maximum(), self.verteiler.leiste(2).da_anzahl)
+
+    def test_ohne_haken_bleibt_die_leitung_gekuerzt(self):
+        dialog = self._auflegen()
+        dialog.liste.item(0, 0).setCheckState(Qt.CheckState.Unchecked)
+        self.assertEqual(dialog.liste.item(0, 3).text(), "bleibt gekürzt")
+        self.assertEqual([p.leiste for p in dialog.plan()], [None])
+
+    def test_zwei_zeilen_auf_dieselbe_stelle_melden_sich(self):
+        """Eine Zeile kann der anderen den Platz wegnehmen - sichtbar."""
+        zweite = self.verteiler.kabel_anlegen("K40", 2, 1, 2, da_gesamt=4)
+        self.assertTrue(zweite.gekuerzt)
+        dialog = self._auflegen()
+        stellen = [dialog._zeilen[z] for z in range(2)]
+        for wahl, start, _zustand in stellen:
+            wahl.setCurrentIndex(wahl.findData(2))
+            start.setValue(5)
+        self.assertEqual(
+            [z.text() for _w, _s, z in stellen].count("belegt"), 1
+        )
+        # Gelegt wird genau eine der beiden.
+        self.assertEqual(
+            sum(1 for p in dialog.plan() if p.leiste is not None), 1
+        )
 
     def test_abbrechen_legt_nichts_auf(self):
         self._auflegen(RestleitungenDialog.DialogCode.Rejected)
@@ -2113,6 +2180,21 @@ class TestRestleitungenAuflegen(unittest.TestCase):
     def test_die_fortsetzung_bleibt_ein_abschnitt(self):
         self._auflegen()
         self.assertEqual(len(self.kabel.abschnitte), 1)
+
+    def test_aufgelegt_wird_wo_im_dialog_steht(self):
+        """Nicht der Vorschlag zaehlt, sondern was dort gewaehlt wurde."""
+        def woanders(dialog):
+            wahl, start, _zustand = dialog._zeilen[0]
+            wahl.setCurrentIndex(wahl.findData(2))
+            start.setValue(7)
+            return RestleitungenDialog.DialogCode.Accepted
+
+        with mock.patch.object(RestleitungenDialog, "exec", woanders):
+            self.fenster.uebersicht.restleitungen_gewuenscht.emit()
+        self.assertEqual(
+            [(a.leiste, a.start_da, a.anzahl_da) for a in self.kabel.abschnitte],
+            [(1, 1, 4), (2, 7, 2)],
+        )
 
     def test_die_adernfarben_ziehen_mit(self):
         """Die neuen DA setzen die Farbfolge des Kabels fort."""

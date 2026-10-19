@@ -237,14 +237,18 @@ Das Kabel läuft über {0} Abschnitte: The cable runs across {0} sections
 Restleitungen auflegen: Terminate remaining lines
 Restleitungen auflegen…: Terminate remaining lines…
 Restleitungen nicht aufgelegt: Remaining lines not terminated
-Von diesen Leitungen liegen weniger Doppeladern auf, als sie haben. Der Rest kommt auf die freien Doppeladern — jede Leitung bleibt dabei eine Leitung.: Fewer pairs of these lines are terminated than they carry. The rest goes onto the free pairs — each line stays one line.
+Von diesen Leitungen liegen weniger Doppeladern auf, als sie haben. Wohin der Rest kommt, steht zur Wahl — vorgeschlagen ist der Platz hinter der Leitung oder das erste freie Stück.: Fewer pairs of these lines are terminated than they carry. Where the rest goes is up to you — proposed is the place behind the line or the first free run.
 Leitung: Line
 Liegt auf: Terminated
 Rest kommt auf: Rest goes to
+Platz: Room
 '{0} von {1} DA': '{0} of {1} pairs'
-Leiste {0} ab DA {1}: Strip {0} from pair {1}
-Leiste {0} ab DA {1} (Fortsetzung): Strip {0} from pair {1} (continuation)
-kein Platz: no room
+'ab DA ': 'from pair '
+' frei': ' free'
+' (Fortsetzung)': ' (continuation)'
+belegt: occupied
+Leiste zu kurz: strip too short
+bleibt gekürzt: stays shortened
 '{0} von {1} werden aufgelegt': '{0} of {1} will be terminated'
 ', {0} ohne Platz': ', {0} without room'
 Auflegen: Terminate

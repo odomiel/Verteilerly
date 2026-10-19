@@ -2250,12 +2250,14 @@ class Hauptfenster(QMainWindow):
         )
 
     def restleitungen_auflegen(self) -> None:
-        """Was von gekuerzten Leitungen uebrig ist, auf die freien DA legen.
+        """Was von gekuerzten Leitungen uebrig ist, auf freie DA legen.
 
-        Geplant wird im Modell, gezeigt im Dialog, aufgelegt erst nach
-        Zustimmung - und alles in **einem** Schritt zum Zuruecknehmen.
-        Die Adernfarben ziehen mit: die neuen Doppeladern setzen die
-        Folge des Kabels fort, von Hand Eingetragenes bleibt stehen.
+        Vorgeschlagen wird im Modell, **gewaehlt im Dialog** - dort
+        stehen Leiste und Startstift je Zeile zur Wahl, und eine Zeile
+        ohne Haken bleibt gekuerzt. Aufgelegt wird erst nach Zustimmung,
+        und alles in **einem** Schritt zum Zuruecknehmen. Die Adernfarben
+        ziehen mit: die neuen Doppeladern setzen die Folge des Kabels
+        fort, von Hand Eingetragenes bleibt stehen.
         """
         if self.projekt is None or self.schreibgeschuetzt:
             return
@@ -2267,9 +2269,14 @@ class Hauptfenster(QMainWindow):
             )
             return
 
-        dialog = RestleitungenDialog(plan, self, leisten=self.leisten_schreibweise)
+        dialog = RestleitungenDialog(
+            verteiler, plan, self, leisten=self.leisten_schreibweise
+        )
         if dialog.exec() != RestleitungenDialog.DialogCode.Accepted:
             return
+        # Gelegt wird, was im Dialog steht - nicht der Vorschlag: dort
+        # sind Leiste und Stift je Zeile zu aendern.
+        plan = dialog.plan()
 
         # Der bisherige Farbplan ist der Massstab fuer das Nachziehen:
         # was noch genau so dasteht, hat die Automatik gesetzt.

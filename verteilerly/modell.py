@@ -1112,6 +1112,40 @@ class Restplatz:
         )
 
 
+def platz_frei(
+    verteiler: Verteiler,
+    leiste: int,
+    start_da: int,
+    anzahl: int,
+    vergeben: set[tuple[int, int]] | None = None,
+) -> bool:
+    """Liegt dieses Stueck Leiste ganz frei?
+
+    ``vergeben`` sind Plaetze, die noch kein Kabel belegt, die aber
+    schon einem Rest zugedacht sind - beim Planen die der vorigen
+    Zeilen, im Dialog die der anderen. Ohne sie schickte ein Plan zwei
+    Reste auf dieselben Doppeladern.
+
+    Dieselbe Regel gilt fuer den Vorschlag des Programms und fuer eine
+    von Hand gewaehlte Stelle: sonst lehnte der Dialog ab, was das
+    Auflegen hinnimmt, oder umgekehrt.
+    """
+    if anzahl < 1 or start_da < 1:
+        return False
+    try:
+        laenge = verteiler.leiste(leiste).da_anzahl
+    except ModellFehler:
+        return False
+    if start_da + anzahl - 1 > laenge:
+        return False
+    schon = vergeben or set()
+    return all(
+        verteiler.kabel_an(leiste, start_da + i) is None
+        and (leiste, start_da + i) not in schon
+        for i in range(anzahl)
+    )
+
+
 def restleitungen_planen(verteiler: Verteiler) -> list[Restplatz]:
     """Sagt fuer jede gekuerzte Leitung, wo ihr Rest aufliegen koennte.
 
@@ -1130,16 +1164,8 @@ def restleitungen_planen(verteiler: Verteiler) -> list[Restplatz]:
     """
     vergeben: set[tuple[int, int]] = set()
 
-    def frei(leiste: int, da: int) -> bool:
-        return (
-            verteiler.kabel_an(leiste, da) is None
-            and (leiste, da) not in vergeben
-        )
-
     def passt_ab(leiste: int, start_da: int, anzahl: int) -> bool:
-        if start_da + anzahl - 1 > verteiler.leiste(leiste).da_anzahl:
-            return False
-        return all(frei(leiste, start_da + i) for i in range(anzahl))
+        return platz_frei(verteiler, leiste, start_da, anzahl, vergeben)
 
     def belegen(leiste: int, start_da: int, anzahl: int) -> None:
         vergeben.update((leiste, start_da + i) for i in range(anzahl))

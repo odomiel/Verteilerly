@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import datetime as _datetime
+from dataclasses import replace
 
 from PySide6.QtCore import QPoint, Qt
 from PySide6.QtGui import (
@@ -68,6 +69,7 @@ from ..modell import (
     Verteiler,
     leistenname,
     mehrzahl,
+    platz_frei,
 )
 from ..vorlagen import (
     Vorlage,
@@ -1260,55 +1262,62 @@ class UeberlaufDialog(PassenderDialog):
 class RestleitungenDialog(PassenderDialog):
     """Was von gekuerzten Leitungen uebrig ist, und wohin es kommt.
 
-    Der Dialog **zeigt nur** - geplant wird im Modell
-    (``restleitungen_planen``), aufgelegt erst, wenn hier jemand
-    zustimmt. Eine Zeile je gekuerzter Leitung, auch fuer die, die
-    keinen Platz mehr findet: wer den Verteiler vor sich hat, soll
-    sehen, was uebrig bleibt.
+    Der Platz ist **Vorschlag, nicht Vorschrift**: je Zeile stehen
+    Leiste und Startstift zur Wahl, vorbelegt mit dem, was das Modell
+    gefunden hat (``restleitungen_planen``). Wer eine Leitung hier
+    nicht auflegen will, nimmt ihren Haken heraus - und eine Leitung,
+    fuer die nichts frei war, laesst sich von Hand irgendwohin legen.
+
+    Geprueft wird mit derselben Regel wie beim Planen
+    (``modell.platz_frei``), die anderen Zeilen eingerechnet: zwei
+    Reste duerfen nicht auf dieselben Doppeladern zeigen.
     """
 
     def __init__(
         self,
+        verteiler: Verteiler,
         plan: list[Restplatz],
         parent: QWidget | None = None,
         leisten: str = LEISTEN_ZAHLEN,
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle(u("Restleitungen auflegen"))
-        self.plan = plan
+        self.verteiler = verteiler
+        self.vorschlag = plan
+        #: Je Zeile die drei Bedienteile - Haken steht in der Tabelle.
+        self._zeilen: list[tuple[QComboBox, QSpinBox, QTableWidgetItem]] = []
 
         erklaerung = QLabel(
             u("Von diesen Leitungen liegen weniger Doppeladern auf, als sie "
-              "haben. Der Rest kommt auf die freien Doppeladern — jede "
-              "Leitung bleibt dabei eine Leitung.")
+              "haben. Wohin der Rest kommt, steht zur Wahl — vorgeschlagen "
+              "ist der Platz hinter der Leitung oder das erste freie Stück.")
         )
         erklaerung.setWordWrap(True)
 
-        self.liste = QTableWidget(len(plan), 3)
+        self.liste = QTableWidget(len(plan), 4)
         self.liste.setHorizontalHeaderLabels(
-            [u("Leitung"), u("Liegt auf"), u("Rest kommt auf")]
+            [u("Leitung"), u("Liegt auf"), u("Rest kommt auf"), u("Platz")]
         )
         self.liste.verticalHeader().setVisible(False)
         self.liste.setSelectionMode(QTableWidget.SelectionMode.NoSelection)
         self.liste.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        # Hier ist nichts zu bedienen - sonst sitzt der Fokusrahmen auf der
-        # ersten Zelle, als waere sie gewaehlt.
-        self.liste.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.liste.horizontalHeader().setStretchLastSection(True)
         for zeile, platz in enumerate(plan):
-            self._zeile_setzen(zeile, platz, leisten)
+            self._zeile_bauen(zeile, platz, leisten)
         self.liste.resizeColumnsToContents()
+        # Die Wahlspalte nimmt, was uebrig ist; die drei anderen so viel,
+        # wie sie brauchen - sonst steht die Meldung abgeschnitten da.
+        kopf = self.liste.horizontalHeader()
+        kopf.setStretchLastSection(False)
+        for spalte in (0, 1, 3):
+            kopf.setSectionResizeMode(
+                spalte, QHeaderView.ResizeMode.ResizeToContents
+            )
+        kopf.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+        self.liste.itemChanged.connect(lambda _eintrag: self._pruefen())
 
-        passend = sum(1 for platz in plan if platz.passt)
-        ohne = len(plan) - passend
-        zusammen = u("{0} von {1} werden aufgelegt").format(passend, len(plan))
-        if ohne:
-            zusammen += u(", {0} ohne Platz").format(ohne)
-        self.zaehler = QLabel(zusammen)
-
+        self.zaehler = QLabel()
         self.auflegen_knopf = QPushButton(u("Auflegen"))
         self.auflegen_knopf.setDefault(True)
-        self.auflegen_knopf.setEnabled(passend > 0)
         self.auflegen_knopf.clicked.connect(self.accept)
         abbrechen = QPushButton(u("Abbrechen"))
         abbrechen.clicked.connect(self.reject)
@@ -1323,31 +1332,154 @@ class RestleitungenDialog(PassenderDialog):
         aufbau.addWidget(erklaerung)
         aufbau.addWidget(self.liste, 1)
         aufbau.addLayout(knoepfe)
-        self.resize(560, 320)
+        self.resize(720, 340)
+        self._pruefen()
 
-    def _zeile_setzen(self, zeile: int, platz: Restplatz, leisten: str) -> None:
-        """Eine Leitung: Name, was aufliegt, wohin der Rest kommt."""
-        name = platz.kabel.beschriftung or u("ohne Beschriftung")
-        liegt = u("{0} von {1} DA").format(
-            platz.kabel.da_aufgelegt, platz.kabel.da_gesamt
+    # -- Aufbau ------------------------------------------------------------
+
+    def _zeile_bauen(self, zeile: int, platz: Restplatz, leisten: str) -> None:
+        """Eine Leitung: Haken und Name, was aufliegt, wohin, und ob es geht."""
+        name = QTableWidgetItem(platz.kabel.beschriftung or u("ohne Beschriftung"))
+        name.setFlags(
+            Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsUserCheckable
         )
-        if not platz.passt:
-            ziel = u("kein Platz")
-        elif platz.fortsetzung:
-            ziel = u("Leiste {0} ab DA {1} (Fortsetzung)").format(
-                leistenname(platz.leiste, leisten), platz.start_da
+        # Was keinen Platz fand, faengt ohne Haken an - sonst stuende der
+        # Knopf auf einer Zeile, die nirgends hinzeigt.
+        name.setCheckState(
+            Qt.CheckState.Checked if platz.passt else Qt.CheckState.Unchecked
+        )
+        self.liste.setItem(zeile, 0, name)
+
+        liegt = QTableWidgetItem(
+            u("{0} von {1} DA").format(
+                platz.kabel.da_aufgelegt, platz.kabel.da_gesamt
             )
-        else:
-            ziel = u("Leiste {0} ab DA {1}").format(
-                leistenname(platz.leiste, leisten), platz.start_da
-            )
-        for spalte, text in enumerate((name, liegt, ziel)):
-            eintrag = QTableWidgetItem(text)
-            if spalte == 2 and not platz.passt:
-                eintrag.setForeground(
+        )
+        self.liste.setItem(zeile, 1, liegt)
+
+        leistenwahl = QComboBox()
+        for l in self.verteiler.alle_leisten:
+            leistenwahl.addItem(leistenname(l.nummer, leisten), l.nummer)
+        start = QSpinBox()
+        start.setPrefix(u("ab DA "))
+        if platz.passt:
+            leistenwahl.setCurrentIndex(max(0, leistenwahl.findData(platz.leiste)))
+        self._spinbereich_setzen(leistenwahl, start)
+        if platz.passt:
+            start.setValue(platz.start_da)
+        leistenwahl.currentIndexChanged.connect(
+            lambda _i, w=leistenwahl, s=start: self._leiste_gewechselt(w, s)
+        )
+        start.valueChanged.connect(lambda _w: self._pruefen())
+
+        huelle = QWidget()
+        waagerecht = QHBoxLayout(huelle)
+        waagerecht.setContentsMargins(2, 0, 2, 0)
+        waagerecht.addWidget(leistenwahl)
+        waagerecht.addWidget(start)
+        self.liste.setCellWidget(zeile, 2, huelle)
+
+        zustand = QTableWidgetItem("")
+        self.liste.setItem(zeile, 3, zustand)
+        self._zeilen.append((leistenwahl, start, zustand))
+
+    def _spinbereich_setzen(self, leistenwahl: QComboBox, start: QSpinBox) -> None:
+        """Der Startstift reicht nur so weit wie die gewaehlte Leiste."""
+        nummer = leistenwahl.currentData()
+        laenge = self.verteiler.leiste(nummer).da_anzahl if nummer else 1
+        start.setRange(1, max(1, laenge))
+
+    def _leiste_gewechselt(self, leistenwahl: QComboBox, start: QSpinBox) -> None:
+        self._spinbereich_setzen(leistenwahl, start)
+        self._pruefen()
+
+    # -- Pruefen -----------------------------------------------------------
+
+    def _gewaehlt(self, zeile: int) -> bool:
+        eintrag = self.liste.item(zeile, 0)
+        return eintrag is not None and eintrag.checkState() == Qt.CheckState.Checked
+
+    def _stelle(self, zeile: int) -> tuple[int, int]:
+        leistenwahl, start, _zustand = self._zeilen[zeile]
+        return leistenwahl.currentData(), start.value()
+
+    def _pruefen(self) -> None:
+        """Sagt je Zeile, ob der gewaehlte Platz frei ist.
+
+        Gerechnet wird **von oben nach unten**, und jede Zeile sieht nur
+        die Plaetze der Zeilen ueber ihr - genauso legt ``plan()``
+        spaeter auf, die obere Zeile bekommt den Platz zuerst. Wer
+        stattdessen alle Zeilen auf einmal einrechnet und die eigene
+        wieder abzieht, sieht zwei Zeilen auf derselben Stelle nicht:
+        in einer Menge heben sie sich gegenseitig auf.
+        """
+        belegt: set[tuple[int, int]] = set()
+        gut = 0
+        for zeile, platz in enumerate(self.vorschlag):
+            _wahl, _start, zustand = self._zeilen[zeile]
+            if not self._gewaehlt(zeile):
+                zustand.setText(u("bleibt gekürzt"))
+                zustand.setForeground(
                     self.palette().color(QPalette.ColorRole.PlaceholderText)
                 )
-            self.liste.setItem(zeile, spalte, eintrag)
+                continue
+            leiste, start_da = self._stelle(zeile)
+            frei = platz_frei(
+                self.verteiler, leiste, start_da, platz.rest, belegt
+            )
+            if frei:
+                belegt.update(
+                    (leiste, start_da + i) for i in range(platz.rest)
+                )
+            if not frei:
+                # Zwei Gruende, zwei Woerter: dort liegt etwas, oder die
+                # Leiste ist vorher zu Ende.
+                laenge = self.verteiler.leiste(leiste).da_anzahl
+                text = (
+                    u("Leiste zu kurz")
+                    if start_da + platz.rest - 1 > laenge
+                    else u("belegt")
+                )
+            else:
+                text = mehrzahl(platz.rest, "DA", "DA") + u(" frei")
+                # Schliesst die Wahl unmittelbar an die Leitung an, waechst
+                # ihr letzter Abschnitt - das ist zu sehen wert.
+                if replace(platz, leiste=leiste, start_da=start_da).fortsetzung:
+                    text += u(" (Fortsetzung)")
+            zustand.setText(text)
+            zustand.setForeground(
+                self.palette().color(
+                    QPalette.ColorRole.Text if frei
+                    else QPalette.ColorRole.PlaceholderText
+                )
+            )
+            gut += 1 if frei else 0
+
+        self.zaehler.setText(
+            u("{0} von {1} werden aufgelegt").format(gut, len(self.vorschlag))
+        )
+        self.auflegen_knopf.setEnabled(gut > 0)
+
+    # -- Ergebnis ----------------------------------------------------------
+
+    def plan(self) -> list[Restplatz]:
+        """Der Plan, wie er jetzt dasteht - mit den gewaehlten Plaetzen.
+
+        Eine Zeile ohne Haken oder mit belegtem Platz kommt ohne Ziel
+        zurueck; ``restplaetze_auflegen`` geht darueber hinweg.
+        """
+        belegt: set[tuple[int, int]] = set()
+        fertig: list[Restplatz] = []
+        for zeile, platz in enumerate(self.vorschlag):
+            leiste, start_da = self._stelle(zeile)
+            if self._gewaehlt(zeile) and platz_frei(
+                self.verteiler, leiste, start_da, platz.rest, belegt
+            ):
+                belegt.update((leiste, start_da + i) for i in range(platz.rest))
+                fertig.append(replace(platz, leiste=leiste, start_da=start_da))
+            else:
+                fertig.append(replace(platz, leiste=None, start_da=None))
+        return fertig
 
 
 class RangiervorlagenDialog(PassenderDialog):
