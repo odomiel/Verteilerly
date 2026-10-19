@@ -1268,6 +1268,12 @@ class RestleitungenDialog(PassenderDialog):
     nicht auflegen will, nimmt ihren Haken heraus - und eine Leitung,
     fuer die nichts frei war, laesst sich von Hand irgendwohin legen.
 
+    Auch **wie viel** vom Rest aufliegt, steht zur Wahl: *Davon* faengt
+    beim ganzen Rest an und laesst sich herunterstellen. Die Leitung
+    bleibt dann gekuerzt, und was uebrig ist, steht beim naechsten Mal
+    wieder in dieser Liste - mancher Rest passt nirgends ganz hin, und
+    ein halber aufgelegter Rest ist besser als keiner.
+
     Geprueft wird mit derselben Regel wie beim Planen
     (``modell.platz_frei``), die anderen Zeilen eingerechnet: zwei
     Reste duerfen nicht auf dieselben Doppeladern zeigen.
@@ -1284,19 +1290,24 @@ class RestleitungenDialog(PassenderDialog):
         self.setWindowTitle(u("Restleitungen auflegen"))
         self.verteiler = verteiler
         self.vorschlag = plan
-        #: Je Zeile die drei Bedienteile - Haken steht in der Tabelle.
-        self._zeilen: list[tuple[QComboBox, QSpinBox, QTableWidgetItem]] = []
+        #: Je Zeile die vier Bedienteile - Haken steht in der Tabelle.
+        self._zeilen: list[
+            tuple[QComboBox, QSpinBox, QSpinBox, QTableWidgetItem]
+        ] = []
 
         erklaerung = QLabel(
             u("Von diesen Leitungen liegen weniger Doppeladern auf, als sie "
               "haben. Wohin der Rest kommt, steht zur Wahl — vorgeschlagen "
-              "ist der Platz hinter der Leitung oder das erste freie Stück.")
+              "ist der Platz hinter der Leitung oder das erste freie Stück. "
+              "Unter „Davon“ lässt sich auch nur ein Teil des Restes "
+              "auflegen; die Leitung bleibt dann gekürzt.")
         )
         erklaerung.setWordWrap(True)
 
-        self.liste = QTableWidget(len(plan), 4)
+        self.liste = QTableWidget(len(plan), 5)
         self.liste.setHorizontalHeaderLabels(
-            [u("Leitung"), u("Liegt auf"), u("Rest kommt auf"), u("Platz")]
+            [u("Leitung"), u("Liegt auf"), u("Rest kommt auf"), u("Davon"),
+             u("Platz")]
         )
         self.liste.verticalHeader().setVisible(False)
         self.liste.setSelectionMode(QTableWidget.SelectionMode.NoSelection)
@@ -1308,7 +1319,7 @@ class RestleitungenDialog(PassenderDialog):
         # wie sie brauchen - sonst steht die Meldung abgeschnitten da.
         kopf = self.liste.horizontalHeader()
         kopf.setStretchLastSection(False)
-        for spalte in (0, 1, 3):
+        for spalte in (0, 1, 3, 4):
             kopf.setSectionResizeMode(
                 spalte, QHeaderView.ResizeMode.ResizeToContents
             )
@@ -1379,9 +1390,18 @@ class RestleitungenDialog(PassenderDialog):
         waagerecht.addWidget(start)
         self.liste.setCellWidget(zeile, 2, huelle)
 
+        # Wie viel vom Rest: vorbelegt ist der ganze - das ist der
+        # Regelfall, und wer kuerzen will, stellt herunter.
+        menge = QSpinBox()
+        menge.setSuffix(u(" DA"))
+        menge.setRange(1, max(1, platz.rest))
+        menge.setValue(max(1, platz.rest))
+        menge.valueChanged.connect(lambda _w: self._pruefen())
+        self.liste.setCellWidget(zeile, 3, menge)
+
         zustand = QTableWidgetItem("")
-        self.liste.setItem(zeile, 3, zustand)
-        self._zeilen.append((leistenwahl, start, zustand))
+        self.liste.setItem(zeile, 4, zustand)
+        self._zeilen.append((leistenwahl, start, menge, zustand))
 
     def _spinbereich_setzen(self, leistenwahl: QComboBox, start: QSpinBox) -> None:
         """Der Startstift reicht nur so weit wie die gewaehlte Leiste."""
@@ -1400,8 +1420,12 @@ class RestleitungenDialog(PassenderDialog):
         return eintrag is not None and eintrag.checkState() == Qt.CheckState.Checked
 
     def _stelle(self, zeile: int) -> tuple[int, int]:
-        leistenwahl, start, _zustand = self._zeilen[zeile]
+        leistenwahl, start, _menge, _zustand = self._zeilen[zeile]
         return leistenwahl.currentData(), start.value()
+
+    def _menge(self, zeile: int) -> int:
+        """Wie viele Doppeladern dieser Zeile aufliegen sollen."""
+        return self._zeilen[zeile][2].value()
 
     def _pruefen(self) -> None:
         """Sagt je Zeile, ob der gewaehlte Platz frei ist.
@@ -1416,7 +1440,7 @@ class RestleitungenDialog(PassenderDialog):
         belegt: set[tuple[int, int]] = set()
         gut = 0
         for zeile, platz in enumerate(self.vorschlag):
-            _wahl, _start, zustand = self._zeilen[zeile]
+            _wahl, _start, _menge, zustand = self._zeilen[zeile]
             if not self._gewaehlt(zeile):
                 zustand.setText(u("bleibt gekürzt"))
                 zustand.setForeground(
@@ -1424,28 +1448,32 @@ class RestleitungenDialog(PassenderDialog):
                 )
                 continue
             leiste, start_da = self._stelle(zeile)
-            frei = platz_frei(
-                self.verteiler, leiste, start_da, platz.rest, belegt
-            )
+            anzahl = self._menge(zeile)
+            frei = platz_frei(self.verteiler, leiste, start_da, anzahl, belegt)
             if frei:
-                belegt.update(
-                    (leiste, start_da + i) for i in range(platz.rest)
-                )
+                belegt.update((leiste, start_da + i) for i in range(anzahl))
             if not frei:
                 # Zwei Gruende, zwei Woerter: dort liegt etwas, oder die
                 # Leiste ist vorher zu Ende.
                 laenge = self.verteiler.leiste(leiste).da_anzahl
                 text = (
                     u("Leiste zu kurz")
-                    if start_da + platz.rest - 1 > laenge
+                    if start_da + anzahl - 1 > laenge
                     else u("belegt")
                 )
             else:
-                text = mehrzahl(platz.rest, "DA", "DA") + u(" frei")
+                text = mehrzahl(anzahl, "DA", "DA") + u(" frei")
                 # Schliesst die Wahl unmittelbar an die Leitung an, waechst
                 # ihr letzter Abschnitt - das ist zu sehen wert.
-                if replace(platz, leiste=leiste, start_da=start_da).fortsetzung:
+                if replace(
+                    platz, rest=anzahl, leiste=leiste, start_da=start_da
+                ).fortsetzung:
                     text += u(" (Fortsetzung)")
+                # Wer nur einen Teil auflegt, soll sehen, was liegen bleibt.
+                if anzahl < platz.rest:
+                    text += u(" — {0} bleiben übrig").format(
+                        mehrzahl(platz.rest - anzahl, "DA", "DA")
+                    )
             zustand.setText(text)
             zustand.setForeground(
                 self.palette().color(
@@ -1463,7 +1491,11 @@ class RestleitungenDialog(PassenderDialog):
     # -- Ergebnis ----------------------------------------------------------
 
     def plan(self) -> list[Restplatz]:
-        """Der Plan, wie er jetzt dasteht - mit den gewaehlten Plaetzen.
+        """Der Plan, wie er jetzt dasteht - Plaetze und Mengen wie gewaehlt.
+
+        ``rest`` ist dabei, was aufgelegt werden soll, nicht mehr
+        zwangslaeufig der ganze Rest der Leitung: ``restplaetze_auflegen``
+        legt genau diese Zahl auf.
 
         Eine Zeile ohne Haken oder mit belegtem Platz kommt ohne Ziel
         zurueck; ``restplaetze_auflegen`` geht darueber hinweg.
@@ -1472,11 +1504,16 @@ class RestleitungenDialog(PassenderDialog):
         fertig: list[Restplatz] = []
         for zeile, platz in enumerate(self.vorschlag):
             leiste, start_da = self._stelle(zeile)
+            anzahl = self._menge(zeile)
             if self._gewaehlt(zeile) and platz_frei(
-                self.verteiler, leiste, start_da, platz.rest, belegt
+                self.verteiler, leiste, start_da, anzahl, belegt
             ):
-                belegt.update((leiste, start_da + i) for i in range(platz.rest))
-                fertig.append(replace(platz, leiste=leiste, start_da=start_da))
+                belegt.update((leiste, start_da + i) for i in range(anzahl))
+                fertig.append(
+                    replace(
+                        platz, rest=anzahl, leiste=leiste, start_da=start_da
+                    )
+                )
             else:
                 fertig.append(replace(platz, leiste=None, start_da=None))
         return fertig

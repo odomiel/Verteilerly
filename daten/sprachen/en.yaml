@@ -241,11 +241,13 @@ Restleitung auflegen: Terminate remaining line
 '{0} ({1} übrig)': '{0} ({1} left)'
 ' — passt hier nicht': ' — does not fit here'
 Restleitungen nicht aufgelegt: Remaining lines not terminated
-Von diesen Leitungen liegen weniger Doppeladern auf, als sie haben. Wohin der Rest kommt, steht zur Wahl — vorgeschlagen ist der Platz hinter der Leitung oder das erste freie Stück.: Fewer pairs of these lines are terminated than they carry. Where the rest goes is up to you — proposed is the place behind the line or the first free run.
+Von diesen Leitungen liegen weniger Doppeladern auf, als sie haben. Wohin der Rest kommt, steht zur Wahl — vorgeschlagen ist der Platz hinter der Leitung oder das erste freie Stück. Unter „Davon“ lässt sich auch nur ein Teil des Restes auflegen; die Leitung bleibt dann gekürzt.: Fewer pairs of these lines are terminated than they carry. Where the rest goes is up to you — proposed is the place behind the line or the first free run. Under „Of that“ only part of the rest can be terminated; the line then stays shortened.
 Leitung: Line
 Liegt auf: Terminated
 Rest kommt auf: Rest goes to
 Platz: Room
+Davon: Of that
+' — {0} bleiben übrig': ' — {0} left over'
 '{0} von {1} DA': '{0} of {1} pairs'
 'ab DA ': 'from pair '
 ' frei': ' free'
