@@ -12,14 +12,20 @@ import tempfile
 # etwas in ~/.config/Verteilerly ab - auch nicht das Programm, das
 # TestSelbstbericht als Unterprozess startet, denn es erbt die Umgebung.
 # Gesetzt wird das hier, vor jedem Import aus verteilerly.
-_TESTHEIM = tempfile.mkdtemp(prefix="verteilerly-tests-")
-os.environ["XDG_CONFIG_HOME"] = _TESTHEIM
+#: Der eigene Ordner der Testreihe. Oeffentlich, damit jede Testdatei
+#: ihn importieren kann: dieser Import ist der **Beweis**, dass das
+#: Paket geladen wurde und die Ordner umgelegt sind. Wer die Reihe
+#: ohne `-t .` startet, bekommt die Dateien als lose Module - dann
+#: schlaegt der Import fehl, statt dass ein Test in die echte
+#: Verteilerly.conf schreibt.
+TESTHEIM = tempfile.mkdtemp(prefix="verteilerly-tests-")
+os.environ["XDG_CONFIG_HOME"] = TESTHEIM
 # Und XDG_DATA_HOME dazu: daran haengen Dateityp und Desktop-Eintrag der
 # Verknuepfung. Ohne das liest die Testreihe die **echte** Anmeldung des
 # Benutzers - zeigte die auf ein anderes Verteilerly, lief ein GUI-Test in
 # eine ungepatchte Rueckfrage und die ganze Reihe blieb an dem Dialog stehen.
-os.environ["XDG_DATA_HOME"] = str(pathlib.Path(_TESTHEIM) / "share")
-atexit.register(shutil.rmtree, _TESTHEIM, True)
+os.environ["XDG_DATA_HOME"] = str(pathlib.Path(TESTHEIM) / "share")
+atexit.register(shutil.rmtree, TESTHEIM, True)
 
 # Eigene Erweiterungen haben in der Testreihe nichts zu suchen - geprueft
 # wird das Laden fremder Erweiterungen an eigenen Ordnern.

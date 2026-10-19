@@ -8,6 +8,10 @@ Programm deutsch stehen - und niemand merkte es.
 
 from __future__ import annotations
 
+# Erst das Paket: es legt Einstellungs- und Arbeitsordner der
+# Testreihe um, bevor etwas aus verteilerly Pfade liest.
+from . import TESTHEIM  # noqa: F401
+
 import ast
 import pathlib
 import tempfile

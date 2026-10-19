@@ -1,5 +1,9 @@
 """Tests zum Paket aus Vorlagen und Einstellungen."""
 
+# Erst das Paket: es legt Einstellungs- und Arbeitsordner der
+# Testreihe um, bevor etwas aus verteilerly Pfade liest.
+from . import TESTHEIM  # noqa: F401
+
 import json
 import pathlib
 import tempfile

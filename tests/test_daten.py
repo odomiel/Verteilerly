@@ -4,6 +4,10 @@ Massstab sind die Mustertabellen: die automatische Vorbefuellung muss
 dieselben Farben erzeugen, die dort von Hand eingetragen sind.
 """
 
+# Erst das Paket: es legt Einstellungs- und Arbeitsordner der
+# Testreihe um, bevor etwas aus verteilerly Pfade liest.
+from . import TESTHEIM  # noqa: F401
+
 import pathlib
 import shutil
 import tempfile

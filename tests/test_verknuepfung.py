@@ -4,6 +4,10 @@ Geschrieben wird immer in einen eigenen ``XDG_DATA_HOME``: die Tests
 sollen die Arbeitsflaeche des Rechners nicht umstellen.
 """
 
+# Erst das Paket: es legt Einstellungs- und Arbeitsordner der
+# Testreihe um, bevor etwas aus verteilerly Pfade liest.
+from . import TESTHEIM  # noqa: F401
+
 import os
 import pathlib
 import sys

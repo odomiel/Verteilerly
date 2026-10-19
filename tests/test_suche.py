@@ -6,6 +6,10 @@ wird mit Ort und Feld, sonst waere die Fundstelle nur eine Behauptung.
 
 from __future__ import annotations
 
+# Erst das Paket: es legt Einstellungs- und Arbeitsordner der
+# Testreihe um, bevor etwas aus verteilerly Pfade liest.
+from . import TESTHEIM  # noqa: F401
+
 import unittest
 
 from verteilerly import schreibweisen, suche

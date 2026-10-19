@@ -1,5 +1,9 @@
 """Tests zum Bestand: welche Bausteine drinstecken."""
 
+# Erst das Paket: es legt Einstellungs- und Arbeitsordner der
+# Testreihe um, bevor etwas aus verteilerly Pfade liest.
+from . import TESTHEIM  # noqa: F401
+
 import unittest
 from unittest import mock
 
