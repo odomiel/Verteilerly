@@ -779,6 +779,40 @@ class Verteiler:
             passend += 1
         return passend, anzahl_da - passend
 
+    def freie_laenge(
+        self,
+        leiste: int,
+        start_da: int,
+        hoechstens: int,
+        vergeben: set[tuple[int, int]] | None = None,
+    ) -> int:
+        """Wie viele Doppeladern ab dieser Stelle zusammenhaengend frei sind.
+
+        Gezaehlt wird bis zum ersten belegten Platz oder zum Ende der
+        Leiste, hoechstens aber ``hoechstens``. ``vergeben`` sind
+        Plaetze, die noch kein Kabel belegt, die aber schon verplant
+        sind - beim Verteilen eines Ueberlaufs die der vorigen Runden.
+
+        Anders als ``platz_pruefen`` wirft das nichts: gefragt ist hier,
+        **wie viel** geht, nicht ob alles geht.
+        """
+        try:
+            laenge = self.leiste(leiste).da_anzahl
+        except ModellFehler:
+            return 0
+        if start_da < 1:
+            return 0
+        schon = vergeben or set()
+        frei = 0
+        while frei < hoechstens:
+            da = start_da + frei
+            if da > laenge:
+                break
+            if self.kabel_an(leiste, da) is not None or (leiste, da) in schon:
+                break
+            frei += 1
+        return frei
+
     def kabel_anlegen(
         self,
         beschriftung: str,

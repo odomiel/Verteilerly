@@ -118,6 +118,9 @@ Auch von Hand geänderte Adernfarben ersetzen: Also replace wire colors changed 
 Wächst und schrumpft am Ende des Kabels; der Anfang bleibt, wo er ist: Grows and shrinks at the end of
   the cable; the start stays where it is
 Kabel passt nicht vollständig: Cable does not fit completely
+'{0} DA sind verteilt, {1} DA bleiben übrig.': '{0} pairs are distributed, {1} pairs are left over.'
+Kein Platz: No room
+'Auf Leiste {0} ab DA {1} ist nichts frei.': 'On strip {0} from pair {1} nothing is free.'
 Auf einer anderen Leiste fortsetzen: Continue on another strip
 'Weiter auf:': 'Continue on:'
 Dokumentation: Documentation

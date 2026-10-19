@@ -1201,7 +1201,14 @@ class KabelDialog(PassenderDialog):
 
 
 class UeberlaufDialog(PassenderDialog):
-    """Was mit dem Rest geschieht, wenn ein Kabel nicht ganz passt."""
+    """Was mit dem Rest geschieht, wenn ein Kabel nicht ganz passt.
+
+    Ein Kabel, das ueber mehr als zwei Leisten laeuft, fragt mehrmals:
+    jede Runde nimmt so viel, wie auf die gewaehlte Leiste geht, und
+    fuer den Ueberrest kommt der Dialog wieder. ``weiter`` sagt, dass
+    es eine solche weitere Runde ist - dann steht im Text, was schon
+    verteilt ist, und nicht mehr die erste Leiste.
+    """
 
     FORTSETZEN = "fortsetzen"
     VERFAELLT = "verfaellt"
@@ -1213,11 +1220,15 @@ class UeberlaufDialog(PassenderDialog):
         rest: int,
         parent: QWidget | None = None,
         leisten: str = LEISTEN_ZAHLEN,
+        weiter: bool = False,
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle(u("Kabel passt nicht vollständig"))
+        self.verteiler = verteiler
 
         erklaerung = QLabel(
+            u("{0} DA sind verteilt, {1} DA bleiben übrig.").format(passend, rest)
+            if weiter else
             u("Von diesem Kabel passen {0} DA auf die gewählte Leiste, {1} DA bleiben übrig.").format(passend, rest)
         )
         erklaerung.setWordWrap(True)
@@ -1235,7 +1246,10 @@ class UeberlaufDialog(PassenderDialog):
                 l.nummer,
             )
         self.start = QSpinBox()
-        self.start.setRange(1, 100)
+        # Der Startstift reicht nur so weit wie die gewaehlte Leiste -
+        # sonst zeigte die Wahl auf einen Stift, den es dort nicht gibt.
+        self.leiste.currentIndexChanged.connect(lambda _i: self._bereich_setzen())
+        self._bereich_setzen()
         self.start.setValue(1)
 
         fortsetzung = QFormLayout()
@@ -1252,6 +1266,11 @@ class UeberlaufDialog(PassenderDialog):
         aufbau.addWidget(kasten)
         aufbau.addWidget(self.verfaellt)
         aufbau.addWidget(_knopfleiste(self))
+
+    def _bereich_setzen(self) -> None:
+        nummer = self.leiste.currentData()
+        laenge = self.verteiler.leiste(nummer).da_anzahl if nummer else 1
+        self.start.setRange(1, max(1, laenge))
 
     def entscheidung(self) -> tuple[str, int, int]:
         if self.verfaellt.isChecked():

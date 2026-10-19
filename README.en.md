@@ -25,7 +25,8 @@ come from *Edit ▸ Save as template*). Strips are counted or carry letters; the
 frame layout can be reversed where termination starts from the right.
 
 **Terminate cables.** A cable lies on the strips in one or more sections, may
-run past the end of a strip and may be **shortened** (a 6-pair cable with five
+run past the end of as many strips as it needs — the question comes as often as
+the rest needs strips — and may be **shortened** (a 6-pair cable with five
 pairs terminated). The **cable type** brings the wire colours with it — the
 usual colour sequences are supplied, your own types are a YAML file. In the
 frame overview a cable can be **moved** with the mouse (copied with Ctrl), cut

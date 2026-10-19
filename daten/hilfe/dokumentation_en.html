@@ -512,7 +512,16 @@ difference to that.</p>
 <p><b>Overflow</b> — if a cable does not fit onto the strip completely, a
 dialog asks what is to happen with the rest: continue on another strip (with
 strip and starting point) or let it lapse. A continued cable stays <i>one</i>
-cable with several sections.</p>
+cable with several sections. <b>The question comes as often as the rest needs
+strips</b>: if the second strip is not enough either, the dialog returns and
+says how much has been distributed and how much is still left — a 25-pair cable
+thus spreads over three strips of ten. The starting point only ever reaches as
+far as the chosen strip, and whatever is occupied there is skipped: if nothing
+is free at the chosen place, the dialog says so and asks again.
+<b>Terminating happens only once everything has been distributed</b> —
+cancelling in the middle of the distribution terminates nothing at all. If the
+rest is allowed to lapse, the cable stays shortened, and <i>terminate remaining
+lines</i> takes care of the rest later.</p>
 
 <p><b>Section numbers</b> — if a line lies in several pieces, each one carries
 its number behind the name: <i>Halle Ost (1)</i>, <i>Halle Ost (2)</i>.

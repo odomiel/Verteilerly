@@ -28,7 +28,8 @@ Leisten werden gezählt oder tragen Buchstaben; die Verteilerbelegung lässt sic
 umkehren, wenn von rechts aufgelegt wird.
 
 **Kabel auflegen.** Ein Kabel liegt mit einem oder mehreren Abschnitten auf den
-Leisten, darf über eine Leiste hinauslaufen und **gekürzt** aufliegen (z.b. ein
+Leisten, darf über beliebig viele Leisten hinauslaufen — gefragt wird so oft,
+wie der Rest Leisten braucht — und **gekürzt** aufliegen (z.b. ein
 6-DA-Kabel mit fünf aufgelegten Adern). Aus dem **Kabeltyp** kommen die
 Adernfarben gleich mit — mitgeliefert sind die üblichen Farbfolgen, eigene
 Typen sind eine YAML-Datei. In der Verteilerübersicht lässt sich ein Kabel mit

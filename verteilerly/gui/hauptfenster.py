@@ -2089,32 +2089,82 @@ class Hauptfenster(QMainWindow):
         )
 
     def _ueberlauf_klaeren(self, angaben: dict, ueberlauf: UeberlaufFehler):
-        """Fortsetzen oder Rest verfallen lassen."""
-        verteiler = self.projekt.verteiler
-        dialog = UeberlaufDialog(
-            verteiler, ueberlauf.passend, ueberlauf.rest, self,
-            leisten=self.leisten_schreibweise,
-        )
-        if dialog.exec() != UeberlaufDialog.DialogCode.Accepted:
-            return None
+        """Fortsetzen oder Rest verfallen lassen.
 
-        wahl, leiste, start = dialog.entscheidung()
-        abschnitte = [
-            Kabelabschnitt(angaben["leiste"], angaben["start_da"], ueberlauf.passend)
-        ]
-        if wahl == UeberlaufDialog.FORTSETZEN:
-            abschnitte.append(Kabelabschnitt(leiste, start, ueberlauf.rest))
+        Gefragt wird so oft, wie der Rest Leisten braucht - erst wenn
+        alles verteilt ist, wird aufgelegt. So liegt nach einem Abbruch
+        auch nichts halb da.
+        """
+        verteiler = self.projekt.verteiler
+        erster = Kabelabschnitt(
+            angaben["leiste"], angaben["start_da"], ueberlauf.passend
+        )
+        weitere = self._ueberlauf_verteilen(
+            ueberlauf.rest,
+            ueberlauf.passend,
+            {
+                (erster.leiste, erster.start_da + i)
+                for i in range(erster.anzahl_da)
+            },
+        )
+        if weitere is None:
+            return None
 
         try:
             return verteiler.kabel_anlegen_mehrteilig(
                 angaben["beschriftung"],
-                abschnitte,
+                [erster, *weitere],
                 kabeltyp=angaben["kabeltyp"],
                 da_gesamt=angaben["da_gesamt"],
             )
         except ModellFehler as fehler:
             QMessageBox.warning(self, u("Kabel nicht aufgelegt"), str(fehler))
             return None
+
+    def _ueberlauf_verteilen(
+        self, rest: int, verteilt: int, vergeben: set[tuple[int, int]]
+    ) -> list | None:
+        """Die Fortsetzungen eines Überlaufs - so viele Runden wie nötig.
+
+        Ein Kabel über drei und mehr Leisten läuft hier mehrmals durch:
+        jede Runde nimmt so viel, wie auf die gewählte Leiste geht, und
+        für den Überrest fragt der Dialog erneut. Geplant wird dabei
+        nur - **geändert wird am Verteiler nichts**, darum zählt
+        ``vergeben`` mit, was die vorigen Runden schon verplant haben.
+
+        ``None`` heißt abgebrochen; eine leere Liste heißt, der Rest
+        verfällt.
+        """
+        verteiler = self.projekt.verteiler
+        abschnitte: list[Kabelabschnitt] = []
+        while rest > 0:
+            dialog = UeberlaufDialog(
+                verteiler, verteilt, rest, self,
+                leisten=self.leisten_schreibweise,
+                weiter=bool(abschnitte),
+            )
+            if dialog.exec() != UeberlaufDialog.DialogCode.Accepted:
+                return None
+            wahl, leiste, start = dialog.entscheidung()
+            if wahl != UeberlaufDialog.FORTSETZEN:
+                return abschnitte
+            passend = verteiler.freie_laenge(leiste, start, rest, vergeben)
+            if not passend:
+                # Nichts frei: noch einmal fragen ist freundlicher, als
+                # die ganze Eingabe zu verwerfen.
+                QMessageBox.warning(
+                    self,
+                    u("Kein Platz"),
+                    u("Auf Leiste {0} ab DA {1} ist nichts frei.").format(
+                        leistenname(leiste, self.leisten_schreibweise), start
+                    ),
+                )
+                continue
+            abschnitte.append(Kabelabschnitt(leiste, start, passend))
+            vergeben.update((leiste, start + i) for i in range(passend))
+            rest -= passend
+            verteilt += passend
+        return abschnitte
 
     def _kabel_angeklickt(self, kabel) -> None:
         """Doppelklick auf ein Kabel: bearbeiten."""
@@ -2195,21 +2245,32 @@ class Hauptfenster(QMainWindow):
             return False
 
     def _ueberlauf_beim_wachsen(self, kabel, ueberlauf: UeberlaufFehler) -> bool:
-        """Das Kabel waechst ueber seine Leiste hinaus."""
+        """Das Kabel wächst über seine Leiste hinaus - auch über mehrere.
+
+        Geplant wird erst ganz, dann aufgelegt: wer die Frage abbricht,
+        findet das Kabel so vor, wie es war.
+        """
         verteiler = self.projekt.verteiler
-        dialog = UeberlaufDialog(
-            verteiler, ueberlauf.passend, ueberlauf.rest, self,
-            leisten=self.leisten_schreibweise,
+        # Was das Wachsen auf der eigenen Leiste noch belegen wird,
+        # gilt für die Planung schon als vergeben.
+        letzter = kabel.abschnitte[-1]
+        weiter = letzter.start_da + letzter.anzahl_da
+        zusatz = ueberlauf.passend - kabel.da_aufgelegt
+        vergeben = {(letzter.leiste, weiter + i) for i in range(zusatz)}
+        weitere = self._ueberlauf_verteilen(
+            ueberlauf.rest, ueberlauf.passend, vergeben
         )
-        if dialog.exec() != UeberlaufDialog.DialogCode.Accepted:
+        if weitere is None:
             return False
 
-        wahl, leiste, start = dialog.entscheidung()
         try:
             # So weit es auf der eigenen Leiste geht, geht es zuerst.
             verteiler.kabel_auflegen_aendern(kabel, ueberlauf.passend)
-            if wahl == UeberlaufDialog.FORTSETZEN:
-                verteiler.kabel_verlaengern(kabel, leiste, start, ueberlauf.rest)
+            for abschnitt in weitere:
+                verteiler.kabel_verlaengern(
+                    kabel, abschnitt.leiste, abschnitt.start_da,
+                    abschnitt.anzahl_da,
+                )
         except ModellFehler as fehler:
             QMessageBox.warning(self, u("Kabel nicht geändert"), str(fehler))
             return False

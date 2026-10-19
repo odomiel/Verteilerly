@@ -3585,6 +3585,162 @@ class TestMenuezustaende(unittest.TestCase):
         self.assertEqual(kabel.da_aufgelegt, 4)      # bis zum Leistenende
         self.assertEqual(len(kabel.abschnitte), 1)
 
+    def test_ueber_mehr_als_zwei_leisten_fragt_der_ueberlauf_erneut(self):
+        """Ein 25-DA-Kabel braucht auf 10er-Leisten drei Stücke."""
+        from verteilerly.gui.dialoge import KabelDialog, UeberlaufDialog
+
+        f = self.fenster
+        verteiler = Verteiler.aus_geometrie(1, 4, 10, name="Probe")
+        f._projekt_setzen(Projekt(verteiler=verteiler), None)
+
+        runden = []
+
+        def weiter(dialog):
+            runden.append(dialog.start.maximum())
+            dialog.fortsetzen.setChecked(True)
+            dialog.leiste.setCurrentIndex(
+                dialog.leiste.findData(2 + len(runden) - 1)
+            )
+            dialog.start.setValue(1)
+            return UeberlaufDialog.DialogCode.Accepted
+
+        def angaben(dialog):
+            dialog.beschriftung.setText("25DA")
+            dialog.kabel_da.setValue(25)
+            dialog.auflegen_da.setValue(25)
+            return KabelDialog.DialogCode.Accepted
+
+        with mock.patch.object(KabelDialog, "exec", angaben), \
+                mock.patch.object(UeberlaufDialog, "exec", weiter):
+            f.kabel_auflegen(1, 1)
+
+        kabel = verteiler.kabel[0]
+        self.assertEqual(len(runden), 2, "nur einmal gefragt")
+        self.assertEqual(
+            [(a.leiste, a.start_da, a.anzahl_da) for a in kabel.abschnitte],
+            [(1, 1, 10), (2, 1, 10), (3, 1, 5)],
+        )
+        self.assertEqual(kabel.da_aufgelegt, 25)
+        self.assertFalse(kabel.gekuerzt)
+        self.assertEqual([kabel.abschnittsnummer(a) for a in kabel.abschnitte],
+                         [1, 2, 3])
+
+    def test_der_startstift_reicht_nur_so_weit_wie_die_leiste(self):
+        """Sonst zeigte die Wahl auf einen Stift, den es dort nicht gibt."""
+        from verteilerly.gui.dialoge import UeberlaufDialog
+
+        verteiler = Verteiler.aus_buchten([(1, 10), (1, 20)])
+        dialog = UeberlaufDialog(verteiler, 10, 5, self.fenster)
+        bauteil_zurueckgeben(self, dialog)
+        dialog.leiste.setCurrentIndex(dialog.leiste.findData(1))
+        self.assertEqual(dialog.start.maximum(), 10)
+        dialog.leiste.setCurrentIndex(dialog.leiste.findData(2))
+        self.assertEqual(dialog.start.maximum(), 20)
+
+    def test_auch_beim_wachsen_wird_mehrmals_gefragt(self):
+        from verteilerly.gui.dialoge import KabelDialog, UeberlaufDialog
+
+        f = self.fenster
+        verteiler = Verteiler.aus_geometrie(1, 4, 10, name="Probe")
+        kabel = verteiler.kabel_anlegen("Leitung", 1, 9, 2)
+        f._projekt_setzen(Projekt(verteiler=verteiler), None)
+
+        runden = []
+
+        def weiter(dialog):
+            runden.append(True)
+            dialog.fortsetzen.setChecked(True)
+            dialog.leiste.setCurrentIndex(
+                dialog.leiste.findData(2 + len(runden) - 1)
+            )
+            dialog.start.setValue(1)
+            return UeberlaufDialog.DialogCode.Accepted
+
+        with mock.patch.object(
+            KabelDialog, "exec",
+            lambda dialog: dialog.kabel_da.setValue(22)
+            or KabelDialog.DialogCode.Accepted,
+        ), mock.patch.object(UeberlaufDialog, "exec", weiter):
+            f.kabel_bearbeiten(kabel)
+
+        self.assertEqual(len(runden), 2, "nur einmal gefragt")
+        self.assertEqual(
+            [(a.leiste, a.start_da, a.anzahl_da) for a in kabel.abschnitte],
+            [(1, 9, 2), (2, 1, 10), (3, 1, 10)],
+        )
+        self.assertEqual(kabel.da_aufgelegt, 22)
+
+    def test_ein_abbruch_mitten_in_der_verteilung_legt_nichts_auf(self):
+        """Erst wenn alles verteilt ist, wird aufgelegt."""
+        from verteilerly.gui.dialoge import KabelDialog, UeberlaufDialog
+
+        f = self.fenster
+        verteiler = Verteiler.aus_geometrie(1, 4, 10, name="Probe")
+        f._projekt_setzen(Projekt(verteiler=verteiler), None)
+
+        runden = []
+
+        def erst_weiter_dann_abbrechen(dialog):
+            runden.append(True)
+            if len(runden) > 1:
+                return UeberlaufDialog.DialogCode.Rejected
+            dialog.leiste.setCurrentIndex(dialog.leiste.findData(2))
+            dialog.start.setValue(1)
+            return UeberlaufDialog.DialogCode.Accepted
+
+        with mock.patch.object(
+            KabelDialog, "exec",
+            lambda dialog: dialog.kabel_da.setValue(25)
+            or dialog.auflegen_da.setValue(25)
+            or KabelDialog.DialogCode.Accepted,
+        ), mock.patch.object(
+            UeberlaufDialog, "exec", erst_weiter_dann_abbrechen
+        ):
+            f.kabel_auflegen(1, 1)
+
+        self.assertEqual(verteiler.kabel, [])
+        self.assertIsNone(verteiler.kabel_an(2, 1))
+
+    def test_ein_belegter_platz_fragt_noch_einmal(self):
+        """Freundlicher, als die ganze Eingabe zu verwerfen."""
+        from PySide6.QtWidgets import QMessageBox
+        from verteilerly.gui.dialoge import KabelDialog, UeberlaufDialog
+
+        f = self.fenster
+        verteiler = Verteiler.aus_geometrie(1, 4, 10, name="Probe")
+        verteiler.kabel_anlegen("Nachbar", 2, 1, 10)
+        f._projekt_setzen(Projekt(verteiler=verteiler), None)
+
+        gemeldet = []
+        runden = []
+
+        def erst_belegt_dann_frei(dialog):
+            runden.append(True)
+            ziel = 2 if len(runden) == 1 else 3
+            dialog.leiste.setCurrentIndex(dialog.leiste.findData(ziel))
+            dialog.start.setValue(1)
+            return UeberlaufDialog.DialogCode.Accepted
+
+        with mock.patch.object(
+            KabelDialog, "exec",
+            lambda dialog: dialog.kabel_da.setValue(15)
+            or dialog.auflegen_da.setValue(15)
+            or KabelDialog.DialogCode.Accepted,
+        ), mock.patch.object(
+            UeberlaufDialog, "exec", erst_belegt_dann_frei
+        ), mock.patch.object(
+            QMessageBox, "warning",
+            lambda eltern, titel, text: gemeldet.append(titel),
+        ):
+            f.kabel_auflegen(1, 1)
+
+        self.assertEqual(gemeldet, ["Kein Platz"])
+        kabel = verteiler.kabel[-1]
+        self.assertEqual(
+            [(a.leiste, a.start_da, a.anzahl_da) for a in kabel.abschnitte],
+            [(1, 1, 10), (3, 1, 5)],
+        )
+
     def test_ein_fremdes_kabel_im_weg_wird_gemeldet(self):
         from PySide6.QtWidgets import QMessageBox
         from verteilerly.gui.dialoge import KabelDialog
