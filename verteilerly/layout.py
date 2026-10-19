@@ -27,6 +27,7 @@ from .modell import (
     Textstil,
     Verteiler,
     Zellenteilung,
+    kabelteil,
     mehrzahl,
 )
 
@@ -1302,7 +1303,7 @@ def verteilerbelegung(
             )
             bb = abschnitt.anzahl_da * zelle_b
             blatt.rechteck(bx, ky, bb, zelle_h, fuellung=FUELLUNG_KABEL, staerke=0.5)
-            beschriftung = kabel.beschriftung
+            beschriftung = kabel.beschriftung + kabelteil(kabel, abschnitt)
             if (kabel.gekuerzt and projekt.kuerzung_zeigen
                     and abschnitt is kabel.abschnitte[-1]):
                 beschriftung += " (gekürzt)"
@@ -1651,7 +1652,7 @@ def _kabelklammern(
             y = oben + (abschnitt.start_da - 1) * 2 * zeile_h
             hoehe = abschnitt.anzahl_da * 2 * zeile_h
             blatt.rechteck(x, y, breite, hoehe, fuellung=FUELLUNG_KABEL, staerke=0.4)
-            beschriftung = kabel.beschriftung
+            beschriftung = kabel.beschriftung + kabelteil(kabel, abschnitt)
             dabei = kabel.gekuerzt and kuerzung_zeigen
             zusatz = (
                 f"gekürzt: {kabel.da_aufgelegt} von {kabel.da_gesamt} DA"

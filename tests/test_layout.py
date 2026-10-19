@@ -16,7 +16,7 @@ from verteilerly.layout import (
 
 RAND = STANDARD.rand
 SCHRIFTFELD_H = STANDARD.schriftfeld_hoehe
-from verteilerly.modell import Aderadresse, Projekt, Verteiler
+from verteilerly.modell import Aderadresse, Kabelabschnitt, Projekt, Verteiler
 from . import BEISPIELVORLAGE
 
 
@@ -1802,3 +1802,50 @@ class TestUmbruch(unittest.TestCase):
 
     def test_leerer_text_bleibt_leer(self):
         self.assertEqual(self.umbrechen("", 10, self.misst), [])
+
+
+class TestTeilnummernAufDenBlaettern(unittest.TestCase):
+    """Jedes aufgelegte Stück einer Leitung trägt seine Nummer."""
+
+    def _projekt(self):
+        v = Verteiler.aus_geometrie(1, 2, 10)
+        v.kabel_anlegen_mehrteilig(
+            "Halle Ost",
+            [Kabelabschnitt(1, 9, 2), Kabelabschnitt(2, 1, 4)],
+            da_gesamt=6,
+        )
+        return Projekt(verteiler=v)
+
+    def _texte(self, blatt):
+        return [e.text for e in blatt.elemente if isinstance(e, Text)]
+
+    def test_die_belegung_nennt_beide_stuecke(self):
+        texte = self._texte(verteilerbelegungen(self._projekt())[0])
+        self.assertIn("Halle Ost (1)", texte)
+        self.assertIn("Halle Ost (2)", texte)
+
+    def test_auf_dem_leistenblatt_steht_die_nummer_am_namen(self):
+        projekt = self._projekt()
+        erste = [t for t in self._texte(leistenblatt(projekt, 1)) if "Halle" in t]
+        zweite = [t for t in self._texte(leistenblatt(projekt, 2)) if "Halle" in t]
+        self.assertTrue(all("(1)" in t for t in erste), erste)
+        self.assertTrue(all("(2)" in t for t in zweite), zweite)
+
+    def test_eine_leitung_in_einem_stueck_bekommt_keine_nummer(self):
+        v = Verteiler.aus_geometrie(1, 2, 10)
+        v.kabel_anlegen("Halle Ost", 1, 1, 4)
+        texte = self._texte(verteilerbelegungen(Projekt(verteiler=v))[0])
+        self.assertIn("Halle Ost", texte)
+
+    def test_der_zusatz_zur_kuerzung_steht_hinter_der_nummer(self):
+        v = Verteiler.aus_geometrie(1, 2, 10)
+        v.kabel_anlegen_mehrteilig(
+            "Halle Ost",
+            [Kabelabschnitt(1, 9, 2), Kabelabschnitt(2, 1, 3)],
+            da_gesamt=6,
+        )
+        projekt = Projekt(verteiler=v)
+        projekt.kuerzung_zeigen = True
+        texte = self._texte(verteilerbelegungen(projekt)[0])
+        self.assertIn("Halle Ost (1)", texte)
+        self.assertIn("Halle Ost (2) (gekürzt)", texte)

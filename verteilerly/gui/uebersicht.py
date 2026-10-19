@@ -23,6 +23,7 @@ from ..modell import (
     LEISTEN_ZAHLEN,
     Kabel,
     Verteiler,
+    kabelteil,
     leistenname,
     mehrzahl,
     platz_frei,
@@ -643,7 +644,15 @@ class Uebersicht(QWidget):
         kabel = self.verteiler.kabel_an(leiste, da)
         if kabel is None:
             return u("Leiste {0}, DA {1} — frei").format(name, da)
-        zeilen = [kabel.beschriftung, u("Leiste {0}, DA {1}").format(name, da)]
+        nummer = self.verteiler.kabel_abschnitt_an(kabel, leiste, da)
+        teil = (
+            kabelteil(kabel, kabel.abschnitte[nummer])
+            if nummer is not None else ""
+        )
+        zeilen = [
+            kabel.beschriftung + teil,
+            u("Leiste {0}, DA {1}").format(name, da),
+        ]
         if kabel.kabeltyp:
             zeilen.append(kabel.kabeltyp)
         if kabel.gekuerzt:
@@ -737,7 +746,10 @@ class Uebersicht(QWidget):
             maler.setPen(QPen(self.farben.q("akzent"), 1))
             maler.drawRect(block)
 
-            beschriftung = kabel.beschriftung
+            # Liegt die Leitung in mehreren Stuecken, traegt jedes seine
+            # Nummer - sonst steht derselbe Name mehrfach da, ohne dass
+            # zu sehen waere, welches Stueck welches ist.
+            beschriftung = kabel.beschriftung + kabelteil(kabel, abschnitt)
             if kabel.gekuerzt and abschnitt is kabel.abschnitte[-1]:
                 beschriftung = u("{0} (gekürzt)").format(beschriftung)
             maler.setPen(self.farben.q("akzent"))

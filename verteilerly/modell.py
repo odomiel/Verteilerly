@@ -483,16 +483,44 @@ class Kabel:
         die Adernfarbe.
         """
         ergebnis: list[tuple[int, int, int]] = []
-        kabel_da = 1
-        for abschnitt in self.abschnitte:
-            if abschnitt.ab_kabel_da is not None:
-                kabel_da = abschnitt.ab_kabel_da
+        for abschnitt, stelle in zip(self.abschnitte, self.abschnittsstellen()):
             for versatz in range(abschnitt.anzahl_da):
                 ergebnis.append(
-                    (kabel_da, abschnitt.leiste, abschnitt.start_da + versatz)
+                    (stelle + versatz, abschnitt.leiste, abschnitt.start_da + versatz)
                 )
-                kabel_da += 1
         return ergebnis
+
+    def abschnittsstellen(self) -> list[int]:
+        """Je Abschnitt die Kabel-DA, mit der er anfaengt.
+
+        Die eine Quelle fuer beides: welche Farbe eine Ader bekommt und
+        das wievielte Stueck der Leitung sie traegt.
+        """
+        stellen: list[int] = []
+        stelle = 1
+        for abschnitt in self.abschnitte:
+            if abschnitt.ab_kabel_da is not None:
+                stelle = abschnitt.ab_kabel_da
+            stellen.append(stelle)
+            stelle += abschnitt.anzahl_da
+        return stellen
+
+    def abschnittsnummer(self, abschnitt: Kabelabschnitt) -> int | None:
+        """Das wievielte Stueck der Leitung dieses ist - oder None.
+
+        Gezaehlt wird **im Kabel**: Stueck 1 traegt die erste Doppelader
+        der Leitung, gleich wo in der Leiste es liegt und in welcher
+        Reihenfolge es aufgelegt wurde. Liegt die Leitung in einem
+        Stueck, kommt None - eine Nummer waere dann keine Auskunft.
+        """
+        if len(self.abschnitte) < 2:
+            return None
+        stellen = self.abschnittsstellen()
+        reihe = sorted(range(len(stellen)), key=lambda i: stellen[i])
+        for nummer, i in enumerate(reihe, start=1):
+            if self.abschnitte[i] is abschnitt:
+                return nummer
+        return None
 
     def belegte_kabel_da(self) -> set[int]:
         """Welche Doppeladern des Kabels aufliegen - gezaehlt im Kabel."""
@@ -1412,6 +1440,17 @@ def mehrzahl(zahl: int, eins: str, viele: str) -> str:
     sie vorkommen.
     """
     return f"{zahl} {u(eins) if zahl == 1 else u(viele)}"
+
+
+def kabelteil(kabel: Kabel, abschnitt: Kabelabschnitt) -> str:
+    """Die Nummer eines aufgelegten Leitungsteils als Zusatz: " (2)".
+
+    Leer, solange die Leitung in einem Stueck liegt - dann ist das Teil
+    die Leitung. Die Klammer traegt keine Woerter und geht darum nicht
+    durch die Uebersetzung: eine Zahl heisst in jeder Sprache gleich.
+    """
+    nummer = kabel.abschnittsnummer(abschnitt)
+    return f" ({nummer})" if nummer else ""
 
 
 def adressen_schreiben(

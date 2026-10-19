@@ -1161,3 +1161,71 @@ class TestAbschnittEntfernen(unittest.TestCase):
         self.assertEqual(_lagen(self.k), [(2, 1, 3), (2, 4, 2)])
         self.assertEqual(self.k.abschnitte[-1].ab_kabel_da, 1)
         self.assertTrue(self.k.lueckenlos)
+
+
+class TestTeilnummern(unittest.TestCase):
+    """Liegt eine Leitung in Stücken, trägt jedes seine Nummer."""
+
+    def setUp(self):
+        self.v = Verteiler.aus_geometrie(1, 3, 10)
+
+    def test_eine_leitung_in_einem_stueck_hat_keine_nummer(self):
+        """Dann ist das Stück die Leitung - eine Nummer wäre Beiwerk."""
+        kabel = self.v.kabel_anlegen("ganz", 1, 1, 4)
+        self.assertIsNone(kabel.abschnittsnummer(kabel.abschnitte[0]))
+        self.assertEqual(modell.kabelteil(kabel, kabel.abschnitte[0]), "")
+
+    def test_zwei_stuecke_werden_in_der_folge_des_kabels_gezaehlt(self):
+        kabel = self.v.kabel_anlegen_mehrteilig(
+            "geteilt", [Kabelabschnitt(1, 9, 2), Kabelabschnitt(2, 1, 4)]
+        )
+        self.assertEqual(
+            [kabel.abschnittsnummer(a) for a in kabel.abschnitte], [1, 2]
+        )
+        self.assertEqual(
+            [modell.kabelteil(kabel, a) for a in kabel.abschnitte],
+            [" (1)", " (2)"],
+        )
+
+    def test_gezaehlt_wird_im_kabel_nicht_in_der_reihenfolge(self):
+        """Stück 1 trägt die erste Doppelader - gleich wann es aufgelegt wurde."""
+        kabel = self.v.kabel_anlegen_mehrteilig(
+            "geteilt",
+            [Kabelabschnitt(1, 1, 4), Kabelabschnitt(2, 1, 2)],
+            da_gesamt=6,
+        )
+        self.v.kabel_abschnitt_entfernen(kabel, 0)
+        self.v.kabel_verlaengern(kabel, 3, 1, 4)
+        # In der Liste steht das liegengebliebene Stück vorn, im Kabel
+        # ist es das zweite.
+        self.assertEqual(
+            [(a.leiste, kabel.abschnittsnummer(a)) for a in kabel.abschnitte],
+            [(2, 2), (3, 1)],
+        )
+
+    def test_drei_stuecke_zaehlen_weiter(self):
+        kabel = self.v.kabel_anlegen_mehrteilig(
+            "dreiteilig",
+            [Kabelabschnitt(1, 9, 2), Kabelabschnitt(2, 1, 2), Kabelabschnitt(3, 5, 2)],
+        )
+        self.assertEqual(
+            [kabel.abschnittsnummer(a) for a in kabel.abschnitte], [1, 2, 3]
+        )
+
+    def test_die_stellen_sagen_wo_jedes_stueck_im_kabel_anfaengt(self):
+        kabel = self.v.kabel_anlegen_mehrteilig(
+            "geteilt", [Kabelabschnitt(1, 9, 2), Kabelabschnitt(2, 1, 4)]
+        )
+        self.assertEqual(kabel.abschnittsstellen(), [1, 3])
+
+    def test_nach_dem_abnehmen_bleibt_die_nummer_des_uebrigen_stuecks(self):
+        """Es trägt noch die Farben seiner Stelle - und deren Nummer."""
+        kabel = self.v.kabel_anlegen_mehrteilig(
+            "geteilt",
+            [Kabelabschnitt(1, 1, 4), Kabelabschnitt(2, 1, 2)],
+            da_gesamt=6,
+        )
+        self.v.kabel_abschnitt_entfernen(kabel, 0)
+        # Allein übrig ist es wieder die ganze Leitung - ohne Nummer.
+        self.assertIsNone(kabel.abschnittsnummer(kabel.abschnitte[0]))
+        self.assertEqual(kabel.abschnittsstellen(), [5])

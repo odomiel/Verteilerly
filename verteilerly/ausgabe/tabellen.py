@@ -98,10 +98,14 @@ def belegungszeilen(projekt: Projekt) -> list[list]:
 def kabelzeilen(projekt: Projekt) -> list[list]:
     zeilen = []
     for kabel in projekt.verteiler.kabel:
-        abschnitte = ", ".join(
-            f"Leiste {projekt.leistenname(a.leiste)} DA {a.start_da}–{a.end_da}"
-            for a in kabel.abschnitte
-        )
+        # Mit Nummer, wenn die Leitung in mehreren Stuecken liegt: so
+        # steht in der Mappe dasselbe wie auf dem Blatt.
+        teile = []
+        for a in kabel.abschnitte:
+            nummer = kabel.abschnittsnummer(a)
+            ort = f"Leiste {projekt.leistenname(a.leiste)} DA {a.start_da}–{a.end_da}"
+            teile.append(f"({nummer}) {ort}" if nummer else ort)
+        abschnitte = ", ".join(teile)
         zeilen.append(
             [
                 kabel.beschriftung,

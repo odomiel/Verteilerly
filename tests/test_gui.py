@@ -1639,6 +1639,40 @@ class TestKabelnamenInDerUebersicht(unittest.TestCase):
         self.uebersicht.render(bild)
 
 
+class TestTeilnummerInDerUebersicht(unittest.TestCase):
+    """Liegt eine Leitung in Stücken, nennt die Übersicht ihre Nummer."""
+
+    def setUp(self):
+        from verteilerly.gui.uebersicht import Uebersicht
+
+        self.uebersicht = Uebersicht()
+        bauteil_zurueckgeben(self, self.uebersicht)
+        self.verteiler = Verteiler.aus_geometrie(1, 2, 10, name="Probe")
+        self.geteilt = self.verteiler.kabel_anlegen_mehrteilig(
+            "Überlauf",
+            [Kabelabschnitt(1, 9, 2), Kabelabschnitt(2, 1, 3)],
+            da_gesamt=6,
+        )
+        self.verteiler.kabel_anlegen("K2", 1, 1, 2)
+        self.uebersicht.verteiler_setzen(self.verteiler)
+
+    def test_der_hinweis_nennt_das_stueck_unter_dem_zeiger(self):
+        self.assertIn("Überlauf (1)", self.uebersicht._hinweistext((1, 9)))
+        self.assertIn("Überlauf (2)", self.uebersicht._hinweistext((2, 2)))
+
+    def test_eine_leitung_in_einem_stueck_bleibt_ohne_nummer(self):
+        hinweis = self.uebersicht._hinweistext((1, 1))
+        self.assertIn("K2", hinweis)
+        self.assertNotIn("(1)", hinweis)
+
+    def test_gezeichnet_wird_mit_nummer_ohne_ausnahme(self):
+        from PySide6.QtGui import QImage
+
+        self.uebersicht.resize(self.uebersicht.sizeHint())
+        bild = QImage(self.uebersicht.size(), QImage.Format.Format_ARGB32)
+        self.uebersicht.render(bild)
+
+
 class TestBelegungWaechst(unittest.TestCase):
     """Erst umbrechen, dann groessere Felder - und abschaltbar."""
 
@@ -2687,6 +2721,41 @@ class TestKabelspalte(unittest.TestCase):
         self.assertEqual(
             EingabeDelegat.umbruchflaggen("", 50, metrik),
             int(Qt.TextFlag.TextWordWrap),
+        )
+
+    # -- Die Nummer des aufgelegten Stuecks -------------------------------
+
+    def test_die_spalte_nennt_das_stueck_bei_seiner_nummer(self):
+        from verteilerly.gui.leistenansicht import SPALTE_KABEL
+
+        modell = self.ansicht.modell
+        # Der Überlauf beginnt auf Leiste 1 bei DA 9 - das ist Zeile 16.
+        self.assertEqual(
+            modell.data(modell.index(16, SPALTE_KABEL)), "Überlauf (1)"
+        )
+        self.ansicht.leiste_zeigen(2)
+        modell = self.ansicht.modell
+        self.assertEqual(
+            modell.data(modell.index(0, SPALTE_KABEL)), "Überlauf (2)"
+        )
+
+    def test_eine_leitung_in_einem_stueck_bleibt_ohne_nummer(self):
+        from verteilerly.gui.leistenansicht import SPALTE_KABEL
+
+        modell = self.ansicht.modell
+        self.assertEqual(
+            modell.data(modell.index(4, SPALTE_KABEL)),
+            "Haus 7 Erdgeschoss Technikraum",
+        )
+
+    def test_getippt_wird_die_beschriftung_ohne_die_nummer(self):
+        """Sonst stünde die Klammer beim Bearbeiten mitten im Text."""
+        from verteilerly.gui.leistenansicht import SPALTE_KABEL
+
+        modell = self.ansicht.modell
+        self.assertEqual(
+            modell.data(modell.index(16, SPALTE_KABEL), Qt.ItemDataRole.EditRole),
+            "Überlauf",
         )
 
 

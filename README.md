@@ -38,7 +38,9 @@ auflegen* nimmt sich alle gekürzten Leitungen auf einmal vor — wohin ihr Rest
 kommt, steht je Zeile zur Wahl, mit einem Vorschlag vorbelegt; der Rechtsklick
 legt eine einzelne Leitung an genau der angeklickten Stelle auf. Entfernt wird
 eine Leitung ganz oder — wenn sie in mehreren Abschnitten liegt — nur das
-angeklickte Stück; sie ist danach gekürzt und ihr Rest wieder auflegbar.
+angeklickte Stück; sie ist danach gekürzt und ihr Rest wieder auflegbar. Liegt
+eine Leitung in mehreren Stücken, trägt jedes seine Nummer: *Halle Ost (1)*,
+*Halle Ost (2)*.
 
 **Leisten beschriften.** Die Leistenansicht ist die Arbeitsfläche: Farbe,
 Bezeichnung, Rangierung und Bemerkung je Ader. Eine Zelle lässt sich in **zwei

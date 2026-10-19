@@ -527,6 +527,25 @@ class TestTabellen(unittest.TestCase):
         self.assertEqual(zeile[2:5], [6, 4, "ja"])
         self.assertIn("Leiste 1 DA 1", zeile[5])
 
+    def test_die_abschnitte_eines_geteilten_kabels_sind_numeriert(self):
+        """In der Mappe steht dieselbe Nummer wie auf dem Blatt."""
+        from verteilerly.modell import Kabelabschnitt
+
+        v = Verteiler.aus_geometrie(1, 2, 10)
+        v.kabel_anlegen_mehrteilig(
+            "geteilt",
+            [Kabelabschnitt(1, 9, 2), Kabelabschnitt(2, 1, 4)],
+            da_gesamt=6,
+        )
+        zeile = kabelzeilen(Projekt(verteiler=v))[0]
+        self.assertEqual(
+            zeile[5], "(1) Leiste 1 DA 9–10, (2) Leiste 2 DA 1–4"
+        )
+
+    def test_eine_leitung_in_einem_stueck_bleibt_ohne_nummer(self):
+        zeile = kabelzeilen(self.projekt)[0]
+        self.assertNotIn("(1)", zeile[5])
+
     def _csv_zeilen(self) -> list[list[str]]:
         ziel = csv_schreiben(self.projekt, Path(self.ordner.name) / "probe.csv")
         with ziel.open(encoding="utf-8-sig", newline="") as datei:

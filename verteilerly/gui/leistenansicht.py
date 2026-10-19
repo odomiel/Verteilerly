@@ -75,6 +75,7 @@ from ..modell import (
     Verteiler,
     Zellenteilung,
     adressen_lesen,
+    kabelteil,
     leistenname,
 )
 from ..schreibweisen import Schreibweise
@@ -568,8 +569,15 @@ class LeistenModell(QAbstractTableModel):
         kabel = self._kabelanfang(stift_nr, seite)
         if kabel is None:
             return ""
-        text = kabel.beschriftung
+        text = kabel.beschriftung + self._teilnummer(kabel, stift_nr)
         return u("{0} (gekürzt)").format(text) if kabel.gekuerzt else text
+
+    def _teilnummer(self, kabel, stift_nr: int) -> str:
+        """Die Nummer des Stuecks, das hier beginnt - bei einem leer."""
+        for abschnitt in kabel.abschnitte:
+            if abschnitt.leiste == self.leiste_nr and abschnitt.start_da == stift_nr:
+                return kabelteil(kabel, abschnitt)
+        return ""
 
     def setData(self, index: QModelIndex, wert, rolle=Qt.ItemDataRole.EditRole) -> bool:
         # Ob die Eingabe angenommen wurde, merkt sich das Modell: die
