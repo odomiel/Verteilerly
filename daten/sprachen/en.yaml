@@ -276,6 +276,7 @@ Abschnitt nicht entfernt: Section not removed
 'Abschnitt entfernt: {0} auf {1}': 'Section removed: {0} on {1}'
 Diesen Abschnitt hat die Leitung nicht: The line does not have this section
 Die Leitung liegt nur in einem Stück — dann wird sie ganz entfernt: The line lies in one piece — then it is removed completely
+Die Leitung hat keine {0} freien Doppeladern in Folge — erst die Lücke füllen: The line has no {0} free pairs in a row — fill the gap first
 nicht gefunden: not found
 'Bucht {0}: {1} zu {2} DA': 'Bay {0}: {1} of {2} pairs'
 „{0}“ kommt im Verteiler nicht vor.: „{0}“ does not appear in the frame.

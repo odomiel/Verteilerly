@@ -544,6 +544,57 @@ class Kabel:
         belegt = self.belegte_kabel_da()
         return belegt == set(range(1, len(belegt) + 1))
 
+    def waechst_am_ende(self, zusatz: int) -> bool:
+        """Darf der letzte Abschnitt um ``zusatz`` Doppeladern weiterzaehlen?
+
+        Nur wenn die Kabel-DA hinter ihm frei sind und noch zum Kabel
+        gehoeren. Ohne Luecke ist das der Regelfall. Mit Luecke zaehlt
+        der letzte Abschnitt der Liste moeglicherweise nicht die
+        hoechsten Stellen - dann liefen seine neuen Doppeladern mitten
+        in ein anderes Stueck.
+        """
+        if not self.abschnitte or zusatz < 1:
+            return False
+        stellen = self.abschnittsstellen()
+        ende = stellen[-1] + self.abschnitte[-1].anzahl_da - 1
+        if ende != self.hoechste_kabel_da:
+            # Der letzte Abschnitt der Liste zaehlt nicht die hoechsten
+            # Stellen - hinter ihm liegt ein anderes Stueck.
+            return False
+        if self.lueckenlos:
+            # Kein Loch im Kabel: dann waechst es hinten weiter, auch
+            # ueber seine Nenngroesse hinaus - die zieht dann nach.
+            return True
+        # Mit Loch gehoeren die neuen Doppeladern hinein, sobald die
+        # Nenngroesse hinten keinen Platz mehr laesst.
+        return ende + zusatz <= (self.da_gesamt or ende + zusatz)
+
+    def freier_lauf(self) -> int:
+        """Wie viele freie Kabel-DA hoechstens zusammenhaengen.
+
+        Ohne Luecke ist das der ganze Rest. Mit Luecke ist es weniger,
+        und mehr laesst sich nicht in einem Stueck auflegen: ein
+        Abschnitt traegt eine **fortlaufende** Reihe von Kabel-DA.
+        """
+        belegt = self.belegte_kabel_da()
+        grenze = self.da_gesamt or len(belegt)
+        laengste = lauf = 0
+        for stelle in range(1, grenze + 1):
+            lauf = 0 if stelle in belegt else lauf + 1
+            laengste = max(laengste, lauf)
+        return laengste
+
+    def auflegbarer_rest(self) -> int:
+        """Wie viel vom Rest sich in einem Stueck auflegen laesst.
+
+        Das ist der Rest - bei einer Luecke in der Zaehlung aber
+        hoechstens der laengste freie Lauf: zerteilt wird ein Rest
+        nicht, und was dann uebrig bleibt, kommt beim naechsten Mal
+        dran. Ohne Luecke, dem Regelfall, ist beides dasselbe.
+        """
+        fehlend = (self.da_gesamt or 0) - self.da_aufgelegt
+        return min(fehlend, self.freier_lauf()) if fehlend > 0 else 0
+
     def freie_kabel_da(self, anzahl: int) -> int | None:
         """Die erste Stelle, an der ``anzahl`` freie Kabel-DA zusammenliegen.
 
@@ -824,19 +875,19 @@ class Verteiler:
         passend, rest = self.platz_pruefen(letzter.leiste, weiter, zusatz)
         if rest:
             raise UeberlaufFehler(jetzt + passend, rest)
-        if kabel.lueckenlos:
+        if kabel.waechst_am_ende(zusatz):
             letzter.anzahl_da += zusatz
         else:
             # Mit Luecke waere Weiterzaehlen falsch: die neuen
             # Doppeladern gehoeren in die Luecke, und eine eigene Stelle
             # im Kabel hat nur ein eigener Abschnitt.
-            kabel.abschnitte.append(
-                Kabelabschnitt(
-                    letzter.leiste,
-                    weiter,
-                    zusatz,
-                    ab_kabel_da=kabel.freie_kabel_da(zusatz),
+            stelle = kabel.freie_kabel_da(zusatz)
+            if stelle is None:
+                raise ModellFehler(
+                    u("Die Leitung hat keine {0} freien Doppeladern in Folge — erst die Lücke füllen").format(zusatz)
                 )
+            kabel.abschnitte.append(
+                Kabelabschnitt(letzter.leiste, weiter, zusatz, ab_kabel_da=stelle)
             )
         if (
             kabel.da_gesamt is not None
@@ -871,7 +922,14 @@ class Verteiler:
         # Abschnitt abgenommen wurde -, gehoert das neue Stueck dorthin
         # und nicht hinter das letzte: so bekommt es die Farben, die im
         # Kabel noch frei sind.
-        stelle = None if kabel.lueckenlos else kabel.freie_kabel_da(anzahl_da)
+        if kabel.waechst_am_ende(anzahl_da):
+            stelle = None        # zaehlt hinter dem letzten Abschnitt weiter
+        else:
+            stelle = kabel.freie_kabel_da(anzahl_da)
+            if stelle is None:
+                raise ModellFehler(
+                    u("Die Leitung hat keine {0} freien Doppeladern in Folge — erst die Lücke füllen").format(anzahl_da)
+                )
         kabel.abschnitte.append(
             Kabelabschnitt(leiste, start_da, anzahl_da, ab_kabel_da=stelle)
         )
@@ -1256,10 +1314,12 @@ class Restplatz:
         """
         if not self.passt or not self.kabel.abschnitte:
             return False
-        # Mit einer Luecke in der Zaehlung des Kabels waere das Wachsen
-        # falsch: die neuen Doppeladern gehoeren in die Luecke, nicht
-        # hinter die letzte - auch wenn die Stelle in der Leiste anschliesst.
-        if not self.kabel.lueckenlos:
+        # Wachsen darf der letzte Abschnitt nur, wenn die Kabel-DA
+        # hinter ihm frei sind: nach einer abgenommenen Luecke zaehlt er
+        # vielleicht nicht die hoechsten Stellen, und seine neuen
+        # Doppeladern liefen mitten in ein anderes Stueck - auch wenn
+        # die Stelle in der Leiste anschliesst.
+        if not self.kabel.waechst_am_ende(self.rest):
             return False
         letzter = self.kabel.abschnitte[-1]
         return (
@@ -1333,8 +1393,11 @@ def restleitungen_planen(verteiler: Verteiler) -> list[Restplatz]:
         letzter = kabel.abschnitte[-1]
         return letzter.leiste, letzter.end_da + 1
 
+    # Geplant wird nur, was sich in einem Stueck zaehlen laesst: hat die
+    # Leitung eine Luecke, gehen hoechstens so viele Doppeladern auf
+    # einmal, wie dort zusammenhaengend frei sind.
     gekuerzte = [
-        (kabel, (kabel.da_gesamt or 0) - kabel.da_aufgelegt)
+        (kabel, kabel.auflegbarer_rest())
         for kabel in sorted(verteiler.kabel, key=_kabellage)
         if kabel.gekuerzt
     ]

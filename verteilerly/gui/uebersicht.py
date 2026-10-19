@@ -191,7 +191,9 @@ class Uebersicht(QWidget):
         for kabel in self.verteiler.kabel:
             if not kabel.gekuerzt:
                 continue
-            rest = (kabel.da_gesamt or 0) - kabel.da_aufgelegt
+            # Was sich in einem Stueck auflegen laesst - bei einer Luecke
+            # in der Zaehlung der Leitung ist das weniger als ihr Rest.
+            rest = kabel.auflegbarer_rest()
             zeilen.append(
                 (kabel, rest, platz_frei(self.verteiler, leiste, da, rest))
             )

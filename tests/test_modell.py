@@ -4,6 +4,7 @@
 # Testreihe um, bevor etwas aus verteilerly Pfade liest.
 from . import TESTHEIM  # noqa: F401
 
+import pathlib
 import unittest
 
 from verteilerly import modell, schreibweisen
@@ -1229,3 +1230,91 @@ class TestTeilnummern(unittest.TestCase):
         # Allein übrig ist es wieder die ganze Leitung - ohne Nummer.
         self.assertIsNone(kabel.abschnittsnummer(kabel.abschnitte[0]))
         self.assertEqual(kabel.abschnittsstellen(), [5])
+
+
+class TestLueckeZaehlen(unittest.TestCase):
+    """Nach einem abgenommenen Stück zählt die Leitung mit Lücke weiter."""
+
+    def setUp(self):
+        self.v = Verteiler.aus_geometrie(1, 3, 10)
+        # 6 DA als 2+3 aufgelegt, eine DA fehlt von Anfang an.
+        self.k = self.v.kabel_anlegen_mehrteilig(
+            "Halle Ost",
+            [Kabelabschnitt(1, 9, 2), Kabelabschnitt(2, 1, 3)],
+            kabeltyp="jystyv",
+            da_gesamt=6,
+        )
+
+    def test_ohne_luecke_ist_der_freie_lauf_der_ganze_rest(self):
+        self.assertEqual(self.k.freier_lauf(), 1)
+        self.assertEqual(self.k.auflegbarer_rest(), 1)
+
+    def test_mit_luecke_zaehlt_nur_der_laengste_lauf(self):
+        """Stellen 1 und 2 sind frei, Stelle 6 auch - aber nicht in Folge."""
+        self.v.kabel_abschnitt_entfernen(self.k, 0)
+        self.assertEqual(sorted(self.k.belegte_kabel_da()), [3, 4, 5])
+        self.assertEqual((self.k.da_gesamt or 0) - self.k.da_aufgelegt, 3)
+        self.assertEqual(self.k.freier_lauf(), 2)
+        self.assertEqual(self.k.auflegbarer_rest(), 2)
+
+    def test_der_plan_bietet_nur_an_was_in_einem_stueck_geht(self):
+        """Zerteilt wird ein Rest nicht - der Überrest kommt beim nächsten Mal."""
+        self.v.kabel_abschnitt_entfernen(self.k, 0)
+        plan = modell.restleitungen_planen(self.v)
+        self.assertEqual([p.rest for p in plan], [2])
+
+    def test_zwei_durchgaenge_fuellen_die_leitung_genau_einmal(self):
+        self.v.kabel_abschnitt_entfernen(self.k, 0)
+        for _runde in (1, 2):
+            modell.restplaetze_auflegen(
+                self.v, modell.restleitungen_planen(self.v)
+            )
+        self.assertEqual(sorted(self.k.belegte_kabel_da()), [1, 2, 3, 4, 5, 6])
+        self.assertFalse(self.k.gekuerzt)
+        self.assertEqual(self.k.da_gesamt, 6)
+
+    def test_der_letzte_abschnitt_waechst_nur_am_ende_des_kabels(self):
+        """Sonst liefen seine neuen Doppeladern in ein anderes Stück."""
+        self.v.kabel_abschnitt_entfernen(self.k, 0)
+        self.v.kabel_verlaengern(self.k, 2, 4, 2)
+        # Der letzte Abschnitt zählt jetzt die Stellen 1 und 2, die
+        # Stelle 3 liegt im ersten - er darf nicht weiterwachsen.
+        self.assertFalse(self.k.waechst_am_ende(1))
+        self.assertTrue(self.k.lueckenlos)
+
+    def test_eine_fortsetzung_ist_es_nur_wenn_hinten_platz_ist(self):
+        self.v.kabel_abschnitt_entfernen(self.k, 0)
+        self.v.kabel_verlaengern(self.k, 2, 4, 2)
+        platz = modell.Restplatz(self.k, 1, 2, 6)
+        self.assertTrue(platz.passt)
+        self.assertFalse(platz.fortsetzung)
+
+    def test_angestueckelt_bekommt_das_stueck_die_freie_stelle(self):
+        self.v.kabel_abschnitt_entfernen(self.k, 0)
+        self.v.kabel_verlaengern(self.k, 2, 4, 2)
+        self.v.kabel_verlaengern(self.k, 2, 6, 1)
+        self.assertEqual(self.k.abschnitte[-1].ab_kabel_da, 6)
+        self.assertEqual(sorted(self.k.belegte_kabel_da()), [1, 2, 3, 4, 5, 6])
+
+    def test_mehr_als_in_folge_frei_ist_wird_gemeldet(self):
+        """Das Modell erfindet keine Stelle außerhalb des Kabels."""
+        self.v.kabel_abschnitt_entfernen(self.k, 0)
+        with self.assertRaises(ModellFehler):
+            self.v.kabel_verlaengern(self.k, 3, 1, 3)
+        self.assertEqual(sorted(self.k.belegte_kabel_da()), [3, 4, 5])
+
+    def test_die_farben_folgen_den_stellen_auch_mit_luecke(self):
+        from verteilerly.farbcodes import Kabeltypen, farben_eintragen
+
+        typen = Kabeltypen.laden(pathlib.Path("daten/kabeltypen"))
+        self.v.kabel_abschnitt_entfernen(self.k, 0)
+        for _runde in (1, 2):
+            modell.restplaetze_auflegen(
+                self.v, modell.restleitungen_planen(self.v)
+            )
+        farben_eintragen(self.v, self.k, typen)
+        leiste = self.v.leiste(2)
+        # Stelle 1 liegt auf DA 4 - dort gehoert die erste Farbe hin.
+        self.assertEqual(
+            (leiste.stift(4).a.farbe, leiste.stift(4).b.farbe), ("rt", "bl")
+        )

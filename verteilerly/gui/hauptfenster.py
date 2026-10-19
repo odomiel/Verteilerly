@@ -2389,7 +2389,7 @@ class Hauptfenster(QMainWindow):
         """
         if self.projekt is None or self.schreibgeschuetzt or kabel is None:
             return
-        rest = (kabel.da_gesamt or 0) - kabel.da_aufgelegt
+        rest = kabel.auflegbarer_rest()
         if rest < 1:
             return
         self._reste_auflegen([Restplatz(kabel, rest, leiste, da)])
