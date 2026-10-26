@@ -47,7 +47,7 @@ MIMETYP = "application/x-verteilerly-projekt"
 PYTHONFASSUNG = "3.14"
 BASIS_URL = (
     "https://github.com/niess/python-appimage/releases/download/python3.14/"
-    "python3.14.8-cp314-cp314-manylinux2014_x86_64.AppImage"
+    "python3.14.9-cp314-cp314-manylinux2014_x86_64.AppImage"
 )
 WERKZEUG_URL = (
     "https://github.com/AppImage/appimagetool/releases/download/continuous/"
