@@ -121,12 +121,16 @@ LIZENZVERWEISE = (
 VORLAGENORDNER = "vorlagen"
 BLATTVORLAGENORDNER = "blattvorlagen"
 
-# Die drei Ausgabewege: Kennung, Name auf dem Knopf, Methode.
+# Die Ausgabewege: Kennung, Name auf dem Knopf, Methode. "komplett"
+# schreibt die drei einzelnen hintereinander unter einem Namen.
 EXPORTFORMATE = (
     ("pdf", "PDF", "pdf_ausgeben"),
     ("xlsx", "XLSX", "xlsx_ausgeben"),
     ("csv", "CSV", "csv_ausgeben"),
+    ("komplett", "Komplett", "komplett_ausgeben"),
 )
+#: Was der Komplettexport schreibt - die Reihenfolge ist die der Arbeit.
+KOMPLETTENDUNGEN = (".pdf", ".xlsx", ".csv")
 
 #: Gespeichert wird als `.vtly` - eine einzige Endung, sonst haengt
 #: Windows die Datei an `.json` und damit an jedes andere Programm.
@@ -138,6 +142,7 @@ DATEIFILTER = (
 PDFFILTER = "PDF (*.pdf)"
 XLSXFILTER = "Excel-Arbeitsmappe (*.xlsx)"
 CSVFILTER = "CSV, Semikolon getrennt (*.csv)"
+KOMPLETTFILTER = "PDF, Excel-Mappe und CSV (*.pdf)"
 PAKETFILTER = "Verteilerly-Paket (*.zip)"
 #: Welche Erweiterungen laufen, entscheidet dieser Rechner. Ein Paket
 #: bringt diese Einstellungen darum nicht mit - sonst koennte eines aus
@@ -498,6 +503,11 @@ class Hauptfenster(QMainWindow):
         self.aktion_csv = aktion(
             u("Als &CSV…"), self.csv_ausgeben, menue=self.exportmenue,
             hinweis=u("Belegung, Kabel und Projektdaten als Textdatei"),
+        )
+        self.exportmenue.addSeparator()
+        self.aktion_komplett = aktion(
+            u("&Komplett…"), self.komplett_ausgeben, menue=self.exportmenue,
+            hinweis=u("Alle drei Formate auf einmal, unter einem Namen"),
         )
         self._exportknopf_bauen(werkzeuge)
         datei.addSeparator()
@@ -2010,6 +2020,82 @@ class Hauptfenster(QMainWindow):
         if ziel is None:
             return
         self._ausgeben(lambda: csv_schreiben(self.projekt, ziel), ziel)
+
+    def komplett_ausgeben(self) -> None:
+        """Alle drei Formate in einem Zug - ein Name, drei Dateien.
+
+        Gefragt wird einmal: welche Blattarten ins PDF kommen und wie die
+        Dateien heissen sollen. Die Endung bestimmt dabei nichts, sie wird
+        ersetzt - wer "Halle Ost.pdf" waehlt, bekommt auch "Halle Ost.xlsx"
+        und "Halle Ost.csv" daneben.
+        """
+        self._format_merken("komplett")
+        if self.projekt is None:
+            return
+        blattarten = self._pdf_blaetter_waehlen()
+        if not blattarten:
+            return
+        ziel = self._ausgabeziel(".pdf", KOMPLETTFILTER)
+        if ziel is None:
+            return
+        ziele = self._komplettziele(ziel)
+        # Nach der ersten Datei hat der Dateidialog schon gefragt; die
+        # beiden anderen schreibt sonst niemand sichtbar ueber.
+        weitere = [pfad for pfad in ziele[1:] if pfad.exists()]
+        if weitere and not self._ueberschreiben_erlaubt(weitere):
+            return
+        vorlage = self.vorschau.blattvorlage
+        arbeiten = (
+            (ziele[0], lambda: pdf_schreiben(self.projekt, ziele[0], vorlage, blattarten)),
+            (ziele[1], lambda: xlsx_schreiben(self.projekt, ziele[1], vorlage)),
+            (ziele[2], lambda: csv_schreiben(self.projekt, ziele[2])),
+        )
+        geschrieben, gescheitert = [], []
+        for datei, arbeit in arbeiten:
+            try:
+                arbeit()
+            except (AusgabeFehler, OSError) as fehler:
+                # Dateiname und Grund - keine Woerter, also ohne u().
+                gescheitert.append(f"{datei.name}: {fehler}")
+            else:
+                geschrieben.append(datei.name)
+        if gescheitert:
+            # Was durchkam, bleibt liegen - gemeldet wird beides.
+            QMessageBox.critical(
+                self,
+                u("Ausgabe fehlgeschlagen"),
+                "\n".join(gescheitert),
+            )
+        if geschrieben:
+            self.statusBar().showMessage(
+                u("Geschrieben: {0}").format(", ".join(geschrieben))
+            )
+
+    def _komplettziele(self, ziel: pathlib.Path) -> list[pathlib.Path]:
+        """Aus dem gewaehlten Namen die drei Dateinamen.
+
+        Abgeschnitten wird nur eine Endung, die zum Export gehoert: ein
+        Name wie "Verteiler 1.2" soll seine Zahl behalten.
+        """
+        stamm = ziel.name
+        for endung in KOMPLETTENDUNGEN:
+            if stamm.lower().endswith(endung):
+                stamm = stamm[: -len(endung)]
+                break
+        return [ziel.with_name(stamm + endung) for endung in KOMPLETTENDUNGEN]
+
+    def _ueberschreiben_erlaubt(self, dateien: list[pathlib.Path]) -> bool:
+        """Fragt nach, bevor der Komplettexport Fremdes ueberschreibt."""
+        antwort = frage(
+            self,
+            u("Überschreiben?"),
+            u("Diese Dateien gibt es schon:\n{0}\nSollen sie überschrieben werden?").format(
+                "\n".join(datei.name for datei in dateien)
+            ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        return antwort == QMessageBox.StandardButton.Yes
 
     def _format_merken(self, kennung: str) -> None:
         """Was zuletzt gewählt wurde, steht danach auf dem Knopf."""

@@ -4650,8 +4650,12 @@ class TestMenuezustaende(unittest.TestCase):
         eintraege = [
             eintrag.text().replace("&", "")
             for eintrag in menues["Exportieren"].actions()
+            if not eintrag.isSeparator()
         ]
-        self.assertEqual(eintraege, ["Als PDF…", "Als Excel-Mappe…", "Als CSV…"])
+        self.assertEqual(
+            eintraege,
+            ["Als PDF…", "Als Excel-Mappe…", "Als CSV…", "Komplett…"],
+        )
         # Im Dateimenü stehen sie dann nicht noch einmal.
         datei = [
             eintrag.text().replace("&", "")
@@ -4676,8 +4680,11 @@ class TestMenuezustaende(unittest.TestCase):
         self.assertEqual(knopf.defaultAction().text(), "Export (XLSX)")
         self.fenster.exportformat_setzen("csv", ausgeben=False)
         self.assertEqual(knopf.defaultAction().text(), "Export (CSV)")
+        self.fenster.exportformat_setzen("komplett", ausgeben=False)
+        self.assertEqual(knopf.defaultAction().text(), "Export (Komplett)")
+        self.fenster.exportformat_setzen("pdf", ausgeben=False)
 
-    def test_der_pfeil_oeffnet_die_drei_formate(self):
+    def test_der_pfeil_oeffnet_alle_formate(self):
         from PySide6.QtWidgets import QToolButton
 
         knopf = self.fenster.export_knopf
@@ -4685,8 +4692,9 @@ class TestMenuezustaende(unittest.TestCase):
             knopf.popupMode(), QToolButton.ToolButtonPopupMode.MenuButtonPopup
         )
         self.assertEqual(
-            [h.text().replace("&", "") for h in knopf.menu().actions()],
-            ["Als PDF…", "Als Excel-Mappe…", "Als CSV…"],
+            [h.text().replace("&", "") for h in knopf.menu().actions()
+             if not h.isSeparator()],
+            ["Als PDF…", "Als Excel-Mappe…", "Als CSV…", "Komplett…"],
         )
 
     def test_der_ansichtsknopf_klappt_die_drei_bereiche_aus(self):
@@ -4804,6 +4812,113 @@ class TestMenuezustaende(unittest.TestCase):
         self.assertEqual(gesehen["auswahl"], {"leisten"})
         # Abgebrochen wird vor dem Dateidialog.
         self.assertFalse(dateidialog.called)
+
+    def _alle_blaetter(self):
+        """Haken setzen und zustimmen - fuer die Blattwahl vor dem Export."""
+        from verteilerly.gui.dialoge import BlattwahlDialog
+
+        def zustimmen(dialog):
+            for haken in dialog.haken.values():
+                haken.setChecked(True)
+            return BlattwahlDialog.DialogCode.Accepted
+
+        return mock.patch.object(BlattwahlDialog, "exec", zustimmen)
+
+    def test_komplett_schreibt_alle_drei_dateien(self):
+        """Ein Name, drei Dateien - und die Meldung nennt alle."""
+        f = self.fenster
+        self._projekt()
+        ziel = pathlib.Path(self.ordner.name) / "alles.pdf"
+        with self._alle_blaetter(), \
+                mock.patch.object(f, "_ausgabeziel", return_value=ziel):
+            f.komplett_ausgeben()
+        for endung in (".pdf", ".xlsx", ".csv"):
+            with self.subTest(endung=endung):
+                self.assertTrue(ziel.with_suffix(endung).exists())
+        meldung = f.statusBar().currentMessage()
+        for name in ("alles.pdf", "alles.xlsx", "alles.csv"):
+            self.assertIn(name, meldung)
+        self.assertEqual(f.exportformat, "komplett")
+        f.exportformat_setzen("pdf", ausgeben=False)
+
+    def test_die_endung_des_namens_bestimmt_nichts(self):
+        """Wer "alles.csv" eintippt, bekommt trotzdem alle drei."""
+        f = self.fenster
+        self._projekt()
+        ziel = pathlib.Path(self.ordner.name) / "wahl.csv"
+        with self._alle_blaetter(), \
+                mock.patch.object(f, "_ausgabeziel", return_value=ziel):
+            f.komplett_ausgeben()
+        for endung in (".pdf", ".xlsx", ".csv"):
+            self.assertTrue((ziel.with_suffix(endung)).exists(), endung)
+        f.exportformat_setzen("pdf", ausgeben=False)
+
+    def test_eine_zahl_im_namen_bleibt_stehen(self):
+        """Abgeschnitten wird nur eine Endung, die zum Export gehoert."""
+        ziele = self.fenster._komplettziele(pathlib.Path("/tmp/Verteiler 1.2"))
+        self.assertEqual(
+            [z.name for z in ziele],
+            ["Verteiler 1.2.pdf", "Verteiler 1.2.xlsx", "Verteiler 1.2.csv"],
+        )
+
+    def test_vor_dem_ueberschreiben_wird_gefragt(self):
+        """Nach der ersten Datei fragt der Dateidialog, nach den anderen wir."""
+        from PySide6.QtWidgets import QMessageBox
+
+        f = self.fenster
+        self._projekt()
+        ziel = pathlib.Path(self.ordner.name) / "schon_da.pdf"
+        ziel.with_suffix(".xlsx").write_bytes(b"alt")
+        gefragt = []
+
+        from verteilerly.gui import hauptfenster
+
+        def nein(eltern, titel, text, knoepfe, vorgabe=None):
+            gefragt.append(text)
+            return QMessageBox.StandardButton.No
+
+        with self._alle_blaetter(), \
+                mock.patch.object(f, "_ausgabeziel", return_value=ziel), \
+                mock.patch.object(hauptfenster, "frage", nein):
+            f.komplett_ausgeben()
+        self.assertEqual(len(gefragt), 1)
+        self.assertIn("schon_da.xlsx", gefragt[0])
+        # Abgelehnt heisst: nichts geschrieben, auch nicht das PDF.
+        self.assertFalse(ziel.exists())
+        self.assertEqual(ziel.with_suffix(".xlsx").read_bytes(), b"alt")
+        f.exportformat_setzen("pdf", ausgeben=False)
+
+    def test_scheitert_ein_format_bleiben_die_anderen_stehen(self):
+        """Sonst waere ein fehlender Schreibzugriff fuer alle drei das Ende."""
+        from PySide6.QtWidgets import QMessageBox
+        from verteilerly.ausgabe import AusgabeFehler
+        from verteilerly.gui import hauptfenster
+
+        f = self.fenster
+        self._projekt()
+        ziel = pathlib.Path(self.ordner.name) / "halb.pdf"
+        gemeldet = []
+
+        def streiken(*args, **kwargs):
+            raise AusgabeFehler("Mappe streikt")
+
+        with self._alle_blaetter(), \
+                mock.patch.object(f, "_ausgabeziel", return_value=ziel), \
+                mock.patch.object(hauptfenster, "xlsx_schreiben", streiken), \
+                mock.patch.object(QMessageBox, "critical",
+                                  lambda *a: gemeldet.append(a[-1])):
+            f.komplett_ausgeben()
+        self.assertTrue(ziel.exists())
+        self.assertTrue(ziel.with_suffix(".csv").exists())
+        self.assertFalse(ziel.with_suffix(".xlsx").exists())
+        self.assertEqual(len(gemeldet), 1)
+        self.assertIn("halb.xlsx", gemeldet[0])
+        self.assertIn("Mappe streikt", gemeldet[0])
+        meldung = f.statusBar().currentMessage()
+        self.assertIn("halb.pdf", meldung)
+        self.assertIn("halb.csv", meldung)
+        self.assertNotIn("halb.xlsx", meldung)
+        f.exportformat_setzen("pdf", ausgeben=False)
 
     def test_der_knopf_gibt_das_gewaehlte_format_aus(self):
         self._projekt()

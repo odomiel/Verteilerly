@@ -329,7 +329,7 @@ view button.</p>
 <p><b>The export button</b> has two parts: on the left it says <i>Export
 (PDF)</i> — a press writes the format in brackets —, on the right an arrow. It
 opens the same menu as <i>File ▸ Export</i>: <i>As PDF…</i>, <i>As Excel
-workbook…</i> and <i>As CSV…</i>. Whatever you choose there is on the button
+workbook…</i>, <i>As CSV…</i> and <i>Complete…</i>. Whatever you choose there is on the button
 afterwards and stays after a restart — whoever always needs CSV presses nothing
 but the button from then on. <b>Ctrl+E</b> still writes a PDF.</p>
 
@@ -1030,7 +1030,18 @@ in the sheet layout, behind them the data as a table: <i>data per wire</i>,
 sortable.</td></tr>
 <tr><td><b>File ▸ Export ▸ As CSV…</b></td><td>Plain data: one row per wire at the top,
 the cables and the project data below.</td></tr>
+<tr><td><b>File ▸ Export ▸ Complete…</b></td><td>All three at once: one name,
+three files side by side — <i>name.pdf</i>, <i>name.xlsx</i> and
+<i>name.csv</i>.</td></tr>
 </table>
+
+<p><b>Complete</b> asks exactly as much as the PDF export: which kinds of sheet
+are to go in and what the files are to be called. The extension you type makes
+no difference — it is replaced for each format, so <i>Halle Ost.pdf</i> turns
+into <i>Halle Ost.pdf</i>, <i>Halle Ost.xlsx</i> and <i>Halle Ost.csv</i>. If
+the other two files already exist, you are asked beforehand (for the first one
+the file dialog asks by itself). If one of the three formats fails, the others
+are still written, and the message says which one did not work.</p>
 
 <p><b>Which sheets go into the PDF</b> a small dialog asks before saving:
 <i>cover sheet</i>, <i>frame layout</i> and <i>strip sheets</i>, each with the
@@ -1398,7 +1409,7 @@ extensions</i>.</p>
 
 <table border="1" cellspacing="0" cellpadding="5">
 <tr><th>Menu</th><th>Entry</th><th>Shortcut</th></tr>
-<tr><td rowspan="10"><b>File</b></td><td>New frame…</td><td>Ctrl+N</td></tr>
+<tr><td rowspan="11"><b>File</b></td><td>New frame…</td><td>Ctrl+N</td></tr>
 <tr><td>Open…</td><td>Ctrl+O</td></tr>
 <tr><td>Open read-only…</td><td>Ctrl+Shift+O</td></tr>
 <tr><td>Save</td><td>Ctrl+S</td></tr>
@@ -1407,6 +1418,7 @@ extensions</i>.</p>
 <tr><td>As PDF…</td><td>Ctrl+E</td></tr>
 <tr><td>As Excel workbook…</td><td></td></tr>
 <tr><td>As CSV…</td><td></td></tr>
+<tr><td>Complete…</td><td></td></tr>
 <tr><td>Quit</td><td>Ctrl+Q</td></tr>
 <tr><td rowspan="10"><b>Edit</b></td><td>Undo</td><td>Ctrl+Z</td></tr>
 <tr><td>Redo</td><td>Ctrl+Y</td></tr>

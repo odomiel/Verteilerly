@@ -68,7 +68,8 @@ Angaben auf.
 **Ausgeben.** Die **Vorschau** zeigt jedes Blatt so, wie es gedruckt wird
 (vergrößerbar bis zur wahren Größe). Daraus entstehen ein **PDF**, eine
 **Excel-Mappe** im Blattbild samt Datenlisten und **CSV**-Listen für die
-Weiterverarbeitung.
+Weiterverarbeitung — einzeln oder mit *Komplett* alle drei auf einmal unter
+einem Namen.
 
 **Einmal am Tag nach Updates sehen** (*Einstellungen*, abschaltbar): das
 Programm fragt die öffentliche Releaseliste und sagt in der Statuszeile

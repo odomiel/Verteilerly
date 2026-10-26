@@ -347,7 +347,7 @@ auflegen, bearbeiten und entfernen sowie der Ansichtsknopf.</p>
 <p><b>Der Exportknopf</b> trägt zwei Teile: links steht <i>Export (PDF)</i> —
 ein Druck gibt in dem Format aus, das in Klammern steht —, rechts ein Pfeil.
 Der öffnet dasselbe Menü wie <i>Datei ▸ Exportieren</i>: <i>Als PDF…</i>,
-<i>Als Excel-Mappe…</i> und <i>Als CSV…</i>. Was Sie dort wählen, steht danach
+<i>Als Excel-Mappe…</i>, <i>Als CSV…</i> und <i>Komplett…</i>. Was Sie dort wählen, steht danach
 auf dem Knopf und bleibt auch nach einem Neustart — wer immer CSV braucht,
 drückt künftig nur noch den Knopf. <b>Strg+E</b> gibt weiterhin als PDF aus.</p>
 
@@ -1064,7 +1064,19 @@ Blattbild, dahinter die Daten als Tabelle: <i>Daten je Ader</i>, <i>Kabel je
 Leiste</i>, <i>Projektdaten</i> — filter- und sortierbar.</td></tr>
 <tr><td><b>Datei ▸ Exportieren ▸ Als CSV…</b></td><td>Reine Daten: oben eine Zeile je Ader,
 darunter die Kabel und die Projektdaten.</td></tr>
+<tr><td><b>Datei ▸ Exportieren ▸ Komplett…</b></td><td>Alle drei auf einmal: ein
+Name, drei Dateien daneben — <i>Name.pdf</i>, <i>Name.xlsx</i> und
+<i>Name.csv</i>.</td></tr>
 </table>
+
+<p><b>Komplett</b> fragt genau so viel wie der PDF-Export: welche Blattarten
+hinein sollen und wie die Dateien heißen. Die Endung, die Sie dabei eintippen,
+bestimmt nichts — sie wird für jedes Format ersetzt; aus <i>Halle Ost.pdf</i>
+werden also <i>Halle Ost.pdf</i>, <i>Halle Ost.xlsx</i> und
+<i>Halle Ost.csv</i>. Gibt es die beiden anderen Dateien schon, wird vorher
+gefragt (nach der ersten fragt der Dateidialog selbst). Scheitert eines der
+drei Formate, bleiben die anderen trotzdem geschrieben, und die Meldung sagt,
+welches nicht ging.</p>
 
 <p><b>Welche Blätter ins PDF kommen</b>, fragt vor dem Speichern ein kleiner
 Dialog: <i>Deckblatt</i>, <i>Verteilerbelegung</i> und <i>Leistenblätter</i>, je
@@ -1441,7 +1453,7 @@ und sie lässt sich unter <i>Erweiterungen verwalten</i> ausschalten.</p>
 
 <table border="1" cellspacing="0" cellpadding="5">
 <tr><th>Menü</th><th>Eintrag</th><th>Kürzel</th></tr>
-<tr><td rowspan="10"><b>Datei</b></td><td>Neuer Verteiler…</td><td>Strg+N</td></tr>
+<tr><td rowspan="11"><b>Datei</b></td><td>Neuer Verteiler…</td><td>Strg+N</td></tr>
 <tr><td>Öffnen…</td><td>Strg+O</td></tr>
 <tr><td>Schreibgeschützt öffnen…</td><td>Strg+Umschalt+O</td></tr>
 <tr><td>Speichern</td><td>Strg+S</td></tr>
@@ -1450,6 +1462,7 @@ und sie lässt sich unter <i>Erweiterungen verwalten</i> ausschalten.</p>
 <tr><td>Als PDF…</td><td>Strg+E</td></tr>
 <tr><td>Als Excel-Mappe…</td><td></td></tr>
 <tr><td>Als CSV…</td><td></td></tr>
+<tr><td>Komplett…</td><td></td></tr>
 <tr><td>Beenden</td><td>Strg+Q</td></tr>
 <tr><td rowspan="10"><b>Bearbeiten</b></td><td>Rückgängig</td><td>Strg+Z</td></tr>
 <tr><td>Wiederherstellen</td><td>Strg+Y</td></tr>

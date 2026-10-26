@@ -294,6 +294,7 @@ Speichern &unter…: Save &as…
 Als &PDF…: As &PDF…
 Als &Excel-Mappe…: As &Excel workbook…
 Als &CSV…: As &CSV…
+'&Komplett…': '&Complete…'
 '&Beenden': '&Quit'
 '&Bearbeiten': '&Edit'
 '&Rückgängig': '&Undo'
@@ -610,6 +611,7 @@ Verteilernummer: Frame number
 Die Blätter im Blattbild, dahinter die Daten je Ader: The sheets in the sheet layout, behind them the
   data per wire
 Belegung, Kabel und Projektdaten als Textdatei: Assignment, cables and project data as a text file
+Alle drei Formate auf einmal, unter einem Namen: All three formats at once, under one name
 Export ({0}): Export ({0})
 Gibt den Verteiler als {0} aus; der Pfeil wählt das Format: Exports the frame as {0}; the arrow chooses
   the format
@@ -853,6 +855,8 @@ angepasst: adjusted
 eingebaut: built-in
 kein Objekt „erweiterung“ vom Typ Erweiterung: no object “erweiterung” of type Erweiterung
 '{0} gibt es schon - überschrieben wird nichts': '{0} exists already - nothing is overwritten'
+Überschreiben?: Overwrite?
+"Diese Dateien gibt es schon:\n{0}\nSollen sie überschrieben werden?": "These files already exist:\n{0}\nAre they to be overwritten?"
 ? '{0} ist auf einen Fehler gelaufen:
 
 

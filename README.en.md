@@ -61,7 +61,8 @@ outdated entries.
 **Output.** The **preview** shows every sheet the way it will be printed
 (zoomable up to true size). From it come a **PDF**, an **Excel workbook** in
 the sheet layout together with data lists, and **CSV** lists for further
-processing.
+processing — one at a time, or all three at once under one name with
+*Complete*.
 
 **A look for updates once a day** (*Settings*, switchable): the program asks
 the public release list and says in the status bar when a newer version is
