@@ -5,6 +5,7 @@
 from . import TESTHEIM  # noqa: F401
 
 import hashlib
+import json
 import pathlib
 import sys
 import tempfile
@@ -56,6 +57,50 @@ class TestFassungUndNotiz(unittest.TestCase):
             )
         finally:
             pathlib.Path(name).unlink()
+
+
+class TestTextNachziehen(unittest.TestCase):
+    """Der Nachtrag: die .exe kommt spaeter ans selbe Release."""
+
+    def setUp(self):
+        self.gesendet = []
+
+        def gefangen(art, url, koepfe, inhalt=None):
+            self.gesendet.append((art, url, inhalt))
+            return 200, b"{}"
+
+        self.flicken = mock.patch.object(
+            github_release, "_anfrage", side_effect=gefangen
+        )
+        self.flicken.start()
+        self.addCleanup(self.flicken.stop)
+
+    def test_ein_geaenderter_text_wird_geschrieben(self):
+        release = {"id": 7, "body": "alt"}
+        self.assertTrue(
+            github_release.text_nachziehen("wer/was", release, "neu", "tok")
+        )
+        art, url, inhalt = self.gesendet[0]
+        self.assertEqual(art, "PATCH")
+        self.assertTrue(url.endswith("/releases/7"))
+        self.assertEqual(json.loads(inhalt)["body"], "neu")
+        # Der Aufrufer sieht den neuen Stand, ohne noch einmal zu fragen.
+        self.assertEqual(release["body"], "neu")
+
+    def test_derselbe_text_kostet_keine_anfrage(self):
+        release = {"id": 7, "body": "gleich"}
+        self.assertFalse(
+            github_release.text_nachziehen("wer/was", release, "gleich", "tok")
+        )
+        self.assertEqual(self.gesendet, [])
+
+    def test_ein_fehler_bricht_ab_statt_stillzuhalten(self):
+        self.flicken.stop()
+        with mock.patch.object(
+            github_release, "_anfrage", return_value=(403, b"nein")
+        ), self.assertRaises(SystemExit):
+            github_release.text_nachziehen("wer/was", {"id": 7}, "neu", "tok")
+        self.flicken.start()
 
 
 class TestKennungUndToken(unittest.TestCase):

@@ -6,6 +6,14 @@
     python3 werkzeuge/github_release.py --probe <dateien>    nur zeigen
     python3 werkzeuge/github_release.py --text notiz.md <dateien>
 
+**Zweimal aufgerufen tut es nichts doppelt.** Gibt es das Release
+schon, wird es genommen, gleichnamige Anhaenge werden ersetzt - und
+der **Begleittext nachgezogen**, wenn er sich geaendert hat. Genau so
+kommt die Windows-.exe spaeter ans selbe Release: sie entsteht auf
+einem anderen Rechner, und ihre Pruefsumme gehoert in den Text. Wer
+den Text drueben von Hand verbessert hat, schuetzt ihn mit
+``--text-lassen``.
+
 **Wozu.** Das Repo wird als Push-Mirror nach GitHub gespiegelt, und ein
 Spiegel uebertraegt nur Zweige und Tags - **keine Releases und keine
 Anhaenge**. Die legt dieses Werkzeug nach: warten, bis der Tag drueben
@@ -205,6 +213,32 @@ def release_anlegen(slug: str, tag: str, notiz: str, token: str,
     )
 
 
+def text_nachziehen(slug: str, release: dict, notiz: str, token: str) -> bool:
+    """Schreibt den Begleittext eines bestehenden Releases neu.
+
+    Gebraucht wird das beim **Nachtrag**: die Windows-.exe entsteht auf
+    einem anderen Rechner und kommt spaeter an dasselbe Release - dann
+    muss ihre Pruefsumme in den Text, sonst steht dort eine Liste, in
+    der sie fehlt.
+
+    Geschrieben wird nur, was sich unterscheidet; zurueck kommt, ob
+    etwas geschrieben wurde.
+    """
+    if (release.get("body") or "") == notiz:
+        return False
+    stand, inhalt = _anfrage(
+        "PATCH", f"{API}/repos/{slug}/releases/{release['id']}",
+        _koepfe(token), json.dumps({"body": notiz}).encode(),
+    )
+    if stand != 200:
+        raise SystemExit(
+            f"Begleittext nachziehen fehlgeschlagen (HTTP {stand}): "
+            f"{inhalt[:400].decode(errors='replace')}"
+        )
+    release["body"] = notiz
+    return True
+
+
 def anhang_entfernen(slug: str, release: dict, name: str, token: str) -> None:
     """Raeumt einen gleichnamigen Anhang weg - sonst wird er umbenannt."""
     for anhang in release.get("assets") or []:
@@ -255,6 +289,10 @@ def main(argv: list[str] | None = None) -> int:
     zerleger.add_argument("--vorab", action="store_true", help="als Vorabfassung")
     zerleger.add_argument("--probe", action="store_true", help="nur zeigen, nichts senden")
     zerleger.add_argument(
+        "--text-lassen", action="store_true",
+        help="den Begleittext eines bestehenden Releases stehen lassen",
+    )
+    zerleger.add_argument(
         "--warten", type=int, default=WARTEN,
         help=f"Sekunden auf den Tag bei GitHub warten (Vorgabe {WARTEN})",
     )
@@ -297,6 +335,12 @@ def main(argv: list[str] | None = None) -> int:
     if vorhanden:
         print(f"· Release {tag} gibt es schon (id {vorhanden['id']}) - wird genommen.")
         release = vorhanden
+        if werte.text_lassen:
+            print("· Begleittext bleibt, wie er ist (--text-lassen).")
+        elif text_nachziehen(slug, release, notiz, token):
+            print("· Begleittext nachgezogen.")
+        else:
+            print("· Begleittext steht schon so da.")
     else:
         release = release_anlegen(
             slug, tag, notiz, token, werte.entwurf, werte.vorab
