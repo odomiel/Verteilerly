@@ -15,6 +15,7 @@ from openpyxl import load_workbook
 from verteilerly.ausgabe import xlsx_schreiben
 from verteilerly.ausgabe.mappe import spaltenbreite, zeilenhoehe
 from verteilerly.blattvorlagen import STANDARD, Blattvorlagen
+from verteilerly.layout import rasterbreiten, rasterspalten
 from verteilerly.modell import Aderadresse, Projekt, Verteiler
 from verteilerly.pfade import mitgeliefert
 from . import BEISPIELVORLAGE
@@ -129,11 +130,35 @@ class TestBlattbild(unittest.TestCase):
         self.assertEqual(mappe.sheetnames[0], "Deckblatt")
 
     def test_spalten_folgen_der_blattvorlage(self):
+        """Je Rangiereintrag eine Spalte - sonst die der Vorlage."""
         blatt = self._mappe()["Leiste 1"]
         self.assertEqual(
             [zelle.value or "" for zelle in blatt[1]],
-            [spalte.ueberschrift for spalte in STANDARD.spalten],
+            [spalte.ueberschrift for spalte, _ in rasterspalten(STANDARD.spalten)],
         )
+
+    def test_die_rangierung_hat_zwei_spalten_unter_einer_ueberschrift(self):
+        """Getrennte Felder wie in der Leistenansicht - aber wie eine Zelle."""
+        blatt = self._mappe()["Leiste 1"]
+        self.assertEqual(blatt["E1"].value, "Rangierung")
+        self.assertIn("E1:F1", [str(r) for r in blatt.merged_cells.ranges])
+        self.assertEqual(blatt["E2"].value, "2 2a")
+        self.assertIsNone(blatt["F2"].value)
+        # Mittig in ihrem Feld, und kein Strich dazwischen.
+        self.assertEqual(blatt["E2"].alignment.horizontal, "center")
+        self.assertEqual(blatt["F2"].alignment.horizontal, "center")
+        self.assertIsNone(blatt["E2"].border.right)
+        self.assertIsNone(blatt["F2"].border.left)
+        self.assertTrue(blatt["E2"].border.left.style)
+        self.assertTrue(blatt["F2"].border.right.style)
+
+    def test_zwei_rangierungen_stehen_nebeneinander(self):
+        self.projekt.verteiler.rangierung_anlegen(
+            Aderadresse(1, 1, "a"), Aderadresse(2, 3, "b")
+        )
+        blatt = self._mappe()["Leiste 1"]
+        self.assertEqual(blatt["E2"].value, "2 2a")
+        self.assertEqual(blatt["F2"].value, "2 3b")
 
     def test_stiftueberschrift_reicht_ueber_beide_spalten(self):
         blatt = self._mappe()["Leiste 1"]
@@ -152,32 +177,43 @@ class TestBlattbild(unittest.TestCase):
     def test_kabelblock_ist_verbunden_und_gedreht(self):
         blatt = self._mappe()["Leiste 1"]
         bereiche = [str(r) for r in blatt.merged_cells.ranges]
-        self.assertIn("G2:G11", bereiche)     # 5 DA sind zehn Zeilen
-        zelle = blatt["G2"]
+        self.assertIn("H2:H11", bereiche)     # 5 DA sind zehn Zeilen
+        zelle = blatt["H2"]
         self.assertEqual(zelle.value, "Linie 1 — Melderkreis")
         self.assertEqual(zelle.alignment.text_rotation, 90)
 
     def test_gekuerztes_kabel_sagt_es(self):
         blatt = self._mappe()["Leiste 1"]
-        self.assertIn("gekürzt: 3 von 4 DA", blatt["G14"].value)
+        self.assertIn("gekürzt: 3 von 4 DA", blatt["H14"].value)
 
     def test_waagerechte_vorlage_dreht_nicht(self):
         knapp = Blattvorlagen.laden(mitgeliefert() / "blattvorlagen").holen("knapp")
         blatt = self._mappe(knapp)["Leiste 1"]
-        stelle = [s.feld for s in knapp.spalten].index("kabel") + 1
+        stelle = [s.feld for s, _ in rasterspalten(knapp.spalten)].index("kabel") + 1
         zelle = blatt.cell(row=2, column=stelle)
         self.assertEqual(zelle.alignment.text_rotation, 0)
         self.assertEqual(zelle.value, "Linie 1 — Melderkreis")
 
     def test_spaltenbreiten_kommen_aus_der_vorlage(self):
         blatt = self._mappe()["Leiste 1"]
-        breiten = STANDARD.breiten(210.0 - 2 * STANDARD.rand)
+        raster = rasterspalten(STANDARD.spalten)
+        breiten = rasterbreiten(raster, 210.0 - 2 * STANDARD.rand)
         self.assertAlmostEqual(
             blatt.column_dimensions["A"].width, spaltenbreite(breiten[0]), places=1
         )
         # Die Kabelspalte ist die schmalste - so steht es in der Vorlage.
         self.assertLess(
-            blatt.column_dimensions["G"].width, blatt.column_dimensions["D"].width
+            blatt.column_dimensions["H"].width, blatt.column_dimensions["D"].width
+        )
+        # Beide Rangierfelder zusammen sind so breit wie die Spalte -
+        # bis auf den Zellrand, den Excel jeder Spalte zugibt.
+        self.assertEqual(
+            blatt.column_dimensions["E"].width, blatt.column_dimensions["F"].width
+        )
+        self.assertAlmostEqual(
+            blatt.column_dimensions["E"].width + blatt.column_dimensions["F"].width,
+            spaltenbreite(STANDARD.breiten(210.0 - 2 * STANDARD.rand)[4]),
+            delta=1.0,
         )
 
     def test_schriftgroessen_kommen_aus_der_vorlage(self):

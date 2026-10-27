@@ -2,7 +2,7 @@
 
 import unittest
 
-from verteilerly.blattvorlagen import STANDARD, Blattvorlage
+from verteilerly.blattvorlagen import MITTE, RECHTS, STANDARD, Blattvorlage
 from verteilerly.layout import (
     Blatt,
     Linie,
@@ -805,6 +805,104 @@ class TestLeistenblatt(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestRangierfelder(unittest.TestCase):
+    """Zwei Rangierungen, zwei Felder - mittig in ihrem Feld."""
+
+    def setUp(self):
+        from verteilerly.layout import rangierfelder
+
+        self.rangierfelder = rangierfelder
+        self.v = Verteiler.aus_geometrie(1, 4, 10, name="Muster")
+        self.projekt = Projekt(verteiler=self.v)
+
+    def _spaltenbreite(self) -> float:
+        from verteilerly.blattvorlagen import STANDARD
+
+        breiten = STANDARD.breiten(210.0 - 2 * STANDARD.rand)
+        stelle = [s.feld for s in STANDARD.spalten].index("rangierung")
+        return breiten[stelle]
+
+    def _text(self, blatt, text):
+        return next(
+            e for e in blatt.elemente if isinstance(e, Text) and e.text == text
+        )
+
+    def test_jeder_eintrag_bekommt_sein_feld(self):
+        self.v.rangierung_anlegen(Aderadresse.parse("1 1a"), Aderadresse.parse("2 2a"))
+        self.v.rangierung_anlegen(Aderadresse.parse("1 1a"), Aderadresse.parse("3 4b"))
+        self.assertEqual(
+            self.rangierfelder(self.projekt, 1, 1, "a"), ["2 2a", "3 4b"]
+        )
+
+    def test_ohne_eintrag_bleiben_die_felder_leer(self):
+        self.assertEqual(self.rangierfelder(self.projekt, 1, 1, "a"), ["", ""])
+
+    def test_ein_eintrag_laesst_das_zweite_feld_frei(self):
+        self.v.rangierung_anlegen(Aderadresse.parse("1 1a"), Aderadresse.parse("2 2a"))
+        self.assertEqual(self.rangierfelder(self.projekt, 1, 1, "a"), ["2 2a", ""])
+
+    def test_was_ueber_die_felder_hinausgeht_bleibt_im_letzten(self):
+        """Sichtbar bleibt alles - lieber eng als verschwunden.
+
+        Heute laesst das Modell je Ader zwei Eintraege zu; waeren es
+        einmal mehr, duerfte keiner stillschweigend wegfallen.
+        """
+        from unittest import mock
+
+        with mock.patch.object(
+            self.v, "rangiereintraege", return_value=["2 2a", "3 4b", "4 5a"]
+        ):
+            felder = self.rangierfelder(self.projekt, 1, 1, "a")
+        self.assertEqual(len(felder), 2)
+        self.assertEqual(felder[0], "2 2a")
+        self.assertIn("3 4b", felder[1])
+        self.assertIn("4 5a", felder[1])
+
+    def test_auf_dem_blatt_stehen_beide_nebeneinander(self):
+        self.v.rangierung_anlegen(Aderadresse.parse("1 1a"), Aderadresse.parse("2 2a"))
+        self.v.rangierung_anlegen(Aderadresse.parse("1 1a"), Aderadresse.parse("3 4b"))
+        blatt = leistenblatt(self.projekt, 1)
+        links = self._text(blatt, "2 2a")
+        rechts = self._text(blatt, "3 4b")
+        self.assertAlmostEqual(links.y, rechts.y)
+        self.assertAlmostEqual(links.breite, rechts.breite, places=6)
+        self.assertGreater(rechts.x, links.x + links.breite - 0.01)
+        # Zusammen fuellen sie die Spalte - ohne Strich dazwischen.
+        self.assertLess(
+            rechts.x + rechts.breite - links.x, self._spaltenbreite()
+        )
+        self.assertFalse([
+            e for e in blatt.elemente
+            if isinstance(e, Linie) and e.x1 == e.x2
+            and links.x < e.x1 < rechts.x
+        ])
+
+    def test_die_eintraege_stehen_mittig_in_ihrem_feld(self):
+        self.v.rangierung_anlegen(Aderadresse.parse("1 1a"), Aderadresse.parse("2 2a"))
+        blatt = leistenblatt(self.projekt, 1)
+        self.assertEqual(self._text(blatt, "2 2a").ausrichtung, MITTE)
+
+    def test_der_zellenstil_geht_vor(self):
+        """Wer die Zelle ausrichtet, bestimmt - wie bei jedem Feld."""
+        from verteilerly.modell import Textstil
+
+        self.v.rangierung_anlegen(Aderadresse.parse("1 1a"), Aderadresse.parse("2 2a"))
+        self.v.leiste(1).stift(1).ader("a").stil_setzen(
+            "rangierung", Textstil(ausrichtung=RECHTS)
+        )
+        blatt = leistenblatt(self.projekt, 1)
+        self.assertEqual(self._text(blatt, "2 2a").ausrichtung, RECHTS)
+
+    def test_die_ueberschrift_bleibt_wie_die_vorlage_sie_setzt(self):
+        """Mittig stehen die Werte, nicht die Spaltenueberschrift."""
+        from verteilerly.blattvorlagen import STANDARD
+
+        blatt = leistenblatt(self.projekt, 1)
+        kopf = self._text(blatt, "Rangierung")
+        stelle = [s.feld for s in STANDARD.spalten].index("rangierung")
+        self.assertEqual(kopf.ausrichtung, STANDARD.spalten[stelle].ausrichtung)
 
 
 class TestKuerzungAnzeigen(unittest.TestCase):

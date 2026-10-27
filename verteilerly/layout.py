@@ -11,14 +11,15 @@ y nach unten.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
-from .blattvorlagen import LINKS, MITTE, RECHTS, STANDARD, Blattvorlage
+from .blattvorlagen import LINKS, MITTE, RECHTS, STANDARD, Blattvorlage, Spalte
 from .modell import (
     BLATTARTEN,
     BLATTBESCHRIFTUNG,
     BRIEFKOPF_FELDER,
     LEERER_STIL,
+    RANGIERUNG_TRENNER,
     STILFELDER,
     TEILBARE_FELDER,
     UNGETEILT,
@@ -50,6 +51,14 @@ FUELLUNG_KABEL = "#EFEFEF"
 # Wie breit eine DA-Zelle der Verteilerbelegung hoechstens werden darf,
 # gemessen an ihrer Hoehe: breiter gezogen wird sie zum Balken.
 BREITE_HOECHSTENS = 2.0
+# Wie viele Eintraege das Rangierfeld nebeneinander traegt - so viele
+# Felder hat die Zelle, und so viele Spalten hat sie in der Leistenansicht.
+RANGIERFELDER = 2
+# Felder, deren Eintraege mittig in ihrem Feld stehen. Das Rangierfeld
+# traegt zwei nebeneinander; mittig sind sie auseinanderzuhalten, auch
+# wenn eines von beiden leer bleibt.
+MITTIGE_FELDER = ("rangierung",)
+
 # Ab wie vielen Leisten je Bucht diese ein eigenes Blatt bekommt.
 # Zwei lange Buchten nebeneinander waeren nur noch Striche.
 LEISTEN_JE_BLATT = 13
@@ -1429,6 +1438,8 @@ def zeilenwerte(
         "ader": seite,
         "farbe": ader.farbe,
         "bezeichnung": ader.bezeichnung,
+        # Das ganze Feld als eine Zeile. Auf dem Blatt und in der Mappe
+        # steht es in zwei Feldern - die holt ``rangierfelder``.
         "rangierung": v.rangierfeld(
             _adresse(leiste_nr, stift_nr, seite), projekt.schreibweise,
             projekt.leisten_schreibweise,
@@ -1436,6 +1447,72 @@ def zeilenwerte(
         "bemerkung": ader.bemerkung,
         "kabel": "",
     }
+
+
+def rangierfelder(
+    projekt: Projekt, leiste_nr: int, stift_nr: int, seite: str
+) -> list[str]:
+    """Das Rangierfeld in seine Felder zerlegt - je Eintrag eines.
+
+    Getippt wird in zwei getrennte Zellen (``RANGIERSPALTEN`` der
+    Leistenansicht); auf dem Blatt und in der Mappe stehen dieselben
+    Eintraege nebeneinander, jeder in seinem Feld. Was ueber die Felder
+    hinausgeht, bleibt im letzten stehen - sichtbar bleibt alles.
+    """
+    eintraege = projekt.verteiler.rangiereintraege(
+        _adresse(leiste_nr, stift_nr, seite), projekt.schreibweise,
+        projekt.leisten_schreibweise,
+    )
+    felder = list(eintraege[:RANGIERFELDER - 1])
+    felder += [""] * (RANGIERFELDER - 1 - len(felder))
+    felder.append(RANGIERUNG_TRENNER.join(eintraege[RANGIERFELDER - 1:]))
+    return felder
+
+
+def wertlage(spalte: Spalte, stil: Textstil) -> str:
+    """Wie der Wert in seiner Zelle liegt.
+
+    Der Zellenstil geht vor, dann die Blattvorlage - nur die
+    ``MITTIGE_FELDER`` stehen von sich aus mittig: zwei Rangierungen
+    nebeneinander sind linksbuendig nicht mehr ihrem Feld zuzuordnen.
+    Die Ueberschrift der Spalte bleibt davon unberuehrt.
+    """
+    if stil.ausrichtung:
+        return stil.ausrichtung
+    return MITTE if spalte.feld in MITTIGE_FELDER else spalte.ausrichtung
+
+
+def rasterspalten(spalten) -> list[tuple[Spalte, int]]:
+    """Die Spalten fuer ein Raster: je Rangiereintrag eine eigene.
+
+    Excel kennt keine halbe Zelle. Damit die beiden Rangierungen auch
+    dort in getrennten Feldern stehen, bekommt jede ihre Spalte - zur
+    Haelfte des Anteils, die zweite ohne Ueberschrift. Damit verbindet
+    ``kopfgruppen`` beide unter einer Ueberschrift, und zwischen ihnen
+    steht kein Strich: die Zeile sieht aus wie bisher. Zurueck kommt je
+    Spalte ihre Stelle im Rangierfeld, sonst -1.
+    """
+    raster: list[tuple[Spalte, int]] = []
+    for spalte in spalten:
+        if spalte.feld not in MITTIGE_FELDER:
+            raster.append((spalte, -1))
+            continue
+        for stelle in range(RANGIERFELDER):
+            raster.append((
+                replace(
+                    spalte,
+                    anteil=spalte.anteil / RANGIERFELDER,
+                    ueberschrift=spalte.ueberschrift if stelle == 0 else "",
+                ),
+                stelle,
+            ))
+    return raster
+
+
+def rasterbreiten(raster: list[tuple[Spalte, int]], platz: float) -> list[float]:
+    """Die Breiten der Rasterspalten, auf den Platz gestreckt."""
+    summe = sum(spalte.anteil for spalte, _ in raster) or 1.0
+    return [platz * spalte.anteil / summe for spalte, _ in raster]
 
 
 def zeilenstile(
@@ -1514,19 +1591,26 @@ def leistenblatt(
             werte = zeilenwerte(projekt, leiste_nr, stift.nummer, seite)
             stile = zeilenstile(projekt, leiste_nr, stift.nummer, seite)
             teilungen = zeilenteilungen(projekt, leiste_nr, stift.nummer, seite)
+            rangier = rangierfelder(projekt, leiste_nr, stift.nummer, seite)
             x = rand
             for spalte, breite in zip(vorlage.spalten, breiten):
                 # Der Zellenstil geht vor; wo keiner gesetzt ist, gilt,
                 # was die Blattvorlage fuer die Spalte haelt.
                 stil = stile.get(spalte.feld, LEERER_STIL)
-                lage = stil.ausrichtung or spalte.ausrichtung
+                lage = wertlage(spalte, stil)
                 teilung = teilungen.get(spalte.feld, UNGETEILT)
                 # Eine geteilte Zelle traegt zwei Felder nebeneinander -
                 # ohne Strich dazwischen: auf dem Blatt soll es aussehen
-                # wie eine Zelle mit zwei Angaben.
-                for text, teil_x, teil_b in _zellenfelder(
-                    x + 1.5, breite - 3, werte.get(spalte.feld, ""), teilung
-                ):
+                # wie eine Zelle mit zwei Angaben. Das Rangierfeld traegt
+                # je Eintrag eines, gleich breit wie in der Leistenansicht.
+                felder = (
+                    _gleiche_felder(x + 1.5, breite - 3, rangier)
+                    if spalte.feld in MITTIGE_FELDER
+                    else _zellenfelder(
+                        x + 1.5, breite - 3, werte.get(spalte.feld, ""), teilung
+                    )
+                )
+                for text, teil_x, teil_b in felder:
                     blatt.text(
                         teil_x, y, teil_b, zeile_h, text,
                         vorlage.schrift_normal, lage,
@@ -1577,6 +1661,23 @@ def _zellenfelder(
     return [
         (text, x, max(links_b, 1.0)),
         (teilung.text, x + breite - rechts_b, rechts_b),
+    ]
+
+
+def _gleiche_felder(
+    x: float, breite: float, texte: list[str]
+) -> list[tuple[str, float, float]]:
+    """Gleich breite Felder nebeneinander, mit Luft dazwischen.
+
+    Ohne Strich: auf dem Blatt soll die Zelle aussehen wie eine, auch
+    wenn zwei Eintraege darin stehen.
+    """
+    if len(texte) < 2:
+        return [(texte[0] if texte else "", x, breite)]
+    luft = 1.0
+    feld_b = max((breite - luft * (len(texte) - 1)) / len(texte), 1.0)
+    return [
+        (text, x + i * (feld_b + luft), feld_b) for i, text in enumerate(texte)
     ]
 
 

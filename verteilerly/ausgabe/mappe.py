@@ -28,11 +28,16 @@ from ..layout import (
     deckblattzeilen,
     kabelfeld,
     kopfgruppen,
+    RANGIERFELDER,
+    rangierfelder,
+    rasterbreiten,
+    rasterspalten,
     STRICH,
     schriftfeldspalten,
     schriftfeldwerte,
     schriftfeldzeilen,
     umgebrochene_zeilen,
+    wertlage,
     zeilenstile,
     zeilenhoehe_leiste,
     zeilenteilungen,
@@ -357,8 +362,12 @@ def _leistenblatt(
     v = projekt.verteiler
     leiste = v.leiste(leiste_nr)
     blatt = mappe.create_sheet(_blatttitel(projekt, leiste_nr, "leisten"))
-    spalten = vorlage.spalten
-    breiten = vorlage.breiten(210.0 - 2 * vorlage.rand)
+    # Je Rangiereintrag eine eigene Spalte: im Raster gibt es keine
+    # halbe Zelle, und getrennte Felder sollen es sein wie in der
+    # Leistenansicht.
+    raster = rasterspalten(vorlage.spalten)
+    spalten = [spalte for spalte, _ in raster]
+    breiten = rasterbreiten(raster, 210.0 - 2 * vorlage.rand)
 
     for i, breite in enumerate(breiten, 1):
         blatt.column_dimensions[zeug.spaltenname(i)].width = spaltenbreite(breite)
@@ -392,12 +401,16 @@ def _leistenblatt(
             werte = zeilenwerte(projekt, leiste_nr, stift.nummer, seite)
             stile = zeilenstile(projekt, leiste_nr, stift.nummer, seite)
             teilungen = zeilenteilungen(projekt, leiste_nr, stift.nummer, seite)
-            for i, spalte in enumerate(spalten, 1):
+            rangier = rangierfelder(projekt, leiste_nr, stift.nummer, seite)
+            for i, (spalte, stelle) in enumerate(raster, 1):
                 # Eine geteilte Zelle gibt es im Raster nicht: beide
-                # Felder stehen hier hintereinander.
-                text = zellentext(
-                    werte.get(spalte.feld, ""),
-                    teilungen.get(spalte.feld, UNGETEILT),
+                # Felder stehen hier hintereinander. Das Rangierfeld
+                # dagegen hat je Eintrag seine eigene Spalte.
+                text = (
+                    rangier[stelle] if stelle >= 0 else zellentext(
+                        werte.get(spalte.feld, ""),
+                        teilungen.get(spalte.feld, UNGETEILT),
+                    )
                 )
                 feld = blatt.cell(row=zeile, column=i, value=text)
                 # Derselbe Zellenstil wie auf dem Blatt.
@@ -405,10 +418,16 @@ def _leistenblatt(
                 feld.font = zeug.schrift(
                     vorlage.schrift_normal, stil.fett, kursiv=stil.kursiv
                 )
-                feld.alignment = zeug.lage(stil.ausrichtung or spalte.ausrichtung)
-                # Unter der b-Zeile trennt ein kraeftiger Strich die Stifte.
+                feld.alignment = zeug.lage(wertlage(spalte, stil))
+                # Unter der b-Zeile trennt ein kraeftiger Strich die
+                # Stifte. Zwischen den Rangierfeldern steht keiner: im
+                # Raster sollen sie aussehen wie eine Zelle.
                 feld.border = zeug.rahmen(
-                    left=zeug.strich(LINIE_FEIN), right=zeug.strich(LINIE_FEIN),
+                    left=None if stelle > 0 else zeug.strich(LINIE_FEIN),
+                    right=(
+                        None if 0 <= stelle < RANGIERFELDER - 1
+                        else zeug.strich(LINIE_FEIN)
+                    ),
                     bottom=zeug.strich(LINIE, seite == "b"),
                 )
             # Dieselbe Zeilenhoehe wie auf dem Blatt: die Tabelle nutzt
@@ -431,7 +450,9 @@ def _kabelbloecke(
 ) -> None:
     """Die Kabelklammer: ueber ihre Zeilen verbunden, wie auf dem Blatt."""
     stelle = next(
-        (i for i, s in enumerate(vorlage.spalten, 1) if s.feld == "kabel"), None
+        (i for i, (s, _) in enumerate(rasterspalten(vorlage.spalten), 1)
+         if s.feld == "kabel"),
+        None,
     )
     if stelle is None:
         return
