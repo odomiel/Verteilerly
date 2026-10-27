@@ -8,17 +8,21 @@ Windows** laufen. Unter Linux entsteht stattdessen ein AppImage
 ## Voraussetzungen
 
 - Windows 10/11 (x64)
-- **Python 3** von python.org
+- **Python 3.14** von python.org (das Skript nimmt fest `py -3.14`, nicht die
+  neueste installierte Fassung; eine andere mit `-Python 3.15`)
 - Paketabhängigkeiten:
 
 ```powershell
-py -3 -m pip install --upgrade pip pyinstaller
-py -3 -m pip install -r requirements.txt
+py -3.14 -m pip install --upgrade pip pyinstaller
+py -3.14 -m pip install -r requirements.txt
 ```
 
 `requirements.txt` bringt PySide6 (Oberfläche und Vorschau), ReportLab (PDF),
 openpyxl (Excel) und PyYAML (Vorlagen, Kabeltypen). Alle vier liefern fertige
-Wheels für Windows; nachzubauen ist nichts.
+Wheels für Windows; nachzubauen ist nichts — solange die Python-Fassung nicht
+neuer ist als die Pakete. Für eine frisch erschienene (etwa 3.15) fehlen die
+Wheels oft noch; pip versucht dann zu kompilieren und scheitert ohne C++-Compiler.
+Das Skript bricht in dem Fall sofort ab, statt eine unvollständige `.exe` zu bauen.
 
 ## Bauen
 
@@ -27,9 +31,9 @@ powershell -ExecutionPolicy Bypass -File build_windows.ps1
 powershell -ExecutionPolicy Bypass -File build_windows.ps1 -Bump   # Version vorher erhöhen
 
 # oder direkt, ohne das Skript:
-py -3 werkzeuge\symboldatei.py
-py -3 werkzeuge\windowsangaben.py
-py -3 -m PyInstaller --noconfirm --distpath auslieferung Verteilerly.spec
+py -3.14 werkzeuge\symboldatei.py
+py -3.14 werkzeuge\windowsangaben.py
+py -3.14 -m PyInstaller --noconfirm --distpath auslieferung Verteilerly.spec
 ```
 
 Ergebnis: `auslieferung\Verteilerly_<Version>.exe` (z. B.
