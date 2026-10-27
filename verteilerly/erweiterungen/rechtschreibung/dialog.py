@@ -20,6 +20,11 @@ auch Zeit** (gemessen zweieinhalb Sekunden je Wort, Nachschlagen
 dagegen nichts), sie werden darum erst geholt, wenn jemand die Zeile
 anklickt - ebenfalls im Faden, ebenfalls ueber ein Signal.
 
+**Welcher Vorschlag genommen wird, ist eine Wahl**: der Druck auf den
+Knopf nimmt den ersten, sein Pfeilmenue zaehlt alle auf - gebaut wird es
+beim Zeilenwechsel, nicht beim Oeffnen, denn die Vorschlaege des
+Woerterbuchs treffen nach.
+
 **Uebernehmen aendert das Projekt** und laeuft darum durch
 ``programm.geaendert()``: nur so kommen Vorschau, Uebersicht und das
 Zuruecknehmen mit. Danach sind die uebrigen Beanstandungen derselben
@@ -40,7 +45,9 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QMenu,
     QPushButton,
+    QToolButton,
     QTreeWidget,
     QTreeWidgetItem,
     QVBoxLayout,
@@ -149,8 +156,22 @@ class RechtschreibDialog(PassenderDialog):
         self.liste.currentItemChanged.connect(lambda *_: self._zeile_gewechselt())
         self.liste.itemDoubleClicked.connect(lambda *_: self.springen())
 
-        self.uebernehmen_knopf = QPushButton(u("Vorschlag übernehmen"))
-        self.uebernehmen_knopf.clicked.connect(self.uebernehmen)
+        # Ein Knopf mit Pfeil wie beim Export: der Druck nimmt den ersten
+        # Vorschlag, der Pfeil laesst unter allen waehlen.
+        self.uebernehmen_knopf = QToolButton()
+        self.uebernehmen_knopf.setText(u("Vorschlag übernehmen"))
+        self.uebernehmen_knopf.setToolButtonStyle(
+            Qt.ToolButtonStyle.ToolButtonTextOnly
+        )
+        self.uebernehmen_knopf.setPopupMode(
+            QToolButton.ToolButtonPopupMode.MenuButtonPopup
+        )
+        self.uebernehmen_knopf.setToolTip(u(
+            "Trägt den ersten Vorschlag ein — der Pfeil daneben zeigt alle."
+        ))
+        self.vorschlagsmenue = QMenu(self.uebernehmen_knopf)
+        self.uebernehmen_knopf.setMenu(self.vorschlagsmenue)
+        self.uebernehmen_knopf.clicked.connect(lambda *_: self.uebernehmen())
         self.aufnehmen_knopf = QPushButton(u("Wort aufnehmen"))
         self.aufnehmen_knopf.setToolTip(u(
             "Trägt das Wort in die eigene Wortliste ein — das Wörterbuch "
@@ -385,6 +406,23 @@ class RechtschreibDialog(PassenderDialog):
         self.aufnehmen_knopf.setEnabled(
             befund is not None and befund.quelle == pruefer.WOERTERBUCH
         )
+        self._vorschlagsmenue_fuellen(self._zu(befund) if befund else ())
+
+    def _vorschlagsmenue_fuellen(self, vorschlaege) -> None:
+        """Jeder Vorschlag ein Eintrag - gebaut, wenn die Zeile wechselt.
+
+        Gebaut wird er **neben** dem Zeigen des Menues: ein offenes
+        ``QMenu.exec()`` haengt die Testreihe auf, so laesst sich die
+        Auswahl ohne eines pruefen.
+        """
+        self.vorschlagsmenue.clear()
+        geht = not self.programm.schreibgeschuetzt()
+        for vorschlag in vorschlaege:
+            eintrag = self.vorschlagsmenue.addAction(vorschlag)
+            eintrag.setEnabled(geht)
+            eintrag.triggered.connect(
+                lambda _=False, wahl=vorschlag: self.uebernehmen(wahl)
+            )
 
     def springen(self) -> None:
         """Schliesst den Dialog und zeigt die Stelle - wie die Suche."""
@@ -413,8 +451,12 @@ class RechtschreibDialog(PassenderDialog):
             u("„{0}“ steht jetzt in der eigenen Wortliste.").format(wort)
         )
 
-    def uebernehmen(self) -> None:
-        """Traegt den ersten Vorschlag ein und meldet die Aenderung."""
+    def uebernehmen(self, ersatz: str | None = None) -> None:
+        """Traegt einen Vorschlag ein und meldet die Aenderung.
+
+        Ohne Angabe ist es der erste - das ist der Druck auf den Knopf;
+        aus dem Pfeilmenue kommt der gewaehlte.
+        """
         befund = self._befund()
         vorschlaege = self._zu(befund) if befund is not None else ()
         if not vorschlaege:
@@ -422,7 +464,8 @@ class RechtschreibDialog(PassenderDialog):
         projekt = self.programm.projekt()
         if projekt is None or self.programm.schreibgeschuetzt():
             return
-        ersatz = vorschlaege[0]
+        if ersatz is None or ersatz not in vorschlaege:
+            ersatz = vorschlaege[0]
         if not pruefer.anwenden(projekt, befund, ersatz):
             self.stand.setText(u(
                 "Diese Stelle liegt über zwei Beschriftungsfeldern — "

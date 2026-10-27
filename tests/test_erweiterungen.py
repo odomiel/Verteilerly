@@ -1461,6 +1461,39 @@ class TestRechtschreibdialog(unittest.TestCase):
         self.assertEqual(aufgenommen.call_args[0][0], "Werkstat")
         self.assertEqual(self.dialog.liste.topLevelItemCount(), 0)
 
+    def test_das_pfeilmenue_zaehlt_jeden_vorschlag_auf(self):
+        befund = dataclasses.replace(
+            self._befund(), vorschlaege=("Werkstatt", "Werkstätte", "Werkstoff")
+        )
+        self._zeigen(befund)
+        self.assertEqual(
+            [a.text() for a in self.dialog.vorschlagsmenue.actions()],
+            ["Werkstatt", "Werkstätte", "Werkstoff"],
+        )
+
+    def test_aus_dem_pfeilmenue_kommt_der_gewaehlte_vorschlag(self):
+        """Der Knopf nimmt den ersten, das Menue den angeklickten."""
+        from verteilerly.modell import Aderadresse
+
+        self._zeigen(dataclasses.replace(
+            self._befund(), vorschlaege=("Werkstatt", "Werkstätte")
+        ))
+        with mock.patch.object(type(self.fenster), "_belegung_geaendert"):
+            self.dialog.vorschlagsmenue.actions()[1].trigger()
+        self.assertEqual(
+            self.projekt.verteiler.ader(Aderadresse(1, 1, "a")).bezeichnung,
+            "Melder Werkstätte",
+        )
+
+    def test_schreibgeschuetzt_bleibt_auch_das_pfeilmenue_aus(self):
+        self.fenster.schreibschutz_setzen(True)
+        self._zeigen(dataclasses.replace(
+            self._befund(), vorschlaege=("Werkstatt", "Werkstätte")
+        ))
+        self.assertFalse(
+            any(a.isEnabled() for a in self.dialog.vorschlagsmenue.actions())
+        )
+
     def test_aufnehmen_gibt_es_nur_fuer_das_woerterbuch(self):
         """Was LanguageTool meldet, ist keine Frage des Wortschatzes."""
         self._zeigen(self._befund())
@@ -1477,9 +1510,16 @@ class TestRechtschreibdialog(unittest.TestCase):
         self.assertEqual(self.dialog.liste.topLevelItem(0).text(4), "")
         self.assertFalse(self.dialog.uebernehmen_knopf.isEnabled())
 
-        self.dialog._vorschlaege_eingetroffen("Werkstat", ("Werkstatt",))
-        self.assertEqual(self.dialog.liste.topLevelItem(0).text(4), "Werkstatt")
+        self.dialog._vorschlaege_eingetroffen("Werkstat", ("Werkstatt", "Werkstoff"))
+        self.assertEqual(
+            self.dialog.liste.topLevelItem(0).text(4), "Werkstatt, Werkstoff"
+        )
         self.assertTrue(self.dialog.uebernehmen_knopf.isEnabled())
+        # Nachgereichte Vorschlaege stehen auch im Pfeilmenue.
+        self.assertEqual(
+            [a.text() for a in self.dialog.vorschlagsmenue.actions()],
+            ["Werkstatt", "Werkstoff"],
+        )
         with mock.patch.object(type(self.fenster), "_belegung_geaendert"):
             self.dialog.uebernehmen()
         from verteilerly.modell import Aderadresse
