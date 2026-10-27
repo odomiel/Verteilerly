@@ -1380,7 +1380,47 @@ Einstellungen sichern</i>) kommt es nicht mit; es gehört zu diesem Rechner. Wer
 gar kein Protokoll will, schaltet die Erweiterung unter <i>Erweiterungen
 verwalten</i> aus.</p>
 
-<h3>11.3 &nbsp; Erweiterungen verwalten</h3>
+<h3>11.3 &nbsp; Die Rechtschreibprüfung</h3>
+
+<p><b>Erweiterungen ▸ Rechtschreibung…</b> schickt die Texte des Verteilers an
+einen <b>LanguageTool</b>-Server und zeigt, was er beanstandet. Geprüft wird,
+was jemand geschrieben hat: <i>Bezeichnung</i> und <i>Bemerkung</i> der Adern,
+die <b>Kabelbeschriftungen</b> und die <b>Projektdaten</b> samt den eigenen
+Feldern. Farbe und Rangierfeld bleiben außen vor — <code>rt/bl</code> und
+<code>L3-2a</code> sind keine Wörter, und eine Prüfung, die jede Aderfarbe
+anstreicht, liest niemand zu Ende; aus demselben Grund bleibt ein Text ohne
+ein einziges Wort aus drei Buchstaben draußen (<code>V-01</code>,
+<code>12k</code>).</p>
+
+<p><b>Nichts geht von selbst hinaus.</b> Gefragt wird erst, wenn Sie auf
+<i>Prüfen</i> drücken — nicht beim Start, nicht beim Speichern. Steht oben eine
+auswärtige Adresse (von Haus aus der öffentliche Dienst
+<code>api.languagetool.org</code>), fragt das Programm vor der ersten Anfrage
+dorthin nach, ob die Texte den Rechner verlassen dürfen; die Zustimmung gilt
+genau dieser Adresse. Wer seine Verteiler im Haus behalten will, betreibt
+LanguageTool selbst und trägt dessen Adresse ein, etwa
+<code>http://localhost:8081/v2/check</code> — dann geht nichts ins Netz.
+Gesendet werden der Text und die Sprache, sonst nichts.</p>
+
+<p>Die Liste nennt je Beanstandung <b>Ort</b>, <b>Feld</b>, das beanstandete
+Wort, den <b>Hinweis</b> und die <b>Vorschläge</b>. <i>Vorschlag übernehmen</i>
+trägt den ersten Vorschlag ein — eine Änderung wie jede andere, also mit
+<b>Rückgängig</b> zurückzuholen. Die übrigen Beanstandungen derselben Zelle
+fallen danach aus der Liste: ihr Text ist ein anderer geworden, ein neuer Lauf
+findet sie wieder. <i>Zur Stelle springen</i> schließt den Dialog und stellt
+die Marke auf die Zelle, wie die Suche es tut; ein Doppelklick tut dasselbe.
+Bei einer <b>schreibgeschützt</b> geöffneten Datei bleibt <i>Übernehmen</i>
+aus, gelesen wird trotzdem. Was über die Fuge einer <b>geteilten Zelle</b>
+hinweg beanstandet wird, lässt sich nicht übernehmen — es liegt in zwei
+Feldern; dort hilft nur die Hand.</p>
+
+<p>Die Texte gehen <b>gebündelt</b> über die Leitung, nicht Zelle für Zelle:
+eine Anfrage je rund 8000 Zeichen, durch Leerzeilen getrennt. Server und
+Sprache werden gemerkt (<code>Verteilerly.conf</code>, Gruppe
+<code>rechtschreibung</code>). Ist nichts zu erreichen, steht der Grund neben
+dem Knopf — geprüft wird dann eben nicht, das Programm läuft weiter.</p>
+
+<h3>11.4 &nbsp; Erweiterungen verwalten</h3>
 
 <p><b>Erweiterungen ▸ Erweiterungen verwalten…</b> listet jede gefundene
 Erweiterung mit Haken, <b>Version</b>, Herkunft und Beschreibung — oder mit dem
@@ -1401,7 +1441,7 @@ trägt darum dessen Version — das Datum des Releases,
 will: was in der Spalte
 steht, ist ihre eigene Angabe. Nennt sie keine, steht dort ein Strich.</p>
 
-<h3>11.4 &nbsp; Eine eigene Erweiterung schreiben</h3>
+<h3>11.5 &nbsp; Eine eigene Erweiterung schreiben</h3>
 
 <p>Eine Erweiterung ist eine Python-Datei — oder ein Ordner mit
 <code>__init__.py</code> — im Ordner <code>erweiterungen</code> des
@@ -1455,6 +1495,16 @@ neu ein.</td></tr>
 <tr><td><code>blattvorlagenordner()</code></td><td>Wohin eigene Blattvorlagen
 geschrieben werden.</td></tr>
 <tr><td><code>meldung(text)</code></td><td>Ein Satz in der Statuszeile.</td></tr>
+<tr><td><code>zur_fundstelle(fund)</code></td><td>Zeigt eine Stelle des
+Projekts (eine <code>suche.Fundstelle</code>) — wie die Suche es tut.</td></tr>
+<tr><td><code>geaendert()</code></td><td>Sagt dem Programm, dass sich am
+Projekt etwas geändert hat. Nur so kommen Vorschau, Übersicht und das
+Zurücknehmen mit.</td></tr>
+<tr><td><code>schreibgeschuetzt()</code></td><td>Ist die Datei
+schreibgeschützt geöffnet? Dann nichts ändern.</td></tr>
+<tr><td><code>einstellungen()</code></td><td>Die
+<code>Verteilerly.conf</code> — eigene Schlüssel gehören in eine eigene
+Gruppe.</td></tr>
 <tr><td><code>farben()</code></td><td>Der Farbsatz des Erscheinungsbilds.</td></tr>
 <tr><td><code>fenster</code></td><td>Das Hauptfenster, etwa als Eltern eines
 eigenen Dialogs.</td></tr>
@@ -1512,8 +1562,9 @@ und sie lässt sich unter <i>Erweiterungen verwalten</i> ausschalten.</p>
 <tr><td>Blattvorlage prüfen…</td><td></td></tr>
 <tr><td>Kabeltypen prüfen…</td><td></td></tr>
 <tr><td>Projektdateien verknüpfen…</td><td></td></tr>
-<tr><td rowspan="3"><b>Erweiterungen</b></td><td>Blattvorlagen-Editor…</td><td></td></tr>
+<tr><td rowspan="4"><b>Erweiterungen</b></td><td>Blattvorlagen-Editor…</td><td></td></tr>
 <tr><td>Protokoll…</td><td></td></tr>
+<tr><td>Rechtschreibung…</td><td></td></tr>
 <tr><td>Erweiterungen verwalten…</td><td></td></tr>
 <tr><td rowspan="3"><b>Hilfe</b></td><td>Dokumentation</td><td>F1</td></tr>
 <tr><td>Nach Updates sehen…</td><td></td></tr>

@@ -70,6 +70,13 @@ out. Nothing is downloaded, nothing is sent beyond the request; switched off
 it **never** goes online. *Help ▸ Look for updates…* asks at the press of a
 button and says in every case what came of it.
 
+**Spell check** (*Extensions ▸ Spell check…*): designations, remarks, cable
+names and project data go to a **LanguageTool** server at the press of a
+button, and what it objects to stands in a list with its suggestion — to apply
+or to jump to. Nothing goes out by itself: before the first request to an
+outside address you are asked, and whoever wants to keep their frames in the
+house enters a LanguageTool server of their own.
+
 **And for everyday work.** Searching across the whole frame, undo and redo of
 the last fifty steps, **opening read-only**, a light and a dark appearance,
 backup and restore of all templates and settings, and a log that says what the

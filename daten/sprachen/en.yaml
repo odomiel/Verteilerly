@@ -805,6 +805,38 @@ Unerwarteter Fehler: Unexpected error
   The program keeps running. What exactly happened is in the log:
 
   {1}'
+# Rechtschreibprüfung (Erweiterung)
+'&Rechtschreibung…': '&Spell check…'
+Rechtschreibung: Spell check
+Rechtschreibprüfung: Spell check
+Bezeichnungen, Bemerkungen, Kabelnamen und Projektdaten von einem LanguageTool-Server prüfen lassen — öffentlich oder im eigenen Netz: Have designations, remarks, cable names and project data checked by a LanguageTool server — the public one or your own
+Die Texte des Verteilers von LanguageTool prüfen lassen: Have the texts of the frame checked by LanguageTool
+Kein Verteiler geöffnet: No frame open
+'Server:': 'Server:'
+'Sprache:': 'Language:'
+Ein eigener LanguageTool-Server, etwa http://localhost:8081/v2/check, hält die Texte im Haus.: A LanguageTool server of your own, such as http://localhost:8081/v2/check, keeps the texts in the house.
+Prüfen: Check
+Geprüft wird erst auf Knopfdruck.: Nothing is checked until you press the button.
+Ort: Place
+Hinweis: Note
+Beanstandet: Objected to
+Vorschlag: Suggestion
+Vorschlag übernehmen: Apply suggestion
+Zur Stelle springen: Jump to the place
+Hier steht kein Text, der zu prüfen wäre.: There is no text here that could be checked.
+'{0} Texte gehen zur Prüfung an {1} …': '{0} texts are going to {1} to be checked …'
+Texte senden?: Send texts?
+"Zum Prüfen gehen {0} Texte dieses Verteilers an\n{1}\n\nSie verlassen damit diesen Rechner. Wer das nicht möchte, trägt einen eigenen LanguageTool-Server ein.\n\nSenden?": "To be checked, {0} texts of this frame are sent to\n{1}\n\nThey leave this computer in doing so. If you do not want that, enter a LanguageTool server of your own.\n\nSend?"
+Es wurde nichts gesendet.: Nothing was sent.
+Nichts zu beanstanden.: Nothing to object to.
+'{0} Stellen beanstandet.': '{0} places objected to.'
+Diese Stelle liegt über zwei Beschriftungsfeldern — bitte von Hand ändern.: This place lies across two labelling fields — please change it by hand.
+'„{0}“ wurde übernommen.': '“{0}” was applied.'
+'Der Server antwortet mit {0}.': 'The server answers with {0}.'
+'Der Server ist nicht zu erreichen ({0}). Bitte prüfen sie die Internetverbindung oder die Adresse.': 'The server cannot be reached ({0}). Please check the internet connection or the address.'
+Die Antwort ist nicht zu lesen — steht unter dieser Adresse ein LanguageTool-Server?: The answer cannot be read — is there a LanguageTool server at this address?
+Auf diesem Rechner sind keine Wurzelzertifikate zu finden — eine gesicherte Verbindung ist damit nicht zu prüfen.: No root certificates are to be found on this computer — a secured connection cannot be verified with that.
+
 'Buchten je Blatt:': 'Bays per sheet:'
 Die Kennung {0!r} trägt schon eine eingebaute Erweiterung: The identifier {0!r} already belongs to a built-in extension
 Die Wahl der Erweiterungen gilt ab dem nächsten Start: The choice of extensions applies from the next start

@@ -63,11 +63,12 @@ def zertifikatsspeicher() -> tuple[str | None, str | None]:
     return datei, ordner
 
 
-def _umgebung():
+def umgebung():
     """Ein TLS-Umfeld mit den Zertifikaten des Rechners - oder nichts.
 
     Unter Windows kennt Python den Speicher des Systems selbst; dort
-    genuegt die Vorgabe.
+    genuegt die Vorgabe. Jede Anfrage des Programms geht ueber diese
+    eine Stelle - die Fassungspruefung wie die Rechtschreibpruefung.
     """
     import ssl
 
@@ -123,7 +124,7 @@ def nachsehen(wartezeit: float = WARTEZEIT) -> dict | None:
     if not erlaubt():
         return None
     try:
-        umfeld = _umgebung()
+        umfeld = umgebung()
         if umfeld is None:
             return None
         with urllib.request.urlopen(bitte, timeout=wartezeit, context=umfeld) as antwort:

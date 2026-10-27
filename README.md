@@ -78,6 +78,13 @@ gesendet nichts außer der Anfrage; abgeschaltet geht es **nie** ins Netz.
 *Hilfe ▸ Nach Updates sehen…* fragt auf Knopfdruck und sagt in jedem Fall, was
 herauskam.
 
+**Rechtschreibung prüfen** (*Erweiterungen ▸ Rechtschreibung…*): Bezeichnungen,
+Bemerkungen, Kabelnamen und Projektdaten gehen auf Knopfdruck an einen
+**LanguageTool**-Server, und was er beanstandet, steht mit Vorschlag in einer
+Liste — zum Übernehmen oder zum Hinspringen. Von selbst geht nichts hinaus:
+vor der ersten Anfrage an eine auswärtige Adresse wird gefragt, und wer seine
+Verteiler im Haus behalten will, trägt einen eigenen LanguageTool-Server ein.
+
 **Dazu im Alltag.** Suchen über den ganzen Verteiler, Zurücknehmen und
 Wiederherstellen der letzten fünfzig Schritte, **schreibgeschützt öffnen**,
 helles und dunkles Erscheinungsbild, Sichern und Einspielen aller Vorlagen und

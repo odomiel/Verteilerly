@@ -64,7 +64,7 @@ class TestNachsehen(unittest.TestCase):
         frei = mock.patch.dict("os.environ", {aktualisierung.OHNE_PRUEFUNG: ""})
         frei.start()
         self.addCleanup(frei.stop)
-        umfeld = mock.patch.object(aktualisierung, "_umgebung", lambda: object())
+        umfeld = mock.patch.object(aktualisierung, "umgebung", lambda: object())
         umfeld.start()
         self.addCleanup(umfeld.stop)
 
@@ -94,7 +94,7 @@ class TestNachsehen(unittest.TestCase):
 
     def test_ohne_zertifikate_wird_nicht_gefragt(self):
         """Lieber nicht pruefen als ungeprueft verbinden."""
-        with mock.patch.object(aktualisierung, "_umgebung", lambda: None), \
+        with mock.patch.object(aktualisierung, "umgebung", lambda: None), \
                 mock.patch("urllib.request.urlopen") as gefragt:
             self.assertIsNone(aktualisierung.nachsehen())
             gefragt.assert_not_called()
@@ -162,7 +162,7 @@ class TestZertifikate(unittest.TestCase):
         with mock.patch.object(aktualisierung, "zertifikatsspeicher",
                                return_value=(None, None)), \
                 mock.patch("os.name", "posix"):
-            self.assertIsNone(aktualisierung._umgebung())
+            self.assertIsNone(aktualisierung.umgebung())
 
 
 if __name__ == "__main__":

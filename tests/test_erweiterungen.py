@@ -277,7 +277,8 @@ class TestImHauptfenster(unittest.TestCase):
         texte = [a.text().replace("&", "") for a in eintraege if not a.isSeparator()]
         self.assertEqual(
             texte,
-            ["Blattvorlagen-Editor…", "Protokoll…", "Erweiterungen verwalten…"],
+            ["Blattvorlagen-Editor…", "Protokoll…", "Rechtschreibung…",
+             "Erweiterungen verwalten…"],
         )
         editor = next(a for a in eintraege if "Blattvorlagen" in a.text())
         self.assertEqual(editor.property("erweiterung"), "blattvorlageneditor")
@@ -1270,6 +1271,123 @@ class TestSchriftfeldImEditor(unittest.TestCase):
         gelesen = blattvorlage_aus_yaml(inhalt)
         self.assertEqual(gelesen.schriftfeld, d.vorlage().schriftfeld)
         self.assertEqual(gelesen.schriftfeld_anteile, (3.0, 1.0))
+
+
+class TestRechtschreibdialog(unittest.TestCase):
+    """Der Dialog der Rechtschreibpruefung - ohne eine einzige Anfrage.
+
+    Gefragt wird hier nie: die Befunde werden von Hand gesetzt. Geprueft
+    wird, was der Dialog daraus macht - und dass vor dem ersten Senden
+    an eine auswaertige Adresse gefragt wird.
+    """
+
+    def setUp(self):
+        from verteilerly.erweiterungen.rechtschreibung import (
+            SCHLUESSEL_SERVER, SCHLUESSEL_SPRACHE, SCHLUESSEL_ZUGESTIMMT,
+        )
+        from verteilerly.erweiterungen.rechtschreibung.dialog import RechtschreibDialog
+        from verteilerly.gui.erweiterungen import Schnittstelle
+        from verteilerly.gui.hauptfenster import Hauptfenster
+        from verteilerly.modell import Aderadresse, Projekt, Verteiler
+
+        from . import einstellung_bewahren
+
+        self.Dialog = RechtschreibDialog
+        self.fenster = Hauptfenster()
+        bauteil_zurueckgeben(self, self.fenster)
+        for schluessel in (SCHLUESSEL_SERVER, SCHLUESSEL_SPRACHE, SCHLUESSEL_ZUGESTIMMT):
+            einstellung_bewahren(self, self.fenster.einstellungen, schluessel)
+
+        verteiler = Verteiler.aus_geometrie(1, 2, 4, name="Muster")
+        verteiler.ader(Aderadresse(1, 1, "a")).bezeichnung = "Melder Werkstat"
+        self.projekt = Projekt(verteiler=verteiler)
+        self.fenster._projekt_setzen(self.projekt, None)
+
+        menue = next(
+            a.menu() for a in self.fenster.menuBar().actions()
+            if a.text().replace("&", "") == "Erweiterungen"
+        )
+        self.schnittstelle = Schnittstelle(
+            self.fenster, menue, self.fenster._erweiterungstrenner,
+            Fund("rechtschreibung", "Rechtschreibprüfung"),
+        )
+        self.dialog = RechtschreibDialog(self.schnittstelle, self.fenster)
+        bauteil_zurueckgeben(self, self.dialog)
+
+    def _befund(self, wort="Werkstat", ersatz="Werkstatt"):
+        from verteilerly.erweiterungen.rechtschreibung import pruefer
+
+        stelle = next(
+            s for s in pruefer.zu_pruefen(self.projekt) if wort in s.text
+        )
+        return pruefer.Befund(
+            stelle, stelle.text.index(wort), len(wort), "Tippfehler", (ersatz,)
+        )
+
+    def _zeigen(self, *befunde):
+        self.dialog._ergebnis(list(befunde), "")
+
+    def test_die_liste_zeigt_ort_wort_und_vorschlag(self):
+        self._zeigen(self._befund())
+        eintrag = self.dialog.liste.topLevelItem(0)
+        self.assertIn("Leiste", eintrag.text(0))
+        self.assertEqual(eintrag.text(2), "Werkstat")
+        self.assertEqual(eintrag.text(4), "Werkstatt")
+        self.assertIn("1", self.dialog.stand.text())
+
+    def test_uebernehmen_aendert_das_projekt_und_meldet_es(self):
+        from verteilerly.modell import Aderadresse
+
+        self._zeigen(self._befund())
+        with mock.patch.object(
+            type(self.fenster), "_belegung_geaendert"
+        ) as gemeldet:
+            self.dialog.uebernehmen()
+        self.assertTrue(gemeldet.called)
+        self.assertEqual(
+            self.projekt.verteiler.ader(Aderadresse(1, 1, "a")).bezeichnung,
+            "Melder Werkstatt",
+        )
+        # Die erledigte Stelle steht nicht mehr in der Liste.
+        self.assertEqual(self.dialog.liste.topLevelItemCount(), 0)
+
+    def test_schreibgeschuetzt_bleibt_uebernehmen_aus(self):
+        self._zeigen(self._befund())
+        self.fenster.schreibschutz_setzen(True)
+        self.dialog._knoepfe_auffrischen()
+        self.assertFalse(self.dialog.uebernehmen_knopf.isEnabled())
+        self.assertTrue(self.dialog.springen_knopf.isEnabled())
+
+    def test_springen_zeigt_die_stelle(self):
+        befund = self._befund()
+        self._zeigen(befund)
+        with mock.patch.object(type(self.fenster), "_zur_fundstelle") as gezeigt:
+            self.dialog.springen()
+        self.assertEqual(gezeigt.call_args[0][0], befund.stelle)
+
+    def test_vor_dem_ersten_senden_wird_gefragt(self):
+        from verteilerly.erweiterungen.rechtschreibung import (
+            SCHLUESSEL_ZUGESTIMMT, dialog as dialogmodul, pruefer,
+        )
+
+        self.dialog.serverfeld.setText(pruefer.SERVER)
+        with mock.patch.object(
+            dialogmodul, "frage", return_value=dialogmodul.Knopf.No
+        ) as gefragt, mock.patch.object(pruefer, "pruefen") as geprueft:
+            self.dialog.pruefen()
+        self.assertTrue(gefragt.called)
+        self.assertFalse(geprueft.called)
+        self.assertFalse(self.fenster.einstellungen.value(SCHLUESSEL_ZUGESTIMMT, ""))
+
+    def test_der_eigene_server_wird_nicht_erst_erfragt(self):
+        from verteilerly.erweiterungen.rechtschreibung import dialog as dialogmodul
+
+        self.dialog.serverfeld.setText("http://localhost:8081/v2/check")
+        with mock.patch.object(dialogmodul, "frage") as gefragt, \
+                mock.patch.object(dialogmodul.threading, "Thread") as faden:
+            self.dialog.pruefen()
+        self.assertFalse(gefragt.called)
+        self.assertTrue(faden.called)
 
 
 if __name__ == "__main__":

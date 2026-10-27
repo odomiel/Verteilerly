@@ -15,6 +15,11 @@ jemand von Hand eingetragen hat:
 Hier steht nur das Suchen: kein Qt, keine Anzeige. Die Oberflaeche macht
 aus einer Fundstelle einen Eintrag in der Liste und springt hin
 (``gui/dialoge.py``, ``gui/hauptfenster.py``).
+
+Den Rundgang durch all diese Texte gibt es **einmal** - ``textstellen()``.
+Das Suchen siebt daraus, was zum Wort passt; die Rechtschreibpruefung
+(Erweiterung ``rechtschreibung``) schickt dieselben Stellen zum Pruefen.
+Wer ein Feld einfuehrt, traegt es hier nach, und beide finden es.
 """
 
 from __future__ import annotations
@@ -93,7 +98,21 @@ def suchen(
     gesucht = (wort or "").strip().casefold()
     if len(gesucht) < 2:
         return []
+    return [
+        stelle for stelle in textstellen(projekt, schreibweise)
+        if _passt(stelle.text, gesucht)
+    ]
 
+
+def textstellen(
+    projekt: Projekt, schreibweise: Schreibweise | None = None
+) -> list[Fundstelle]:
+    """Jede Stelle des Projekts, an der Text steht - ungesiebt.
+
+    In der Reihenfolge des Verteilers: erst die Adern, dann die Kabel,
+    dann die Projektdaten. **Leere Felder bleiben weg** - an ihnen ist
+    weder etwas zu finden noch zu pruefen.
+    """
     verteiler = projekt.verteiler
     gefunden: list[Fundstelle] = []
 
@@ -103,13 +122,11 @@ def suchen(
                 for seite in ("a", "b"):
                     adresse = Aderadresse(leiste.nummer, stift.nummer, seite)
                     gefunden.extend(
-                        _in_der_ader(
-                            projekt, bucht.nummer, adresse, gesucht, schreibweise
-                        )
+                        _in_der_ader(projekt, bucht.nummer, adresse, schreibweise)
                     )
 
     for kabel in verteiler.kabel:
-        if not _passt(kabel.beschriftung, gesucht):
+        if not (kabel.beschriftung or "").strip():
             continue
         anfang = kabel.abschnitte[0] if kabel.abschnitte else None
         leisten = sorted({teil.leiste for teil in kabel.abschnitte})
@@ -136,7 +153,7 @@ def suchen(
             )
         )
 
-    gefunden.extend(_in_den_projektdaten(projekt, gesucht))
+    gefunden.extend(_in_den_projektdaten(projekt))
     return gefunden
 
 
@@ -144,7 +161,6 @@ def _in_der_ader(
     projekt: Projekt,
     bucht: int,
     adresse: Aderadresse,
-    gesucht: str,
     schreibweise: Schreibweise | None,
 ) -> list[Fundstelle]:
     """Die vier Felder einer Ader - die geteilte Zelle mit beiden Texten."""
@@ -164,7 +180,7 @@ def _in_der_ader(
                 # und in der Liste stehen sie so, wie sie auf dem Blatt
                 # nebeneinander stuenden.
                 text = f"{text} {zweiter}".strip()
-        if _passt(text, gesucht):
+        if (text or "").strip():
             gefunden.append(
                 Fundstelle(
                     bereich=ADER,
@@ -179,14 +195,14 @@ def _in_der_ader(
     return gefunden
 
 
-def _in_den_projektdaten(projekt: Projekt, gesucht: str) -> list[Fundstelle]:
+def _in_den_projektdaten(projekt: Projekt) -> list[Fundstelle]:
     """Briefkopf und eigene Felder - dort steht der Kunde, nicht in der Leiste."""
     gefunden = []
     for feld, beschriftung, wert in (
         ("verteilername", u("Verteilername"), projekt.verteiler.name),
         ("verteilernummer", u("Verteilernummer"), projekt.verteiler.nummer),
     ):
-        if _passt(wert, gesucht):
+        if (wert or "").strip():
             gefunden.append(
                 Fundstelle(
                     bereich=PROJEKTDATEN,
@@ -197,7 +213,7 @@ def _in_den_projektdaten(projekt: Projekt, gesucht: str) -> list[Fundstelle]:
                 )
             )
     for name, wert in projekt.briefkopf.items():
-        if _passt(wert, gesucht):
+        if (wert or "").strip():
             gefunden.append(
                 Fundstelle(
                     bereich=PROJEKTDATEN,
@@ -208,7 +224,7 @@ def _in_den_projektdaten(projekt: Projekt, gesucht: str) -> list[Fundstelle]:
                 )
             )
     for name, wert in projekt.eigene_felder.items():
-        if _passt(wert, gesucht):
+        if (wert or "").strip():
             gefunden.append(
                 Fundstelle(
                     bereich=PROJEKTDATEN,

@@ -104,6 +104,32 @@ class Schnittstelle:
         """Ein Satz in der Statuszeile."""
         self._fenster.statusBar().showMessage(text, dauer)
 
+    def zur_fundstelle(self, fund) -> None:
+        """Zeigt eine Stelle des Projekts - wie die Suche es tut.
+
+        ``fund`` ist eine ``suche.Fundstelle``: die Leistenansicht
+        schaltet auf ihre Leiste und stellt die Marke auf die Zelle, eine
+        Stelle in den Projektdaten oeffnet deren Dialog.
+        """
+        self._fenster._zur_fundstelle(fund)
+
+    def geaendert(self) -> None:
+        """Sagt dem Programm, dass sich am Projekt etwas geaendert hat.
+
+        Nur so kommen Vorschau, Uebersicht, Titelzeile und das
+        Zuruecknehmen mit: was daran vorbeigeht, laesst sich nicht
+        zurueckholen.
+        """
+        self._fenster._belegung_geaendert()
+
+    def schreibgeschuetzt(self) -> bool:
+        """Ist die offene Datei schreibgeschuetzt geoeffnet?"""
+        return bool(getattr(self._fenster, "schreibgeschuetzt", False))
+
+    def einstellungen(self):
+        """Die ``Verteilerly.conf`` - fuer eigene Schluessel in eigener Gruppe."""
+        return self._fenster.einstellungen
+
 
 class ErweiterungenDialog(PassenderDialog):
     """Erweiterungen ein- und ausschalten.
