@@ -2659,6 +2659,61 @@ class TestKabelspalte(unittest.TestCase):
             [(4, 8), (14, 2), (16, 4)],
         )
 
+    def test_wo_ein_kabel_endet_faellt_ein_strich(self):
+        """Der Verteiler hat Kabel auf DA 3-6, 8 und 9-10."""
+        modell = self.ansicht.modell
+        grenzen = [z for z in range(modell.rowCount()) if modell.kabelgrenze(z)]
+        # Je Doppelader zwei Zeilen: DA 3 beginnt bei 4, DA 7 bei 12 …
+        self.assertEqual(grenzen, [4, 12, 14, 16])
+
+    def test_zwischen_zwei_freien_doppeladern_endet_nichts(self):
+        modell = self.ansicht.modell
+        self.assertFalse(modell.kabelgrenze(2))   # DA 1 auf DA 2, beide frei
+        self.assertFalse(modell.kabelgrenze(0))   # ganz oben ist keine Grenze
+
+    def test_innerhalb_eines_kabels_faellt_keiner(self):
+        modell = self.ansicht.modell
+        for zeile in (5, 6, 7, 8, 9, 10, 11):     # mitten im ersten Kabel
+            with self.subTest(zeile=zeile):
+                self.assertFalse(modell.kabelgrenze(zeile))
+
+    def test_zwei_stuecke_derselben_leitung_trennt_er_auch(self):
+        """Sonst saehe ein geteilt aufgelegtes Kabel wie ein Stueck aus."""
+        verteiler = Verteiler.aus_geometrie(1, 1, 8, name="Geteilt")
+        verteiler.kabel_anlegen_mehrteilig(
+            "Zwei Stücke", [Kabelabschnitt(1, 1, 2), Kabelabschnitt(1, 3, 2)]
+        )
+        self.fenster._projekt_setzen(Projekt(verteiler=verteiler), None)
+        modell = self.fenster.leistenansicht.modell
+        self.assertTrue(modell.kabelgrenze(4))    # DA 3: das zweite Stueck
+        self.assertFalse(modell.kabelgrenze(2))   # DA 2: dasselbe Stueck
+
+    def test_der_strich_wird_auch_gezeichnet(self):
+        """Gegenprobe am Bild: die oberste Zeile der Zelle wird dunkler."""
+        from PySide6.QtCore import QRect
+        from PySide6.QtGui import QPainter, QPixmap
+        from PySide6.QtWidgets import QStyleOptionViewItem
+
+        from verteilerly.gui.leistenansicht import SPALTE_FARBE
+
+        tabelle = self.ansicht.tabelle
+        delegat = tabelle.itemDelegate()
+
+        def oberste_zeile(zeile):
+            bild = QPixmap(60, 20)
+            bild.fill()
+            lage = QStyleOptionViewItem()
+            lage.rect = QRect(0, 0, 60, 20)
+            maler = QPainter(bild)
+            delegat.paint(maler, lage, tabelle.model().index(zeile, SPALTE_FARBE))
+            maler.end()
+            abbild = bild.toImage()
+            return [abbild.pixelColor(x, 0).value() for x in range(60)]
+
+        mit = oberste_zeile(4)      # hier faengt das erste Kabel an
+        ohne = oberste_zeile(6)     # mitten im Kabel
+        self.assertLess(min(mit), min(ohne), "kein Strich zu sehen")
+
     def test_eine_andere_leiste_hat_ihre_eigenen_bloecke(self):
         """Das mehrteilige Kabel fängt auf Leiste 2 bei DA 1 an."""
         self.ansicht.leiste_zeigen(2)

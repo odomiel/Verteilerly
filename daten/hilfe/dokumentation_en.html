@@ -221,6 +221,15 @@ characters. Wrapping happens at word boundaries; only a single word that is
 wider than the column anyway breaks in the middle. Typing still happens in
 that same cell.</p>
 
+<p><b>A line shows where a cable ends.</b> Between the last pair of a line and
+the next row the strip view draws a separator across the <b>full width</b> —
+otherwise the end would only be visible in the cable column, and while
+labelling the wires you are not looking there. It is drawn where a line ends
+and free pairs follow as well, and between <b>two pieces of the same line</b>:
+they are terminated apart and should look apart. Between two free pairs
+nothing is drawn. The line belongs to the editing view — it does not appear on
+the sheet, in the PDF or in the workbook.</p>
+
 <p><b>Undo</b> — the two arrows ↶ and ↷ next to the strip selector take back
 the last change to the frame and bring it back again; so do <b>Edit ▸ Undo</b>
 (Ctrl+Z) and <b>Redo</b> (Ctrl+Y). The last 50 steps are kept — every change to

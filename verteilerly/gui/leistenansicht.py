@@ -564,6 +564,38 @@ class LeistenModell(QAbstractTableModel):
                 )
         return bloecke
 
+    def _abschnitt_der_zeile(self, zeile: int):
+        """Welcher Kabelabschnitt in dieser Zeile liegt - oder nichts."""
+        if self.verteiler is None or self.leiste_nr is None:
+            return None
+        stift_nr = zeile // 2 + 1
+        kabel = self.verteiler.kabel_an(self.leiste_nr, stift_nr)
+        if kabel is None:
+            return None
+        for abschnitt in kabel.abschnitte:
+            if abschnitt.belegt(self.leiste_nr, stift_nr):
+                return abschnitt
+        return None
+
+    def kabelgrenze(self, zeile: int) -> bool:
+        """Endet ueber dieser Zeile ein Kabel?
+
+        Verglichen wird der **Abschnitt**, nicht das Kabel: liegt
+        dieselbe Leitung in zwei Stuecken untereinander, gehoert zwischen
+        sie genauso ein Strich wie zwischen zwei Leitungen. Zwischen zwei
+        freien Doppeladern dagegen endet nichts.
+
+        Die Entscheidung steht neben dem Zeichnen, damit ein Test sie
+        pruefen kann, ohne Pixel zu vergleichen.
+        """
+        if zeile <= 0:
+            return False
+        hier = self._abschnitt_der_zeile(zeile)
+        darueber = self._abschnitt_der_zeile(zeile - 1)
+        if hier is None and darueber is None:
+            return False
+        return hier is not darueber
+
     def _kabeltext(self, stift_nr: int, seite: str) -> str:
         """Die Beschriftung steht nur an der ersten Zeile des Kabelblocks."""
         kabel = self._kabelanfang(stift_nr, seite)
@@ -835,6 +867,32 @@ class EingabeDelegat(QStyledItemDelegate):
         maler.restore()
 
     def paint(self, maler, option, index) -> None:
+        self._inhalt_zeichnen(maler, option, index)
+        self._kabelgrenze_zeichnen(maler, option, index)
+
+    def _kabelgrenze_zeichnen(self, maler, option, index) -> None:
+        """Ein Strich dort, wo ein Kabel endet und das naechste anfaengt.
+
+        Auf der Leiste ist sonst nur in der Kabelspalte zu sehen, wie
+        weit eine Leitung reicht - zwischen den Adern laeuft das
+        Zeilengitter durch wie ueberall. Der Strich geht darum ueber die
+        **ganze Zeile** und wird **nach** dem Inhalt gezogen, sonst
+        deckte ihn der Hintergrund der naechsten Zelle zu.
+        """
+        modell = index.model()
+        grenze = getattr(modell, "kabelgrenze", None)
+        if grenze is None or not grenze(index.row()):
+            return
+        maler.save()
+        farbe = QColor(option.palette.color(
+            QPalette.ColorGroup.Normal, QPalette.ColorRole.Text))
+        farbe.setAlpha(160)
+        maler.setPen(QPen(farbe, 2))
+        oben = option.rect.top()
+        maler.drawLine(option.rect.left(), oben, option.rect.right(), oben)
+        maler.restore()
+
+    def _inhalt_zeichnen(self, maler, option, index) -> None:
         if index.column() == SPALTE_KABEL:
             self._kabel_zeichnen(maler, option, index)
             return
