@@ -81,7 +81,31 @@ PyYAML                                   MIT
     Text: PyYAML-LICENSE.txt
 charset-normalizer                       MIT
     Text: charset-normalizer-LICENSE.txt
+spylls                                   MPL-2.0
+    Hunspell in reinem Python; traegt die Rechtschreibpruefung ohne
+    Netz. Die Paketdaten nennen MIT, die beiliegende Lizenzdatei
+    dagegen die Mozilla Public License 2.0 - es gilt der Text.
+    Text: spylls-LICENSE.txt
     Quelltext der Python-Pakete: https://pypi.org/project/<name>/
+
+
+Woerterbuecher (daten/woerterbuecher)
+=====================================
+
+Deutsch (de_DE)                          GPL-2.0-or-later / GPL-3.0
+    Aus igerman98 bzw. dem Woerterbuchpaket "frami" von Franz Michael
+    Baumann, aufgebaut auf der Arbeit von Bjoern Jacke. Doppelt
+    lizenziert; hier gilt die GPL-3, unter der auch Verteilerly steht.
+    Die Dateien sind selbst der Quelltext - sie liegen im Abbild unter
+    daten/woerterbuecher und sind von Hand zu lesen und zu aendern.
+    Herkunft im Einzelnen: daten/woerterbuecher/HERKUNFT.txt
+    Text: GPL-3.0.txt
+    Quelltext: https://git.libreoffice.org/dictionaries
+
+    Woerterbuecher des Rechners werden bevorzugt, wenn welche da sind
+    (/usr/share/hunspell und Geschwister). Weitere Sprachen legt der
+    Anwender selbst in den Arbeitsordner unter "woerterbuecher"; sie
+    gehoeren dann ihm und nicht zu dieser Weitergabe.
 
 zstd                                     BSD-3-Clause
     Text: zstd.txt

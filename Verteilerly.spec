@@ -56,6 +56,18 @@ if os.path.isdir(_sprachen):
                 (os.path.join(_sprachen, name), os.path.join("daten", "sprachen"))
             )
 
+# Die Woerterbuecher der Rechtschreibpruefung. Sie werden nicht ausgelegt,
+# sondern dort gelesen, wo sie liegen - wer ein eigenes hat, legt es in den
+# Arbeitsordner unter "woerterbuecher".
+_woerterbuecher = os.path.join(_wurzel, "daten", "woerterbuecher")
+if os.path.isdir(_woerterbuecher):
+    for name in sorted(os.listdir(_woerterbuecher)):
+        if name.endswith((".aff", ".dic", ".txt")):
+            datas.append((
+                os.path.join(_woerterbuecher, name),
+                os.path.join("daten", "woerterbuecher"),
+            ))
+
 # README und Lizenzen mit hinein - eine weitergegebene .exe soll sagen koennen,
 # was sie ist und unter welchen Bedingungen sie weitergegeben werden darf.
 for beigabe in ("README.md", "README.en.md", "LICENSE"):

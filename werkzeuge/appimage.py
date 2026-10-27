@@ -16,7 +16,7 @@ Verteilung.
     python3 werkzeuge/appimage.py --basis DATEI  eigene Python-AppImage
 
 Ergebnis ist eine einzelne Datei in auslieferung/. Python, Qt, ReportLab,
-openpyxl und PyYAML stecken darin; vom Zielrechner erwartet das Programm
+openpyxl, PyYAML und spylls stecken darin; vom Zielrechner erwartet das Programm
 nur die X11-Grundausstattung, die jede Arbeitsumgebung mitbringt.
 """
 
@@ -252,12 +252,12 @@ def _site_packages() -> pathlib.Path:
 
 
 def abhaengigkeiten_einbauen() -> None:
-    """PySide6, ReportLab, openpyxl und PyYAML in das AppDir installieren."""
+    """PySide6, ReportLab, openpyxl, PyYAML und spylls in das AppDir."""
     melden("installiere die Bibliotheken in das AppDir (dauert)")
     subprocess.run(
         [str(_python()), "-m", "pip", "install", "--no-warn-script-location",
          "--disable-pip-version-check", "--upgrade",
-         "PySide6-Essentials", "reportlab", "openpyxl", "PyYAML"],
+         "PySide6-Essentials", "reportlab", "openpyxl", "PyYAML", "spylls"],
         check=True,
         stdout=subprocess.DEVNULL,
     )

@@ -105,6 +105,15 @@ class TestDatensuche(unittest.TestCase):
         self.assertTrue(pfade.vorlagenordner().is_dir())
         self.assertTrue(pfade.kabeltypenordner().is_dir())
 
+    def test_woerterbuecher_werden_gesucht_und_mitgeliefert(self):
+        """Der Speicher des Rechners zaehlt mit - das Abbild hat eines dabei."""
+        orte = pfade.woerterbuchordner_alle()
+        self.assertIn(pfade.mitgeliefert() / "woerterbuecher", orte)
+        self.assertTrue(all(ort.is_dir() for ort in orte))
+        # Das Mitgelieferte steht hinten: ein Woerterbuch des Rechners
+        # ist gepflegter als eines, das mit dem Programm alt wird.
+        self.assertEqual(orte[-1], pfade.mitgeliefert() / "woerterbuecher")
+
     def test_mitgeliefertes_ist_der_quellbaum(self):
         self.assertEqual(
             pfade.mitgeliefert(),

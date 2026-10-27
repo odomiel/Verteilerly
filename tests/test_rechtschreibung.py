@@ -6,6 +6,12 @@ was das Programm daraus macht - welche Texte ueberhaupt hinausgehen, wie
 sie gebuendelt werden, wie die Stellen der Antwort in die einzelne Zelle
 zurueckgerechnet werden und ob ein Vorschlag dort landet, wo der Text
 herkommt.
+
+Das **Woerterbuch** bekommt ebenso wenig das des Rechners zu sehen: die
+Tests schreiben sich ein winziges eigenes (``_WOERTERBUCH``, vier
+Woerter). Ein Lauf haengt damit nicht daran, was auf dem Rechner
+installiert ist, und das grosse deutsche Woerterbuch - 4 MB, eine
+Sekunde Ladezeit - bleibt aus der Testreihe heraus.
 """
 
 from __future__ import annotations
@@ -14,12 +20,19 @@ from __future__ import annotations
 # Testreihe um, bevor etwas aus verteilerly Pfade liest.
 from . import TESTHEIM  # noqa: F401
 
+import pathlib
+import tempfile
 import unittest
+import warnings
 from unittest import mock
 
-from verteilerly import suche
-from verteilerly.erweiterungen.rechtschreibung import pruefer
+from verteilerly import pfade, suche
+from verteilerly.erweiterungen.rechtschreibung import pruefer, woerterbuch
 from verteilerly.modell import Aderadresse, Projekt, Verteiler, Zellenteilung
+
+#: Ein Woerterbuch mit vier Woertern - mehr braucht hier niemand.
+_AFF = "SET UTF-8\n"
+_DIC = "4\nMelder\nWerkstatt\nHalle\nKontakt\n"
 
 
 def _projekt() -> Projekt:
@@ -273,6 +286,164 @@ class TestUebernehmen(unittest.TestCase):
         self.assertFalse(pruefer.anwenden(self.projekt, befund, "Amt Eins"))
         self.assertEqual(ader.bezeichnung, "Amt")
         self.assertEqual(ader.teilung("bezeichnung").text, "eins")
+
+
+def _woerterbuchordner(pruefling: unittest.TestCase):
+    """Legt das winzige Woerterbuch an und raeumt es wieder weg."""
+    # spylls laesst die Dateihandles dem Sammler; das meldet die
+    # Testreihe als ResourceWarning. Nicht unser Leck, aber unser
+    # Bildschirm - hier bleibt es still.
+    pruefling.enterContext(warnings.catch_warnings())
+    warnings.simplefilter("ignore", ResourceWarning)
+    ordner = tempfile.TemporaryDirectory()
+    pruefling.addCleanup(ordner.cleanup)
+    ort = pathlib.Path(ordner.name)
+    (ort / "de_DE.aff").write_text(_AFF, encoding="utf-8")
+    (ort / "de_DE.dic").write_text(_DIC, encoding="utf-8")
+    woerterbuch._GELADEN.clear()
+    pruefling.addCleanup(woerterbuch._GELADEN.clear)
+    return ort
+
+
+@unittest.skipUnless(woerterbuch.verfuegbar(), "ohne spylls keine Pruefung ohne Netz")
+class TestWoerterbuch(unittest.TestCase):
+    """Nachschlagen ohne Netz - mit einem Woerterbuch aus vier Woertern."""
+
+    def setUp(self):
+        self.ordner = _woerterbuchordner(self)
+        self.fund = woerterbuch.Woerterbuchfund("de_DE", self.ordner / "de_DE")
+
+    def _stelle(self, text: str) -> suche.Fundstelle:
+        return suche.Fundstelle(
+            bereich=suche.ADER, feld="bezeichnung", beschriftung="Bezeichnung",
+            text=text, ort="Leiste 1",
+        )
+
+    def test_gefunden_wird_was_im_ordner_liegt(self):
+        with mock.patch.object(
+            pfade, "woerterbuchordner_alle", return_value=[self.ordner]
+        ):
+            self.assertEqual(sorted(woerterbuch.vorhandene()), ["de_DE"])
+            gefunden = woerterbuch.passendes("de-DE")
+        self.assertEqual(gefunden.kennung, "de_DE")
+
+    def test_eine_sprache_ohne_woerterbuch_findet_keines(self):
+        with mock.patch.object(
+            pfade, "woerterbuchordner_alle", return_value=[self.ordner]
+        ):
+            self.assertIsNone(woerterbuch.passendes("en-GB"))
+            self.assertIsNone(woerterbuch.passendes("auto"))
+
+    def test_der_zusatz_der_auslieferung_stoert_nicht(self):
+        """``de_DE_frami`` ist das Woerterbuch zu ``de-DE``."""
+        (self.ordner / "de_DE.aff").rename(self.ordner / "de_DE_frami.aff")
+        (self.ordner / "de_DE.dic").rename(self.ordner / "de_DE_frami.dic")
+        with mock.patch.object(
+            pfade, "woerterbuchordner_alle", return_value=[self.ordner]
+        ):
+            self.assertEqual(woerterbuch.passendes("de-DE").kennung, "de_DE_frami")
+
+    def test_nur_unbekannte_woerter_werden_beanstandet(self):
+        befunde = woerterbuch.pruefen([self._stelle("Melder Werkstat")], self.fund)
+        self.assertEqual([b.wort for b in befunde], ["Werkstat"])
+        self.assertEqual(befunde[0].quelle, pruefer.WOERTERBUCH)
+        self.assertEqual(befunde[0].von, len("Melder "))
+
+    def test_vorschlaege_bringt_der_befund_nicht_mit(self):
+        """Sie kosten Sekunden - geholt wird erst, wer hinsieht."""
+        befund = woerterbuch.pruefen([self._stelle("Werkstat")], self.fund)[0]
+        self.assertEqual(befund.vorschlaege, ())
+        self.assertIn("Werkstatt", woerterbuch.vorschlaege(self.fund, "Werkstat"))
+
+    def test_kurzes_und_abkuerzungen_bleiben_draussen(self):
+        """``LSA`` steht in keinem Woerterbuch und ist doch richtig."""
+        stelle = self._stelle("LSA DA 2 am BMZ")
+        self.assertEqual(woerterbuch.pruefen([stelle], self.fund), [])
+
+    def test_bindestriche_werden_in_teilen_gelesen(self):
+        """``Melder-Halle`` kennt kein Woerterbuch, beide Haelften schon."""
+        befunde = woerterbuch.pruefen([self._stelle("Melder-Halle")], self.fund)
+        self.assertEqual(befunde, [])
+        self.assertEqual(
+            [b.wort for b in
+             woerterbuch.pruefen([self._stelle("Melder-Hall")], self.fund)],
+            ["Melder-Hall"],
+        )
+
+    def test_eigene_woerter_werden_nicht_beanstandet(self):
+        stelle = self._stelle("Melderkreis")
+        self.assertTrue(woerterbuch.pruefen([stelle], self.fund))
+        self.assertEqual(
+            woerterbuch.pruefen([stelle], self.fund, frozenset({"melderkreis"})), []
+        )
+
+    def test_die_eigene_liste_waechst_und_wird_gelesen(self):
+        liste = self.ordner / "woerterbuch.txt"
+        self.assertEqual(woerterbuch.eigene_lesen(liste), frozenset())
+        self.assertTrue(woerterbuch.eigenes_wort_aufnehmen("Melderkreis", liste))
+        self.assertTrue(woerterbuch.eigenes_wort_aufnehmen("Rangierung", liste))
+        # Zweimal dasselbe Wort steht nur einmal darin.
+        self.assertTrue(woerterbuch.eigenes_wort_aufnehmen("melderkreis", liste))
+        self.assertEqual(
+            woerterbuch.eigene_lesen(liste), frozenset({"melderkreis", "rangierung"})
+        )
+        self.assertEqual(
+            len([z for z in liste.read_text(encoding="utf-8").splitlines()
+                 if z and not z.startswith("#")]), 2
+        )
+
+    def test_eine_krumme_datei_meldet_sich(self):
+        (self.ordner / "krumm.aff").write_text("SET UTF-8\n", encoding="utf-8")
+        (self.ordner / "krumm.dic").write_text("", encoding="utf-8")
+        with self.assertRaises(woerterbuch.WoerterbuchFehler):
+            woerterbuch.laden(
+                woerterbuch.Woerterbuchfund("krumm", self.ordner / "fehlt")
+            )
+
+
+class TestZusammenfuehren(unittest.TestCase):
+    """Beide Pruefer zusammen - jede Stelle steht einmal da."""
+
+    def _stelle(self, text="Melder Werkstat"):
+        return suche.Fundstelle(
+            bereich=suche.ADER, feld="bezeichnung", beschriftung="Bezeichnung",
+            text=text, ort="Leiste 1",
+        )
+
+    def _befund(self, stelle, von, laenge, quelle, meldung="x"):
+        return pruefer.Befund(stelle, von, laenge, meldung, quelle=quelle)
+
+    def test_dasselbe_wort_steht_nur_einmal_da(self):
+        stelle = self._stelle()
+        aus_lt = self._befund(stelle, 7, 8, pruefer.LANGUAGETOOL, "Tippfehler")
+        aus_wb = self._befund(stelle, 7, 8, pruefer.WOERTERBUCH)
+        zusammen = pruefer.zusammenfuehren([aus_lt, aus_wb], [stelle])
+        self.assertEqual(zusammen, [aus_lt])
+
+    def test_auch_eine_teilweise_ueberdeckung_zaehlt(self):
+        """LanguageTool nimmt gern das Komma davor mit."""
+        stelle = self._stelle()
+        aus_lt = self._befund(stelle, 6, 9, pruefer.LANGUAGETOOL)
+        aus_wb = self._befund(stelle, 7, 8, pruefer.WOERTERBUCH)
+        self.assertEqual(
+            pruefer.zusammenfuehren([aus_lt, aus_wb], [stelle]), [aus_lt]
+        )
+
+    def test_zwei_verschiedene_stellen_bleiben_beide(self):
+        stelle = self._stelle()
+        erster = self._befund(stelle, 0, 6, pruefer.LANGUAGETOOL)
+        zweiter = self._befund(stelle, 7, 8, pruefer.WOERTERBUCH)
+        self.assertEqual(
+            pruefer.zusammenfuehren([zweiter, erster], [stelle]), [erster, zweiter]
+        )
+
+    def test_sortiert_wird_nach_dem_verteiler_nicht_nach_dem_pruefer(self):
+        vorne, hinten = self._stelle("Werkstat"), self._stelle("Melder")
+        spaet = self._befund(hinten, 0, 6, pruefer.LANGUAGETOOL)
+        frueh = self._befund(vorne, 0, 8, pruefer.WOERTERBUCH)
+        self.assertEqual(
+            pruefer.zusammenfuehren([spaet, frueh], [vorne, hinten]), [frueh, spaet]
+        )
 
 
 if __name__ == "__main__":

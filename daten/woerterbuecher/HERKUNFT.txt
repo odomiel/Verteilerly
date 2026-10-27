@@ -1,0 +1,18 @@
+Mitgelieferte Woerterbuecher
+============================
+
+de_DE.aff, de_DE.dic
+  Das deutsche Hunspell-Woerterbuch der LibreOffice-Sammlung
+  (de_DE_frami, abgeleitet aus igerman98), unveraendert uebernommen.
+  Copyright 1998-2017 Bjoern Jacke <bjoern@j3e.de>
+  Copyright 1998-2017 Franz Michael Baumann
+  Lizenz: GPL-2 oder GPL-3 - Verteilerly gibt es unter der GPL-3,
+  hier gilt also die GPL-3 (lizenzen/GPL-3.0.txt bzw. LICENSE).
+  Quelle: https://git.libreoffice.org/dictionaries (Ordner de/)
+
+Gesucht wird in dieser Reihenfolge: der Ordner "woerterbuecher" des
+Arbeitsordners, dann der Woerterbuchspeicher des Rechners
+(/usr/share/hunspell, /usr/share/myspell und Geschwister), zuletzt
+dieser mitgelieferte Bestand - ein gepflegtes Woerterbuch des Systems
+geht also vor. Eigene Woerterbuecher gehoeren als <kennung>.aff und
+<kennung>.dic in den Ordner "woerterbuecher" des Arbeitsordners.

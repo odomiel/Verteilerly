@@ -19,7 +19,8 @@ class TestAbhaengigkeiten(unittest.TestCase):
                 self.assertTrue(teil.fassung)
                 self.assertIn(
                     teil.lizenz,
-                    ("GPL-3.0-or-later", "PSF", "LGPLv3", "BSD", "MIT"),
+                    ("GPL-3.0-or-later", "PSF", "LGPLv3", "BSD", "MIT",
+                     "MPL-2.0"),
                 )
 
     def test_die_fassungen_kommen_aus_dem_laufenden_programm(self):
@@ -85,7 +86,8 @@ class TestLizenz(unittest.TestCase):
         ordner = bestand.lizenzordner()
         text = (ordner / "QUELLEN.txt").read_text(encoding="utf-8")
         for wort in ("GPL-3.0-or-later", "LGPL-3.0", "Qt", "PySide6", "Python",
-                     "ReportLab", "openpyxl", "PyYAML", "Pillow", "AppImage"):
+                     "ReportLab", "openpyxl", "PyYAML", "Pillow", "AppImage",
+                     "spylls", "MPL-2.0"):
             with self.subTest(wort=wort):
                 self.assertIn(wort, text)
 
@@ -107,6 +109,7 @@ class TestLizenz(unittest.TestCase):
         for wort in ("ICU", "GLib", "LGPL-2.1", "zstd", "libatomic",
                      "Qt-Fremdbestandteile.txt", "Python-Fremdbestandteile.txt",
                      "charset-normalizer", "Independent JPEG Group",
+                     "spylls", "igerman98", "de_DE",
                      "FreeType Project", "PyInstaller", "Visual C++"):
             with self.subTest(wort=wort):
                 self.assertIn(wort, quellen)

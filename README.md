@@ -79,11 +79,16 @@ gesendet nichts außer der Anfrage; abgeschaltet geht es **nie** ins Netz.
 herauskam.
 
 **Rechtschreibung prüfen** (*Erweiterungen ▸ Rechtschreibung…*): Bezeichnungen,
-Bemerkungen, Kabelnamen und Projektdaten gehen auf Knopfdruck an einen
-**LanguageTool**-Server, und was er beanstandet, steht mit Vorschlag in einer
-Liste — zum Übernehmen oder zum Hinspringen. Von selbst geht nichts hinaus:
-vor der ersten Anfrage an eine auswärtige Adresse wird gefragt, und wer seine
-Verteiler im Haus behalten will, trägt einen eigenen LanguageTool-Server ein.
+Bemerkungen, Kabelnamen und Projektdaten werden auf Knopfdruck nachgelesen, und
+was zu beanstanden ist, steht mit Vorschlag in einer Liste — zum Übernehmen
+oder zum Hinspringen. Zwei Prüfer, jeder für sich zuzuschalten: ein
+**Wörterbuch auf diesem Rechner** (Hunspell, findet Tippfehler, nichts
+verlässt den Rechner — von Haus aus an) und ein **LanguageTool**-Server
+(findet auch Grammatik, dafür gehen die Texte hinaus — von Haus aus aus). Von
+selbst geht nichts hinaus: vor der ersten Anfrage an eine auswärtige Adresse
+wird gefragt, und wer seine Verteiler im Haus behalten will, trägt einen
+eigenen LanguageTool-Server ein oder lässt es beim Wörterbuch. Eigene Wörter —
+`Melderkreis`, Hausbegriffe — nimmt eine eigene Wortliste auf.
 
 **Dazu im Alltag.** Suchen über den ganzen Verteiler, Zurücknehmen und
 Wiederherstellen der letzten fünfzig Schritte, **schreibgeschützt öffnen**,

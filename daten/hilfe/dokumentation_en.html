@@ -1337,40 +1337,82 @@ the extension off under <i>Manage extensions</i>.</p>
 
 <h3>11.3 &nbsp; The spell check</h3>
 
-<p><b>Extensions ▸ Spell check…</b> sends the texts of the frame to a
-<b>LanguageTool</b> server and shows what it objects to. Checked is what
-somebody wrote: <i>designation</i> and <i>remark</i> of the wires, the
-<b>cable labels</b> and the <b>project data</b> including your own fields.
-Color and jumper field stay out — <code>rt/bl</code> and <code>L3-2a</code>
-are not words, and nobody reads a check to the end that underlines every wire
-color; for the same reason a text without a single word of three letters stays
-out (<code>V-01</code>, <code>12k</code>).</p>
+<p><b>Extensions ▸ Spell check…</b> reads through the texts of the frame and
+shows what there is to object to. What is checked is what somebody wrote:
+<i>designation</i> and <i>remark</i> of the wires, the <b>cable labels</b> and
+the <b>project data</b> including the own fields. Colour and jumper field stay
+out — <code>rt/bl</code> and <code>L3-2a</code> are not words, and nobody
+reads a check to the end that marks up every wire colour; for the same reason
+a text without a single word of three letters stays out (<code>V-01</code>,
+<code>12k</code>).</p>
 
-<p><b>Nothing goes out by itself.</b> The server is only asked once you press
-<i>Check</i> — not at start, not on saving. If an outside address stands above
-(by default the public service <code>api.languagetool.org</code>), the program
-asks before the first request there whether the texts may leave this computer;
-the consent applies to exactly that address. Whoever wants to keep their frames
-in the house runs LanguageTool themselves and enters its address, for instance
-<code>http://localhost:8081/v2/check</code> — then nothing goes onto the net.
-Sent are the text and the language, nothing else.</p>
+<p><b>Two checkers, each to be switched on separately</b> — there is a tick
+box for each at the top of the dialogue:</p>
 
-<p>The list names per objection the <b>place</b>, the <b>field</b>, the word
-objected to, the <b>note</b> and the <b>suggestions</b>. <i>Apply
-suggestion</i> enters the first suggestion — a change like any other, so it
-can be taken back with <b>Undo</b>. The remaining objections of the same cell
-then drop out of the list: their text has become a different one, and a new
-run finds them again. <i>Jump to the place</i> closes the dialog and puts the
-mark on the cell, just as the search does; a double click does the same. For a
-file opened <b>read-only</b>, <i>Apply</i> stays off — reading works all the
-same. What is objected to across the seam of a <b>split cell</b> cannot be
-applied — it lies in two fields; there only the hand helps.</p>
+<ul>
+<li><b>Dictionary (on this computer)</b> looks up every word in a Hunspell
+dictionary, the way LibreOffice does. It finds typing mistakes, not grammar,
+and <b>nothing leaves the computer</b>. It is on by default. Next to the tick
+box it says which dictionary was found for the language set and where it
+lies.</li>
+<li><b>LanguageTool (server)</b> finds grammar and punctuation as well, but
+for that the texts go to a server. It is <b>off</b> by default — whoever
+gives texts out of the house should have decided that themselves.</li>
+</ul>
 
-<p>The texts go over the line <b>in bundles</b>, not cell by cell: one request
-per some 8000 characters, separated by blank lines. Server and language are
-remembered (<code>Verteilerly.conf</code>, group <code>rechtschreibung</code>).
-If nothing can be reached, the reason stands next to the button — then there
-is no check, and the program carries on.</p>
+<p>Both together work too; if both object to the same word it appears only
+once, with LanguageTool's note — that one says more. The <b>Source</b> column
+names who found something.</p>
+
+<p><b>Which dictionary is taken</b> depends on the language set. The search
+goes first to the folder <code>woerterbuecher</code> of the working folder,
+then to the dictionary store of the computer
+(<code>/usr/share/hunspell</code> and its siblings), last to what came with
+the program — a maintained dictionary of the system thus takes precedence. A
+further language is added by putting its <code>.aff</code> and
+<code>.dic</code> file into the folder <code>woerterbuecher</code> of the
+working folder. <code>auto</code> has no dictionary: it cannot guess, that is
+what LanguageTool is for.</p>
+
+<p><b>Your own word list.</b> A dictionary knows neither
+<code>Melderkreis</code> nor <code>BMZ</code> nor the terms of your house.
+Words in capitals throughout and words under three letters are passed over by
+the check itself; everything else is taken into your own list by <i>Add
+word</i> — after that it is not objected to any more, not in other frames
+either. The list lies as <code>woerterbuch.txt</code> in the working folder,
+one word per line, and can be edited with any text editor.</p>
+
+<p><b>Nothing goes out by itself.</b> Nothing is asked until you press
+<i>Check</i> — not at the start, not on saving. If LanguageTool is switched on
+and an outside address stands at the top (by default the public service
+<code>api.languagetool.org</code>), the program asks before the first request
+goes there whether the texts may leave the computer; the consent applies to
+exactly that address. Whoever wants to keep their frames in the house runs
+LanguageTool themselves and enters its address, such as
+<code>http://localhost:8081/v2/check</code> — or leaves it at the dictionary.
+What is sent is the text and the language, nothing else.</p>
+
+<p>The list names for each objection the <b>Place</b>, the <b>Field</b>, the
+word objected to, the <b>Note</b>, the <b>Suggestions</b> and the
+<b>Source</b>. <i>Apply suggestion</i> enters the first suggestion — a change
+like any other, so it can be taken back with <b>Undo</b>. The remaining
+objections of the same cell then drop out of the list: their text has become
+another one, a new run finds them again. <i>Jump to the place</i> closes the
+dialogue and puts the mark on the cell, the way the search does; a double
+click does the same. With a file opened <b>read-only</b>, <i>Apply</i> stays
+off, reading works all the same. What is objected to across the seam of a
+<b>split cell</b> cannot be applied — it lies in two fields; there only the
+hand helps.</p>
+
+<p><b>Suggestions from the dictionary come with a delay.</b> Looking up costs
+nothing, searching for a suggestion costs a few seconds — the search therefore
+starts only when you click the row, and the suggestion appears as soon as it
+is there. The texts go to LanguageTool <b>in bundles</b>, not cell by cell:
+one request per roughly 8000 characters, separated by blank lines. Both tick
+boxes, server and language are remembered
+(<code>Verteilerly.conf</code>, group <code>rechtschreibung</code>). If
+nothing can be reached, the reason stands next to the button — then nothing is
+checked, and the program carries on; what the other checker found stays.</p>
 
 <h3>11.4 &nbsp; Managing extensions</h3>
 

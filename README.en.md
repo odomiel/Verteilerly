@@ -71,11 +71,16 @@ it **never** goes online. *Help ▸ Look for updates…* asks at the press of a
 button and says in every case what came of it.
 
 **Spell check** (*Extensions ▸ Spell check…*): designations, remarks, cable
-names and project data go to a **LanguageTool** server at the press of a
-button, and what it objects to stands in a list with its suggestion — to apply
-or to jump to. Nothing goes out by itself: before the first request to an
-outside address you are asked, and whoever wants to keep their frames in the
-house enters a LanguageTool server of their own.
+names and project data are read through at the press of a button, and what
+there is to object to stands in a list with its suggestion — to apply or to
+jump to. Two checkers, each to be switched on separately: a **dictionary on
+this computer** (Hunspell, finds typing mistakes, nothing leaves the computer
+— on by default) and a **LanguageTool** server (finds grammar as well, but the
+texts go out for it — off by default). Nothing goes out by itself: before the
+first request to an outside address you are asked, and whoever wants to keep
+their frames in the house enters a LanguageTool server of their own or leaves
+it at the dictionary. Words of your own — `Melderkreis`, the terms of your
+house — go into your own word list.
 
 **And for everyday work.** Searching across the whole frame, undo and redo of
 the last fifty steps, **opening read-only**, a light and a dark appearance,

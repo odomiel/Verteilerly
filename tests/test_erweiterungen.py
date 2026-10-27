@@ -1,5 +1,6 @@
 """Tests zu den Erweiterungen und zum Blattvorlagen-Editor."""
 
+import dataclasses
 import html
 import os
 import pathlib
@@ -1283,7 +1284,8 @@ class TestRechtschreibdialog(unittest.TestCase):
 
     def setUp(self):
         from verteilerly.erweiterungen.rechtschreibung import (
-            SCHLUESSEL_SERVER, SCHLUESSEL_SPRACHE, SCHLUESSEL_ZUGESTIMMT,
+            SCHLUESSEL_LANGUAGETOOL, SCHLUESSEL_SERVER, SCHLUESSEL_SPRACHE,
+            SCHLUESSEL_WOERTERBUCH, SCHLUESSEL_ZUGESTIMMT,
         )
         from verteilerly.erweiterungen.rechtschreibung.dialog import RechtschreibDialog
         from verteilerly.gui.erweiterungen import Schnittstelle
@@ -1295,7 +1297,9 @@ class TestRechtschreibdialog(unittest.TestCase):
         self.Dialog = RechtschreibDialog
         self.fenster = Hauptfenster()
         bauteil_zurueckgeben(self, self.fenster)
-        for schluessel in (SCHLUESSEL_SERVER, SCHLUESSEL_SPRACHE, SCHLUESSEL_ZUGESTIMMT):
+        for schluessel in (SCHLUESSEL_SERVER, SCHLUESSEL_SPRACHE,
+                           SCHLUESSEL_ZUGESTIMMT, SCHLUESSEL_LANGUAGETOOL,
+                           SCHLUESSEL_WOERTERBUCH):
             einstellung_bewahren(self, self.fenster.einstellungen, schluessel)
 
         verteiler = Verteiler.aus_geometrie(1, 2, 4, name="Muster")
@@ -1325,7 +1329,13 @@ class TestRechtschreibdialog(unittest.TestCase):
         )
 
     def _zeigen(self, *befunde):
-        self.dialog._ergebnis(list(befunde), "")
+        # Kein Faden: die erste Zeile wird gleich ausgewaehlt, und ein
+        # Befund des Woerterbuchs schickte dann einen Faden nach
+        # Vorschlaegen los - der laedt 4 MB und laeuft Sekunden.
+        from verteilerly.erweiterungen.rechtschreibung import dialog as dialogmodul
+
+        with mock.patch.object(dialogmodul.threading, "Thread"):
+            self.dialog._ergebnis(list(befunde), "")
 
     def test_die_liste_zeigt_ort_wort_und_vorschlag(self):
         self._zeigen(self._befund())
@@ -1370,6 +1380,7 @@ class TestRechtschreibdialog(unittest.TestCase):
             SCHLUESSEL_ZUGESTIMMT, dialog as dialogmodul, pruefer,
         )
 
+        self.dialog.lt_haken.setChecked(True)
         self.dialog.serverfeld.setText(pruefer.SERVER)
         with mock.patch.object(
             dialogmodul, "frage", return_value=dialogmodul.Knopf.No
@@ -1382,12 +1393,100 @@ class TestRechtschreibdialog(unittest.TestCase):
     def test_der_eigene_server_wird_nicht_erst_erfragt(self):
         from verteilerly.erweiterungen.rechtschreibung import dialog as dialogmodul
 
+        self.dialog.lt_haken.setChecked(True)
         self.dialog.serverfeld.setText("http://localhost:8081/v2/check")
         with mock.patch.object(dialogmodul, "frage") as gefragt, \
                 mock.patch.object(dialogmodul.threading, "Thread") as faden:
             self.dialog.pruefen()
         self.assertFalse(gefragt.called)
         self.assertTrue(faden.called)
+
+    def test_ohne_languagetool_wird_nichts_gefragt_und_nichts_gesendet(self):
+        """Das Woerterbuch allein schickt nichts hinaus - also keine Rueckfrage."""
+        from verteilerly.erweiterungen.rechtschreibung import (
+            dialog as dialogmodul, pruefer,
+        )
+
+        self.dialog.lt_haken.setChecked(False)
+        self.dialog.wb_haken.setChecked(True)
+        self.dialog.serverfeld.setText(pruefer.SERVER)
+        with mock.patch.object(dialogmodul, "frage") as gefragt, \
+                mock.patch.object(pruefer, "abrufen") as gesendet, \
+                mock.patch.object(dialogmodul.threading, "Thread") as faden:
+            self.dialog.pruefen()
+        self.assertFalse(gefragt.called)
+        self.assertFalse(gesendet.called)
+        self.assertTrue(faden.called)
+
+    def test_ohne_pruefer_passiert_gar_nichts(self):
+        from verteilerly.erweiterungen.rechtschreibung import dialog as dialogmodul
+
+        self.dialog.lt_haken.setChecked(False)
+        self.dialog.wb_haken.setChecked(False)
+        with mock.patch.object(dialogmodul.threading, "Thread") as faden:
+            self.dialog.pruefen()
+        self.assertFalse(faden.called)
+        self.assertIn("Prüfer", self.dialog.stand.text())
+
+    def test_die_beiden_schalter_werden_gemerkt(self):
+        from verteilerly.erweiterungen.rechtschreibung import (
+            SCHLUESSEL_LANGUAGETOOL, SCHLUESSEL_WOERTERBUCH,
+            dialog as dialogmodul,
+        )
+
+        self.dialog.lt_haken.setChecked(True)
+        self.dialog.wb_haken.setChecked(False)
+        self.dialog.serverfeld.setText("http://localhost:8081/v2/check")
+        with mock.patch.object(dialogmodul.threading, "Thread"):
+            self.dialog.pruefen()
+        werte = self.fenster.einstellungen
+        self.assertTrue(werte.value(SCHLUESSEL_LANGUAGETOOL, False, type=bool))
+        self.assertFalse(werte.value(SCHLUESSEL_WOERTERBUCH, True, type=bool))
+
+    def test_ein_aufgenommenes_wort_verschwindet_aus_der_liste(self):
+        """Und zwar jedes Vorkommen - nicht nur die angeklickte Zeile."""
+        from verteilerly.erweiterungen.rechtschreibung import (
+            dialog as dialogmodul, pruefer,
+        )
+
+        befund = self._befund()
+        aus_woerterbuch = dataclasses.replace(
+            befund, vorschlaege=(), quelle=pruefer.WOERTERBUCH
+        )
+        self._zeigen(aus_woerterbuch)
+        with mock.patch.object(
+            dialogmodul.woerterbuch, "eigenes_wort_aufnehmen", return_value=True
+        ) as aufgenommen:
+            self.dialog.wort_aufnehmen()
+        self.assertEqual(aufgenommen.call_args[0][0], "Werkstat")
+        self.assertEqual(self.dialog.liste.topLevelItemCount(), 0)
+
+    def test_aufnehmen_gibt_es_nur_fuer_das_woerterbuch(self):
+        """Was LanguageTool meldet, ist keine Frage des Wortschatzes."""
+        self._zeigen(self._befund())
+        self.assertFalse(self.dialog.aufnehmen_knopf.isEnabled())
+
+    def test_vorschlaege_kommen_nachtraeglich_in_die_zeile(self):
+        """Das Woerterbuch schlaegt erst vor, wenn jemand hinsieht."""
+        from verteilerly.erweiterungen.rechtschreibung import pruefer
+
+        befund = dataclasses.replace(
+            self._befund(), vorschlaege=(), quelle=pruefer.WOERTERBUCH
+        )
+        self._zeigen(befund)
+        self.assertEqual(self.dialog.liste.topLevelItem(0).text(4), "")
+        self.assertFalse(self.dialog.uebernehmen_knopf.isEnabled())
+
+        self.dialog._vorschlaege_eingetroffen("Werkstat", ("Werkstatt",))
+        self.assertEqual(self.dialog.liste.topLevelItem(0).text(4), "Werkstatt")
+        self.assertTrue(self.dialog.uebernehmen_knopf.isEnabled())
+        with mock.patch.object(type(self.fenster), "_belegung_geaendert"):
+            self.dialog.uebernehmen()
+        from verteilerly.modell import Aderadresse
+        self.assertEqual(
+            self.projekt.verteiler.ader(Aderadresse(1, 1, "a")).bezeichnung,
+            "Melder Werkstatt",
+        )
 
 
 if __name__ == "__main__":

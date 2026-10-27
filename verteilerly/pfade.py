@@ -204,6 +204,35 @@ def vorlagenordner_alle() -> list[pathlib.Path]:
     return [ort / "vorlagen" for ort in datenordner_alle() if (ort / "vorlagen").is_dir()]
 
 
+#: Wo die Rechner ihre Hunspell-Woerterbuecher hinlegen. Linux und die
+#: BSDs teilen sich die ersten beiden; macOS hat einen eigenen Ort.
+#: Windows kennt keinen - dort zaehlt das Mitgelieferte.
+SYSTEMWOERTERBUECHER = (
+    "/usr/share/hunspell",
+    "/usr/share/myspell",
+    "/usr/share/myspell/dicts",
+    "/usr/local/share/hunspell",
+    "/Library/Spelling",
+)
+
+
+def woerterbuchordner_alle() -> list[pathlib.Path]:
+    """Jeder Ort, an dem Woerterbuecher liegen koennen - der eigene zuerst.
+
+    Die Reihenfolge ist Absicht: **eigene** vor denen des **Rechners**
+    vor dem **Mitgelieferten**. Wer ein Woerterbuch in seinen
+    Arbeitsordner legt, meint es; die Sammlung des Rechners pflegt seine
+    Distribution und ist damit neuer als unsere Kopie; und die ist nur
+    da, damit es unter Windows und im Abbild ueberhaupt eine gibt.
+    """
+    fertig = mitgeliefert()
+    orte = [ort / "woerterbuecher" for ort in _kandidaten() if ort != fertig]
+    orte += [pathlib.Path(ort) for ort in SYSTEMWOERTERBUECHER]
+    if fertig:
+        orte.append(fertig / "woerterbuecher")
+    return [ort for ort in orte if ort.is_dir()]
+
+
 def kabeltypenordner() -> pathlib.Path:
     return _unterordner("kabeltypen")
 

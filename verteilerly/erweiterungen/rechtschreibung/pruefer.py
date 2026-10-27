@@ -71,6 +71,15 @@ PRUEFFELDER = ("bezeichnung", "bemerkung")
 #: Ein Wort, an dem sich etwas pruefen laesst: drei Buchstaben am Stueck.
 _WORT = re.compile(r"[^\W\d_]{3,}")
 
+#: Woher ein Befund kommt. Beide Pruefer koennen zugleich laufen, und in
+#: der Liste soll zu sehen sein, wer etwas zu beanstanden hat.
+LANGUAGETOOL = "languagetool"
+WOERTERBUCH = "woerterbuch"
+QUELLEN = {
+    LANGUAGETOOL: "LanguageTool",
+    WOERTERBUCH: "Wörterbuch",
+}
+
 
 class PruefFehler(Exception):
     """Der Server war nicht zu erreichen oder antwortete unverstaendlich."""
@@ -92,6 +101,7 @@ class Befund:
     vorschlaege: tuple[str, ...] = ()
     regel: str = ""
     art: str = ""
+    quelle: str = LANGUAGETOOL
 
     @property
     def wort(self) -> str:
@@ -256,6 +266,43 @@ def pruefen(
         text, starts = zusammenlegen(teil)
         befunde.extend(befunde_aus(abrufen(server, text, sprache), teil, starts))
     return befunde
+
+
+def zusammenfuehren(
+    befunde: list[Befund], stellen: list[Fundstelle] | None = None
+) -> list[Befund]:
+    """Die Befunde beider Pruefer in **einer** Liste, ohne Doppel.
+
+    Laufen LanguageTool und Woerterbuch zusammen, beanstanden sie
+    dasselbe Wort zweimal. Es bleibt der **erste** - und die Aufrufer
+    reihen LanguageTool vor das Woerterbuch, denn LanguageTool sagt,
+    was es meint, und bringt Vorschlaege gleich mit. Verglichen wird die
+    Ueberdeckung, nicht die genaue Stelle: LanguageTool nimmt gern das
+    Wort samt Komma davor.
+
+    Sortiert wird nach ``stellen`` - der Reihenfolge des Verteilers -
+    und innerhalb einer Zelle nach der Stelle im Text; sonst stuenden
+    erst alle Befunde des einen, dann alle des anderen Pruefers in der
+    Liste. Die Reihenfolge der Befunde taugt dafuer nicht: beanstandet
+    LanguageTool etwas in der letzten Zelle und das Woerterbuch etwas in
+    der ersten, kaeme die letzte zuerst.
+    """
+    behalten: list[Befund] = []
+    for befund in befunde:
+        if not any(
+            anderer.stelle is befund.stelle and _ueberdeckt(anderer, befund)
+            for anderer in behalten
+        ):
+            behalten.append(befund)
+    reihe = {id(stelle): nummer for nummer, stelle in enumerate(stellen or [])}
+    behalten.sort(key=lambda b: (reihe.get(id(b.stelle), 0), b.von))
+    return behalten
+
+
+def _ueberdeckt(einer: Befund, anderer: Befund) -> bool:
+    """Treffen sich die beiden Stellen im Text?"""
+    return (einer.von < anderer.von + anderer.laenge
+            and anderer.von < einer.von + einer.laenge)
 
 
 def oeffentlich(server: str) -> bool:

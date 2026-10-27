@@ -134,6 +134,11 @@ class TestWortliste(unittest.TestCase):
         # der Ersatztext geht erst beim Anzeigen durch u(…).
         from verteilerly.blattvorlagen import ABGELEGT
 
+        # Woher ein Befund der Rechtschreibpruefung kommt, steht als
+        # Tabelle in der Erweiterung und geht erst beim Anzeigen durch u(…).
+        from verteilerly.erweiterungen.rechtschreibung.pruefer import QUELLEN
+
+        gebraucht |= set(QUELLEN.values())
         gebraucht |= {a.ersatz for a in ABGELEGT}
         gebraucht |= {a.stelle for a in ABGELEGT}
         gebraucht |= set(BRIEFKOPF_BESCHRIFTUNG.values())

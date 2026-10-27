@@ -1382,43 +1382,85 @@ verwalten</i> aus.</p>
 
 <h3>11.3 &nbsp; Die Rechtschreibprüfung</h3>
 
-<p><b>Erweiterungen ▸ Rechtschreibung…</b> schickt die Texte des Verteilers an
-einen <b>LanguageTool</b>-Server und zeigt, was er beanstandet. Geprüft wird,
-was jemand geschrieben hat: <i>Bezeichnung</i> und <i>Bemerkung</i> der Adern,
-die <b>Kabelbeschriftungen</b> und die <b>Projektdaten</b> samt den eigenen
+<p><b>Erweiterungen ▸ Rechtschreibung…</b> liest die Texte des Verteilers nach
+und zeigt, was zu beanstanden ist. Geprüft wird, was jemand geschrieben hat:
+<i>Bezeichnung</i> und <i>Bemerkung</i> der Adern, die
+<b>Kabelbeschriftungen</b> und die <b>Projektdaten</b> samt den eigenen
 Feldern. Farbe und Rangierfeld bleiben außen vor — <code>rt/bl</code> und
 <code>L3-2a</code> sind keine Wörter, und eine Prüfung, die jede Aderfarbe
 anstreicht, liest niemand zu Ende; aus demselben Grund bleibt ein Text ohne
 ein einziges Wort aus drei Buchstaben draußen (<code>V-01</code>,
 <code>12k</code>).</p>
 
+<p><b>Zwei Prüfer, jeder für sich zuzuschalten</b> — oben im Dialog steht für
+jeden ein Haken:</p>
+
+<ul>
+<li><b>Wörterbuch (auf diesem Rechner)</b> schlägt jedes Wort in einem
+Hunspell-Wörterbuch nach, wie LibreOffice es tut. Es findet Tippfehler, keine
+Grammatik, und <b>nichts verlässt den Rechner</b>. Von Haus aus ist es
+eingeschaltet. Neben dem Haken steht, welches Wörterbuch zur eingestellten
+Sprache gefunden wurde und wo es liegt.</li>
+<li><b>LanguageTool (Server)</b> findet darüber hinaus Grammatik und
+Zeichensetzung, dafür gehen die Texte an einen Server. Von Haus aus ist es
+<b>ausgeschaltet</b> — wer Texte aus dem Haus gibt, soll das selbst
+entschieden haben.</li>
+</ul>
+
+<p>Beide zusammen gehen auch; beanstanden beide dasselbe Wort, steht es nur
+einmal in der Liste, und zwar mit dem Hinweis von LanguageTool — der sagt
+mehr. Die Spalte <b>Quelle</b> nennt, wer etwas gefunden hat.</p>
+
+<p><b>Welches Wörterbuch genommen wird</b>, richtet sich nach der eingestellten
+Sprache. Gesucht wird zuerst im Ordner <code>woerterbuecher</code> des
+Arbeitsordners, dann im Wörterbuchspeicher des Rechners
+(<code>/usr/share/hunspell</code> und Geschwister), zuletzt im mitgelieferten
+Bestand — ein gepflegtes Wörterbuch des Systems geht also vor. Eine weitere
+Sprache fügt man hinzu, indem man ihre <code>.aff</code>- und
+<code>.dic</code>-Datei in den Ordner <code>woerterbuecher</code> des
+Arbeitsordners legt. <code>auto</code> hat kein Wörterbuch: raten kann es
+nicht, dafür ist LanguageTool da.</p>
+
+<p><b>Die eigene Wortliste.</b> Ein Wörterbuch kennt weder
+<code>Melderkreis</code> noch <code>BMZ</code> noch Ihre Hausbegriffe. Reine
+Großschreibungen und Wörter unter drei Buchstaben übergeht die Prüfung von
+selbst; alles andere nimmt <i>Wort aufnehmen</i> in Ihre eigene Liste auf —
+danach wird es nicht mehr beanstandet, auch nicht in anderen Verteilern. Die
+Liste steht als <code>woerterbuch.txt</code> im Arbeitsordner, ein Wort je
+Zeile, und lässt sich mit jedem Texteditor bearbeiten.</p>
+
 <p><b>Nichts geht von selbst hinaus.</b> Gefragt wird erst, wenn Sie auf
-<i>Prüfen</i> drücken — nicht beim Start, nicht beim Speichern. Steht oben eine
-auswärtige Adresse (von Haus aus der öffentliche Dienst
-<code>api.languagetool.org</code>), fragt das Programm vor der ersten Anfrage
-dorthin nach, ob die Texte den Rechner verlassen dürfen; die Zustimmung gilt
-genau dieser Adresse. Wer seine Verteiler im Haus behalten will, betreibt
-LanguageTool selbst und trägt dessen Adresse ein, etwa
-<code>http://localhost:8081/v2/check</code> — dann geht nichts ins Netz.
-Gesendet werden der Text und die Sprache, sonst nichts.</p>
+<i>Prüfen</i> drücken — nicht beim Start, nicht beim Speichern. Ist
+LanguageTool eingeschaltet und steht oben eine auswärtige Adresse (von Haus
+aus der öffentliche Dienst <code>api.languagetool.org</code>), fragt das
+Programm vor der ersten Anfrage dorthin nach, ob die Texte den Rechner
+verlassen dürfen; die Zustimmung gilt genau dieser Adresse. Wer seine
+Verteiler im Haus behalten will, betreibt LanguageTool selbst und trägt dessen
+Adresse ein, etwa <code>http://localhost:8081/v2/check</code> — oder lässt es
+beim Wörterbuch. Gesendet werden der Text und die Sprache, sonst nichts.</p>
 
 <p>Die Liste nennt je Beanstandung <b>Ort</b>, <b>Feld</b>, das beanstandete
-Wort, den <b>Hinweis</b> und die <b>Vorschläge</b>. <i>Vorschlag übernehmen</i>
-trägt den ersten Vorschlag ein — eine Änderung wie jede andere, also mit
-<b>Rückgängig</b> zurückzuholen. Die übrigen Beanstandungen derselben Zelle
-fallen danach aus der Liste: ihr Text ist ein anderer geworden, ein neuer Lauf
-findet sie wieder. <i>Zur Stelle springen</i> schließt den Dialog und stellt
-die Marke auf die Zelle, wie die Suche es tut; ein Doppelklick tut dasselbe.
-Bei einer <b>schreibgeschützt</b> geöffneten Datei bleibt <i>Übernehmen</i>
-aus, gelesen wird trotzdem. Was über die Fuge einer <b>geteilten Zelle</b>
-hinweg beanstandet wird, lässt sich nicht übernehmen — es liegt in zwei
-Feldern; dort hilft nur die Hand.</p>
+Wort, den <b>Hinweis</b>, die <b>Vorschläge</b> und die <b>Quelle</b>.
+<i>Vorschlag übernehmen</i> trägt den ersten Vorschlag ein — eine Änderung wie
+jede andere, also mit <b>Rückgängig</b> zurückzuholen. Die übrigen
+Beanstandungen derselben Zelle fallen danach aus der Liste: ihr Text ist ein
+anderer geworden, ein neuer Lauf findet sie wieder. <i>Zur Stelle springen</i>
+schließt den Dialog und stellt die Marke auf die Zelle, wie die Suche es tut;
+ein Doppelklick tut dasselbe. Bei einer <b>schreibgeschützt</b> geöffneten
+Datei bleibt <i>Übernehmen</i> aus, gelesen wird trotzdem. Was über die Fuge
+einer <b>geteilten Zelle</b> hinweg beanstandet wird, lässt sich nicht
+übernehmen — es liegt in zwei Feldern; dort hilft nur die Hand.</p>
 
-<p>Die Texte gehen <b>gebündelt</b> über die Leitung, nicht Zelle für Zelle:
-eine Anfrage je rund 8000 Zeichen, durch Leerzeilen getrennt. Server und
-Sprache werden gemerkt (<code>Verteilerly.conf</code>, Gruppe
-<code>rechtschreibung</code>). Ist nichts zu erreichen, steht der Grund neben
-dem Knopf — geprüft wird dann eben nicht, das Programm läuft weiter.</p>
+<p><b>Vorschläge des Wörterbuchs kommen verzögert.</b> Nachschlagen kostet
+nichts, einen Vorschlag zu suchen dagegen ein paar Sekunden — gesucht wird
+darum erst, wenn Sie die Zeile anklicken, und der Vorschlag erscheint, sobald
+er da ist. Die Texte gehen an LanguageTool <b>gebündelt</b> über die Leitung,
+nicht Zelle für Zelle: eine Anfrage je rund 8000 Zeichen, durch Leerzeilen
+getrennt. Beide Haken, Server und Sprache werden gemerkt
+(<code>Verteilerly.conf</code>, Gruppe <code>rechtschreibung</code>). Ist
+nichts zu erreichen, steht der Grund neben dem Knopf — geprüft wird dann eben
+nicht, das Programm läuft weiter; was der andere Prüfer gefunden hat, bleibt
+stehen.</p>
 
 <h3>11.4 &nbsp; Erweiterungen verwalten</h3>
 

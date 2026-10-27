@@ -809,9 +809,27 @@ Unerwarteter Fehler: Unexpected error
 '&Rechtschreibung…': '&Spell check…'
 Rechtschreibung: Spell check
 Rechtschreibprüfung: Spell check
-Bezeichnungen, Bemerkungen, Kabelnamen und Projektdaten von einem LanguageTool-Server prüfen lassen — öffentlich oder im eigenen Netz: Have designations, remarks, cable names and project data checked by a LanguageTool server — the public one or your own
-Die Texte des Verteilers von LanguageTool prüfen lassen: Have the texts of the frame checked by LanguageTool
+Bezeichnungen, Bemerkungen, Kabelnamen und Projektdaten prüfen — mit einem Wörterbuch auf diesem Rechner oder über LanguageTool: Check designations, remarks, cable names and project data — with a dictionary on this computer or via LanguageTool
+Die Texte des Verteilers auf Rechtschreibung prüfen: Check the spelling of the texts of the frame
 Kein Verteiler geöffnet: No frame open
+Wörterbuch (auf diesem Rechner): Dictionary (on this computer)
+Findet Tippfehler, ohne dass etwas den Rechner verlässt.: Finds typing mistakes without anything leaving the computer.
+LanguageTool (Server): LanguageTool (server)
+Findet auch Grammatik und Zeichensetzung — die Texte gehen dafür an einen Server.: Finds grammar and punctuation as well — for that the texts go to a server.
+Dafür fehlt spylls.: spylls is missing for that.
+Für die Prüfung ohne Netz fehlt spylls.: spylls is missing for checking without a network.
+'Das Wörterbuch {0} ist nicht zu lesen ({1}).': 'The dictionary {0} cannot be read ({1}).'
+Für diese Sprache liegt kein Wörterbuch bereit.: No dictionary is available for this language.
+'{0} aus {1}': '{0} from {1}'
+Kein Prüfer gewählt.: No checker chosen.
+Unbekanntes Wort: Unknown word
+Wörterbuch: Dictionary
+Quelle: Source
+Wort aufnehmen: Add word
+Trägt das Wort in die eigene Wortliste ein — das Wörterbuch beanstandet es dann nicht mehr.: Enters the word in your own word list — the dictionary will not object to it any more.
+Die eigene Wortliste ist nicht zu schreiben.: Your own word list cannot be written.
+'„{0}“ steht jetzt in der eigenen Wortliste.': '“{0}” is now in your own word list.'
+'{0} Texte werden geprüft …': '{0} texts are being checked …'
 'Server:': 'Server:'
 'Sprache:': 'Language:'
 Ein eigener LanguageTool-Server, etwa http://localhost:8081/v2/check, hält die Texte im Haus.: A LanguageTool server of your own, such as http://localhost:8081/v2/check, keeps the texts in the house.
@@ -826,7 +844,7 @@ Zur Stelle springen: Jump to the place
 Hier steht kein Text, der zu prüfen wäre.: There is no text here that could be checked.
 '{0} Texte gehen zur Prüfung an {1} …': '{0} texts are going to {1} to be checked …'
 Texte senden?: Send texts?
-"Zum Prüfen gehen {0} Texte dieses Verteilers an\n{1}\n\nSie verlassen damit diesen Rechner. Wer das nicht möchte, trägt einen eigenen LanguageTool-Server ein.\n\nSenden?": "To be checked, {0} texts of this frame are sent to\n{1}\n\nThey leave this computer in doing so. If you do not want that, enter a LanguageTool server of your own.\n\nSend?"
+"Zum Prüfen gehen {0} Texte dieses Verteilers an\n{1}\n\nSie verlassen damit diesen Rechner. Wer das nicht möchte, trägt einen eigenen LanguageTool-Server ein oder prüft nur mit dem Wörterbuch.\n\nSenden?": "To be checked, {0} texts of this frame are sent to\n{1}\n\nThey leave this computer in doing so. If you do not want that, enter a LanguageTool server of your own or check with the dictionary only.\n\nSend?"
 Es wurde nichts gesendet.: Nothing was sent.
 Nichts zu beanstanden.: Nothing to object to.
 '{0} Stellen beanstandet.': '{0} places objected to.'

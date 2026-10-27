@@ -1,7 +1,7 @@
 """Was in diesem Programm steckt.
 
 Verteilerly selbst steht unter der GPL-3.0-or-later, seine Bausteine
-unter LGPL, BSD, MIT oder PSF - nachzulesen im Abbild unter
+unter LGPL, BSD, MIT, MPL oder PSF - nachzulesen im Abbild unter
 ``lizenzen/``. Damit das auch im laufenden Programm nachzusehen ist, sammelt dieses Modul
 die Fassungen zur Laufzeit ein: was tatsaechlich geladen ist, nicht was
 in einer Liste steht.
@@ -43,6 +43,24 @@ def _fassung(modul: str, feld: str = "__version__") -> str:
     return str(wert) if wert else "unbekannt"
 
 
+def _paketfassung(paket: str, modul: str) -> str:
+    """Die Fassung aus den Paketdaten - fuer ein Modul ohne ``__version__``.
+
+    spylls traegt am Modul noch die 0.1.0 der ersten Ausgabe; was
+    tatsaechlich installiert ist, wissen nur die Paketdaten.
+    """
+    try:
+        __import__(modul)
+    except ImportError:
+        return FEHLT
+    try:
+        import importlib.metadata
+
+        return importlib.metadata.version(paket)
+    except Exception:       # noqa: BLE001 - ohne Paketdaten eben ohne
+        return "unbekannt"
+
+
 def _qt() -> str:
     try:
         from PySide6 import QtCore
@@ -64,6 +82,8 @@ def abhaengigkeiten() -> list[Baustein]:
         Baustein("ReportLab", _fassung("reportlab", "Version"), "BSD", "PDF"),
         Baustein("openpyxl", _fassung("openpyxl"), "MIT", "Excel-Mappe"),
         Baustein("PyYAML", _fassung("yaml"), "MIT", "Vorlagen und Kabeltypen"),
+        Baustein("spylls", _paketfassung("spylls", "spylls"), "MPL-2.0",
+                 "Rechtschreibung ohne Netz"),
     ]
 
 

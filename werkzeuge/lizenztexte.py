@@ -17,7 +17,7 @@ import re
 # Lizenz als Datei mitbringt. PySide6 und shiboken6 bringen keine mit -
 # fuer sie steht LGPL-3.0.txt in lizenzen/.
 PAKETE = ("reportlab", "pillow", "openpyxl", "et_xmlfile", "PyYAML",
-          "charset_normalizer")
+          "charset_normalizer", "spylls")
 
 _LIZENZDATEI = re.compile(r"^(LICEN[CS]E|COPYING|NOTICE)", re.IGNORECASE)
 
