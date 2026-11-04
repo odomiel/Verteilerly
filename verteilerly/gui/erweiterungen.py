@@ -78,6 +78,10 @@ class Schnittstelle:
         """Das offene Projekt - oder None."""
         return self._fenster.projekt
 
+    def vorlagen(self):
+        """Die Verteilervorlagen, wie sie gerade geladen sind."""
+        return self._fenster.vorlagen
+
     def blattvorlagen(self):
         """Alle Blattvorlagen, wie sie gerade geladen sind."""
         return self._fenster.blattvorlagen

@@ -48,6 +48,11 @@ class Programmattrappe:
     def projekt(self):
         return None
 
+    def vorlagen(self):
+        from verteilerly.vorlagen import Vorlagen
+
+        return Vorlagen([])
+
     def blattvorlagen(self):
         return self._vorlagen
 
@@ -278,8 +283,8 @@ class TestImHauptfenster(unittest.TestCase):
         texte = [a.text().replace("&", "") for a in eintraege if not a.isSeparator()]
         self.assertEqual(
             texte,
-            ["Blattvorlagen-Editor…", "Protokoll…", "Rechtschreibung…",
-             "Erweiterungen verwalten…"],
+            ["Blattvorlagen-Editor…", "Projekt anlegen…", "Protokoll…",
+             "Rechtschreibung…", "Erweiterungen verwalten…"],
         )
         editor = next(a for a in eintraege if "Blattvorlagen" in a.text())
         self.assertEqual(editor.property("erweiterung"), "blattvorlageneditor")

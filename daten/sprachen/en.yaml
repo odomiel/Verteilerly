@@ -805,6 +805,49 @@ Unerwarteter Fehler: Unexpected error
   The program keeps running. What exactly happened is in the log:
 
   {1}'
+# Projekt anlegen (Erweiterung)
+Projekt: Project
+'Projekt &anlegen…': '&Create project…'
+Projekt anlegen: Create project
+Mehrere Verteiler mit denselben Projektdaten auf einmal anlegen — jeden in seinem Projektordner, mit vorgegebenen Dateien darin: Create several frames with the same project data in one go — each in its own project folder, with predefined files in it
+Mehrere Verteiler mit denselben Projektdaten anlegen: Create several frames with the same project data
+'Zielordner:': 'Target folder:'
+Ordner, in dem das Projekt entsteht: Folder in which the project is created
+Durchsuchen…: Browse…
+Zielordner wählen: Choose target folder
+Geometrie — für jeden Verteiler dieselbe: Geometry — the same for every frame
+Ordner: Folder
+Wird angelegt: Will be created
+Je Zeile ein Verteiler. Die Spalte Ordner folgt Name und Nummer, solange niemand sie ändert.: One frame per row. The Folder column follows name and number as long as nobody changes it.
+Zeile hinzufügen: Add row
+Zeile entfernen: Remove row
+Für jeden Verteiler einen eigenen Ordner: A folder of its own for every frame
+Ohne Haken liegen alle Projektdateien nebeneinander im Zielordner, und die Beilagen kommen einmal dazu.: Without the tick all project files lie side by side in the target folder, and the enclosures are added once.
+Beilagen — kommen in jeden Projektordner: Enclosures — go into every project folder
+Unterordner: Subfolder
+Datei oder Ordner: File or folder
+'Unterordner leer heißt: unmittelbar in den Projektordner. Von einem Ordner wandert sein Inhalt mit.': 'An empty subfolder means: straight into the project folder. From a folder its contents travel along.'
+Dateien hinzufügen…: Add files…
+Ordner hinzufügen…: Add folder…
+Dateien für jeden Projektordner: Files for every project folder
+Ordner, dessen Inhalt mitwandert: Folder whose contents travel along
+'Nicht zu finden: {0}': 'Not to be found: {0}'
+Projektdaten — für jeden Verteiler dieselben: Project data — the same for every frame
+Anlegen: Create
+Erst einen Zielordner wählen.: Choose a target folder first.
+Noch kein Verteiler eingetragen.: No frame entered yet.
+Keine Zeile geht — die Gründe stehen rechts.: No row works — the reasons are on the right.
+Angelegt werden {0} Verteiler und {1} Dateien dazu.: '{0} frames and {1} files alongside will be created.'
+'{0} Verteiler angelegt, {1} Dateien beigelegt': '{0} frames created, {1} files enclosed'
+' ({0} lagen schon da)': ' ({0} were already there)'
+Nichts angelegt: Nothing created
+"Das ging nicht:\n\n{0}": "That did not work:\n\n{0}"
+kein Name, der als Ordnername taugt: no name that works as a folder name
+steht in dieser Liste zweimal: appears twice in this list
+diese Datei gibt es schon: this file already exists
+dort liegt eine Datei dieses Namens: a file of that name lies there
+kein Projekt zu dieser Zeile: no project for this row
+
 # Rechtschreibprüfung (Erweiterung)
 '&Rechtschreibung…': '&Spell check…'
 Rechtschreibung: Spell check

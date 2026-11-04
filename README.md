@@ -78,6 +78,15 @@ gesendet nichts außer der Anfrage; abgeschaltet geht es **nie** ins Netz.
 *Hilfe ▸ Nach Updates sehen…* fragt auf Knopfdruck und sagt in jedem Fall, was
 herauskam.
 
+**Ein Projekt anlegen** (*Erweiterungen ▸ Projekt anlegen…*): ein Projekt
+besteht selten aus einem Verteiler. Hier stehen sie als Liste — je Zeile Name
+und Verteilernummer —, dazu einmal die Geometrie und einmal die
+**Projektdaten**; angelegt wird je Verteiler ein **Projektordner** mit seiner
+Projektdatei darin. **Beilagen** kommen mit: vorgegebene Dateien und ganze
+Ordner, jede in ihrem Unterordner, damit ein frischer Projektordner aussieht
+wie die vom letzten Mal (`Fotos/`, `Messprotokolle/Vorlage.xlsx`).
+Überschrieben wird dabei nichts.
+
 **Rechtschreibung prüfen** (*Erweiterungen ▸ Rechtschreibung…*): Bezeichnungen,
 Bemerkungen, Kabelnamen und Projektdaten werden auf Knopfdruck nachgelesen, und
 was zu beanstanden ist, steht mit Vorschlag in einer Liste — zum Übernehmen

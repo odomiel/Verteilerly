@@ -70,6 +70,14 @@ out. Nothing is downloaded, nothing is sent beyond the request; switched off
 it **never** goes online. *Help ▸ Look for updates…* asks at the press of a
 button and says in every case what came of it.
 
+**Creating a project** (*Extensions ▸ Create project…*): a project rarely
+consists of one frame. Here they stand as a list — name and frame number per
+row —, together with the geometry once and the **project data** once; every
+frame gets a **project folder** with its project file in it. **Enclosures**
+come along: predefined files and whole folders, each in its subfolder, so that
+a fresh project folder looks like the ones from last time (`Fotos/`,
+`Messprotokolle/Vorlage.xlsx`). Nothing is overwritten in the process.
+
 **Spell check** (*Extensions ▸ Spell check…*): designations, remarks, cable
 names and project data are read through at the press of a button, and what
 there is to object to stands in a list with its suggestion — to apply or to

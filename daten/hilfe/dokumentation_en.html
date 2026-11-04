@@ -1416,7 +1416,60 @@ boxes, server and language are remembered
 nothing can be reached, the reason stands next to the button — then nothing is
 checked, and the program carries on; what the other checker found stays.</p>
 
-<h3>11.4 &nbsp; Managing extensions</h3>
+<h3>11.4 &nbsp; Creating a project</h3>
+
+<p><b>Extensions ▸ Create project…</b> creates several frames in one go. A
+project rarely consists of one: a building has a main frame and several floor
+frames, and all of them carry the same project data — company, customer,
+building project, date. By hand that means creating a new frame, typing in the
+project data and saving it, six times over. The dialog takes all of it at
+once:</p>
+
+<ul>
+<li><b>Target folder</b> — the project is created in it. The last one is
+kept.</li>
+<li><b>Geometry</b> — a frame template or your own numbers, <b>the same for
+every frame of the list</b>. If you need a different one, create it separately
+afterwards.</li>
+<li><b>The list of frames</b> — name and frame number per row. The column
+<i>Folder</i> suggests what folder and file are called: the number first, so
+that the folders lie in the file manager in the order of the installation. It
+follows the name as long as nobody touches it — change it, and your spelling
+stays. The last column shows what becomes of the row, or why it does not
+work.</li>
+<li><b>Project data</b> — the same fields as for a new frame, prefilled with
+the defaults (<i>Edit ▸ Defaults for new frames</i>). They apply to every
+frame of the list; what the sheet template does not carry is not offered here
+and is deselected in every project. Fields of your own from the sheet template
+stand below them.</li>
+<li><b>Enclosures</b> — predefined files and whole folders that travel into
+every project folder, each into its <i>subfolder</i>. That way a fresh project
+folder looks like the ones from last time: <code>Fotos/</code>,
+<code>Messprotokolle/Vorlage.xlsx</code>, the checklist of the house. From a
+folder its <b>contents</b> travel along; an empty one brings itself, which is
+how an empty compartment is predefined. The stock is kept and applies again
+next time.</li>
+</ul>
+
+<p>Every frame gets a <b>project folder</b> with its project file in it.
+Without the check mark <i>A folder of its own for every frame</i> all project
+files lie side by side in the target folder, and the enclosures are added
+once.</p>
+
+<p><b>Nothing is overwritten.</b> A project file that already exists leaves its
+row standing — the reason is in the last column —, and an enclosure that
+already lies at its target is passed over. An existing folder, on the other
+hand, keeps being used: a second run adds what is missing. And one error does
+not stop the rest — a locked folder should not cost the other nine frames;
+what did not work is shown in a window afterwards.</p>
+
+<p>The <b>open frame stays untouched</b>: files are created, none is opened.
+The new frames are opened like any other via <i>File ▸ Open</i>. Target folder,
+enclosures and the check mark are kept (<code>Verteilerly.conf</code>, group
+<code>projekt</code>) — the list of frames and the project data are not, they
+belong to this project.</p>
+
+<h3>11.5 &nbsp; Managing extensions</h3>
 
 <p><b>Extensions ▸ Manage extensions…</b> lists every extension found with a
 check mark, its <b>version</b>, its origin and description — or the reason why
@@ -1436,7 +1489,7 @@ for several builds on one day. One of <b>your own</b> counts however it likes:
 what stands in
 the column is its own statement. If it names none, a dash stands there.</p>
 
-<h3>11.5 &nbsp; Writing an extension of your own</h3>
+<h3>11.6 &nbsp; Writing an extension of your own</h3>
 
 <p>An extension is a Python file — or a folder with <code>__init__.py</code> —
 in the <code>erweiterungen</code> folder of the working folder; <i>Manage
@@ -1483,6 +1536,8 @@ entry in the Extensions menu. An error in the call is shown instead of
 stopping the program.</td></tr>
 <tr><td><code>projekt()</code></td><td>The open frame including the project
 data — or <code>None</code>.</td></tr>
+<tr><td><code>vorlagen()</code></td><td>The frame templates as they are
+currently loaded.</td></tr>
 <tr><td><code>blattvorlagen()</code>, <code>blattvorlage()</code></td><td>All
 sheet templates and the one currently chosen.</td></tr>
 <tr><td><code>blattvorlagen_neu_laden()</code></td><td>Reads the sheet templates
@@ -1558,7 +1613,8 @@ extensions</i>.</p>
 <tr><td>Check sheet template…</td><td></td></tr>
 <tr><td>Check cable types…</td><td></td></tr>
 <tr><td>Link project files…</td><td></td></tr>
-<tr><td rowspan="4"><b>Extensions</b></td><td>Sheet template editor…</td><td></td></tr>
+<tr><td rowspan="5"><b>Extensions</b></td><td>Sheet template editor…</td><td></td></tr>
+<tr><td>Create project…</td><td></td></tr>
 <tr><td>Log…</td><td></td></tr>
 <tr><td>Spell check…</td><td></td></tr>
 <tr><td>Manage extensions…</td><td></td></tr>

@@ -1464,7 +1464,59 @@ nichts zu erreichen, steht der Grund neben dem Knopf — geprüft wird dann eben
 nicht, das Programm läuft weiter; was der andere Prüfer gefunden hat, bleibt
 stehen.</p>
 
-<h3>11.4 &nbsp; Erweiterungen verwalten</h3>
+<h3>11.4 &nbsp; Ein Projekt anlegen</h3>
+
+<p><b>Erweiterungen ▸ Projekt anlegen…</b> legt mehrere Verteiler auf einmal
+an. Ein Projekt besteht selten aus einem: ein Haus hat einen HVt und mehrere
+Etagenverteiler, und alle tragen dieselben Projektdaten — Firma, Kunde,
+Bauvorhaben, Datum. Von Hand heißt das sechsmal neuen Verteiler anlegen,
+Projektdaten eintippen, speichern. Der Dialog nimmt alles auf einmal:</p>
+
+<ul>
+<li><b>Zielordner</b> — darin entsteht das Projekt. Der letzte wird
+gemerkt.</li>
+<li><b>Geometrie</b> — eine Verteilervorlage oder eigene Zahlen, <b>für jeden
+Verteiler der Liste dieselbe</b>. Wer einen abweichenden braucht, legt ihn
+hinterher einzeln an.</li>
+<li><b>Die Liste der Verteiler</b> — je Zeile Name und Verteilernummer. Die
+Spalte <i>Ordner</i> schlägt vor, wie Ordner und Datei heißen: die Nummer
+vorn, damit die Ordner in der Dateiverwaltung in der Reihenfolge der Anlage
+liegen. Sie folgt dem Namen, solange niemand sie anfasst — wer sie ändert,
+behält seine Schreibweise. Die letzte Spalte zeigt, was aus der Zeile wird,
+oder warum sie nicht geht.</li>
+<li><b>Projektdaten</b> — dieselben Felder wie beim neuen Verteiler, vorbelegt
+mit den Vorgaben (<i>Bearbeiten ▸ Vorgaben für neue Verteiler</i>). Sie gelten
+für jeden Verteiler der Liste; was die Blattvorlage nicht führt, steht hier
+nicht zur Eingabe und ist in jedem Projekt abgewählt. Eigene Felder der
+Blattvorlage stehen darunter.</li>
+<li><b>Beilagen</b> — vorgegebene Dateien und ganze Ordner, die in jeden
+Projektordner mitwandern, jede in ihrem <i>Unterordner</i>. Damit sieht ein
+frischer Projektordner aus wie die vom letzten Mal: <code>Fotos/</code>,
+<code>Messprotokolle/Vorlage.xlsx</code>, die Checkliste des Hauses. Von einem
+Ordner wandert sein <b>Inhalt</b> mit; ein leerer bringt sich selbst mit, so
+lässt sich ein leeres Fach vorgeben. Der Bestand wird gemerkt und gilt beim
+nächsten Mal wieder.</li>
+</ul>
+
+<p>Je Verteiler entsteht ein <b>Projektordner</b> mit der Projektdatei darin.
+Ohne den Haken <i>Für jeden Verteiler einen eigenen Ordner</i> liegen alle
+Projektdateien nebeneinander im Zielordner, und die Beilagen kommen einmal
+dazu.</p>
+
+<p><b>Überschrieben wird nichts.</b> Eine Projektdatei, die es schon gibt,
+lässt ihre Zeile stehen — der Grund steht in der letzten Spalte —, und eine
+Beilage, die am Ziel schon liegt, wird übergangen. Ein vorhandener Ordner wird
+dagegen weiterbenutzt: ein zweiter Durchgang ergänzt, was fehlt. Und ein
+Fehler hält den Rest nicht auf — ein gesperrter Ordner soll nicht die anderen
+neun Verteiler kosten; was nicht ging, steht hinterher in einem Fenster.</p>
+
+<p>Der <b>offene Verteiler bleibt unberührt</b>: angelegt werden Dateien,
+geöffnet wird keine. Die neuen Verteiler öffnet man wie jeden anderen über
+<i>Datei ▸ Öffnen</i>. Gemerkt werden Zielordner, Beilagen und der Haken
+(<code>Verteilerly.conf</code>, Gruppe <code>projekt</code>) — die Liste der
+Verteiler und die Projektdaten nicht, die gehören diesem Projekt.</p>
+
+<h3>11.5 &nbsp; Erweiterungen verwalten</h3>
 
 <p><b>Erweiterungen ▸ Erweiterungen verwalten…</b> listet jede gefundene
 Erweiterung mit Haken, <b>Version</b>, Herkunft und Beschreibung — oder mit dem
@@ -1485,7 +1537,7 @@ trägt darum dessen Version — das Datum des Releases,
 will: was in der Spalte
 steht, ist ihre eigene Angabe. Nennt sie keine, steht dort ein Strich.</p>
 
-<h3>11.5 &nbsp; Eine eigene Erweiterung schreiben</h3>
+<h3>11.6 &nbsp; Eine eigene Erweiterung schreiben</h3>
 
 <p>Eine Erweiterung ist eine Python-Datei — oder ein Ordner mit
 <code>__init__.py</code> — im Ordner <code>erweiterungen</code> des
@@ -1532,6 +1584,8 @@ Eintrag im Menü Erweiterungen. Ein Fehler im Aufruf wird angezeigt, statt das
 Programm anzuhalten.</td></tr>
 <tr><td><code>projekt()</code></td><td>Der offene Verteiler samt Projektdaten —
 oder <code>None</code>.</td></tr>
+<tr><td><code>vorlagen()</code></td><td>Die Verteilervorlagen, wie sie
+gerade geladen sind.</td></tr>
 <tr><td><code>blattvorlagen()</code>, <code>blattvorlage()</code></td><td>Alle
 Blattvorlagen und die gerade gewählte.</td></tr>
 <tr><td><code>blattvorlagen_neu_laden()</code></td><td>Liest die Blattvorlagen
@@ -1606,7 +1660,8 @@ und sie lässt sich unter <i>Erweiterungen verwalten</i> ausschalten.</p>
 <tr><td>Blattvorlage prüfen…</td><td></td></tr>
 <tr><td>Kabeltypen prüfen…</td><td></td></tr>
 <tr><td>Projektdateien verknüpfen…</td><td></td></tr>
-<tr><td rowspan="4"><b>Erweiterungen</b></td><td>Blattvorlagen-Editor…</td><td></td></tr>
+<tr><td rowspan="5"><b>Erweiterungen</b></td><td>Blattvorlagen-Editor…</td><td></td></tr>
+<tr><td>Projekt anlegen…</td><td></td></tr>
 <tr><td>Protokoll…</td><td></td></tr>
 <tr><td>Rechtschreibung…</td><td></td></tr>
 <tr><td>Erweiterungen verwalten…</td><td></td></tr>
