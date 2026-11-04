@@ -7,13 +7,15 @@ nebeneinander in einem Ordner liegen. Von Hand heisst das: neuen
 Verteiler anlegen, Projektdaten eintippen, speichern, und das sechsmal.
 
 Diese Erweiterung nimmt die Liste auf einmal: je Zeile Name und
-Verteilernummer, darueber die Geometrie, daneben die Projektdaten.
-Heraus kommt je Verteiler ein **Projektordner** mit der Projektdatei
-darin - oder, wenn der Haken fort ist, ein Ordner mit allen Dateien.
+Verteilernummer, darueber die Geometrie, daneben die Projektdaten. Alles
+entsteht in **einem Projektordner** - darin je Verteiler ein
+Unterordner mit seiner Projektdatei, oder, wenn der Haken fort ist, alle
+Projektdateien nebeneinander.
 
 Dazu die **Beilagen**: vorgegebene Dateien und ganze Ordner, jede mit
-ihrem Unterordner, die in jeden Projektordner mitwandern. Damit sieht
-ein frischer Projektordner aus wie die vom letzten Mal - ``Fotos/``,
+ihrem Unterordner. Sie gehoeren dem Projektordner und kommen darum
+**einmal** hinein, nicht in jeden Verteilerordner - damit ein frischer
+Projektordner aussieht wie der vom letzten Mal: ``Fotos/``,
 ``Messprotokolle/Vorlage.xlsx``, die Checkliste des Hauses. Der Bestand
 steht in der ``Verteilerly.conf`` unter ``projekt/`` und gilt beim
 naechsten Mal wieder.
@@ -33,7 +35,7 @@ from .anlage import beilagen_lesen, beilagen_schreiben
 #: Die eigene Ecke in der Verteilerly.conf.
 GRUPPE = "projekt"
 #: Wohin zuletzt angelegt wurde - der naechste Griff geht meist daneben.
-SCHLUESSEL_ZIEL = f"{GRUPPE}/zielordner"
+SCHLUESSEL_ORDNER = f"{GRUPPE}/projektordner"
 #: Der Bestand an Beilagen, als Text mit Zeilenumbruechen.
 SCHLUESSEL_BEILAGEN = f"{GRUPPE}/beilagen"
 #: Bekommt jeder Verteiler seinen eigenen Ordner? Vorgabe: ja.
@@ -45,7 +47,7 @@ class ProjektAnlegen(Erweiterung):
     name = "Projekt"
     beschreibung = (
         "Mehrere Verteiler mit denselben Projektdaten auf einmal anlegen — "
-        "jeden in seinem Projektordner, mit vorgegebenen Dateien darin"
+        "in einem Projektordner, mit vorgegebenen Dateien darin"
     )
 
     def einrichten(self, programm) -> None:
@@ -67,8 +69,8 @@ class ProjektAnlegen(Erweiterung):
     # -- Was gemerkt wird ----------------------------------------------------
 
     @staticmethod
-    def zielordner(einstellungen) -> str:
-        return str(einstellungen.value(SCHLUESSEL_ZIEL, "") or "")
+    def projektordner(einstellungen) -> str:
+        return str(einstellungen.value(SCHLUESSEL_ORDNER, "") or "")
 
     @staticmethod
     def beilagen(einstellungen):
@@ -80,14 +82,14 @@ class ProjektAnlegen(Erweiterung):
 
     @staticmethod
     def merken(einstellungen, dialog) -> None:
-        """Zielordner, Beilagen und den Haken fuer das naechste Mal.
+        """Projektordner, Beilagen und den Haken fuer das naechste Mal.
 
         Die Verteilerliste und die Projektdaten bleiben draussen: die
         gehoeren diesem Projekt, nicht dem Programm. Was an Projektdaten
         als Vorgabe stehen soll, merkt sich *Bearbeiten ▸ Vorgaben fuer
         neue Verteiler*.
         """
-        einstellungen.setValue(SCHLUESSEL_ZIEL, str(dialog.zielordner()))
+        einstellungen.setValue(SCHLUESSEL_ORDNER, str(dialog.projektordner()))
         einstellungen.setValue(
             SCHLUESSEL_BEILAGEN, beilagen_schreiben(dialog.beilagen())
         )

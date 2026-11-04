@@ -1473,8 +1473,8 @@ Bauvorhaben, Datum. Von Hand heißt das sechsmal neuen Verteiler anlegen,
 Projektdaten eintippen, speichern. Der Dialog nimmt alles auf einmal:</p>
 
 <ul>
-<li><b>Zielordner</b> — darin entsteht das Projekt. Der letzte wird
-gemerkt.</li>
+<li><b>Projektordner</b> — darin entsteht das Projekt, und zwar alles:
+die Verteiler und die Beilagen. Der letzte wird gemerkt.</li>
 <li><b>Geometrie</b> — eine Verteilervorlage oder eigene Zahlen, <b>für jeden
 Verteiler der Liste dieselbe</b>. Wer einen abweichenden braucht, legt ihn
 hinterher einzeln an.</li>
@@ -1489,30 +1489,43 @@ mit den Vorgaben (<i>Bearbeiten ▸ Vorgaben für neue Verteiler</i>). Sie gelte
 für jeden Verteiler der Liste; was die Blattvorlage nicht führt, steht hier
 nicht zur Eingabe und ist in jedem Projekt abgewählt. Eigene Felder der
 Blattvorlage stehen darunter.</li>
-<li><b>Beilagen</b> — vorgegebene Dateien und ganze Ordner, die in jeden
-Projektordner mitwandern, jede in ihrem <i>Unterordner</i>. Damit sieht ein
-frischer Projektordner aus wie die vom letzten Mal: <code>Fotos/</code>,
+<li><b>Beilagen</b> — vorgegebene Dateien und ganze Ordner, die
+<b>einmal</b> in den Projektordner kommen, jede in ihrem
+<i>Unterordner</i>. Sie gehören dem Projekt, nicht dem einzelnen
+Verteiler: in den Verteilerordnern liegt nur ihre Projektdatei. Damit sieht
+ein frischer Projektordner aus wie der vom letzten Mal: <code>Fotos/</code>,
 <code>Messprotokolle/Vorlage.xlsx</code>, die Checkliste des Hauses. Von einem
 Ordner wandert sein <b>Inhalt</b> mit; ein leerer bringt sich selbst mit, so
 lässt sich ein leeres Fach vorgeben. Der Bestand wird gemerkt und gilt beim
 nächsten Mal wieder.</li>
 </ul>
 
-<p>Je Verteiler entsteht ein <b>Projektordner</b> mit der Projektdatei darin.
-Ohne den Haken <i>Für jeden Verteiler einen eigenen Ordner</i> liegen alle
-Projektdateien nebeneinander im Zielordner, und die Beilagen kommen einmal
-dazu.</p>
+<p>Im Projektordner bekommt jeder Verteiler einen <b>eigenen Unterordner</b>
+mit seiner Projektdatei darin; ohne den Haken <i>Für jeden Verteiler einen
+eigenen Ordner</i> liegen alle Projektdateien nebeneinander im Projektordner.
+Die Beilagen liegen in beiden Fällen daneben — einmal:</p>
+
+<pre>Neubau Musterstraße/        ← der Projektordner
+    1.1 Hauptverteiler/
+        1.1 Hauptverteiler.vtly
+    1.2 Etage 1/
+        1.2 Etage 1.vtly
+    Dokumentation/
+        Checkliste.txt          ← eine Beilage
+    Fotos/                      ← ein leeres Fach als Beilage</pre>
 
 <p><b>Überschrieben wird nichts.</b> Eine Projektdatei, die es schon gibt,
 lässt ihre Zeile stehen — der Grund steht in der letzten Spalte —, und eine
 Beilage, die am Ziel schon liegt, wird übergangen. Ein vorhandener Ordner wird
-dagegen weiterbenutzt: ein zweiter Durchgang ergänzt, was fehlt. Und ein
-Fehler hält den Rest nicht auf — ein gesperrter Ordner soll nicht die anderen
-neun Verteiler kosten; was nicht ging, steht hinterher in einem Fenster.</p>
+dagegen weiterbenutzt: ein zweiter Durchgang ergänzt, was fehlt — so kommt ein
+weiterer Verteiler später in dasselbe Projekt. Geht <b>keine einzige</b> Zeile,
+entsteht nichts, auch kein Ordner und keine Beilage. Und ein Fehler hält den
+Rest nicht auf — ein gesperrter Ordner soll nicht die anderen neun Verteiler
+kosten; was nicht ging, steht hinterher in einem Fenster.</p>
 
 <p>Der <b>offene Verteiler bleibt unberührt</b>: angelegt werden Dateien,
 geöffnet wird keine. Die neuen Verteiler öffnet man wie jeden anderen über
-<i>Datei ▸ Öffnen</i>. Gemerkt werden Zielordner, Beilagen und der Haken
+<i>Datei ▸ Öffnen</i>. Gemerkt werden Projektordner, Beilagen und der Haken
 (<code>Verteilerly.conf</code>, Gruppe <code>projekt</code>) — die Liste der
 Verteiler und die Projektdaten nicht, die gehören diesem Projekt.</p>
 

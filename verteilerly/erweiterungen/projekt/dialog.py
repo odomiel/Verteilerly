@@ -1,8 +1,9 @@
 """Der Dialog zum Anlegen eines Projekts: die Liste links, die Daten rechts.
 
-Links steht, **was** entsteht: der Zielordner, die Geometrie (einmal
+Links steht, **was** entsteht: der Projektordner, die Geometrie (einmal
 fuer alle - ein Projekt besteht meist aus gleichen Verteilern), die
-Liste der Verteiler und die Beilagen. Rechts stehen die
+Liste der Verteiler und die Beilagen, die einmal in den Projektordner
+kommen. Rechts stehen die
 **Projektdaten**, und zwar dieselben Felder wie im Dialog *Neuer
 Verteiler*: dasselbe Bauteil (``ProjektdatenFelder``), damit beide
 Wege nicht auseinanderlaufen. Gezeigt wird, was die gerade gewaehlte
@@ -79,17 +80,17 @@ class ProjektDialog(PassenderDialog):
         #: nicht auf ``itemChanged`` - sonst rechnete er sich im Kreis.
         self._fuellt = False
 
-        self.ziel = QLineEdit(ProjektAnlegen.zielordner(self.einstellungen))
-        self.ziel.setPlaceholderText(u("Ordner, in dem das Projekt entsteht"))
-        self.ziel.textChanged.connect(self._vorschau_auffrischen)
-        self.zielknopf = QPushButton(u("Durchsuchen…"))
-        self.zielknopf.clicked.connect(self._ziel_waehlen)
+        self.ordnerfeld = QLineEdit(ProjektAnlegen.projektordner(self.einstellungen))
+        self.ordnerfeld.setPlaceholderText(u("Ordner, in dem das Projekt entsteht"))
+        self.ordnerfeld.textChanged.connect(self._vorschau_auffrischen)
+        self.suchknopf = QPushButton(u("Durchsuchen…"))
+        self.suchknopf.clicked.connect(self._ordner_waehlen)
         self.ordnerknopf = QPushButton(u("Ordner öffnen"))
-        self.ordnerknopf.clicked.connect(self._ziel_oeffnen)
-        zielzeile = QHBoxLayout()
-        zielzeile.addWidget(self.ziel, 1)
-        zielzeile.addWidget(self.zielknopf)
-        zielzeile.addWidget(self.ordnerknopf)
+        self.ordnerknopf.clicked.connect(self._ordner_oeffnen)
+        ordnerzeile = QHBoxLayout()
+        ordnerzeile.addWidget(self.ordnerfeld, 1)
+        ordnerzeile.addWidget(self.suchknopf)
+        ordnerzeile.addWidget(self.ordnerknopf)
 
         # Die Geometrie gilt fuer alle Zeilen: ein Projekt besteht in der
         # Regel aus gleichen Verteilern. Wer einen anderen braucht, legt
@@ -157,7 +158,7 @@ class ProjektDialog(PassenderDialog):
         )
         self.eigener_ordner_haken.setToolTip(
             u("Ohne Haken liegen alle Projektdateien nebeneinander im "
-              "Zielordner, und die Beilagen kommen einmal dazu.")
+              "Projektordner.")
         )
         self.eigener_ordner_haken.setChecked(
             ProjektAnlegen.eigener_ordner(self.einstellungen)
@@ -210,7 +211,7 @@ class ProjektDialog(PassenderDialog):
         beilagenblock.addWidget(self.beilagentabelle, 1)
         beilagenblock.addLayout(beilagenknoepfe)
         beilagenblock.addWidget(self.beilagenhinweis)
-        beilagenkasten = QGroupBox(u("Beilagen — kommen in jeden Projektordner"))
+        beilagenkasten = QGroupBox(u("Beilagen — kommen einmal in den Projektordner"))
         beilagenkasten.setLayout(beilagenblock)
 
         # Die Projektdaten: dasselbe Bauteil wie im Dialog Neuer
@@ -267,11 +268,11 @@ class ProjektDialog(PassenderDialog):
         self.summe = QLabel()
         self.summe.setWordWrap(True)
 
-        zielform = QFormLayout()
-        zielform.addRow(u("Zielordner:"), zielzeile)
+        ordnerform = QFormLayout()
+        ordnerform.addRow(u("Projektordner:"), ordnerzeile)
         links = QVBoxLayout()
         links.setContentsMargins(0, 0, 0, 0)
-        links.addLayout(zielform)
+        links.addLayout(ordnerform)
         links.addWidget(geometriekasten)
         links.addWidget(verteilerkasten, 1)
         links.addWidget(beilagenkasten, 1)
@@ -301,22 +302,22 @@ class ProjektDialog(PassenderDialog):
         self.inhalt_rollbar(inhalt, self.knoepfe)
         self._vorschau_auffrischen()
 
-    # -- Zielordner ----------------------------------------------------------
+    # -- Der Projektordner ---------------------------------------------------
 
-    def zielordner(self) -> pathlib.Path | None:
-        text = self.ziel.text().strip()
+    def projektordner(self) -> pathlib.Path | None:
+        text = self.ordnerfeld.text().strip()
         return pathlib.Path(text).expanduser() if text else None
 
-    def _ziel_waehlen(self) -> None:
+    def _ordner_waehlen(self) -> None:
         name = QFileDialog.getExistingDirectory(
-            self, u("Zielordner wählen"), self.ziel.text().strip()
+            self, u("Projektordner wählen"), self.ordnerfeld.text().strip()
         )
         if name:
-            self.ziel.setText(name)
+            self.ordnerfeld.setText(name)
 
-    def _ziel_oeffnen(self) -> None:
-        """Zeigt den Zielordner im Dateiverwalter - vorher und nachher."""
-        ordner = self.zielordner()
+    def _ordner_oeffnen(self) -> None:
+        """Zeigt den Projektordner im Dateiverwalter - vorher und nachher."""
+        ordner = self.projektordner()
         if ordner is not None and ordner.is_dir():
             QDesktopServices.openUrl(QUrl.fromLocalFile(str(ordner)))
 
@@ -423,7 +424,7 @@ class ProjektDialog(PassenderDialog):
 
     def _dateien_waehlen(self) -> None:
         namen, _ = QFileDialog.getOpenFileNames(
-            self, u("Dateien für jeden Projektordner"), self.ziel.text().strip()
+            self, u("Dateien für den Projektordner"), self.ordnerfeld.text().strip()
         )
         for name in namen:
             self.beilage_anhaengen(Beilage(pathlib.Path(name), self._fach()))
@@ -432,7 +433,7 @@ class ProjektDialog(PassenderDialog):
 
     def _beilagenordner_waehlen(self) -> None:
         name = QFileDialog.getExistingDirectory(
-            self, u("Ordner, dessen Inhalt mitwandert"), self.ziel.text().strip()
+            self, u("Ordner, dessen Inhalt mitwandert"), self.ordnerfeld.text().strip()
         )
         if not name:
             return
@@ -464,7 +465,7 @@ class ProjektDialog(PassenderDialog):
         """Was angelegt werden soll - gerechnet, nicht geschrieben."""
         return planen(
             self.angaben(),
-            self.zielordner() or pathlib.Path(),
+            self.projektordner() or pathlib.Path(),
             self.beilagen(),
             self.eigener_ordner_haken.isChecked(),
         )
@@ -478,7 +479,7 @@ class ProjektDialog(PassenderDialog):
 
     def _vorschau_auffrischen(self, *_args) -> None:
         """Schreibt in die letzte Spalte, was aus jeder Zeile wird."""
-        ziel = self.zielordner()
+        ordner = self.projektordner()
         angaben = self.angaben()
         plan = self.plan()
         # ``planen`` geht die Angaben in dieser Reihenfolge durch und
@@ -493,9 +494,9 @@ class ProjektDialog(PassenderDialog):
                 stand.setText("")
                 stand.setToolTip("")
                 continue
-            anlage = plan[lauf]
+            anlage = plan.anlagen[lauf]
             lauf += 1
-            text = anlage.grund if not anlage.geht else self._wohin(anlage, ziel)
+            text = anlage.grund if not anlage.geht else self._wohin(anlage, ordner)
             stand.setText(text)
             stand.setToolTip(str(anlage.datei))
         self._fuellt = False
@@ -508,32 +509,30 @@ class ProjektDialog(PassenderDialog):
             if fehlende else ""
         )
 
-        geht = [anlage for anlage in plan if anlage.geht]
-        dateien = sum(len(anlage.dateien) for anlage in geht)
-        if ziel is None:
-            self.summe.setText(u("Erst einen Zielordner wählen."))
-        elif not plan:
+        geht = plan.moegliche
+        if ordner is None:
+            self.summe.setText(u("Erst einen Projektordner wählen."))
+        elif not plan.anlagen:
             self.summe.setText(u("Noch kein Verteiler eingetragen."))
         elif not geht:
             self.summe.setText(u("Keine Zeile geht — die Gründe stehen rechts."))
         else:
             self.summe.setText(
-                u("Angelegt werden {0} Verteiler und {1} Dateien dazu.").format(
-                    len(geht), dateien
-                )
+                u("Angelegt werden {0} Verteiler, dazu {1} Dateien im "
+                  "Projektordner.").format(len(geht), len(plan.dateien))
             )
-        self.anlegenknopf.setEnabled(ziel is not None and bool(geht))
+        self.anlegenknopf.setEnabled(ordner is not None and bool(geht))
 
-    def _wohin(self, anlage, ziel) -> str:
-        """Wo die Projektdatei landet - kurz, vom Zielordner aus gesehen.
+    def _wohin(self, anlage, ordner) -> str:
+        """Wo die Projektdatei landet - kurz, vom Projektordner aus gesehen.
 
-        Ohne Zielordner und bei einem eigenen Pfad in der Spalte steht
+        Ohne Projektordner und bei einem eigenen Pfad in der Spalte steht
         der ganze Weg da: lieber lang als falsch.
         """
-        if ziel is None:
+        if ordner is None:
             return str(anlage.datei)
         try:
-            return str(anlage.datei.relative_to(ziel))
+            return str(anlage.datei.relative_to(ordner))
         except ValueError:
             return str(anlage.datei)
 

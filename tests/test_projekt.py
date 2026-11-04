@@ -4,6 +4,9 @@ Zwei Haelften: der **Plan** (``anlage.py``, ohne Qt) wird gegen einen
 Temp-Ordner gerechnet - geschrieben wird dort erst, wenn der Test es
 verlangt -, und der **Dialog** gegen ein echtes Hauptfenster, aber ohne
 Dateidialog und ohne ``exec()``.
+
+Ein Auge gilt dabei durchgehend den **Beilagen**: sie gehoeren dem
+Projektordner und werden **einmal** gelegt, nicht je Verteiler.
 """
 
 from __future__ import annotations
@@ -26,7 +29,7 @@ ANWENDUNG = QApplication.instance() or QApplication([])
 from verteilerly.erweiterungen.projekt import (  # noqa: E402
     SCHLUESSEL_BEILAGEN,
     SCHLUESSEL_EIGENER_ORDNER,
-    SCHLUESSEL_ZIEL,
+    SCHLUESSEL_ORDNER,
     anlage,
     erweiterung,
 )
@@ -115,81 +118,22 @@ class TestBeilagenBestand(unittest.TestCase):
         self.assertEqual(anlage.beilagen_lesen(""), [])
 
 
-class TestPlanen(unittest.TestCase):
-    """Gerechnet, nicht geschrieben."""
+class TestWasEineBeilageMitbringt(unittest.TestCase):
+    """Eine Datei bringt sich selbst, ein Ordner seinen Inhalt."""
 
-    def setUp(self):
-        self.ziel = pathlib.Path(tempfile.mkdtemp(prefix="projekt-"))
-
-    def test_je_zeile_ein_ordner_mit_der_datei_darin(self):
-        plan = planen([Angabe("Keller", "1.1"), Angabe("Dach", "1.2")], self.ziel)
-        self.assertEqual(len(plan), 2)
-        self.assertTrue(all(x.geht for x in plan))
-        self.assertEqual(plan[0].ordner, self.ziel / "1.1 Keller")
-        self.assertEqual(plan[0].datei.name, "1.1 Keller.vtly")
-        # Gerechnet heisst: auf der Platte steht noch nichts.
-        self.assertEqual(list(self.ziel.iterdir()), [])
-
-    def test_leere_zeilen_fallen_weg(self):
-        plan = planen([Angabe(), Angabe("Keller"), Angabe("  ", " ")], self.ziel)
-        self.assertEqual([x.angabe.name for x in plan], ["Keller"])
-
-    def test_ohne_eigenen_ordner_liegen_alle_im_zielordner(self):
-        plan = planen(
-            [Angabe("Keller"), Angabe("Dach")], self.ziel, eigener_ordner=False
-        )
-        self.assertEqual({x.ordner for x in plan}, {self.ziel})
-        self.assertEqual([x.datei.name for x in plan], ["Keller.vtly", "Dach.vtly"])
-
-    def test_derselbe_name_zweimal_ist_ein_grund(self):
-        plan = planen([Angabe("Keller"), Angabe("keller")], self.ziel)
-        self.assertTrue(plan[0].geht)
-        self.assertFalse(plan[1].geht)
-
-    def test_eine_vorhandene_datei_bleibt_stehen(self):
-        (self.ziel / "Keller").mkdir()
-        (self.ziel / "Keller" / "Keller.vtly").write_text("{}", encoding="utf-8")
-        plan = planen([Angabe("Keller")], self.ziel)
-        self.assertFalse(plan[0].geht)
-
-    def test_ein_name_ohne_brauchbare_zeichen_ist_ein_grund(self):
-        plan = planen([Angabe("///")], self.ziel)
-        self.assertFalse(plan[0].geht)
-
-    def test_jeder_bekommt_die_beilagen(self):
+    def test_eine_datei_kommt_in_ihr_fach(self):
         quelle = pathlib.Path(tempfile.mkdtemp()) / "Checkliste.txt"
         quelle.write_text("haken", encoding="utf-8")
-        plan = planen(
-            [Angabe("Keller"), Angabe("Dach")], self.ziel,
-            [Beilage(quelle, "Dokumentation")],
-        )
-        for anlagenteil in plan:
-            self.assertEqual(
-                anlagenteil.dateien, ((quelle, "Dokumentation/Checkliste.txt"),)
-            )
-            self.assertEqual(anlagenteil.faecher, ("Dokumentation",))
+        dateien, faecher = anlage.beilagendateien(Beilage(quelle, "Dokumentation"))
+        self.assertEqual(dateien, ((quelle, "Dokumentation/Checkliste.txt"),))
+        self.assertEqual(faecher, ("Dokumentation",))
 
-    def test_in_einem_ordner_traegt_die_erste_zeile_die_beilagen(self):
-        """Den Projektordner gibt es einmal - also die Beilagen auch."""
+    def test_ohne_fach_kommt_sie_unmittelbar_hinein(self):
         quelle = pathlib.Path(tempfile.mkdtemp()) / "Checkliste.txt"
         quelle.write_text("haken", encoding="utf-8")
-        plan = planen(
-            [Angabe("Keller"), Angabe("Dach")], self.ziel,
-            [Beilage(quelle, "")], eigener_ordner=False,
-        )
-        self.assertEqual(len(plan[0].dateien), 1)
-        self.assertEqual(plan[1].dateien, ())
-
-    def test_scheitert_die_erste_traegt_die_naechste_die_beilagen(self):
-        quelle = pathlib.Path(tempfile.mkdtemp()) / "Checkliste.txt"
-        quelle.write_text("haken", encoding="utf-8")
-        (self.ziel / "Keller.vtly").write_text("{}", encoding="utf-8")
-        plan = planen(
-            [Angabe("Keller"), Angabe("Dach")], self.ziel,
-            [Beilage(quelle, "")], eigener_ordner=False,
-        )
-        self.assertFalse(plan[0].geht)
-        self.assertEqual(len(plan[1].dateien), 1)
+        dateien, faecher = anlage.beilagendateien(Beilage(quelle, ""))
+        self.assertEqual(dateien, ((quelle, "Checkliste.txt"),))
+        self.assertEqual(faecher, ())
 
     def test_ein_ordner_bringt_seinen_inhalt_mit(self):
         muster = pathlib.Path(tempfile.mkdtemp()) / "Muster"
@@ -218,37 +162,119 @@ class TestPlanen(unittest.TestCase):
         self.assertEqual(anlage.beilagendateien(weg), ((), ()))
 
 
+class TestPlanen(unittest.TestCase):
+    """Gerechnet, nicht geschrieben."""
+
+    def setUp(self):
+        self.ordner = pathlib.Path(tempfile.mkdtemp(prefix="projekt-"))
+
+    def test_je_zeile_ein_ordner_mit_der_datei_darin(self):
+        plan = planen([Angabe("Keller", "1.1"), Angabe("Dach", "1.2")], self.ordner)
+        self.assertEqual(plan.ordner, self.ordner)
+        self.assertEqual(len(plan.anlagen), 2)
+        self.assertEqual(len(plan.moegliche), 2)
+        self.assertEqual(plan.anlagen[0].ordner, self.ordner / "1.1 Keller")
+        self.assertEqual(plan.anlagen[0].datei.name, "1.1 Keller.vtly")
+        # Gerechnet heisst: auf der Platte steht noch nichts.
+        self.assertEqual(list(self.ordner.iterdir()), [])
+
+    def test_leere_zeilen_fallen_weg(self):
+        plan = planen([Angabe(), Angabe("Keller"), Angabe("  ", " ")], self.ordner)
+        self.assertEqual([x.angabe.name for x in plan.anlagen], ["Keller"])
+
+    def test_ohne_eigenen_ordner_liegen_alle_im_projektordner(self):
+        plan = planen(
+            [Angabe("Keller"), Angabe("Dach")], self.ordner, eigener_ordner=False
+        )
+        self.assertEqual({x.ordner for x in plan.anlagen}, {self.ordner})
+        self.assertEqual(
+            [x.datei.name for x in plan.anlagen], ["Keller.vtly", "Dach.vtly"]
+        )
+
+    def test_derselbe_name_zweimal_ist_ein_grund(self):
+        plan = planen([Angabe("Keller"), Angabe("keller")], self.ordner)
+        self.assertTrue(plan.anlagen[0].geht)
+        self.assertFalse(plan.anlagen[1].geht)
+
+    def test_eine_vorhandene_datei_bleibt_stehen(self):
+        (self.ordner / "Keller").mkdir()
+        (self.ordner / "Keller" / "Keller.vtly").write_text("{}", encoding="utf-8")
+        plan = planen([Angabe("Keller")], self.ordner)
+        self.assertFalse(plan.anlagen[0].geht)
+
+    def test_ein_name_ohne_brauchbare_zeichen_ist_ein_grund(self):
+        plan = planen([Angabe("///")], self.ordner)
+        self.assertFalse(plan.anlagen[0].geht)
+
+    def test_die_beilagen_haengen_am_plan_nicht_an_der_zeile(self):
+        """Sie gehoeren dem Projektordner - einmal, nicht je Verteiler."""
+        quelle = pathlib.Path(tempfile.mkdtemp()) / "Checkliste.txt"
+        quelle.write_text("haken", encoding="utf-8")
+        plan = planen(
+            [Angabe("Keller"), Angabe("Dach")], self.ordner,
+            [Beilage(quelle, "Dokumentation")],
+        )
+        self.assertEqual(plan.dateien, ((quelle, "Dokumentation/Checkliste.txt"),))
+        self.assertEqual(plan.faecher, ("Dokumentation",))
+        for teil in plan.anlagen:
+            self.assertFalse(hasattr(teil, "dateien"))
+
+    def test_der_haken_aendert_an_den_beilagen_nichts(self):
+        quelle = pathlib.Path(tempfile.mkdtemp()) / "Checkliste.txt"
+        quelle.write_text("haken", encoding="utf-8")
+        beilagen = [Beilage(quelle, "")]
+        mit = planen([Angabe("Keller")], self.ordner, beilagen)
+        ohne = planen(
+            [Angabe("Keller")], self.ordner, beilagen, eigener_ordner=False
+        )
+        self.assertEqual(mit.dateien, ohne.dateien)
+
+
 class TestAnlegen(unittest.TestCase):
     """Jetzt wird geschrieben."""
 
     def setUp(self):
-        self.ziel = pathlib.Path(tempfile.mkdtemp(prefix="projekt-"))
-        self.muster = pathlib.Path(tempfile.mkdtemp()) / "Checkliste.txt"
+        self.ordner = pathlib.Path(tempfile.mkdtemp(prefix="projekt-"))
+        quelle = pathlib.Path(tempfile.mkdtemp())
+        self.muster = quelle / "Checkliste.txt"
         self.muster.write_text("haken", encoding="utf-8")
+        self.leer = quelle / "leer"
+        self.leer.mkdir()
 
     def _plan(self, **mehr):
         return planen(
-            [Angabe("Keller", "1.1"), Angabe("Dach", "1.2")], self.ziel,
-            [Beilage(self.muster, "Dokumentation")], **mehr
+            [Angabe("Keller", "1.1"), Angabe("Dach", "1.2")], self.ordner,
+            [Beilage(self.muster, "Dokumentation"), Beilage(self.leer, "Fotos")],
+            **mehr
         )
 
-    def test_je_verteiler_ein_ordner_mit_datei_und_beilage(self):
+    def test_je_verteiler_ein_ordner_die_beilagen_einmal(self):
         bericht = anlegen(self._plan(), _projekt_fuer)
         self.assertEqual(bericht.angelegt, 2)
-        self.assertEqual(bericht.beigelegt, 2)
+        self.assertEqual(bericht.beigelegt, 1)
         self.assertEqual(bericht.gruende, [])
+        self.assertEqual(bericht.ordner, self.ordner)
         for name in ("1.1 Keller", "1.2 Dach"):
-            self.assertTrue((self.ziel / name / f"{name}.vtly").is_file())
-            self.assertTrue(
-                (self.ziel / name / "Dokumentation" / "Checkliste.txt").is_file()
+            self.assertTrue((self.ordner / name / f"{name}.vtly").is_file())
+            # Im Verteilerordner liegt nur seine Datei.
+            self.assertEqual(
+                [x.name for x in (self.ordner / name).iterdir()], [f"{name}.vtly"]
             )
+        self.assertTrue(
+            (self.ordner / "Dokumentation" / "Checkliste.txt").is_file()
+        )
+
+    def test_ein_leeres_fach_entsteht_auch(self):
+        anlegen(self._plan(), _projekt_fuer)
+        self.assertTrue((self.ordner / "Fotos").is_dir())
+        self.assertEqual(list((self.ordner / "Fotos").iterdir()), [])
 
     def test_was_geschrieben_wurde_laesst_sich_lesen(self):
         from verteilerly import projektdatei
 
         anlegen(self._plan(), _projekt_fuer)
         projekt = projektdatei.laden(
-            self.ziel / "1.1 Keller" / "1.1 Keller.vtly"
+            self.ordner / "1.1 Keller" / "1.1 Keller.vtly"
         )
         self.assertEqual(projekt.verteiler.name, "Keller")
         self.assertEqual(projekt.verteiler.nummer, "1.1")
@@ -259,9 +285,25 @@ class TestAnlegen(unittest.TestCase):
         bericht = anlegen(self._plan(), _projekt_fuer)
         self.assertEqual(bericht.angelegt, 0)
         self.assertEqual(len(bericht.gruende), 2)
+        # Ohne eine einzige Zeile entsteht auch keine Beilage noch einmal.
+        self.assertEqual(bericht.beigelegt, 0)
+        self.assertEqual(bericht.uebergangen, 0)
+
+    def test_ein_dritter_verteiler_kommt_in_denselben_ordner(self):
+        """Ein zweiter Durchgang ergaenzt, was fehlt."""
+        anlegen(self._plan(), _projekt_fuer)
+        plan = planen(
+            [Angabe("Dachboden", "1.3")], self.ordner,
+            [Beilage(self.muster, "Dokumentation")],
+        )
+        bericht = anlegen(plan, _projekt_fuer)
+        self.assertEqual(bericht.angelegt, 1)
+        # Die Beilage lag schon da - sie wird gezaehlt, nicht ersetzt.
+        self.assertEqual(bericht.uebergangen, 1)
+        self.assertEqual(bericht.beigelegt, 0)
 
     def test_eine_vorhandene_beilage_wird_uebergangen_nicht_ersetzt(self):
-        ordner = self.ziel / "1.1 Keller" / "Dokumentation"
+        ordner = self.ordner / "Dokumentation"
         ordner.mkdir(parents=True)
         (ordner / "Checkliste.txt").write_text("von Hand", encoding="utf-8")
         bericht = anlegen(self._plan(), _projekt_fuer)
@@ -272,10 +314,20 @@ class TestAnlegen(unittest.TestCase):
 
     def test_eine_zeile_mit_grund_wird_uebergangen_die_andere_nicht(self):
         plan = self._plan()
-        plan[0].grund = "Probe"
+        plan.anlagen[0].grund = "Probe"
         bericht = anlegen(plan, _projekt_fuer)
         self.assertEqual(bericht.angelegt, 1)
         self.assertEqual(bericht.gruende, ["1.1 Keller: Probe"])
+
+    def test_ohne_eine_einzige_zeile_entsteht_kein_ordner(self):
+        """Ein Projekt aus lauter Gruenden ist keines."""
+        plan = self._plan()
+        for teil in plan.anlagen:
+            teil.grund = "Probe"
+        bericht = anlegen(plan, _projekt_fuer)
+        self.assertEqual(bericht.angelegt, 0)
+        self.assertIsNone(bericht.ordner)
+        self.assertEqual(list(self.ordner.iterdir()), [])
 
     def test_ein_fehler_haelt_den_rest_nicht_auf(self):
         """Ein gesperrter Ordner soll nicht die anderen Verteiler kosten."""
@@ -287,15 +339,15 @@ class TestAnlegen(unittest.TestCase):
         bericht = anlegen(self._plan(), launisch)
         self.assertEqual(bericht.angelegt, 1)
         self.assertEqual(len(bericht.gruende), 1)
-        self.assertTrue((self.ziel / "1.2 Dach" / "1.2 Dach.vtly").is_file())
+        self.assertTrue((self.ordner / "1.2 Dach" / "1.2 Dach.vtly").is_file())
 
     def test_ohne_eigenen_ordner_liegt_alles_nebeneinander(self):
         bericht = anlegen(self._plan(eigener_ordner=False), _projekt_fuer)
         self.assertEqual(bericht.angelegt, 2)
         self.assertEqual(bericht.beigelegt, 1)
-        self.assertTrue((self.ziel / "1.1 Keller.vtly").is_file())
-        self.assertTrue((self.ziel / "1.2 Dach.vtly").is_file())
-        self.assertTrue((self.ziel / "Dokumentation" / "Checkliste.txt").is_file())
+        self.assertTrue((self.ordner / "1.1 Keller.vtly").is_file())
+        self.assertTrue((self.ordner / "1.2 Dach.vtly").is_file())
+        self.assertTrue((self.ordner / "Dokumentation" / "Checkliste.txt").is_file())
 
 
 class TestDialog(unittest.TestCase):
@@ -309,7 +361,7 @@ class TestDialog(unittest.TestCase):
 
         self.fenster = Hauptfenster()
         bauteil_zurueckgeben(self, self.fenster)
-        for schluessel in (SCHLUESSEL_ZIEL, SCHLUESSEL_BEILAGEN,
+        for schluessel in (SCHLUESSEL_ORDNER, SCHLUESSEL_BEILAGEN,
                            SCHLUESSEL_EIGENER_ORDNER):
             einstellung_bewahren(self, self.fenster.einstellungen, schluessel)
         menue = next(
@@ -320,10 +372,10 @@ class TestDialog(unittest.TestCase):
             self.fenster, menue, self.fenster._erweiterungstrenner,
             Fund("projekt", "Projekt"),
         )
-        self.ziel = pathlib.Path(tempfile.mkdtemp(prefix="projekt-"))
+        self.ordner = pathlib.Path(tempfile.mkdtemp(prefix="projekt-"))
         self.dialog = ProjektDialog(self.schnittstelle, self.fenster)
         bauteil_zurueckgeben(self, self.dialog)
-        self.dialog.ziel.setText(str(self.ziel))
+        self.dialog.ordnerfeld.setText(str(self.ordner))
 
     def _zeile(self, zeile: int, name: str, nummer: str = "") -> None:
         self.dialog.tabelle.item(zeile, 0).setText(name)
@@ -359,11 +411,21 @@ class TestDialog(unittest.TestCase):
             self.dialog.tabelle.item(1, 3).text(),
         )
 
-    def test_ohne_zielordner_laesst_sich_nichts_anlegen(self):
+    def test_ohne_projektordner_laesst_sich_nichts_anlegen(self):
         self._zeile(0, "Keller")
         self.assertTrue(self.dialog.anlegenknopf.isEnabled())
-        self.dialog.ziel.setText("")
+        self.dialog.ordnerfeld.setText("")
         self.assertFalse(self.dialog.anlegenknopf.isEnabled())
+
+    def test_die_summe_zaehlt_die_beilagen_einmal(self):
+        quelle = pathlib.Path(tempfile.mkdtemp()) / "Checkliste.txt"
+        quelle.write_text("haken", encoding="utf-8")
+        self._zeile(0, "Keller")
+        self._zeile(1, "Dach")
+        self.dialog.beilage_anhaengen(Beilage(quelle, "Dokumentation"))
+        self.dialog._vorschau_auffrischen()
+        self.assertIn("2", self.dialog.summe.text())
+        self.assertIn("1", self.dialog.summe.text())
 
     def test_eine_zeile_mehr_und_eine_weniger(self):
         self.dialog.zeile_anhaengen("Dach")
@@ -393,10 +455,18 @@ class TestDialog(unittest.TestCase):
         )
 
     def test_ausfuehren_legt_an_was_dasteht(self):
+        quelle = pathlib.Path(tempfile.mkdtemp()) / "Checkliste.txt"
+        quelle.write_text("haken", encoding="utf-8")
         self._zeile(0, "Keller", "1.1")
+        self._zeile(1, "Dach", "1.2")
+        self.dialog.beilage_anhaengen(Beilage(quelle, "Dokumentation"))
         bericht = self.dialog.ausfuehren()
-        self.assertEqual(bericht.angelegt, 1)
-        self.assertTrue((self.ziel / "1.1 Keller" / "1.1 Keller.vtly").is_file())
+        self.assertEqual(bericht.angelegt, 2)
+        self.assertTrue((self.ordner / "1.1 Keller" / "1.1 Keller.vtly").is_file())
+        # Einmal im Projektordner, nicht in jedem Verteilerordner.
+        self.assertTrue((self.ordner / "Dokumentation" / "Checkliste.txt").is_file())
+        self.assertFalse((self.ordner / "1.1 Keller" / "Dokumentation").exists())
+        self.assertEqual(bericht.beigelegt, 1)
 
     def test_der_offene_verteiler_bleibt_unberuehrt(self):
         self.fenster._projekt_setzen(
@@ -407,14 +477,14 @@ class TestDialog(unittest.TestCase):
         self.assertEqual(self.fenster.projekt.verteiler.name, "Offen")
         self.assertFalse(self.fenster.veraendert)
 
-    def test_gemerkt_werden_ziel_beilagen_und_haken(self):
+    def test_gemerkt_werden_ordner_beilagen_und_haken(self):
         quelle = pathlib.Path(tempfile.mkdtemp()) / "Checkliste.txt"
         quelle.write_text("haken", encoding="utf-8")
         self.dialog.beilage_anhaengen(Beilage(quelle, "Dokumentation"))
         self.dialog.eigener_ordner_haken.setChecked(False)
         erweiterung.merken(self.fenster.einstellungen, self.dialog)
         self.assertEqual(
-            erweiterung.zielordner(self.fenster.einstellungen), str(self.ziel)
+            erweiterung.projektordner(self.fenster.einstellungen), str(self.ordner)
         )
         self.assertEqual(
             erweiterung.beilagen(self.fenster.einstellungen),

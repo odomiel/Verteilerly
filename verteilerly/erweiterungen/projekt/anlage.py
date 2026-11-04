@@ -8,12 +8,14 @@ aendert nichts und sagt zu jeder Zeile, was ihr im Weg steht, der Dialog
 zeigt das, und erst ``anlegen()`` legt an. So laesst sich die Rechnung
 ohne Qt pruefen.
 
-Je Verteiler entsteht ein **Projektordner** mit der Projektdatei darin;
-``eigener_ordner=False`` legt stattdessen alle Dateien in **einen**
-Ordner. Dazu kommen die **Beilagen**: vorgegebene Dateien und Ordner,
-die in jeden Projektordner mitwandern - jede mit ihrem eigenen
-Unterordner, damit ein Projektordner von Anfang an aussieht wie die
-anderen (``Fotos/``, ``Messprotokolle/Vorlage.xlsx``).
+Gearbeitet wird in **einem Projektordner**: darin bekommt jeder
+Verteiler seinen eigenen Unterordner mit seiner Projektdatei, oder - mit
+``eigener_ordner=False`` - liegen alle Projektdateien nebeneinander
+darin. Die **Beilagen** gehoeren dem Projektordner und werden darum
+**einmal** gelegt, nicht je Verteiler: vorgegebene Dateien und Ordner,
+jede mit ihrem eigenen Unterordner, damit ein Projektordner von Anfang
+an aussieht wie der vom letzten Mal (``Fotos/``,
+``Messprotokolle/Vorlage.xlsx``).
 
 **Ueberschrieben wird nichts.** Eine Projektdatei, die es schon gibt,
 ist ein Grund, die Zeile stehen zu lassen; eine Beilage, die am Ziel
@@ -80,7 +82,7 @@ def sicherer_unterordner(text: str) -> str:
 
 @dataclass(frozen=True)
 class Beilage:
-    """Eine Datei - oder ein ganzer Ordner -, die in jeden Projektordner kommt.
+    """Eine Datei - oder ein ganzer Ordner -, die in den Projektordner kommt.
 
     Bei einem Ordner wandert sein **Inhalt** in den Unterordner, nicht er
     selbst: wer ``Muster`` nach ``Fotos`` legt, will die Bilder in
@@ -215,12 +217,10 @@ class Anlage:
     """
 
     angabe: Angabe
+    #: Der Ordner des Verteilers - der Projektordner selbst, wenn alle
+    #: Projektdateien nebeneinander liegen sollen.
     ordner: pathlib.Path
     datei: pathlib.Path
-    #: Faecher, die im Projektordner entstehen - auch leere.
-    faecher: tuple[str, ...] = ()
-    #: Die Beilagen: (Quelle, Zielpfad im Projektordner).
-    dateien: tuple[tuple[pathlib.Path, str], ...] = ()
     grund: str = ""
 
     @property
@@ -228,29 +228,50 @@ class Anlage:
         return not self.grund
 
 
-def planen(angaben, ziel, beilagen=(), eigener_ordner: bool = True) -> list[Anlage]:
-    """Was entstehen soll - und was dem im Weg steht.
+@dataclass
+class Plan:
+    """Ein Projektordner, wie er entstehen soll - noch ist nichts geschrieben.
+
+    Die Verteiler stehen in ``anlagen``, die **Beilagen** daneben: sie
+    gehoeren dem Projektordner und werden einmal gelegt, ganz gleich wie
+    viele Verteiler darin wohnen.
+    """
+
+    #: Der Projektordner.
+    ordner: pathlib.Path
+    anlagen: list[Anlage] = field(default_factory=list)
+    #: Faecher der Beilagen, relativ zum Projektordner - auch leere.
+    faecher: tuple[str, ...] = ()
+    #: Die Beilagen: (Quelle, Zielpfad im Projektordner).
+    dateien: tuple[tuple[pathlib.Path, str], ...] = ()
+
+    @property
+    def moegliche(self) -> list[Anlage]:
+        """Die Zeilen, denen nichts im Weg steht."""
+        return [anlage for anlage in self.anlagen if anlage.geht]
+
+
+def planen(angaben, ordner, beilagen=(), eigener_ordner: bool = True) -> Plan:
+    """Was im Projektordner entstehen soll - und was dem im Weg steht.
 
     Leere Zeilen fallen weg, der Rest bekommt seinen Ordner und seine
     Datei. Geprueft wird **von oben nach unten**, jede Zeile gegen die
     darueber: zwei gleiche Namen sind ein Fehler, und die obere Zeile
     bekommt den Namen zuerst.
 
-    **Die Beilagen gehoeren dem Projektordner.** Bekommt jeder Verteiler
-    einen eigenen, bekommt jeder sie; liegen alle in einem Ordner, gibt
-    es diesen Ordner einmal - dann traegt sie die erste Zeile, die
-    durchgeht.
+    Die **Beilagen** haengen am Plan, nicht an der einzelnen Zeile: sie
+    gehoeren dem Projektordner und werden darum einmal gelegt.
     """
-    ziel = pathlib.Path(ziel)
+    ordner = pathlib.Path(ordner)
     faecher, dateien = _mitbringsel(beilagen)
+    plan = Plan(ordner, [], faecher, dateien)
     vergeben: set[str] = set()
-    anlagen: list[Anlage] = []
     for angabe in angaben:
         if angabe.leer:
             continue
         name = ablagename(angabe)
-        ordner = ziel / name if eigener_ordner else ziel
-        datei = ordner / f"{name}{ENDUNG}"
+        eigen = ordner / name if eigener_ordner else ordner
+        datei = eigen / f"{name}{ENDUNG}"
         grund = ""
         if not name:
             grund = u("kein Name, der als Ordnername taugt")
@@ -258,22 +279,19 @@ def planen(angaben, ziel, beilagen=(), eigener_ordner: bool = True) -> list[Anla
             grund = u("steht in dieser Liste zweimal")
         elif datei.exists():
             grund = u("diese Datei gibt es schon")
-        elif ordner.exists() and not ordner.is_dir():
+        elif eigen.exists() and not eigen.is_dir():
             grund = u("dort liegt eine Datei dieses Namens")
         vergeben.add(name.casefold())
-        anlage = Anlage(angabe, ordner, datei, grund=grund)
-        if not grund and (eigener_ordner or not any(x.geht for x in anlagen)):
-            anlage.faecher, anlage.dateien = faecher, dateien
-        anlagen.append(anlage)
-    return anlagen
+        plan.anlagen.append(Anlage(angabe, eigen, datei, grund=grund))
+    return plan
 
 
 @dataclass
 class Bericht:
     """Was angelegt wurde - und was nicht."""
 
-    #: Die Projektordner, jeder einmal.
-    ordner: list[pathlib.Path] = field(default_factory=list)
+    #: Der Projektordner - gesetzt, sobald er dasteht.
+    ordner: pathlib.Path | None = None
     #: Die geschriebenen Projektdateien.
     dateien: list[pathlib.Path] = field(default_factory=list)
     #: So viele Beilagen sind mitgewandert.
@@ -292,23 +310,63 @@ def _grundsatz(angabe: Angabe, grund: str) -> str:
     return f"{angabe.bezeichnung() or '?'}: {grund}"
 
 
-def anlegen(anlagen, projekt_fuer) -> Bericht:
+def _beilegen(plan: Plan, bericht: Bericht) -> None:
+    """Legt die Beilagen **einmal** in den Projektordner.
+
+    Die Faecher zuerst, und zwar alle - ein vorgegebenes leeres Fach
+    (``Fotos/``) soll auch dann dastehen, wenn keine Datei hineingehoert.
+    **Ueberschrieben wird nichts**: was am Ziel schon liegt, wird gezaehlt
+    und bleibt, wie es ist.
+    """
+    for fach in plan.faecher:
+        try:
+            (plan.ordner / fach).mkdir(parents=True, exist_ok=True)
+        except OSError as fehler:
+            bericht.gruende.append(f"{fach}: {fehler}")
+    for quelle, pfad in plan.dateien:
+        ziel = plan.ordner / pfad
+        try:
+            if ziel.exists():
+                bericht.uebergangen += 1
+                continue
+            ziel.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(quelle, ziel)
+        except OSError as fehler:
+            bericht.gruende.append(f"{pfad}: {fehler}")
+            continue
+        bericht.beigelegt += 1
+
+
+def anlegen(plan: Plan, projekt_fuer) -> Bericht:
     """Schreibt, was geht, und sagt, was nicht ging.
 
     ``projekt_fuer(angabe)`` baut das Projekt zu einer Zeile: Geometrie
     und Projektdaten kommen von dort, hier wird nur geschrieben. Jede
     Zeile steht fuer sich - **scheitert eine, bleiben die anderen
     stehen**; der Grund kommt in den Bericht.
+
+    **Ohne einen einzigen Verteiler entsteht nichts**, auch kein
+    Projektordner und keine Beilage: ein Projekt aus lauter Gruenden ist
+    keines. Laesst sich der Projektordner nicht anlegen, ist alles
+    Weitere ohnehin vergebens.
     """
     bericht = Bericht()
-    for anlage in anlagen:
+    for anlage in plan.anlagen:
         if not anlage.geht:
             bericht.gruende.append(_grundsatz(anlage.angabe, anlage.grund))
-            continue
+    moegliche = plan.moegliche
+    if not moegliche:
+        return bericht
+    try:
+        plan.ordner.mkdir(parents=True, exist_ok=True)
+    except OSError as fehler:
+        bericht.gruende.append(f"{plan.ordner}: {fehler}")
+        return bericht
+    bericht.ordner = plan.ordner
+    _beilegen(plan, bericht)
+    for anlage in moegliche:
         try:
             anlage.ordner.mkdir(parents=True, exist_ok=True)
-            for fach in anlage.faecher:
-                (anlage.ordner / fach).mkdir(parents=True, exist_ok=True)
             projekt = projekt_fuer(anlage.angabe)
             if not isinstance(projekt, Projekt):
                 raise ModellFehler(u("kein Projekt zu dieser Zeile"))
@@ -316,19 +374,5 @@ def anlegen(anlagen, projekt_fuer) -> Bericht:
         except (OSError, ModellFehler) as fehler:
             bericht.gruende.append(_grundsatz(anlage.angabe, str(fehler)))
             continue
-        if anlage.ordner not in bericht.ordner:
-            bericht.ordner.append(anlage.ordner)
         bericht.dateien.append(anlage.datei)
-        for quelle, pfad in anlage.dateien:
-            ziel = anlage.ordner / pfad
-            try:
-                if ziel.exists():
-                    bericht.uebergangen += 1
-                    continue
-                ziel.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(quelle, ziel)
-            except OSError as fehler:
-                bericht.gruende.append(f"{pfad}: {fehler}")
-                continue
-            bericht.beigelegt += 1
     return bericht

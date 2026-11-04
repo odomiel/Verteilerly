@@ -1426,8 +1426,8 @@ project data and saving it, six times over. The dialog takes all of it at
 once:</p>
 
 <ul>
-<li><b>Target folder</b> — the project is created in it. The last one is
-kept.</li>
+<li><b>Project folder</b> — the project is created in it, all of it: the
+frames and the enclosures. The last one is kept.</li>
 <li><b>Geometry</b> — a frame template or your own numbers, <b>the same for
 every frame of the list</b>. If you need a different one, create it separately
 afterwards.</li>
@@ -1442,30 +1442,43 @@ the defaults (<i>Edit ▸ Defaults for new frames</i>). They apply to every
 frame of the list; what the sheet template does not carry is not offered here
 and is deselected in every project. Fields of your own from the sheet template
 stand below them.</li>
-<li><b>Enclosures</b> — predefined files and whole folders that travel into
-every project folder, each into its <i>subfolder</i>. That way a fresh project
-folder looks like the ones from last time: <code>Fotos/</code>,
+<li><b>Enclosures</b> — predefined files and whole folders that go
+<b>once</b> into the project folder, each into its <i>subfolder</i>. They
+belong to the project, not to the single frame: in the frame folders lies
+nothing but their project file. That way a fresh project folder looks like the
+one from last time: <code>Fotos/</code>,
 <code>Messprotokolle/Vorlage.xlsx</code>, the checklist of the house. From a
 folder its <b>contents</b> travel along; an empty one brings itself, which is
 how an empty compartment is predefined. The stock is kept and applies again
 next time.</li>
 </ul>
 
-<p>Every frame gets a <b>project folder</b> with its project file in it.
-Without the check mark <i>A folder of its own for every frame</i> all project
-files lie side by side in the target folder, and the enclosures are added
-once.</p>
+<p>Inside the project folder every frame gets a <b>subfolder of its own</b>
+with its project file in it; without the check mark <i>A folder of its own for
+every frame</i> all project files lie side by side in the project folder. In
+both cases the enclosures lie beside them — once:</p>
+
+<pre>Neubau Musterstraße/        ← the project folder
+    1.1 Hauptverteiler/
+        1.1 Hauptverteiler.vtly
+    1.2 Etage 1/
+        1.2 Etage 1.vtly
+    Dokumentation/
+        Checkliste.txt          ← an enclosure
+    Fotos/                      ← an empty compartment as an enclosure</pre>
 
 <p><b>Nothing is overwritten.</b> A project file that already exists leaves its
 row standing — the reason is in the last column —, and an enclosure that
 already lies at its target is passed over. An existing folder, on the other
-hand, keeps being used: a second run adds what is missing. And one error does
-not stop the rest — a locked folder should not cost the other nine frames;
-what did not work is shown in a window afterwards.</p>
+hand, keeps being used: a second run adds what is missing — that is how a
+further frame joins the same project later on. If <b>not a single</b> row
+works, nothing is created, no folder and no enclosure either. And one error
+does not stop the rest — a locked folder should not cost the other nine
+frames; what did not work is shown in a window afterwards.</p>
 
 <p>The <b>open frame stays untouched</b>: files are created, none is opened.
-The new frames are opened like any other via <i>File ▸ Open</i>. Target folder,
-enclosures and the check mark are kept (<code>Verteilerly.conf</code>, group
+The new frames are opened like any other via <i>File ▸ Open</i>. Project
+folder, enclosures and the check mark are kept (<code>Verteilerly.conf</code>, group
 <code>projekt</code>) — the list of frames and the project data are not, they
 belong to this project.</p>
 

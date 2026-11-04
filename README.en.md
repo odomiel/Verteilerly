@@ -72,11 +72,13 @@ button and says in every case what came of it.
 
 **Creating a project** (*Extensions ▸ Create project…*): a project rarely
 consists of one frame. Here they stand as a list — name and frame number per
-row —, together with the geometry once and the **project data** once; every
-frame gets a **project folder** with its project file in it. **Enclosures**
-come along: predefined files and whole folders, each in its subfolder, so that
-a fresh project folder looks like the ones from last time (`Fotos/`,
-`Messprotokolle/Vorlage.xlsx`). Nothing is overwritten in the process.
+row —, together with the geometry once and the **project data** once; all of it
+is created in **one project folder**, with a subfolder per frame holding its
+project file. **Enclosures** come along: predefined files and whole folders,
+each in its subfolder — **once** into the project folder, not into every frame
+folder —, so that a fresh project folder looks like the one from last time
+(`Fotos/`, `Messprotokolle/Vorlage.xlsx`). Nothing is overwritten in the
+process.
 
 **Spell check** (*Extensions ▸ Spell check…*): designations, remarks, cable
 names and project data are read through at the press of a button, and what

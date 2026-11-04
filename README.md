@@ -81,11 +81,12 @@ herauskam.
 **Ein Projekt anlegen** (*Erweiterungen ▸ Projekt anlegen…*): ein Projekt
 besteht selten aus einem Verteiler. Hier stehen sie als Liste — je Zeile Name
 und Verteilernummer —, dazu einmal die Geometrie und einmal die
-**Projektdaten**; angelegt wird je Verteiler ein **Projektordner** mit seiner
-Projektdatei darin. **Beilagen** kommen mit: vorgegebene Dateien und ganze
-Ordner, jede in ihrem Unterordner, damit ein frischer Projektordner aussieht
-wie die vom letzten Mal (`Fotos/`, `Messprotokolle/Vorlage.xlsx`).
-Überschrieben wird dabei nichts.
+**Projektdaten**; alles entsteht in **einem Projektordner**, darin je Verteiler
+ein Unterordner mit seiner Projektdatei. **Beilagen** kommen mit: vorgegebene
+Dateien und ganze Ordner, jede in ihrem Unterordner — **einmal** in den
+Projektordner, nicht in jeden Verteilerordner —, damit ein frischer
+Projektordner aussieht wie der vom letzten Mal (`Fotos/`,
+`Messprotokolle/Vorlage.xlsx`). Überschrieben wird dabei nichts.
 
 **Rechtschreibung prüfen** (*Erweiterungen ▸ Rechtschreibung…*): Bezeichnungen,
 Bemerkungen, Kabelnamen und Projektdaten werden auf Knopfdruck nachgelesen, und
