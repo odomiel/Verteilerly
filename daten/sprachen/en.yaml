@@ -815,10 +815,14 @@ Mehrere Verteiler mit denselben Projektdaten anlegen: Create several frames with
 Ordner, in dem das Projekt entsteht: Folder in which the project is created
 Durchsuchen…: Browse…
 Projektordner wählen: Choose project folder
-Geometrie — für jeden Verteiler dieselbe: Geometry — the same for every frame
+Geometrie: Geometry
+Benutzerdefiniert…: Custom…
+Eigene Geometrie: Geometry of your own
+'{0} × {1} zu {2} DA ({3} DA)': '{0} × {1} with {2} DA ({3} DA)'
+'{0}, {1} DA': '{0}, {1} DA'
 Ordner: Folder
 Wird angelegt: Will be created
-Je Zeile ein Verteiler. Die Spalte Ordner folgt Name und Nummer, solange niemand sie ändert.: One frame per row. The Folder column follows name and number as long as nobody changes it.
+Je Zeile ein Verteiler mit seiner eigenen Geometrie. Die Spalte Ordner folgt Name und Nummer, solange niemand sie ändert.: One frame per row, each with a geometry of its own. The Folder column follows name and number as long as nobody changes it.
 Zeile hinzufügen: Add row
 Zeile entfernen: Remove row
 Für jeden Verteiler einen eigenen Ordner: A folder of its own for every frame
@@ -837,7 +841,7 @@ Anlegen: Create
 Erst einen Projektordner wählen.: Choose a project folder first.
 Noch kein Verteiler eingetragen.: No frame entered yet.
 Keine Zeile geht — die Gründe stehen rechts.: No row works — the reasons are on the right.
-Angelegt werden {0} Verteiler, dazu {1} Dateien im Projektordner.: '{0} frames will be created, with {1} files in the project folder.'
+Angelegt werden {0} Verteiler mit {1} DA, dazu {2} Dateien im Projektordner.: '{0} frames with {1} DA will be created, and {2} files in the project folder.'
 '{0} Verteiler angelegt, {1} Dateien beigelegt': '{0} frames created, {1} files enclosed'
 ' ({0} lagen schon da)': ' ({0} were already there)'
 Nichts angelegt: Nothing created

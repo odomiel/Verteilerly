@@ -191,7 +191,10 @@ class TestWortliste(unittest.TestCase):
                    # Sprachen so.
                    # "Server" heißt in beiden Sprachen so.
                    "Export ({0})", "&Tools", "Name: {0}", "Name:", "Version",
-                   "Server:"}
+                   "Server:",
+                   # "2 Buchten, 80 DA": die Woerter darin uebersetzt
+                   # mehrzahl() selbst, der Satz traegt nur Zahlen.
+                   "{0}, {1} DA"}
         gleich = [
             deutsch for deutsch, englisch in self.katalog.items()
             if deutsch == englisch and deutsch not in erlaubt

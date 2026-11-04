@@ -176,16 +176,32 @@ def _mitbringsel(beilagen):
 
 @dataclass
 class Angabe:
-    """Ein Verteiler, wie der Anwender ihn angibt - eine Zeile der Liste."""
+    """Ein Verteiler, wie der Anwender ihn angibt - eine Zeile der Liste.
+
+    Die **Geometrie steht dabei**: jede Zeile traegt ihren eigenen
+    Bauplan, denn ein Projekt besteht nicht aus gleichen Verteilern -
+    neben dem HVt mit vier Buchten haengt eine einzelne 10er-Leiste im
+    Treppenhaus. Woher er kommt - aus einer Verteilervorlage oder aus
+    eigenen Zahlen -, ist Sache des Dialogs; hier stehen nur die Zahlen,
+    und zwar in der Form, die ``Verteiler.aus_buchten`` nimmt.
+    """
 
     name: str = ""
     nummer: str = ""
     #: Wie Ordner und Datei heissen sollen; leer heisst: aus Name und Nummer.
     ablage: str = ""
+    #: Je Bucht (Leisten, DA je Leiste). Leer heisst: keine Geometrie
+    #: gewaehlt - daraus laesst sich kein Verteiler bauen, und der
+    #: Aufrufer bekommt es beim Anlegen gesagt.
+    bauplan: tuple[tuple[int, int], ...] = ()
 
     @property
     def leer(self) -> bool:
         return not (self.name.strip() or self.nummer.strip())
+
+    @property
+    def da_gesamt(self) -> int:
+        return sum(leisten * da for leisten, da in self.bauplan)
 
     def bezeichnung(self) -> str:
         """Wie der Verteiler in Meldungen und als Ordner heisst.

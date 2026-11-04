@@ -1,9 +1,14 @@
 """Der Dialog zum Anlegen eines Projekts: die Liste links, die Daten rechts.
 
-Links steht, **was** entsteht: der Projektordner, die Geometrie (einmal
-fuer alle - ein Projekt besteht meist aus gleichen Verteilern), die
-Liste der Verteiler und die Beilagen, die einmal in den Projektordner
-kommen. Rechts stehen die
+Links steht, **was** entsteht: der Projektordner, die Liste der
+Verteiler und die Beilagen, die einmal in den Projektordner kommen.
+
+**Die Geometrie steht in der Zeile**, nicht ueber der Liste: ein Projekt
+besteht nicht aus gleichen Verteilern. Je Zeile ein Auswahlfeld mit den
+Verteilervorlagen und *Benutzerdefiniert…*, das nach drei Zahlen fragt
+und sie als eigenen Eintrag in dieses Feld legt. Eine **neue Zeile erbt
+die Wahl der letzten** - das Haeufige ist damit ein Griff, das
+Abweichende einer mehr. Rechts stehen die
 **Projektdaten**, und zwar dieselben Felder wie im Dialog *Neuer
 Verteiler*: dasselbe Bauteil (``ProjektdatenFelder``), damit beide
 Wege nicht auseinanderlaufen. Gezeigt wird, was die gerade gewaehlte
@@ -48,7 +53,7 @@ from PySide6.QtWidgets import (
 
 from ... import einstellungen as einstellungsspeicher
 from ...layout import briefkopffelder
-from ...modell import BRIEFKOPF_FELDER, Projekt, Verteiler
+from ...modell import BRIEFKOPF_FELDER, Projekt, Verteiler, mehrzahl
 from ...sprachen import u
 from ...vorlagen import Vorlagen
 from ...gui.dialoge import ProjektdatenFelder
@@ -57,14 +62,89 @@ from . import ProjektAnlegen
 from .anlage import Angabe, Beilage, ablagename, anlegen, planen
 
 #: Die Spalten der Verteilerliste.
-NAME, NUMMER, ABLAGE, STAND = range(4)
+NAME, NUMMER, GEOMETRIE, ABLAGE, STAND = range(5)
 #: Die Spalten der Beilagenliste.
 UNTERORDNER, QUELLE = range(2)
 
 #: So viele leere Zeilen stehen am Anfang in der Liste.
 ZEILEN_ANFANGS = 3
-#: Hoehe einer Zeile in beiden Listen.
-ZEILENHOEHE = 26
+#: Hoehe einer Zeile in beiden Listen - ein Auswahlfeld braucht Luft.
+ZEILENHOEHE = 30
+
+#: Was im Auswahlfeld der Geometrie steht: eine Verteilervorlage, ein
+#: eigener Bauplan, oder die Aufforderung, nach Zahlen zu fragen.
+VORLAGE, PLAN, EIGEN = "vorlage", "plan", "eigen"
+
+#: Womit der Dialog fuer eine eigene Geometrie anfaengt.
+BUCHTEN_VORGABE, LEISTEN_VORGABE, DA_VORGABE = 1, 4, 10
+
+
+def bauplantext(bauplan) -> str:
+    """Ein Bauplan in einer Zeile - gleichmaessig kurz, sonst aufgezaehlt."""
+    gesamt = sum(leisten * da for leisten, da in bauplan)
+    if len(set(bauplan)) == 1:
+        leisten, da = bauplan[0]
+        return u("{0} × {1} zu {2} DA ({3} DA)").format(
+            mehrzahl(len(bauplan), "Bucht", "Buchten"),
+            mehrzahl(leisten, "Leiste", "Leisten"), da, gesamt,
+        )
+    return u("{0}, {1} DA").format(
+        mehrzahl(len(bauplan), "Bucht", "Buchten"), gesamt
+    )
+
+
+class GeometrieDialog(PassenderDialog):
+    """Drei Zahlen fuer **eine** Zeile der Liste.
+
+    Mehr als drei gibt es hier nicht: eine ungleich besetzte Anlage
+    gehoert in eine Verteilervorlage (*Neuer Verteiler ▸ Als Vorlage
+    speichern*), dann steht sie jedem Projekt zur Wahl.
+    """
+
+    def __init__(self, bauplan=(), parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle(u("Eigene Geometrie"))
+        buchten, leisten, da = BUCHTEN_VORGABE, LEISTEN_VORGABE, DA_VORGABE
+        if bauplan and len(set(bauplan)) == 1:
+            buchten, (leisten, da) = len(bauplan), bauplan[0]
+        self.buchten = QSpinBox()
+        self.buchten.setRange(1, 20)
+        self.buchten.setValue(buchten)
+        self.leisten = QSpinBox()
+        self.leisten.setRange(1, 60)
+        self.leisten.setValue(leisten)
+        self.da = QSpinBox()
+        self.da.setRange(1, 100)
+        self.da.setValue(da)
+        self.da.setSuffix(u(" DA"))
+        self.summe = QLabel()
+        for feld in (self.buchten, self.leisten, self.da):
+            feld.valueChanged.connect(self._summe_zeigen)
+
+        knoepfe = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok
+            | QDialogButtonBox.StandardButton.Cancel
+        )
+        knoepfe.button(QDialogButtonBox.StandardButton.Ok).setText(u("Übernehmen"))
+        knoepfe.button(QDialogButtonBox.StandardButton.Cancel).setText(
+            u("Abbrechen")
+        )
+        knoepfe.accepted.connect(self.accept)
+        knoepfe.rejected.connect(self.reject)
+
+        aufbau = QFormLayout(self)
+        aufbau.addRow(u("Buchten:"), self.buchten)
+        aufbau.addRow(u("Leisten je Bucht:"), self.leisten)
+        aufbau.addRow(u("DA je Leiste:"), self.da)
+        aufbau.addRow("", self.summe)
+        aufbau.addRow(knoepfe)
+        self._summe_zeigen()
+
+    def _summe_zeigen(self) -> None:
+        self.summe.setText(bauplantext(self.bauplan()))
+
+    def bauplan(self) -> tuple[tuple[int, int], ...]:
+        return ((self.leisten.value(), self.da.value()),) * self.buchten.value()
 
 
 class ProjektDialog(PassenderDialog):
@@ -92,53 +172,20 @@ class ProjektDialog(PassenderDialog):
         ordnerzeile.addWidget(self.suchknopf)
         ordnerzeile.addWidget(self.ordnerknopf)
 
-        # Die Geometrie gilt fuer alle Zeilen: ein Projekt besteht in der
-        # Regel aus gleichen Verteilern. Wer einen anderen braucht, legt
-        # ihn hinterher einzeln an.
-        self.vorlagenwahl = QComboBox()
-        for vorlage in self.vorlagen.alle:
-            self.vorlagenwahl.addItem(str(vorlage), vorlage.id)
-        self.vorlagenwahl.addItem(u("Benutzerdefiniert"), "")
-        if len(self.vorlagen):
-            stelle = self.vorlagenwahl.findData(self.vorlagen.standard.id)
-            self.vorlagenwahl.setCurrentIndex(max(stelle, 0))
-        self.vorlagenwahl.currentIndexChanged.connect(self._geometrie_umschalten)
-
-        self.buchten = QSpinBox()
-        self.buchten.setRange(1, 20)
-        self.leisten = QSpinBox()
-        self.leisten.setRange(1, 60)
-        self.leisten.setValue(4)
-        self.da = QSpinBox()
-        self.da.setRange(1, 100)
-        self.da.setValue(10)
-        self.da.setSuffix(u(" DA"))
-        eigenform = QFormLayout()
-        eigenform.setContentsMargins(0, 0, 0, 0)
-        eigenform.addRow(u("Buchten:"), self.buchten)
-        eigenform.addRow(u("Leisten je Bucht:"), self.leisten)
-        eigenform.addRow(u("DA je Leiste:"), self.da)
-        self.eigenblock = QWidget()
-        self.eigenblock.setLayout(eigenform)
-
-        geometrie = QVBoxLayout()
-        geometrie.addWidget(self.vorlagenwahl)
-        geometrie.addWidget(self.eigenblock)
-        geometriekasten = QGroupBox(u("Geometrie — für jeden Verteiler dieselbe"))
-        geometriekasten.setLayout(geometrie)
-        self._geometrie_umschalten()
-
-        self.tabelle = QTableWidget(0, 4)
+        self.tabelle = QTableWidget(0, 5)
         self.tabelle.setHorizontalHeaderLabels(
-            [u("Verteilername"), u("Verteilernummer"), u("Ordner"), u("Wird angelegt")]
+            [u("Verteilername"), u("Verteilernummer"), u("Geometrie"),
+             u("Ordner"), u("Wird angelegt")]
         )
         self.tabelle.verticalHeader().setDefaultSectionSize(ZEILENHOEHE)
-        self.tabelle.horizontalHeader().setSectionResizeMode(
-            QHeaderView.ResizeMode.Stretch
-        )
+        kopf = self.tabelle.horizontalHeader()
+        kopf.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        # Die Nummer ist kurz - der Platz gehoert den anderen.
+        kopf.setSectionResizeMode(NUMMER, QHeaderView.ResizeMode.ResizeToContents)
         self.tabelle.setToolTip(
-            u("Je Zeile ein Verteiler. Die Spalte Ordner folgt Name und "
-              "Nummer, solange niemand sie ändert.")
+            u("Je Zeile ein Verteiler mit seiner eigenen Geometrie. Die "
+              "Spalte Ordner folgt Name und Nummer, solange niemand sie "
+              "ändert.")
         )
         self.tabelle.itemChanged.connect(self._zelle_geaendert)
         for _ in range(ZEILEN_ANFANGS):
@@ -273,7 +320,6 @@ class ProjektDialog(PassenderDialog):
         links = QVBoxLayout()
         links.setContentsMargins(0, 0, 0, 0)
         links.addLayout(ordnerform)
-        links.addWidget(geometriekasten)
         links.addWidget(verteilerkasten, 1)
         links.addWidget(beilagenkasten, 1)
         links.addWidget(self.summe)
@@ -321,20 +367,106 @@ class ProjektDialog(PassenderDialog):
         if ordner is not None and ordner.is_dir():
             QDesktopServices.openUrl(QUrl.fromLocalFile(str(ordner)))
 
-    # -- Geometrie -----------------------------------------------------------
+    # -- Geometrie je Zeile --------------------------------------------------
 
-    def _geometrie_umschalten(self, *_args) -> None:
-        self.eigenblock.setVisible(not self.vorlagenwahl.currentData())
+    def _geometriefeld(self, erben_von: int = -1) -> QComboBox:
+        """Das Auswahlfeld einer Zeile: die Vorlagen und ein eigener Weg.
+
+        ``erben_von`` ist die Zeile, deren Wahl die neue uebernimmt - in
+        der Regel die letzte. Ein eigener Bauplan wird dabei
+        mituebernommen: wer zwei gleiche Sonderlinge eintraegt, soll die
+        Zahlen nicht zweimal tippen.
+        """
+        feld = QComboBox()
+        for vorlage in self.vorlagen.alle:
+            feld.addItem(str(vorlage), (VORLAGE, vorlage.id))
+        vorbild = (
+            self.tabelle.cellWidget(erben_von, GEOMETRIE)
+            if erben_von >= 0 else None
+        )
+        geerbt = vorbild.currentData() if vorbild is not None else None
+        if geerbt is not None and geerbt[0] == PLAN:
+            feld.addItem(bauplantext(geerbt[1]), geerbt)
+        feld.addItem(u("Benutzerdefiniert…"), (EIGEN, None))
+        if geerbt is not None:
+            stelle = feld.findData(geerbt)
+            feld.setCurrentIndex(max(stelle, 0))
+        elif len(self.vorlagen):
+            stelle = feld.findData((VORLAGE, self.vorlagen.standard.id))
+            feld.setCurrentIndex(max(stelle, 0))
+        else:
+            # Ohne eine einzige Vorlage bleibt nur der eigene Weg.
+            feld.setCurrentIndex(feld.count() - 1)
+        feld.setProperty("zuletzt", feld.currentIndex())
+        feld.currentIndexChanged.connect(
+            lambda _stelle, f=feld: self._geometrie_gewechselt(f)
+        )
+        return feld
+
+    def _geometrie_gewechselt(self, feld: QComboBox) -> None:
+        """*Benutzerdefiniert…* fragt nach Zahlen, alles andere gilt sofort.
+
+        Der Eintrag ist eine **Aufforderung, kein Zustand**: angenommen
+        wird der Bauplan als eigener Eintrag darueber, abgebrochen steht
+        wieder da, was vorher dastand - sonst zeigte das Feld eine
+        Geometrie, die niemand gewaehlt hat.
+        """
+        daten = feld.currentData()
+        if daten is None or daten[0] != EIGEN:
+            feld.setProperty("zuletzt", feld.currentIndex())
+            self._vorschau_auffrischen()
+            return
+        vorher = feld.property("zuletzt")
+        voriger = feld.itemData(vorher) if vorher is not None else None
+        dialog = GeometrieDialog(
+            voriger[1] if voriger is not None and voriger[0] == PLAN else (),
+            self,
+        )
+        if dialog.exec() != GeometrieDialog.DialogCode.Accepted:
+            feld.setCurrentIndex(vorher if vorher is not None else 0)
+            return
+        self._eigenen_plan_setzen(feld, dialog.bauplan())
+
+    def _eigenen_plan_setzen(self, feld: QComboBox, bauplan) -> None:
+        """Legt den Bauplan als Eintrag vor *Benutzerdefiniert…* und waehlt ihn.
+
+        Je Feld gibt es nur **einen** eigenen Eintrag: ein zweiter waere
+        die vorige Eingabe, die niemand mehr sucht.
+        """
+        daten = (PLAN, tuple(bauplan))
+        feld.blockSignals(True)
+        for stelle in range(feld.count() - 1, -1, -1):
+            if (feld.itemData(stelle) or ("", None))[0] == PLAN:
+                feld.removeItem(stelle)
+        feld.insertItem(feld.count() - 1, bauplantext(daten[1]), daten)
+        feld.setCurrentIndex(feld.count() - 2)
+        feld.setProperty("zuletzt", feld.currentIndex())
+        feld.blockSignals(False)
+        # Die Zeile hat eine andere Geometrie - die Vorschau soll es zeigen.
+        self._vorschau_auffrischen()
+
+    def bauplan(self, zeile: int) -> tuple[tuple[int, int], ...]:
+        """Die Geometrie dieser Zeile, als Bauplan je Bucht."""
+        feld = self.tabelle.cellWidget(zeile, GEOMETRIE)
+        daten = feld.currentData() if feld is not None else None
+        if daten is None:
+            return ()
+        art, wert = daten
+        if art == PLAN:
+            return tuple(wert)
+        if art == VORLAGE and wert in self.vorlagen:
+            return self.vorlagen.holen(wert).buchtenplan
+        return ()
 
     def verteiler(self, angabe: Angabe) -> Verteiler:
-        """Der Verteiler zu einer Zeile - aus Vorlage oder eigener Geometrie."""
-        name, nummer = angabe.name.strip(), angabe.nummer.strip()
-        kennung = self.vorlagenwahl.currentData()
-        if kennung:
-            return self.vorlagen.holen(kennung).verteiler(name, nummer)
-        return Verteiler.aus_geometrie(
-            self.buchten.value(), self.leisten.value(), self.da.value(),
-            name, nummer,
+        """Der Verteiler zu einer Zeile - nach ihrem eigenen Bauplan.
+
+        Ohne Bauplan wirft ``aus_buchten`` einen ``ModellFehler``, und
+        ``anlegen()`` schreibt ihn als Grund zu dieser Zeile - genau
+        richtig: die anderen Verteiler gehen davon nichts an.
+        """
+        return Verteiler.aus_buchten(
+            list(angabe.bauplan), angabe.name.strip(), angabe.nummer.strip()
         )
 
     # -- Die Verteilerliste --------------------------------------------------
@@ -348,6 +480,10 @@ class ProjektDialog(PassenderDialog):
         stand = QTableWidgetItem("")
         stand.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
         self.tabelle.setItem(zeile, STAND, stand)
+        # Die Geometrie erbt die neue Zeile von der letzten.
+        self.tabelle.setCellWidget(
+            zeile, GEOMETRIE, self._geometriefeld(zeile - 1)
+        )
         self._fuellt = False
         self._ablage_nachziehen(zeile)
         return zeile
@@ -369,6 +505,7 @@ class ProjektDialog(PassenderDialog):
             self._text(self.tabelle, zeile, NAME),
             self._text(self.tabelle, zeile, NUMMER),
             self._text(self.tabelle, zeile, ABLAGE),
+            self.bauplan(zeile),
         )
 
     def angaben(self) -> list[Angabe]:
@@ -518,8 +655,12 @@ class ProjektDialog(PassenderDialog):
             self.summe.setText(u("Keine Zeile geht — die Gründe stehen rechts."))
         else:
             self.summe.setText(
-                u("Angelegt werden {0} Verteiler, dazu {1} Dateien im "
-                  "Projektordner.").format(len(geht), len(plan.dateien))
+                u("Angelegt werden {0} Verteiler mit {1} DA, dazu {2} Dateien "
+                  "im Projektordner.").format(
+                    len(geht),
+                    sum(anlage.angabe.da_gesamt for anlage in geht),
+                    len(plan.dateien),
+                )
             )
         self.anlegenknopf.setEnabled(ordner is not None and bool(geht))
 

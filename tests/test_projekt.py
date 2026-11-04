@@ -5,8 +5,9 @@ Temp-Ordner gerechnet - geschrieben wird dort erst, wenn der Test es
 verlangt -, und der **Dialog** gegen ein echtes Hauptfenster, aber ohne
 Dateidialog und ohne ``exec()``.
 
-Ein Auge gilt dabei durchgehend den **Beilagen**: sie gehoeren dem
-Projektordner und werden **einmal** gelegt, nicht je Verteiler.
+Zwei Dinge haben hier ein eigenes Auge: die **Beilagen** gehoeren dem
+Projektordner und werden **einmal** gelegt, nicht je Verteiler - und die
+**Geometrie** gehoert der Zeile, nicht dem Dialog.
 """
 
 from __future__ import annotations
@@ -42,16 +43,29 @@ from verteilerly.erweiterungen.projekt.anlage import (  # noqa: E402
     sicherer_name,
     sicherer_unterordner,
 )
+from verteilerly.erweiterungen.projekt.dialog import (  # noqa: E402
+    ABLAGE,
+    EIGEN,
+    GEOMETRIE,
+    NAME,
+    NUMMER,
+    PLAN,
+    STAND,
+    VORLAGE,
+    GeometrieDialog,
+    bauplantext,
+)
 from verteilerly.modell import Projekt, Verteiler  # noqa: E402
 
 from . import bauteil_zurueckgeben, einstellung_bewahren  # noqa: E402
 
 
 def _projekt_fuer(angabe: Angabe) -> Projekt:
-    """Ein winziger Verteiler je Zeile - die Geometrie ist hier nicht die Frage."""
+    """Der Verteiler zur Zeile - nach ihrem Bauplan, sonst winzig."""
+    bauplan = list(angabe.bauplan) or [(1, 2)]
     return Projekt(
-        verteiler=Verteiler.aus_geometrie(
-            1, 1, 2, angabe.name.strip(), angabe.nummer.strip()
+        verteiler=Verteiler.aus_buchten(
+            bauplan, angabe.name.strip(), angabe.nummer.strip()
         ),
         briefkopf={"firma": "Beliebig GmbH"},
     )
@@ -350,6 +364,46 @@ class TestAnlegen(unittest.TestCase):
         self.assertTrue((self.ordner / "Dokumentation" / "Checkliste.txt").is_file())
 
 
+class TestBauplantext(unittest.TestCase):
+    """Was im Auswahlfeld der Zeile steht."""
+
+    def test_gleichmaessig_steht_kurz_da(self):
+        self.assertEqual(
+            bauplantext(((10, 20),) * 2), "2 Buchten × 10 Leisten zu 20 DA (400 DA)"
+        )
+
+    def test_eine_bucht_eine_leiste(self):
+        self.assertEqual(
+            bauplantext(((1, 10),)), "1 Bucht × 1 Leiste zu 10 DA (10 DA)"
+        )
+
+    def test_ungleich_wird_nur_gezaehlt(self):
+        """Aufzaehlen waere laenger als die Spalte breit ist."""
+        self.assertEqual(bauplantext(((4, 10), (2, 20))), "2 Buchten, 80 DA")
+
+
+class TestGeometrieDialog(unittest.TestCase):
+    """Drei Zahlen fuer eine Zeile."""
+
+    def setUp(self):
+        self.dialog = GeometrieDialog(((10, 20),) * 2)
+        bauteil_zurueckgeben(self, self.dialog)
+
+    def test_ein_vorhandener_plan_steht_schon_drin(self):
+        self.assertEqual(self.dialog.buchten.value(), 2)
+        self.assertEqual(self.dialog.leisten.value(), 10)
+        self.assertEqual(self.dialog.da.value(), 20)
+
+    def test_der_plan_kommt_aus_den_drei_zahlen(self):
+        self.dialog.buchten.setValue(3)
+        self.dialog.leisten.setValue(5)
+        self.dialog.da.setValue(10)
+        self.assertEqual(self.dialog.bauplan(), ((5, 10),) * 3)
+
+    def test_die_summe_steht_dabei(self):
+        self.assertIn("400 DA", self.dialog.summe.text())
+
+
 class TestDialog(unittest.TestCase):
     """Der Dialog - mit echtem Fenster, ohne Dateidialog und ohne exec()."""
 
@@ -378,8 +432,17 @@ class TestDialog(unittest.TestCase):
         self.dialog.ordnerfeld.setText(str(self.ordner))
 
     def _zeile(self, zeile: int, name: str, nummer: str = "") -> None:
-        self.dialog.tabelle.item(zeile, 0).setText(name)
-        self.dialog.tabelle.item(zeile, 1).setText(nummer)
+        self.dialog.tabelle.item(zeile, NAME).setText(name)
+        self.dialog.tabelle.item(zeile, NUMMER).setText(nummer)
+
+    def _ordner(self, zeile: int) -> str:
+        return self.dialog.tabelle.item(zeile, ABLAGE).text()
+
+    def _stand(self, zeile: int) -> str:
+        return self.dialog.tabelle.item(zeile, STAND).text()
+
+    def _geometrie(self, zeile: int):
+        return self.dialog.tabelle.cellWidget(zeile, GEOMETRIE)
 
     def test_drei_leere_zeilen_stehen_bereit(self):
         self.assertEqual(self.dialog.tabelle.rowCount(), 3)
@@ -387,29 +450,24 @@ class TestDialog(unittest.TestCase):
 
     def test_der_ordnername_folgt_name_und_nummer(self):
         self._zeile(0, "Keller", "1.1")
-        self.assertEqual(self.dialog.tabelle.item(0, 2).text(), "1.1 Keller")
+        self.assertEqual(self._ordner(0), "1.1 Keller")
 
     def test_eine_eigene_schreibweise_bleibt_stehen(self):
         """Was von Hand kommt, bleibt - wie bei den Adernfarben."""
         self._zeile(0, "Keller", "1.1")
-        self.dialog.tabelle.item(0, 2).setText("Mein Ordner")
+        self.dialog.tabelle.item(0, ABLAGE).setText("Mein Ordner")
         self._zeile(0, "Keller neu", "1.1")
-        self.assertEqual(self.dialog.tabelle.item(0, 2).text(), "Mein Ordner")
+        self.assertEqual(self._ordner(0), "Mein Ordner")
 
     def test_die_letzte_spalte_sagt_wohin(self):
         self._zeile(0, "Keller", "1.1")
-        self.assertEqual(
-            self.dialog.tabelle.item(0, 3).text(), "1.1 Keller/1.1 Keller.vtly"
-        )
+        self.assertEqual(self._stand(0), "1.1 Keller/1.1 Keller.vtly")
 
     def test_die_letzte_spalte_sagt_warum_nicht(self):
         self._zeile(0, "Keller")
         self._zeile(1, "keller")
-        self.assertTrue(self.dialog.tabelle.item(1, 3).text())
-        self.assertNotEqual(
-            self.dialog.tabelle.item(0, 3).text(),
-            self.dialog.tabelle.item(1, 3).text(),
-        )
+        self.assertTrue(self._stand(1))
+        self.assertNotEqual(self._stand(0), self._stand(1))
 
     def test_ohne_projektordner_laesst_sich_nichts_anlegen(self):
         self._zeile(0, "Keller")
@@ -427,6 +485,112 @@ class TestDialog(unittest.TestCase):
         self.assertIn("2", self.dialog.summe.text())
         self.assertIn("1", self.dialog.summe.text())
 
+    def test_jede_zeile_hat_ihr_eigenes_geometriefeld(self):
+        felder = [self._geometrie(zeile) for zeile in range(3)]
+        self.assertTrue(all(felder))
+        self.assertEqual(len({id(feld) for feld in felder}), 3)
+
+    def test_die_vorlagen_stehen_zur_wahl_und_der_eigene_weg_zuletzt(self):
+        feld = self._geometrie(0)
+        self.assertEqual(feld.itemData(feld.count() - 1), (EIGEN, None))
+        self.assertEqual(feld.count(), len(self.fenster.vorlagen) + 1)
+        self.assertEqual(feld.currentData()[0], VORLAGE)
+
+    def test_zwei_zeilen_zwei_geometrien(self):
+        """Darum geht es: der HVt ist nicht die Leiste im Treppenhaus."""
+        feld = self._geometrie(1)
+        andere = next(
+            stelle for stelle in range(feld.count())
+            if (feld.itemData(stelle) or ("", None))[0] == VORLAGE
+            and feld.itemData(stelle) != self._geometrie(0).currentData()
+        )
+        feld.setCurrentIndex(andere)
+        self.assertNotEqual(self.dialog.bauplan(0), self.dialog.bauplan(1))
+
+    def test_eine_neue_zeile_erbt_die_wahl_der_letzten(self):
+        self.dialog._eigenen_plan_setzen(self._geometrie(2), ((5, 10),) * 2)
+        zeile = self.dialog.zeile_anhaengen("Dach")
+        self.assertEqual(self.dialog.bauplan(zeile), ((5, 10),) * 2)
+        self.assertEqual(self._geometrie(zeile).currentData(), (PLAN, ((5, 10),) * 2))
+
+    def test_ein_eigener_plan_steht_als_eintrag_im_feld(self):
+        feld = self._geometrie(0)
+        self.dialog._eigenen_plan_setzen(feld, ((4, 10),))
+        self.assertEqual(feld.currentText(), bauplantext(((4, 10),)))
+        self.assertEqual(self.dialog.bauplan(0), ((4, 10),))
+        # Der eigene Weg bleibt der letzte Eintrag.
+        self.assertEqual(feld.itemData(feld.count() - 1), (EIGEN, None))
+
+    def test_ein_zweiter_eigener_plan_ersetzt_den_ersten(self):
+        feld = self._geometrie(0)
+        vorher = feld.count()
+        self.dialog._eigenen_plan_setzen(feld, ((4, 10),))
+        self.dialog._eigenen_plan_setzen(feld, ((2, 20),))
+        self.assertEqual(feld.count(), vorher + 1)
+        self.assertEqual(self.dialog.bauplan(0), ((2, 20),))
+
+    def test_benutzerdefiniert_fragt_und_uebernimmt(self):
+        from unittest import mock
+
+        from verteilerly.erweiterungen.projekt import dialog as dialogmodul
+
+        feld = self._geometrie(0)
+        with mock.patch.object(
+            dialogmodul.GeometrieDialog, "exec",
+            lambda self: GeometrieDialog.DialogCode.Accepted,
+        ):
+            feld.setCurrentIndex(feld.count() - 1)
+        self.assertEqual(feld.currentData()[0], PLAN)
+        self.assertEqual(
+            self.dialog.bauplan(0),
+            ((dialogmodul.LEISTEN_VORGABE, dialogmodul.DA_VORGABE),)
+            * dialogmodul.BUCHTEN_VORGABE,
+        )
+
+    def test_abgebrochen_bleibt_die_vorige_wahl_stehen(self):
+        """Sonst zeigte das Feld eine Geometrie, die niemand gewaehlt hat."""
+        from unittest import mock
+
+        from verteilerly.erweiterungen.projekt import dialog as dialogmodul
+
+        feld = self._geometrie(0)
+        vorher = feld.currentData()
+        with mock.patch.object(
+            dialogmodul.GeometrieDialog, "exec",
+            lambda self: GeometrieDialog.DialogCode.Rejected,
+        ):
+            feld.setCurrentIndex(feld.count() - 1)
+        self.assertEqual(feld.currentData(), vorher)
+
+    def test_die_geometrie_der_zeile_landet_in_der_datei(self):
+        from verteilerly import projektdatei
+
+        self._zeile(0, "Keller", "1.1")
+        self._zeile(1, "Treppenhaus", "1.2")
+        self.dialog._eigenen_plan_setzen(self._geometrie(1), ((1, 10),))
+        self.dialog.ausfuehren()
+        gross = projektdatei.laden(
+            self.ordner / "1.1 Keller" / "1.1 Keller.vtly"
+        )
+        klein = projektdatei.laden(
+            self.ordner / "1.2 Treppenhaus" / "1.2 Treppenhaus.vtly"
+        )
+        self.assertEqual(klein.verteiler.da_gesamt, 10)
+        self.assertEqual(len(klein.verteiler.alle_leisten), 1)
+        self.assertNotEqual(gross.verteiler.da_gesamt, klein.verteiler.da_gesamt)
+
+    def test_die_summe_nennt_die_doppeladern(self):
+        self._zeile(0, "Keller")
+        self.dialog._eigenen_plan_setzen(self._geometrie(0), ((2, 10),))
+        self.assertIn("20 DA", self.dialog.summe.text())
+
+    def test_ohne_geometrie_scheitert_nur_diese_zeile(self):
+        plan = planen([Angabe("Ohne"), Angabe("Mit", bauplan=((1, 2),))], self.ordner)
+        bericht = anlegen(plan, self.dialog.projekt_fuer)
+        self.assertEqual(bericht.angelegt, 1)
+        self.assertEqual(len(bericht.gruende), 1)
+        self.assertIn("Ohne", bericht.gruende[0])
+
     def test_eine_zeile_mehr_und_eine_weniger(self):
         self.dialog.zeile_anhaengen("Dach")
         self.assertEqual(self.dialog.tabelle.rowCount(), 4)
@@ -442,14 +606,14 @@ class TestDialog(unittest.TestCase):
 
     def test_jedes_projekt_bekommt_seine_eigenen_sammlungen(self):
         """Zwei Projekte an einem Briefkopf waeren eine Falle."""
-        eines = self.dialog.projekt_fuer(Angabe("Keller", "1.1"))
-        anderes = self.dialog.projekt_fuer(Angabe("Dach", "1.2"))
+        eines = self.dialog.projekt_fuer(Angabe("Keller", "1.1", bauplan=((1, 2),)))
+        anderes = self.dialog.projekt_fuer(Angabe("Dach", "1.2", bauplan=((1, 2),)))
         self.assertIsNot(eines.briefkopf, anderes.briefkopf)
         self.assertIsNot(eines.ausgeblendet, anderes.ausgeblendet)
         self.assertEqual(eines.verteiler.nummer, "1.1")
 
     def test_was_die_blattvorlage_nicht_fuehrt_ist_abgewaehlt(self):
-        projekt = self.dialog.projekt_fuer(Angabe("Keller"))
+        projekt = self.dialog.projekt_fuer(Angabe("Keller", bauplan=((1, 2),)))
         self.assertTrue(
             self.dialog.projektdaten.verborgene() <= projekt.ausgeblendet
         )

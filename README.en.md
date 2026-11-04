@@ -71,9 +71,10 @@ it **never** goes online. *Help ▸ Look for updates…* asks at the press of a
 button and says in every case what came of it.
 
 **Creating a project** (*Extensions ▸ Create project…*): a project rarely
-consists of one frame. Here they stand as a list — name and frame number per
-row —, together with the geometry once and the **project data** once; all of it
-is created in **one project folder**, with a subfolder per frame holding its
+consists of one frame. Here they stand as a list — name, frame number and
+**geometry** per row (a frame template or your own numbers; a new row inherits
+the choice of the last one) —, together with the **project data** once; all of
+it is created in **one project folder**, with a subfolder per frame holding its
 project file. **Enclosures** come along: predefined files and whole folders,
 each in its subfolder — **once** into the project folder, not into every frame
 folder —, so that a fresh project folder looks like the one from last time

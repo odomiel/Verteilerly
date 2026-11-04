@@ -79,8 +79,9 @@ gesendet nichts außer der Anfrage; abgeschaltet geht es **nie** ins Netz.
 herauskam.
 
 **Ein Projekt anlegen** (*Erweiterungen ▸ Projekt anlegen…*): ein Projekt
-besteht selten aus einem Verteiler. Hier stehen sie als Liste — je Zeile Name
-und Verteilernummer —, dazu einmal die Geometrie und einmal die
+besteht selten aus einem Verteiler. Hier stehen sie als Liste — je Zeile Name,
+Verteilernummer und **Geometrie** (eine Verteilervorlage oder eigene Zahlen;
+eine neue Zeile erbt die Wahl der letzten) —, dazu einmal die
 **Projektdaten**; alles entsteht in **einem Projektordner**, darin je Verteiler
 ein Unterordner mit seiner Projektdatei. **Beilagen** kommen mit: vorgegebene
 Dateien und ganze Ordner, jede in ihrem Unterordner — **einmal** in den
