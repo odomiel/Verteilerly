@@ -8,6 +8,8 @@
 '{0}: Spalte {1!r} gibt es nicht (bekannt: {2})': '{0}: there is no column {1!r} (known: {2})'
 '{0}: Ausrichtung {1!r} gibt es nicht': '{0}: there is no alignment {1!r}'
 '{0}: Blattvorlage ohne {1}': '{0}: sheet template without {1}'
+'{0}: Die Kennung {1!r} taugt nicht als Dateiname': '{0}: The identifier {1!r} is not usable
+  as a file name'
 '{0!r} ist keine Leiste': '{0!r} is not a strip'
 '{0}: {1!r} gehört nicht ins Schriftfeld (bekannt: {2})': '{0}: {1!r} does not belong in the title block
   (known: {2})'
@@ -547,6 +549,9 @@ Es ist keine einzige Vorlage vorhanden: There is not a single template
 Es gibt schon eine Vorlage {0!r}: There already is a template {0!r}
 '{0}Vorlage ohne Buchten': '{0}template without bays'
 '{0}Vorlage ohne {1}': '{0}template without {1}'
+'{0}Die Kennung {1!r} taugt nicht als Dateiname': '{0}The identifier {1!r} is not usable
+  as a file name'
+Die Kennung {0!r} taugt nicht als Dateiname: The identifier {0!r} is not usable as a file name
 '{0}Buchten, Leisten und DA muessen mindestens 1 sein': '{0}bays, strips and pairs must be at least 1'
 'Vorlage nicht gespeichert: {0}': 'Template not saved: {0}'
 '{0}Bucht {1}: erwartet wird leisten und da': '{0}bay {1}: expected are leisten and da'

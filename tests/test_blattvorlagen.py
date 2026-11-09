@@ -81,6 +81,16 @@ class TestAusYaml(unittest.TestCase):
         with self.assertRaises(BlattvorlagenFehler):
             blattvorlage_aus_yaml({"id": "x"}, "x.yaml")
 
+    def test_eine_id_mit_pfad_wird_abgewiesen(self):
+        """``id: ../opfer`` taugt nicht als Dateiname (Audit 2)."""
+        from verteilerly.blattvorlagen import blattvorlage_loeschen
+
+        for boese in ("../opfer", "/etc/passwd", "a/b"):
+            with self.assertRaises(BlattvorlagenFehler):
+                blattvorlage_aus_yaml({"id": boese, "name": "X"}, "x.yaml")
+            with self.assertRaises(BlattvorlagenFehler):
+                blattvorlage_loeschen(boese, pathlib.Path("."))
+
     def test_zahl_muss_eine_zahl_sein(self):
         with self.assertRaises(BlattvorlagenFehler):
             blattvorlage_aus_yaml({"id": "x", "name": "X", "rand": "breit"}, "x.yaml")

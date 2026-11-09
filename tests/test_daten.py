@@ -542,6 +542,27 @@ class TestVorlagenVerwalten(unittest.TestCase):
 
         self.assertFalse(vorlage_loeschen("gibtsnicht", self.ziel))
 
+    def test_eine_id_mit_pfad_bricht_nicht_aus(self):
+        """Eine Vorlage mit ``id: ../opfer`` loescht nichts ausserhalb (Audit 2)."""
+        from verteilerly.vorlagen import vorlage_aus_yaml, vorlage_loeschen
+
+        # Ein Opfer eine Ebene ueber dem Vorlagenordner.
+        opfer = self.ziel.parent / "opfer.yaml"
+        opfer.write_text("id: opfer\nname: Opfer\nbuchten: 1\n"
+                         "leisten_je_bucht: 1\nda_je_leiste: 1\n", encoding="utf-8")
+
+        # Schon das Laden weist die Kennung ab …
+        with self.assertRaises(VorlagenFehler):
+            vorlage_aus_yaml(
+                {"id": "../opfer", "name": "Harmlos", "buchten": 1,
+                 "leisten_je_bucht": 1, "da_je_leiste": 1},
+                "harmlos.yaml",
+            )
+        # … und auch ein direkter Loeschversuch trifft das Opfer nicht.
+        with self.assertRaises(VorlagenFehler):
+            vorlage_loeschen("../opfer", self.ziel)
+        self.assertTrue(opfer.exists(), "das Opfer wurde geloescht")
+
     def test_umbenennen_aendert_den_namen_nicht_die_kennung(self):
         from verteilerly.vorlagen import vorlage_umbenennen
 

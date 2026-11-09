@@ -27,7 +27,12 @@ from dataclasses import dataclass, replace
 
 import yaml
 
-from .modell import ModellFehler, Verteiler, unbekannte_schluessel
+from .modell import (
+    ModellFehler,
+    Verteiler,
+    kennung_unsicher,
+    unbekannte_schluessel,
+)
 from .sprachen import u
 
 
@@ -179,6 +184,10 @@ def vorlage_speichern(
     vorlage: Vorlage, ordner: pathlib.Path, ueberschreiben: bool = False
 ) -> pathlib.Path:
     """Legt die Vorlage als YAML-Datei im Vorlagenordner ab."""
+    if kennung_unsicher(vorlage.id):
+        raise VorlagenFehler(
+            u("Die Kennung {0!r} taugt nicht als Dateiname").format(vorlage.id)
+        )
     ordner = pathlib.Path(ordner)
     ziel = ordner / f"{vorlage.id}.yaml"
     if ziel.exists() and not ueberschreiben:
@@ -221,6 +230,10 @@ def vorlage_loeschen(kennung: str, ordner: pathlib.Path) -> bool:
     nie ausgelegt wurde, gibt es hier nicht - sie wird stattdessen
     vermerkt, damit der naechste Start sie nicht wieder auslegt.
     """
+    if kennung_unsicher(kennung):
+        raise VorlagenFehler(
+            u("Die Kennung {0!r} taugt nicht als Dateiname").format(kennung)
+        )
     ziel = pathlib.Path(ordner) / f"{kennung}{ENDUNG}"
     if not ziel.is_file():
         return False
@@ -261,9 +274,15 @@ def vorlage_aus_yaml(inhalt: dict, herkunft: str = "", hinweise=None) -> Vorlage
     if fehlend:
         raise VorlagenFehler(u("{0}Vorlage ohne {1}").format(wo, ', '.join(fehlend)))
 
+    kennung = str(_feld(inhalt, "id"))
+    if kennung_unsicher(kennung):
+        raise VorlagenFehler(
+            u("{0}Die Kennung {1!r} taugt nicht als Dateiname").format(wo, kennung)
+        )
+
     try:
         vorlage = Vorlage(
-            id=str(_feld(inhalt, "id")),
+            id=kennung,
             name=str(_feld(inhalt, "name")),
             buchten=len(plan) if plan else int(buchten),
             leisten_je_bucht=plan[0][0] if plan else int(

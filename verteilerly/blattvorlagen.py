@@ -24,6 +24,7 @@ from .modell import (
     MITTE,
     RECHTS,
     ModellFehler,
+    kennung_unsicher,
     unbekannte_schluessel,
 )
 from .sprachen import u
@@ -395,6 +396,11 @@ def blattvorlage_aus_yaml(
     for feld in ("id", "name"):
         if not str(inhalt.get(feld, "")).strip():
             raise BlattvorlagenFehler(u("{0}: Blattvorlage ohne {1}").format(wo, feld))
+    if kennung_unsicher(str(inhalt["id"])):
+        raise BlattvorlagenFehler(
+            u("{0}: Die Kennung {1!r} taugt nicht als Dateiname").format(
+                wo, str(inhalt["id"]))
+        )
 
     schrift = inhalt.get("schrift") or {}
     belegung = inhalt.get("belegung") or {}
@@ -740,6 +746,10 @@ def blattvorlage_speichern(
     andere aus Versehen ersetzen. Wer eine vorhandene bearbeitet, will
     genau das Gegenteil und sagt es ausdruecklich.
     """
+    if kennung_unsicher(vorlage.id):
+        raise BlattvorlagenFehler(
+            u("Die Kennung {0!r} taugt nicht als Dateiname").format(vorlage.id)
+        )
     ordner = pathlib.Path(ordner)
     ordner.mkdir(parents=True, exist_ok=True)
     ziel = ordner / f"{vorlage.id}.yaml"
@@ -794,6 +804,10 @@ def blattvorlage_umbenennen(
     name = (name or "").strip()
     if not name:
         raise BlattvorlagenFehler(u("Eine Blattvorlage braucht einen Namen"))
+    if kennung_unsicher(vorlage.id):
+        raise BlattvorlagenFehler(
+            u("Die Kennung {0!r} taugt nicht als Dateiname").format(vorlage.id)
+        )
 
     ordner = pathlib.Path(ordner)
     ziel = ordner / f"{vorlage.id}.yaml"
@@ -827,6 +841,10 @@ def blattvorlage_loeschen(kennung: str, ordner: pathlib.Path) -> bool:
     Abbild weiter - dass sie nicht wieder ausgelegt wird, merkt sich
     ``pfade.loeschen_merken``.
     """
+    if kennung_unsicher(kennung):
+        raise BlattvorlagenFehler(
+            u("Die Kennung {0!r} taugt nicht als Dateiname").format(kennung)
+        )
     ziel = pathlib.Path(ordner) / f"{kennung}.yaml"
     if not ziel.is_file():
         return False

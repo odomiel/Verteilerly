@@ -776,8 +776,10 @@ file is gone.</p>
 
 <p><b>The file name is the identifier</b>: the file for <code>id: eng</code> is
 called <code>eng.yaml</code>. Only then do <i>rename</i> and <i>delete</i> find
-it again. It is read at <b>startup</b> — a new file is offered after a restart.
-The keys stay German, they are the format of the file.</p>
+it again. The identifier must therefore be a plain name, not a path: a
+<code>/</code> or a <code>..</code> in it is rejected, otherwise the file would
+point out of the template folder. It is read at <b>startup</b> — a new file is
+offered after a restart. The keys stay German, they are the format of the file.</p>
 
 <p><b>Two lines are required</b>, <code>id</code> and <code>name</code>.
 Everything else is optional: what is missing comes from the built-in default. A

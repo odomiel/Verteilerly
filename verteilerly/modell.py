@@ -9,6 +9,7 @@ Verteiler, nicht an der einzelnen Ader.
 from __future__ import annotations
 
 import copy
+import os.path
 import re
 from dataclasses import dataclass, field, replace
 
@@ -21,6 +22,28 @@ SEITEN = ("a", "b")
 
 class ModellFehler(Exception):
     """Fachlicher Fehler im Datenmodell."""
+
+
+def kennung_unsicher(kennung) -> bool:
+    """True, wenn diese Kennung als Dateiname aus dem Ordner zeigt.
+
+    Die Kennung einer Vorlage wird zum Dateinamen ``{kennung}.yaml``.
+    Mit ``..``, einem Schraegstrich oder einem absoluten Pfad zeigte die
+    Datei aus dem Vorlagenordner heraus - Loeschen und Speichern traefen
+    dann fremde Dateien (Audit 2). Nur die Form wird geprueft, nicht die
+    Schreibweise: ein grossgeschriebener oder mit Unterstrich gebildeter
+    Name bleibt erlaubt, er ist nur kein Ausbruch.
+    """
+    kennung = str(kennung)
+    return (
+        not kennung
+        or kennung in (".", "..")
+        or "/" in kennung
+        or "\\" in kennung
+        or "\x00" in kennung
+        or os.path.isabs(kennung)
+        or os.path.basename(kennung) != kennung
+    )
 
 
 def unbekannte_schluessel(
