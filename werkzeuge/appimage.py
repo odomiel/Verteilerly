@@ -23,6 +23,7 @@ nur die X11-Grundausstattung, die jede Arbeitsumgebung mitbringt.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import os
 import pathlib
 import shutil
@@ -49,10 +50,18 @@ BASIS_URL = (
     "https://github.com/niess/python-appimage/releases/download/python3.14/"
     "python3.14.9-cp314-cp314-manylinux2014_x86_64.AppImage"
 )
+# SHA-256 des erwarteten Abbilds. Wird ``BASIS_URL`` auf eine neue Fassung
+# gesetzt, gehoert diese Summe zusammen mit angepasst (GitHub nennt sie am
+# Release-Anhang als ``digest``) - sonst bricht ``holen`` ab. Das veroeffentlichte
+# AppImage landet bei den Nutzern; ein vertauschter Download faellt so auf.
+BASIS_SHA256 = "4b41368bce1f49c08817ef96fe480e99e38bd34fe5c98fbaaa72b09680453f01"
+# appimagetool auf ein festes Release genagelt, nicht den wandernden Tag
+# ``continuous``: so baut jeder Lauf mit demselben, gepruefen Werkzeug.
 WERKZEUG_URL = (
-    "https://github.com/AppImage/appimagetool/releases/download/continuous/"
+    "https://github.com/AppImage/appimagetool/releases/download/1.9.1/"
     "appimagetool-x86_64.AppImage"
 )
+WERKZEUG_SHA256 = "ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0"
 
 # Die mitgenommenen Systembibliotheken kommen nicht vom Baurechner,
 # sondern aus einer aelteren Verteilung: sonst verlangte das fertige
@@ -193,18 +202,35 @@ WARTEZEIT = 30.0          # Sekunden je Versuch
 VERSUCHE = 3
 
 
-def holen(url: str, ziel: pathlib.Path) -> pathlib.Path:
+def _sha256(datei: pathlib.Path) -> str:
+    """SHA-256 einer Datei, haeppchenweise gelesen."""
+    haken = hashlib.sha256()
+    with datei.open("rb") as quelle:
+        for brocken in iter(lambda: quelle.read(1 << 20), b""):
+            haken.update(brocken)
+    return haken.hexdigest()
+
+
+def holen(url: str, ziel: pathlib.Path, sha256: str | None = None) -> pathlib.Path:
     """Laedt eine Datei, wenn sie noch nicht daliegt.
 
     Mit Wartezeit und zweitem Anlauf: ein haengender Spiegel hielt den
     Bau sonst endlos auf, ohne ein Wort zu sagen. Eine halb geladene
     Datei wird weggeraeumt - sonst gaelte sie beim naechsten Mal als
     "schon vorhanden".
+
+    Ist ``sha256`` gegeben, wird die Datei danach - und eine schon
+    liegende vorweg - gegen diese Summe geprueft. Passt sie nicht, bricht
+    der Bau ab: das fertige AppImage geht an die Nutzer, ein vertauschter
+    Download darf nicht hineinwandern.
     """
     ziel.parent.mkdir(parents=True, exist_ok=True)
     if ziel.exists() and ziel.stat().st_size > 0:
-        melden(f"schon vorhanden: {ziel.name}")
-        return ziel
+        if sha256 is None or _sha256(ziel) == sha256.lower():
+            melden(f"schon vorhanden: {ziel.name}")
+            return ziel
+        melden(f"  {ziel.name} passt nicht zur Pruefsumme - neu laden")
+        ziel.unlink(missing_ok=True)
     melden(f"lade {url.rsplit('/', 1)[-1]} …")
     for versuch in range(1, VERSUCHE + 1):
         try:
@@ -220,6 +246,13 @@ def holen(url: str, ziel: pathlib.Path) -> pathlib.Path:
                     "Spiegel nicht erreichbar?"
                 ) from None
             melden(f"  Versuch {versuch} fehlgeschlagen ({fehler}) - noch einmal")
+    if sha256 is not None and _sha256(ziel) != sha256.lower():
+        gefunden = _sha256(ziel)
+        ziel.unlink(missing_ok=True)
+        raise SystemExit(
+            f"{ziel.name} hat die falsche Pruefsumme.\n"
+            f"  erwartet: {sha256.lower()}\n  gefunden: {gefunden}"
+        )
     ziel.chmod(0o755)
     return ziel
 
@@ -548,24 +581,33 @@ def _copyright_mitnehmen(paket: str) -> None:
             return
 
 
-def _debian_index() -> dict[str, str]:
-    """Paketname zum Ort im Debian-Archiv."""
+def _debian_index() -> dict[str, tuple[str, str]]:
+    """Paketname zu (Ort, SHA-256) im Debian-Archiv.
+
+    Die SHA-256 steht je Paket in ``Packages.gz`` und bindet den
+    heruntergeladenen Deb an das, was der Index nennt - der Spiegel wird
+    ueber HTTPS gelesen, die Signatur der ``InRelease`` aber nicht geprueft,
+    darum ist das die Grenze der Zusicherung.
+    """
     import gzip
 
     datei = holen(DEBIAN_INDEX, DEBIANORDNER / "Packages.gz")
     gesucht = set(DEBIAN_PAKETE.values())
-    orte: dict[str, str] = {}
+    orte: dict[str, tuple[str, str]] = {}
     paket = ""
+    ort = ""
     with gzip.open(datei, "rt", encoding="utf-8", errors="replace") as index:
         for zeile in index:
             if zeile.startswith("Package: "):
-                paket = zeile[9:].strip()
+                paket, ort = zeile[9:].strip(), ""
             elif zeile.startswith("Filename: ") and paket in gesucht:
-                orte[paket] = zeile[10:].strip()
+                ort = zeile[10:].strip()
+            elif zeile.startswith("SHA256: ") and paket in gesucht and ort:
+                orte[paket] = (ort, zeile[8:].strip())
     return orte
 
 
-_INDEX: dict[str, str] | None = None
+_INDEX: dict[str, tuple[str, str]] | None = None
 
 
 def _aus_debian(name: str) -> pathlib.Path | None:
@@ -582,11 +624,12 @@ def _aus_debian(name: str) -> pathlib.Path | None:
 
     if _INDEX is None:
         _INDEX = _debian_index()
-    ort = _INDEX.get(paket)
-    if not ort:
+    eintrag = _INDEX.get(paket)
+    if not eintrag:
         return None
+    ort, summe = eintrag
 
-    deb = holen(DEBIAN_SPIEGEL + ort, DEBIANORDNER / ort.rsplit("/", 1)[-1])
+    deb = holen(DEBIAN_SPIEGEL + ort, DEBIANORDNER / ort.rsplit("/", 1)[-1], summe)
     ausgepackt.mkdir(parents=True, exist_ok=True)
     subprocess.run(["dpkg-deb", "-x", str(deb), str(ausgepackt)], check=True)
     return _bibliothek_finden(ausgepackt, name)
@@ -788,9 +831,11 @@ def main() -> int:
     argumente = zerleger.parse_args()
 
     basis = argumente.basis or holen(
-        BASIS_URL, BASISORDNER / BASIS_URL.rsplit("/", 1)[-1]
+        BASIS_URL, BASISORDNER / BASIS_URL.rsplit("/", 1)[-1], BASIS_SHA256
     )
-    werkzeug = holen(WERKZEUG_URL, BASISORDNER / "appimagetool-x86_64.AppImage")
+    werkzeug = holen(
+        WERKZEUG_URL, BASISORDNER / "appimagetool-x86_64.AppImage", WERKZEUG_SHA256
+    )
 
     basis_auspacken(basis)
     abhaengigkeiten_einbauen()

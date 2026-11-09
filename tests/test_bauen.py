@@ -10,6 +10,8 @@ PyInstaller angekommen wäre.
 # Testreihe um, bevor etwas aus verteilerly Pfade liest.
 from . import TESTHEIM  # noqa: F401
 
+import hashlib
+import io
 import json
 import os
 import pathlib
@@ -609,7 +611,7 @@ class TestAbhaengigkeitspruefung(unittest.TestCase):
         text = gedruckt.getvalue()
         self.assertIn("Python (Abbild)", text)
         self.assertIn("neuer: 3.14.8", text)
-        self.assertIn("PYTHONFASSUNG und BASIS_URL", text)
+        self.assertIn("PYTHONFASSUNG, BASIS_URL und BASIS_SHA256", text)
 
     def test_bei_leise_meldet_sich_nur_das_neue_python(self):
         """Auch wenn die Pakete aktuell sind, soll das Abbild auffallen."""
@@ -630,3 +632,87 @@ class TestAbhaengigkeitspruefung(unittest.TestCase):
         quelle = (WURZEL / "werkzeuge" / "bauen.py").read_text(encoding="utf-8")
         self.assertIn("abhaengigkeiten.taeglich()", quelle)
         self.assertIn("--ohne-pruefung", quelle)
+
+
+class TestHolen(unittest.TestCase):
+    """holen prueft die Pruefsumme - frisch geladen wie schon vorhanden (Audit 7)."""
+
+    def setUp(self):
+        import appimage
+
+        self.appimage = appimage
+        self._ordner = tempfile.TemporaryDirectory()
+        self.addCleanup(self._ordner.cleanup)
+        self.ordner = pathlib.Path(self._ordner.name)
+        self.inhalt = b"ein kleines Abbild"
+        self.summe = hashlib.sha256(self.inhalt).hexdigest()
+
+    def _mit_netz(self, inhalt: bytes):
+        behaelter = mock.MagicMock()
+        behaelter.__enter__.return_value = io.BytesIO(inhalt)
+        return mock.patch.object(
+            self.appimage.urllib.request, "urlopen", return_value=behaelter
+        )
+
+    def test_frisch_geladen_und_summe_passt(self):
+        ziel = self.ordner / "a.bin"
+        with self._mit_netz(self.inhalt) as ruf:
+            self.appimage.holen("http://x/a.bin", ziel, self.summe)
+        self.assertTrue(ruf.called)
+        self.assertEqual(ziel.read_bytes(), self.inhalt)
+
+    def test_falsche_summe_bricht_ab_und_raeumt_weg(self):
+        ziel = self.ordner / "a.bin"
+        with self._mit_netz(b"etwas ganz anderes"):
+            with self.assertRaises(SystemExit):
+                self.appimage.holen("http://x/a.bin", ziel, self.summe)
+        self.assertFalse(ziel.exists())
+
+    def test_schon_vorhanden_und_passend_laedt_nicht(self):
+        ziel = self.ordner / "a.bin"
+        ziel.write_bytes(self.inhalt)
+        with self._mit_netz(b"waere falsch") as ruf:
+            self.appimage.holen("http://x/a.bin", ziel, self.summe)
+        self.assertFalse(ruf.called)
+        self.assertEqual(ziel.read_bytes(), self.inhalt)
+
+    def test_vorhandenes_mit_falscher_summe_wird_neu_geladen(self):
+        ziel = self.ordner / "a.bin"
+        ziel.write_bytes(b"alt und falsch")
+        with self._mit_netz(self.inhalt) as ruf:
+            self.appimage.holen("http://x/a.bin", ziel, self.summe)
+        self.assertTrue(ruf.called)
+        self.assertEqual(ziel.read_bytes(), self.inhalt)
+
+    def test_ohne_summe_gilt_vorhandenes_ungeprueft(self):
+        ziel = self.ordner / "a.bin"
+        ziel.write_bytes(b"irgendwas")
+        with self._mit_netz(b"neuer") as ruf:
+            self.appimage.holen("http://x/a.bin", ziel)
+        self.assertFalse(ruf.called)
+
+    def test_der_debian_index_liest_ort_und_summe(self):
+        import gzip
+
+        paketdatei = self.ordner / "Packages.gz"
+        with gzip.open(paketdatei, "wt", encoding="utf-8") as datei:
+            datei.write(
+                "Package: libpng16-16\n"
+                "Filename: pool/main/libp/libpng/libpng16-16_1.6_amd64.deb\n"
+                "SHA256: " + "ab" * 32 + "\n\n"
+                "Package: egal\nFilename: pool/x.deb\nSHA256: " + "cd" * 32 + "\n\n"
+            )
+        with mock.patch.object(self.appimage, "holen", return_value=paketdatei), \
+             mock.patch.object(
+                 self.appimage, "DEBIAN_PAKETE", {"libpng16.so.16": "libpng16-16"}
+             ):
+            index = self.appimage._debian_index()
+        self.assertEqual(
+            index["libpng16-16"],
+            ("pool/main/libp/libpng/libpng16-16_1.6_amd64.deb", "ab" * 32),
+        )
+        self.assertNotIn("egal", index)
+
+
+if __name__ == "__main__":
+    unittest.main()

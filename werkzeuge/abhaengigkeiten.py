@@ -271,8 +271,8 @@ def taeglich(immer: bool = False, leise: bool = False) -> list[tuple[str, str, s
     if python_neu:
         print(
             "  → neuere Python-AppImage vorhanden. In werkzeuge/appimage.py\n"
-            "      PYTHONFASSUNG und BASIS_URL anpassen, dann die Pfade in\n"
-            "      lizenzen/QUELLEN.txt nachziehen.",
+            "      PYTHONFASSUNG, BASIS_URL und BASIS_SHA256 anpassen, dann die\n"
+            "      Pfade in lizenzen/QUELLEN.txt nachziehen.",
             flush=True,
         )
     return stand
