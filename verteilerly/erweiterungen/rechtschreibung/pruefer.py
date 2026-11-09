@@ -210,6 +210,14 @@ def abrufen(
     Keine Kennung, kein Wortspeicher, keine Vorlieben: gesendet werden
     der Text und die Sprache.
     """
+    # Nur http(s): eine Adresse wie file:// oder gopher:// hat an einer
+    # Netzanfrage nichts zu suchen (Audit 8). Ob http nach aussen
+    # unverschluesselt geht, sagt der Dialog vor dem Senden.
+    schema = urllib.parse.urlparse(server).scheme
+    if schema not in ("http", "https"):
+        raise PruefFehler(
+            u("Die Serveradresse muss mit http:// oder https:// beginnen: {0}").format(server)
+        )
     daten = urllib.parse.urlencode({"text": text, "language": sprache})
     bitte = urllib.request.Request(
         server,

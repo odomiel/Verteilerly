@@ -918,7 +918,10 @@ Zur Stelle springen: Jump to the place
 Hier steht kein Text, der zu prüfen wäre.: There is no text here that could be checked.
 '{0} Texte gehen zur Prüfung an {1} …': '{0} texts are going to {1} to be checked …'
 Texte senden?: Send texts?
-"Zum Prüfen gehen {0} Texte dieses Verteilers an\n{1}\n\nSie verlassen damit diesen Rechner. Wer das nicht möchte, trägt einen eigenen LanguageTool-Server ein oder prüft nur mit dem Wörterbuch.\n\nSenden?": "To be checked, {0} texts of this frame are sent to\n{1}\n\nThey leave this computer in doing so. If you do not want that, enter a LanguageTool server of your own or check with the dictionary only.\n\nSend?"
+"Zum Prüfen gehen {0} Texte dieses Verteilers an\n{1}\n\nSie verlassen damit diesen Rechner. Wer das nicht möchte, trägt einen eigenen LanguageTool-Server ein oder prüft nur mit dem Wörterbuch.{2}\n\nSenden?": "To be checked, {0} texts of this frame are sent to\n{1}\n\nThey leave this computer in doing so. If you do not want that, enter a LanguageTool server of your own or check with the dictionary only.{2}\n\nSend?"
+"\n\nAchtung: {0} ist eine http-Adresse — die Texte gehen unverschlüsselt über das Netz.": "\n\nCaution: {0} is an http address — the texts travel over the network unencrypted."
+'Die Serveradresse muss mit http:// oder https:// beginnen: {0}': 'The server address must begin
+  with http:// or https://: {0}'
 Es wurde nichts gesendet.: Nothing was sent.
 Nichts zu beanstanden.: Nothing to object to.
 '{0} Stellen beanstandet.': '{0} places objected to.'

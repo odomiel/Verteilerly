@@ -218,6 +218,14 @@ class TestAnfrage(unittest.TestCase):
             with self.assertRaises(pruefer.PruefFehler):
                 pruefer.abrufen("http://localhost:8081/v2/check", "Melder", "de-DE")
 
+    def test_eine_fremde_adresse_ohne_http_wird_abgelehnt(self):
+        """file:// und Co. haben an einer Netzanfrage nichts zu suchen (Audit 8)."""
+        for adresse in ("file:///etc/passwd", "gopher://x", "ftp://x/y", "localhost:8081"):
+            with mock.patch.object(pruefer.urllib.request, "urlopen") as geoeffnet:
+                with self.assertRaises(pruefer.PruefFehler):
+                    pruefer.abrufen(adresse, "Melder", "de-DE")
+                self.assertFalse(geoeffnet.called, adresse)
+
     def test_ohne_wurzelzertifikate_wird_nicht_gesendet(self):
         with mock.patch.object(pruefer, "umgebung", lambda: None), \
                 mock.patch.object(pruefer.urllib.request, "urlopen") as geoeffnet:

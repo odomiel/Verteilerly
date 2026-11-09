@@ -299,14 +299,21 @@ class RechtschreibDialog(PassenderDialog):
             return True
         if str(self.einstellungen.value(SCHLUESSEL_ZUGESTIMMT, "") or "") == server:
             return True
+        from urllib.parse import urlparse
+        unverschluesselt = urlparse(server).scheme == "http"
+        warnung = (
+            u("\n\nAchtung: {0} ist eine http-Adresse — die Texte gehen "
+              "unverschlüsselt über das Netz.").format(server)
+            if unverschluesselt else ""
+        )
         antwort = frage(
             self,
             u("Texte senden?"),
             u("Zum Prüfen gehen {0} Texte dieses Verteilers an\n{1}\n\n"
               "Sie verlassen damit diesen Rechner. Wer das nicht möchte, "
               "trägt einen eigenen LanguageTool-Server ein oder prüft nur "
-              "mit dem Wörterbuch.\n\nSenden?")
-            .format(anzahl, server),
+              "mit dem Wörterbuch.{2}\n\nSenden?")
+            .format(anzahl, server, warnung),
             Knopf.Yes | Knopf.No,
             Knopf.No,
         )
