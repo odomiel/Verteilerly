@@ -1014,7 +1014,6 @@ def deckblattzeilen(
 
 def deckblatt(projekt: Projekt, vorlage: Blattvorlage = STANDARD) -> Blatt:
     blatt = Blatt(*A4_HOCH, titel="Deckblatt")
-    v = projekt.verteiler
     rand = vorlage.rand
     breite = blatt.breite - 2 * rand
     y = 55.0

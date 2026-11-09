@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import copy
 import pathlib
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, replace
 
 import yaml
 

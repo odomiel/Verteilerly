@@ -26,7 +26,6 @@ import datetime
 import json
 import pathlib
 import re
-import sys
 import urllib.error
 import urllib.request
 

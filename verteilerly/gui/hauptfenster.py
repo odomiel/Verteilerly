@@ -64,7 +64,6 @@ from ..modell import (
     Projekt,
     Restplatz,
     UeberlaufFehler,
-    Verteiler,
     fremde_vermerke,
     leistenname,
     mehrzahl,

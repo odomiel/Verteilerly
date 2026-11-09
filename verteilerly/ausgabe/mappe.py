@@ -34,8 +34,6 @@ from ..layout import (
     rasterspalten,
     STRICH,
     schriftfeldspalten,
-    schriftfeldwerte,
-    schriftfeldzeilen,
     umgebrochene_zeilen,
     wertlage,
     zeilenstile,

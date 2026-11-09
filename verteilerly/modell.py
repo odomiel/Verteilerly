@@ -1261,8 +1261,6 @@ class Verteiler:
         if len(set(ziele)) != len(ziele):
             raise ModellFehler(u("Dieselbe Gegenstelle ist zweimal angegeben"))
 
-        bisher = self.ziele_von(adresse)
-
         # Vorpruefung auf einer Kopie, damit nichts halb angewandt wird.
         # Erst fliegen alle Rangierungen dieser Ader heraus, dann kommen
         # sie in der angegebenen Folge zurueck - so bleibt die Reihenfolge
