@@ -2,6 +2,7 @@
 
 import dataclasses
 import html
+import json
 import os
 import pathlib
 import re
@@ -260,6 +261,60 @@ class TestFinden(unittest.TestCase):
                 self.assertEqual(len(programm.meldungen), 1)
 
 
+class TestVerankerung(unittest.TestCase):
+    """Eine eingeschaltete fremde Erweiterung haengt an Pfad und Inhalt."""
+
+    def setUp(self):
+        self._ordner = tempfile.TemporaryDirectory()
+        self.addCleanup(self._ordner.cleanup)
+        self.ordner = pathlib.Path(self._ordner.name)
+
+    def _datei(self, name: str, text: str) -> pathlib.Path:
+        datei = self.ordner / name
+        datei.parent.mkdir(parents=True, exist_ok=True)
+        datei.write_text(text, encoding="utf-8")
+        return datei
+
+    def _fremd(self, kennung: str) -> Fund:
+        return next(f for f in erweiterungen.finden([self.ordner]) if f.kennung == kennung)
+
+    def test_die_summe_haengt_am_inhalt(self):
+        datei = self._datei("a.py", '"""A."""\n')
+        erste = erweiterungen.pruefsumme(datei)
+        self.assertEqual(erste, erweiterungen.pruefsumme(datei))     # stabil
+        datei.write_text('"""A."""\nx = 1\n', encoding="utf-8")
+        self.assertNotEqual(erste, erweiterungen.pruefsumme(datei))
+
+    def test_ein_paket_zaehlt_seinen_baum_ohne_pycache(self):
+        self._datei("paket/__init__.py", '"""P."""\n')
+        self._datei("paket/teil.py", "WORT = 'x'\n")
+        ordner = self.ordner / "paket"
+        vorher = erweiterungen.pruefsumme(ordner)
+        (ordner / "__pycache__").mkdir()
+        (ordner / "__pycache__" / "teil.pyc").write_bytes(b"\x00\x01")
+        self.assertEqual(vorher, erweiterungen.pruefsumme(ordner))   # pycache zaehlt nicht
+        (ordner / "teil.py").write_text("WORT = 'y'\n", encoding="utf-8")
+        self.assertNotEqual(vorher, erweiterungen.pruefsumme(ordner))  # ein Modul schon
+
+    def test_abweichung_erkennt_tausch_und_duldet_ohne_anker(self):
+        self._datei("w.py", '"""W."""\n')
+        fund = self._fremd("w")
+        verankert = erweiterungen.verankerung([fund], {"w"})
+        self.assertIn("w", verankert)
+        self.assertFalse(erweiterungen.abweichung(fund, verankert))   # unveraendert
+        self.assertFalse(erweiterungen.abweichung(fund, {}))          # ohne Anker: nichts zu vergleichen
+        (self.ordner / "w.py").write_text("import os\n", encoding="utf-8")
+        self.assertTrue(erweiterungen.abweichung(fund, verankert))    # Inhalt getauscht
+
+    def test_abweichung_erkennt_den_umzug(self):
+        self._datei("w.py", '"""W."""\n')
+        fund = self._fremd("w")
+        # Gleicher Inhalt, aber als an anderer Stelle eingeschaltet gemerkt.
+        verankert = {"w": {"summe": erweiterungen.pruefsumme(self.ordner / "w.py"),
+                           "pfad": str(self.ordner / "woanders" / "w.py")}}
+        self.assertTrue(erweiterungen.abweichung(fund, verankert))
+
+
 class TestImHauptfenster(unittest.TestCase):
     def setUp(self):
         from verteilerly.gui.hauptfenster import Hauptfenster
@@ -380,6 +435,94 @@ class TestImHauptfenster(unittest.TestCase):
                         geladen,
                     )
         sys.modules.pop("verteilerly_erweiterung_hallo", None)
+
+    def test_eine_geaenderte_eigene_wird_nicht_geladen(self):
+        """Liegt an der Stelle anderer Code als beim Einschalten, bleibt sie aus."""
+        from verteilerly import pfade
+        from verteilerly.gui import hauptfenster as hf
+
+        from . import einstellung_bewahren
+
+        f = self.fenster
+        for schluessel in ("erweiterungen_an", "erweiterungen_verankert",
+                           "erweiterungen_nur_eingebaute"):
+            einstellung_bewahren(self, f.einstellungen, schluessel)
+        f.einstellungen.setValue("erweiterungen_nur_eingebaute", False)
+        f.einstellungen.setValue("erweiterungen_an", "wacht")
+
+        with tempfile.TemporaryDirectory() as ordner:
+            datei = pathlib.Path(ordner) / "wacht.py"
+            datei.write_text(
+                "from verteilerly.erweiterungen import Erweiterung\n"
+                "class Wacht(Erweiterung):\n"
+                "    kennung = 'wacht'\n"
+                "    def einrichten(self, programm):\n"
+                "        programm.menueeintrag('Wacht', lambda: None)\n"
+                "erweiterung = Wacht()\n",
+                encoding="utf-8",
+            )
+            # Anker auf einen anderen Inhalt - seit dem Einschalten getauscht.
+            f.einstellungen.setValue("erweiterungen_verankert", json.dumps(
+                {"wacht": {"summe": "0" * 64, "pfad": str(datei)}}
+            ))
+            ohne_schalter = {
+                k: v for k, v in os.environ.items() if k != erweiterungen.OHNE_FREMDE
+            }
+            sys.modules.pop("verteilerly_erweiterung_wacht", None)
+            with mock.patch.dict(os.environ, ohne_schalter, clear=True), \
+                 mock.patch.object(
+                     pfade, "erweiterungsordner_alle",
+                     return_value=[pathlib.Path(ordner)],
+                 ), \
+                 mock.patch.object(hf.QMessageBox, "warning") as gewarnt:
+                f._erweiterungen_einrichten()
+            wacht = next(x for x in f.erweiterungen if x.kennung == "wacht")
+            self.assertIsNone(wacht.erweiterung)                     # nicht geladen
+            self.assertFalse(any(a.text() == "Wacht" for a in self._menue().actions()))
+            self.assertTrue(gewarnt.called)
+            self.assertIn("geändert", gewarnt.call_args[0][1])      # Titel
+        sys.modules.pop("verteilerly_erweiterung_wacht", None)
+
+    def test_verwalten_verankert_eine_eingeschaltete_eigene(self):
+        """Beim Einschalten merkt sich das Fenster Pfad und Fingerabdruck."""
+        from PySide6.QtCore import Qt
+        from verteilerly import pfade
+        from verteilerly.gui.erweiterungen import ErweiterungenDialog
+
+        from . import einstellung_bewahren
+
+        f = self.fenster
+        for schluessel in ("erweiterungen_an", "erweiterungen_aus",
+                           "erweiterungen_verankert", "erweiterungen_nur_eingebaute"):
+            einstellung_bewahren(self, f.einstellungen, schluessel)
+        f.einstellungen.setValue("erweiterungen_nur_eingebaute", False)
+
+        with tempfile.TemporaryDirectory() as ordner:
+            datei = pathlib.Path(ordner) / "neu.py"
+            datei.write_text('"""Neu."""\n', encoding="utf-8")
+            ohne_schalter = {
+                k: v for k, v in os.environ.items() if k != erweiterungen.OHNE_FREMDE
+            }
+            with mock.patch.dict(os.environ, ohne_schalter, clear=True), \
+                 mock.patch.object(
+                     pfade, "erweiterungsordner_alle",
+                     return_value=[pathlib.Path(ordner)],
+                 ), \
+                 mock.patch.object(
+                     pfade, "erweiterungsordner", return_value=pathlib.Path(ordner)
+                 ):
+                f._erweiterungen_einrichten()                       # findet 'neu'
+
+                def einschalten(dialog):
+                    dialog.eintraege["neu"].setCheckState(0, Qt.CheckState.Checked)
+                    return ErweiterungenDialog.DialogCode.Accepted
+
+                with mock.patch.object(ErweiterungenDialog, "exec", einschalten):
+                    f.erweiterungen_verwalten()
+
+            gemerkt = json.loads(f.einstellungen.value("erweiterungen_verankert"))
+            self.assertEqual(gemerkt["neu"]["summe"], erweiterungen.pruefsumme(datei))
+            self.assertEqual(gemerkt["neu"]["pfad"], str(datei))
 
     def test_nur_eingebaute_ist_die_vorgabe(self):
         from . import einstellung_bewahren

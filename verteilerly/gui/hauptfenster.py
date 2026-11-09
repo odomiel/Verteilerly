@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import json
 import os
 import pathlib
 import shutil
@@ -2733,6 +2734,19 @@ class Hauptfenster(QMainWindow):
         """Nur fuer diesen Lauf abgeschaltet - ``--ohne-fremde-erweiterungen``."""
         return bool(os.environ.get(erweiterungen.OHNE_FREMDE))
 
+    def _verankerung_lesen(self) -> dict:
+        """Der gemerkte Fingerabdruck je eingeschalteter fremder Erweiterung.
+
+        Steht als JSON in der Conf (``erweiterungen_verankert``). Was sich
+        nicht lesen laesst, gilt als nicht verankert - dann wird nichts
+        blockiert, nur beim naechsten Einschalten neu gemerkt.
+        """
+        try:
+            gemerkt = json.loads(self.einstellungen.value("erweiterungen_verankert", "") or "{}")
+            return gemerkt if isinstance(gemerkt, dict) else {}
+        except (ValueError, TypeError):
+            return {}
+
     def _nur_eingebaute(self) -> bool:
         """Auf Dauer abgeschaltet - der Haken in *Erweiterungen verwalten*.
 
@@ -2756,11 +2770,21 @@ class Hauptfenster(QMainWindow):
             orte = []
         self.erweiterungen = erweiterungen.finden(orte)
         an, aus = self._erweiterungswahl()
+        verankert = self._verankerung_lesen()
         uebergangen = []
+        veraendert = []
         for fund in self.erweiterungen:
             if not erweiterungen.eingeschaltet(fund, an, aus):
                 continue
             if not fund.eingebaut and (self._ohne_fremde() or self._nur_eingebaute()):
+                continue
+            # An der Stelle einer eingeschalteten eigenen Erweiterung kann
+            # anderer Code liegen, wenn jemand dort schreiben darf. Weicht
+            # sie vom Fingerabdruck beim Einschalten ab, wird sie nicht
+            # geladen, sondern zur erneuten Bestaetigung gemeldet (Audit 9).
+            if not fund.eingebaut and erweiterungen.abweichung(fund, verankert):
+                fund.fehler = u("hat sich seit dem Einschalten geändert")
+                veraendert.append(u(fund.name))
                 continue
             erweiterungen.laden(fund)
             if fund.erweiterung is not None and not fund.fehler:
@@ -2777,6 +2801,15 @@ class Hauptfenster(QMainWindow):
                 self, u("Erweiterungen übergangen"),
                 u("Diese Erweiterungen wurden nicht geladen; das Programm läuft "
                   "ohne sie weiter.\n\n{0}").format("\n".join(uebergangen)),
+            )
+        if veraendert:
+            QMessageBox.warning(
+                self, u("Erweiterungen geändert"),
+                u("Diese eigenen Erweiterungen haben sich geändert, seit Sie sie "
+                  "eingeschaltet haben, und wurden aus Sicherheit nicht geladen. "
+                  "Prüfen Sie, ob das so sein soll, und schalten Sie sie unter "
+                  "»Erweiterungen verwalten« erneut ein.\n\n{0}").format(
+                      "\n".join(veraendert)),
             )
 
     def verknuepfung_zeigen(self) -> None:
@@ -2906,6 +2939,13 @@ class Hauptfenster(QMainWindow):
         self.einstellungen.setValue("erweiterungen_an", erweiterungen.wahl_schreiben(neu_an))
         self.einstellungen.setValue("erweiterungen_aus", erweiterungen.wahl_schreiben(neu_aus))
         self.einstellungen.setValue("erweiterungen_nur_eingebaute", neu_nur_eingebaute)
+        # Die eingeschalteten eigenen Erweiterungen werden jetzt verankert:
+        # das Fenster merkt sich ihren Fingerabdruck, damit ein spaeterer
+        # Tausch an derselben Stelle beim naechsten Start auffaellt (Audit 9).
+        self.einstellungen.setValue(
+            "erweiterungen_verankert",
+            json.dumps(erweiterungen.verankerung(self.erweiterungen, neu_an)),
+        )
         self.statusBar().showMessage(
             u("Die Wahl der Erweiterungen gilt ab dem nächsten Start"), 8000
         )

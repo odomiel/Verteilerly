@@ -946,6 +946,14 @@ Die Änderungen sind noch nicht gespeichert. Verwerfen?: The changes are not sav
 
 
   {0}'
+? 'Diese eigenen Erweiterungen haben sich geändert, seit Sie sie eingeschaltet haben, und wurden aus Sicherheit nicht geladen. Prüfen Sie, ob das so sein soll, und schalten Sie sie unter »Erweiterungen verwalten« erneut ein.
+
+
+  {0}'
+: 'These own extensions have changed since you switched them on, and were not loaded for safety. Check whether that is intended, and switch them on again under »Manage extensions«.
+
+
+  {0}'
 E&rweiterungen: E&xtensions
 'Eigene Erweiterungen liegen in:': 'Your own extensions are in:'
 Eine Blattvorlage anpassen und als neue speichern — mit Vorschau am Blatt: Adjust a sheet template and save it as a new one — with a preview of the sheet
@@ -957,7 +965,9 @@ Erweiterung: Extension
 Erweiterungen: Extensions
 Erweiterungen &verwalten…: '&Manage extensions…'
 Erweiterungen verwalten: Manage extensions
+Erweiterungen geändert: Extensions changed
 Erweiterungen übergangen: Extensions skipped
+hat sich seit dem Einschalten geändert: has changed since it was switched on
 Gezeigt wird der offene Verteiler.: Shown is the open frame.
 Gezeigt wird ein Beispielverteiler — es ist keiner geöffnet.: Shown is an example frame — none is open.
 Herkunft: Origin

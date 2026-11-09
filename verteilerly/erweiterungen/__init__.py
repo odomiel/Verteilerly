@@ -22,6 +22,7 @@ reicht ``gui.erweiterungen.Schnittstelle`` herein.
 from __future__ import annotations
 
 import ast
+import hashlib
 import importlib
 import importlib.util
 import pathlib
@@ -233,6 +234,69 @@ def laden(fund: Fund) -> None:
     # Jetzt zaehlt, was die Erweiterung selbst sagt - gelesen wurde vorher
     # nur, was in der Datei stand.
     fund.version = erweiterung.version or fund.version
+
+
+def pruefsumme(ort: pathlib.Path) -> str:
+    """SHA-256 ueber die Datei - oder, bei einem Paket, ueber seinen Baum.
+
+    Der Pfad jeder Datei geht mit ein, damit auch Umbenennen und Verschieben
+    auffaellt. ``__pycache__`` und verborgene Dateien bleiben weg: sie
+    entstehen erst beim Laufen und wuerden die Summe grundlos aendern.
+    """
+    ort = pathlib.Path(ort)
+    haken = hashlib.sha256()
+    if ort.is_dir():
+        for datei in sorted(ort.rglob("*")):
+            teile = datei.relative_to(ort).parts
+            if any(teil == "__pycache__" or teil.startswith(".") for teil in teile):
+                continue
+            if not datei.is_file():
+                continue
+            haken.update("/".join(teile).encode("utf-8"))
+            haken.update(b"\0")
+            haken.update(datei.read_bytes())
+            haken.update(b"\0")
+    else:
+        haken.update(ort.read_bytes())
+    return haken.hexdigest()
+
+
+def verankerung(funde, kennungen) -> dict:
+    """``{kennung: {summe, pfad}}`` fuer die fremden unter ``kennungen``.
+
+    Das ist der Fingerabdruck, den das Programm sich beim Einschalten merkt.
+    Eine Erweiterung, deren Dateien sich gerade nicht lesen lassen, bleibt
+    weg - sie wird beim naechsten Start wie eine ohne Anker behandelt.
+    """
+    gemerkt: dict[str, dict[str, str]] = {}
+    for fund in funde:
+        if fund.eingebaut or fund.ort is None or fund.kennung not in kennungen:
+            continue
+        try:
+            gemerkt[fund.kennung] = {
+                "summe": pruefsumme(fund.ort), "pfad": str(fund.ort)
+            }
+        except OSError:
+            continue
+    return gemerkt
+
+
+def abweichung(fund: Fund, verankert) -> bool:
+    """Liegt an der Stelle einer *verankerten* Erweiterung jetzt anderes?
+
+    Nur mit Anker gibt es etwas zu vergleichen: ohne einen sagt die Funktion
+    ``False`` - was dann gilt, entscheidet der Aufrufer (ein bestehender
+    Bestand wird von Haus aus geduldet, neu eingeschaltet wird nur ueber den
+    Dialog, der einen Anker setzt).
+    """
+    eintrag = verankert.get(fund.kennung)
+    if not eintrag or fund.ort is None:
+        return False
+    try:
+        jetzt = pruefsumme(fund.ort)
+    except OSError:
+        return True
+    return eintrag.get("summe") != jetzt or eintrag.get("pfad") != str(fund.ort)
 
 
 def wahl_lesen(text) -> set[str]:
