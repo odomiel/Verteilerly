@@ -89,6 +89,15 @@ class TestNamen(unittest.TestCase):
     def test_lang_wird_gekuerzt(self):
         self.assertEqual(len(sicherer_name("x" * 300)), anlage.NAME_HOECHSTENS)
 
+    def test_reservierte_windows_namen_bekommen_einen_unterstrich(self):
+        """CON, NUL, COM1 ... lassen sich unter Windows nicht als Ordner anlegen (Audit 10)."""
+        self.assertEqual(sicherer_name("CON"), "CON_")
+        self.assertEqual(sicherer_name("nul"), "nul_")
+        self.assertEqual(sicherer_name("Com3"), "Com3_")
+        self.assertEqual(sicherer_name("LPT9.txt"), "LPT9.txt_")
+        # Ein gewoehnlicher Name bleibt, wie er ist.
+        self.assertEqual(sicherer_name("Controller"), "Controller")
+
     def test_ein_unterordner_fuehrt_nicht_hinaus(self):
         """``..`` und ein absoluter Pfad sind kein Unterordner."""
         self.assertEqual(sicherer_unterordner("../../weg"), "weg")

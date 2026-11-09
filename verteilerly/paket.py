@@ -39,6 +39,12 @@ BESCHRIFTUNG = {
 }
 ENDUNG = ".yaml"
 
+#: Hoechstgroesse eines einzelnen Eintrags beim Einspielen. Eine Vorlage
+#: oder eine Conf ist ein paar Kilobyte gross; alles darueber ist kein
+#: Bestand, sondern eine praeparierte Datei ("ZIP-Bombe"), die beim
+#: Auspacken den Speicher fuellt (Audit 10).
+DATEI_HOECHSTENS = 5 * 1024 * 1024
+
 
 class PaketFehler(Exception):
     """Das Paket ist keines oder laesst sich nicht schreiben."""
@@ -190,6 +196,10 @@ def einspielen(
             for name in paket.namelist():
                 if not _brauchbar(name):
                     continue
+                if paket.getinfo(name).file_size > DATEI_HOECHSTENS:
+                    raise PaketFehler(
+                        u("{0} ist ungewoehnlich gross - das Paket wird nicht eingespielt").format(name)
+                    )
                 if name == CONFNAME:
                     if einstellungen is None or EINSTELLUNGEN not in gewaehlt:
                         continue

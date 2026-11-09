@@ -44,6 +44,15 @@ ENDUNG = ENDUNGEN[0]
 #: Stick und soll auch dort heissen, wie er heisst.
 VERBOTEN = '<>:"/\\|?*'
 
+#: Namen, die Windows fuer Geraete reserviert - ein Ordner so benannt
+#: laesst sich dort nicht anlegen (Audit 10). Verglichen wird ohne
+#: Ruecksicht auf Gross-/Kleinschreibung und auf eine Endung.
+RESERVIERT = frozenset(
+    ["CON", "PRN", "AUX", "NUL"]
+    + [f"COM{i}" for i in range(1, 10)]
+    + [f"LPT{i}" for i in range(1, 10)]
+)
+
 #: Laenger wird kein Ordnername. Lange Pfade sind unter Windows eine
 #: Falle, und niemand liest einen Ordner mit zweihundert Zeichen.
 NAME_HOECHSTENS = 80
@@ -65,7 +74,12 @@ def sicherer_name(text: str) -> str:
         for zeichen in str(text or "")
     )
     name = re.sub(r"\s+", " ", name).strip()
-    return name[:NAME_HOECHSTENS].strip().rstrip(". ").strip()
+    name = name[:NAME_HOECHSTENS].strip().rstrip(". ").strip()
+    # CON, NUL, COM1 ... Windows reserviert sie auch mit Endung - ein
+    # Unterstrich dahinter macht daraus einen gewoehnlichen Namen.
+    if name.split(".")[0].upper() in RESERVIERT:
+        name += "_"
+    return name
 
 
 def sicherer_unterordner(text: str) -> str:

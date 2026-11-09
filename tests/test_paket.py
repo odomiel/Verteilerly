@@ -150,6 +150,18 @@ class TestPaket(unittest.TestCase):
             list(self.wurzel.rglob("auch.yaml")) + list(self.wurzel.rglob("absolut.yaml"))
         self.assertEqual(entwischt, [])
 
+    def test_ein_riesiger_eintrag_wird_nicht_ausgepackt(self):
+        """Eine praeparierte ZIP-Bombe fuellt den Speicher nicht (Audit 10)."""
+        bombe = self.wurzel / "bombe.zip"
+        with zipfile.ZipFile(bombe, "w", zipfile.ZIP_DEFLATED) as datei:
+            datei.writestr(paket.MERKZETTEL, json.dumps({"kennung": paket.KENNUNG}))
+            # Gut komprimierbar, aber riesig entpackt.
+            datei.writestr("vorlagen/riesig.yaml", "a" * (paket.DATEI_HOECHSTENS + 1))
+        ziel = self.wurzel / "ziel"
+        with self.assertRaises(paket.PaketFehler):
+            paket.einspielen(bombe, ziel)
+        self.assertFalse((ziel / "vorlagen" / "riesig.yaml").exists())
+
     def test_kaputter_merkzettel_meldet_sich(self):
         """Ein ZIP mit unlesbarem oder falsch gebautem Merkzettel ist keines."""
         for fall, merkzettel in (("kein JSON", "kaputt"), ("keine Tabelle", "[1]"),

@@ -535,6 +535,8 @@ Das ist kein Verteilerly-Paket: This is not a Verteilerly package
 'Das ist kein Verteilerly-Paket: der Merkzettel ist unlesbar': 'This is not a Verteilerly package: the note
   file is unreadable'
 'Die Datei ist kein Paket: {0}': 'The file is not a package: {0}'
+'{0} ist ungewoehnlich gross - das Paket wird nicht eingespielt': '{0} is unusually large - the
+  package is not imported'
 Das ist keine Verteilerly-Projektdatei: This is not a Verteilerly project file
 'Formatversion {0} wird nicht unterstuetzt (lesbar: {1})': 'Format version {0} is not supported (readable:
   {1})'
