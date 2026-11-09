@@ -1,6 +1,7 @@
 # Verteilerly - Laufzeitabhaengigkeiten
 PySide6>=6.9      # LGPLv3 - Oberflaeche und Vorschau
 reportlab>=4.2    # BSD    - PDF-Ausgabe
+Pillow>=13        # MIT-CMU - Bildcodecs von reportlab; >=13 schliesst die von pip-audit in 12 gemeldeten Luecken
 openpyxl>=3.1     # MIT    - Excel-Ausgabe
 PyYAML>=6.0       # MIT    - Vorlagen und Kabeltypen
 spylls>=0.1.7     # MPL-2.0 - Hunspell in reinem Python, Rechtschreibung ohne Netz

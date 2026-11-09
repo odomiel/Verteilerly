@@ -257,7 +257,10 @@ def abhaengigkeiten_einbauen() -> None:
     subprocess.run(
         [str(_python()), "-m", "pip", "install", "--no-warn-script-location",
          "--disable-pip-version-check", "--upgrade",
-         "PySide6-Essentials", "reportlab", "openpyxl", "PyYAML", "spylls"],
+         # Pillow kommt mit reportlab, wird hier aber mit einer Untergrenze
+         # genannt: >=13 schliesst die von pip-audit in 12 gemeldeten Luecken.
+         "PySide6-Essentials", "reportlab", "Pillow>=13", "openpyxl",
+         "PyYAML", "spylls"],
         check=True,
         stdout=subprocess.DEVNULL,
     )
