@@ -4067,6 +4067,60 @@ class TestMenuezustaende(unittest.TestCase):
                 f.einstellungen.value("erweiterungen_nur_eingebaute", type=bool)
             )
 
+    def test_paket_bringt_keine_fremde_zustimmung_mit(self):
+        """Ein Paket schaltet keinen fremden LanguageTool-Server frei (Audit 3)."""
+        import tempfile
+        import zipfile
+        from pathlib import Path
+
+        from PySide6.QtCore import QSettings
+        from PySide6.QtWidgets import QFileDialog
+
+        from verteilerly import paket, pfade
+        from verteilerly.gui.dialoge import PaketDialog
+
+        f = self.fenster
+        with tempfile.TemporaryDirectory() as ordner:
+            conf = Path(ordner) / "Verteilerly.conf"
+            daten = Path(ordner) / "daten"
+            f.einstellungen = QSettings(str(conf), QSettings.Format.IniFormat)
+            # Auf diesem Rechner ist nichts zugestimmt, und eine lokale
+            # Vorliebe steht, die das Paket nicht kennt.
+            f.einstellungen.setValue("thema", "dunkel")
+            f.einstellungen.sync()
+
+            fremd = Path(ordner) / "fremd.zip"
+            with zipfile.ZipFile(fremd, "w") as datei:
+                datei.writestr(paket.MERKZETTEL, '{"kennung": "verteilerly-paket"}')
+                datei.writestr(paket.CONFNAME, (
+                    "[General]\nblattvorlage=knapp\n"
+                    "[briefkopf]\nfirma=Fremdfirma\n"
+                    "[rechtschreibung]\n"
+                    "server=http://fremder-rechner.example/v2/check\n"
+                    "languagetool=true\nzugestimmt=http://fremder-rechner.example/v2/check\n"
+                    "[projekt]\nbeilagen=Fotos\t/home/fremd/geheim\n"
+                ))
+
+            with mock.patch.object(pfade, "eigener_datenordner", return_value=daten), \
+                 mock.patch.object(
+                     QFileDialog, "getOpenFileName", return_value=(str(fremd), "")
+                 ), mock.patch.object(
+                     PaketDialog, "exec",
+                     lambda dialog: PaketDialog.DialogCode.Accepted,
+                 ):
+                f.paket_einspielen()
+
+            # Das Harmlose kommt an …
+            self.assertEqual(f.einstellungen.value("blattvorlage"), "knapp")
+            self.assertEqual(f.einstellungen.value("briefkopf/firma"), "Fremdfirma")
+            # … die lokale Vorliebe bleibt, nichts wird geleert …
+            self.assertEqual(f.einstellungen.value("thema"), "dunkel")
+            # … und das Heikle bleibt draussen.
+            self.assertFalse(f.einstellungen.contains("rechtschreibung/zugestimmt"))
+            self.assertFalse(f.einstellungen.contains("rechtschreibung/server"))
+            self.assertFalse(f.einstellungen.contains("rechtschreibung/languagetool"))
+            self.assertFalse(f.einstellungen.contains("projekt/beilagen"))
+
     def test_auswahl_bietet_nur_an_was_es_gibt(self):
         """Ein Paket ohne Kabeltypen kann keine mitbringen."""
         from verteilerly.gui.dialoge import PaketDialog

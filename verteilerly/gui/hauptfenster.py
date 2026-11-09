@@ -144,14 +144,39 @@ XLSXFILTER = "Excel-Arbeitsmappe (*.xlsx)"
 CSVFILTER = "CSV, Semikolon getrennt (*.csv)"
 KOMPLETTFILTER = "PDF, Excel-Mappe und CSV (*.pdf)"
 PAKETFILTER = "Verteilerly-Paket (*.zip)"
-#: Welche Erweiterungen laufen, entscheidet dieser Rechner. Ein Paket
-#: bringt diese Einstellungen darum nicht mit - sonst koennte eines aus
-#: fremder Hand eine eigene Erweiterung einschalten, die hier liegt.
-ERWEITERUNGSWAHL = (
-    "erweiterungen_an",
-    "erweiterungen_aus",
-    "erweiterungen_nur_eingebaute",
-)
+#: Was ein eingespieltes Paket in die laufenden Einstellungen uebernehmen
+#: darf - eine Positivliste, kein Negativfilter. Alles andere bleibt, wie
+#: es auf diesem Rechner steht. Eine Liste gesperrter Schluessel uebersieht
+#: sonst leicht einen heiklen; vor allem darf ``rechtschreibung/zugestimmt``
+#: NIE aus fremder Hand kommen - andernfalls schickt das naechste "Pruefen"
+#: alle Texte an einen Server, dem auf diesem Rechner niemand zugestimmt
+#: hat. Ebenso heikel: der Server selbst, die Quellpfade der Beilagen und
+#: die Wahl der Erweiterungen (die entscheidet dieser Rechner, sonst
+#: koennte ein Paket eine eigene Erweiterung einschalten, die hier liegt).
+UEBERNAHME_EINZELN = frozenset({
+    "blattvorlage", "schreibweise", "rangiervorlagen", "thema", "sprache",
+    "exportformat", "pdf_blaetter", "kuerzung_zeigen", "belegung_waechst",
+    "ansichtsknopf", "uebersicht", "leistenansicht", "vorschau",
+    "update_pruefen", "felder_ausgeblendet",
+})
+#: Ganze Gruppen, die mitkommen: die Projektdaten-Vorgaben und die
+#: Beschriftungen. Als Praefix, weil QSettings sie als ``briefkopf/firma``
+#: fuehrt.
+UEBERNAHME_GRUPPEN = ("briefkopf/", "beschriftungen/")
+#: Aus der Gruppe ``rechtschreibung`` nur das Harmlose: die Sprache und ob
+#: das lokale Woerterbuch an ist - NICHT server, languagetool, zugestimmt.
+UEBERNAHME_RECHTSCHREIBUNG = frozenset({
+    "rechtschreibung/sprache", "rechtschreibung/woerterbuch",
+})
+
+
+def _darf_uebernehmen(schluessel: str) -> bool:
+    """Darf dieser Conf-Schluessel aus einem Paket kommen? (Audit 3)"""
+    return (
+        schluessel in UEBERNAHME_EINZELN
+        or schluessel in UEBERNAHME_RECHTSCHREIBUNG
+        or schluessel.startswith(UEBERNAHME_GRUPPEN)
+    )
 VORSCHAU_VERZUG = 250  # ms, damit das Tippen nicht stockt
 
 #: Wie viele Schritte sich zurücknehmen lassen. Ein Stand ist das
@@ -1654,19 +1679,19 @@ class Hauptfenster(QMainWindow):
         return ", ".join(teile)
 
     def _einstellungen_uebernehmen(self, datei: pathlib.Path) -> None:
-        """Traegt die Werte einer eingespielten Datei in die laufenden ein."""
+        """Traegt die uebernehmbaren Werte einer eingespielten Datei ein.
+
+        Nur die Positivliste ``_darf_uebernehmen`` kommt mit; alles andere
+        bleibt, wie es auf diesem Rechner steht. So kann ein Paket aus
+        fremder Hand weder eine Zustimmung zum Senden an einen fremden
+        Server mitliefern noch eine Erweiterung einschalten (Audit 3).
+        Geleert wird dabei nichts: ein hier gesetzter Schluessel, den das
+        Paket nicht kennt, soll stehen bleiben.
+        """
         quelle = QSettings(str(datei), QSettings.Format.IniFormat)
-        behalten = {
-            schluessel: self.einstellungen.value(schluessel)
-            for schluessel in ERWEITERUNGSWAHL
-            if self.einstellungen.contains(schluessel)
-        }
-        self.einstellungen.clear()
         for schluessel in quelle.allKeys():
-            if schluessel not in ERWEITERUNGSWAHL:
+            if _darf_uebernehmen(schluessel):
                 self.einstellungen.setValue(schluessel, quelle.value(schluessel))
-        for schluessel, wert in behalten.items():
-            self.einstellungen.setValue(schluessel, wert)
         self.einstellungen.sync()
 
     def _nach_dem_einspielen(self) -> None:
