@@ -181,6 +181,60 @@ class TestProjektdatei(unittest.TestCase):
                 with self.assertRaises(ProjektdateiFehler):
                     projektdatei.laden(self.pfad)
 
+    def test_in_sich_widerspruechliche_datei_wird_abgewiesen(self):
+        """Was erst beim Zeichnen krachte, faellt jetzt beim Laden auf (Audit 4)."""
+        import copy
+
+        gueltig = projektdatei.als_dict(beispielprojekt())
+        # Das gueltige Original laedt ohne Murren.
+        self.assertIsNotNone(projektdatei.aus_dict(copy.deepcopy(gueltig)))
+
+        def mit(aenderung):
+            daten = copy.deepcopy(gueltig)
+            aenderung(daten)
+            return daten
+
+        def stift_nummer_text(d):
+            d["verteiler"]["buchten"][0]["leisten"][0]["stifte"][0]["nummer"] = "eins"
+
+        def leiste_ohne_stifte(d):
+            d["verteiler"]["buchten"][0]["leisten"][0]["stifte"] = []
+
+        def doppelte_leiste(d):
+            leisten = d["verteiler"]["buchten"][0]["leisten"]
+            leisten[1]["nummer"] = leisten[0]["nummer"]
+
+        def kabel_ins_leere(d):
+            d["verteiler"]["kabel"][0]["abschnitte"][0]["leiste"] = 999
+
+        def kabel_zu_weit(d):
+            d["verteiler"]["kabel"][0]["abschnitte"][0]["start_da"] = 99
+
+        def rangierung_ins_leere(d):
+            d["verteiler"]["rangierungen"][0]["nach"] = "9 1a"
+
+        def rangierung_auf_sich(d):
+            d["verteiler"]["rangierungen"][0]["nach"] = \
+                d["verteiler"]["rangierungen"][0]["von"]
+
+        def ausgeblendet_als_text(d):
+            d["ausgeblendet"] = "firma"
+
+        faelle = {
+            "Stiftnummer als Text": stift_nummer_text,
+            "Leiste ohne Stifte": leiste_ohne_stifte,
+            "doppelte Leistennummer": doppelte_leiste,
+            "Kabel auf nicht vorhandene Leiste": kabel_ins_leere,
+            "Kabel ueber das Leistenende": kabel_zu_weit,
+            "Rangierung ins Leere": rangierung_ins_leere,
+            "Rangierung auf sich selbst": rangierung_auf_sich,
+            "ausgeblendet als Text": ausgeblendet_als_text,
+        }
+        for name, aenderung in faelle.items():
+            with self.subTest(fall=name):
+                with self.assertRaises(ProjektdateiFehler):
+                    projektdatei.aus_dict(mit(aenderung))
+
     def test_binaerdatei_abgelehnt(self):
         self.pfad.write_bytes(b"\xff\xfe\x00kein Text")
         with self.assertRaises(ProjektdateiFehler):

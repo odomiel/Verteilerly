@@ -12,9 +12,10 @@ from typing import Any
 
 from .modell import (
     Ader,
-    BLATTARTEN,
     LEISTEN_SCHREIBWEISEN,
     LEISTEN_ZAHLEN,
+    MAX_RANGIERUNGEN_JE_ADER,
+    SEITEN,
     STILFELDER,
     TEILBARE_FELDER,
     Textstil,
@@ -251,6 +252,91 @@ def _verteiler_rein(daten: dict[str, Any]) -> Verteiler:
     )
 
 
+def _ganzzahl(wert, was: str) -> int:
+    """Eine ganze Zahl aus der Datei - sonst eine Meldung statt eines Absturzes."""
+    if isinstance(wert, bool) or not isinstance(wert, int):
+        raise ProjektdateiFehler(u("{0} muss eine ganze Zahl sein").format(was))
+    return wert
+
+
+def _pruefen(verteiler: Verteiler) -> None:
+    """Weist eine in sich widerspruechliche Projektdatei ab (Audit 4).
+
+    Der Verteiler wird aus dem Dict direkt gebaut, nicht ueber
+    ``aus_buchten()`` - keine der Pruefungen des Modells greift also. Eine
+    Datei aus fremder Hand koennte darum Unsinn enthalten, der erst beim
+    Zeichnen auffiele: ein Stift mit der Nummer ``"eins"`` (TypeError),
+    eine Leiste ohne Stifte (Division durch null), ein Kabel oder eine
+    Rangierung auf eine Stelle, die es nicht gibt. Hier faellt das als
+    Meldung auf, nicht spaeter als Absturz im Fenster.
+    """
+    if not isinstance(verteiler.name, str) or not isinstance(verteiler.nummer, str):
+        raise ProjektdateiFehler(u("Name und Nummer des Verteilers muessen Text sein"))
+    if not verteiler.buchten:
+        raise ProjektdateiFehler(u("Der Verteiler hat keine Buchten"))
+
+    leisten: dict[int, Leiste] = {}
+    for bucht in verteiler.buchten:
+        _ganzzahl(bucht.nummer, u("Die Buchtnummer"))
+        if not bucht.leisten:
+            raise ProjektdateiFehler(u("Bucht {0} hat keine Leisten").format(bucht.nummer))
+        for leiste in bucht.leisten:
+            nr = _ganzzahl(leiste.nummer, u("Die Leistennummer"))
+            if nr in leisten:
+                raise ProjektdateiFehler(
+                    u("Die Leistennummer {0} kommt mehrfach vor").format(nr)
+                )
+            if not leiste.stifte:
+                raise ProjektdateiFehler(u("Leiste {0} hat keine Stifte").format(nr))
+            for stift in leiste.stifte:
+                _ganzzahl(stift.nummer, u("Die Stiftnummer"))
+                for seite in (stift.a.seite, stift.b.seite):
+                    if seite not in SEITEN:
+                        raise ProjektdateiFehler(
+                            u("Leiste {0} Stift {1}: unbekannte Aderseite {2!r}").format(
+                                nr, stift.nummer, seite)
+                        )
+            leisten[nr] = leiste
+
+    for k in verteiler.kabel:
+        for a in k.abschnitte:
+            _ganzzahl(a.leiste, u("Die Leiste eines Kabelabschnitts"))
+            start = _ganzzahl(a.start_da, u("Der Startstift eines Kabelabschnitts"))
+            anzahl = _ganzzahl(a.anzahl_da, u("Die DA-Zahl eines Kabelabschnitts"))
+            leiste = leisten.get(a.leiste)
+            if leiste is None:
+                raise ProjektdateiFehler(
+                    u("Ein Kabel liegt auf Leiste {0}, die es nicht gibt").format(a.leiste)
+                )
+            if start < 1 or anzahl < 1 or start + anzahl - 1 > leiste.da_anzahl:
+                raise ProjektdateiFehler(
+                    u("Ein Kabel liegt auf Leiste {0} DA {1}–{2}, die es dort nicht gibt").format(
+                        a.leiste, start, start + anzahl - 1)
+                )
+
+    belegt: dict[tuple, int] = {}
+    for r in verteiler.rangierungen:
+        enden = (r.von, r.nach)
+        for ende in enden:
+            leiste = leisten.get(ende.leiste)
+            if leiste is None or not 1 <= ende.stift <= leiste.da_anzahl:
+                raise ProjektdateiFehler(
+                    u("Eine Rangierung zeigt auf {0}, die es nicht gibt").format(ende)
+                )
+        if (r.von.leiste, r.von.stift, r.von.seite) == (r.nach.leiste, r.nach.stift, r.nach.seite):
+            raise ProjektdateiFehler(
+                u("Eine Rangierung verbindet eine Ader mit sich selbst")
+            )
+        for ende in enden:
+            schluessel = (ende.leiste, ende.stift, ende.seite)
+            belegt[schluessel] = belegt.get(schluessel, 0) + 1
+            if belegt[schluessel] > MAX_RANGIERUNGEN_JE_ADER:
+                raise ProjektdateiFehler(
+                    u("{0} traegt mehr als {1} Rangierungen").format(
+                        ende, MAX_RANGIERUNGEN_JE_ADER)
+                )
+
+
 def aus_dict(daten: dict[str, Any]) -> Projekt:
     if daten.get("dateikennung") != DATEIKENNUNG:
         raise ProjektdateiFehler(u("Das ist keine Verteilerly-Projektdatei"))
@@ -260,11 +346,19 @@ def aus_dict(daten: dict[str, Any]) -> Projekt:
         raise ProjektdateiFehler(
             u("Formatversion {0} wird nicht unterstuetzt (lesbar: {1})").format(version, lesbar)
         )
+    verteiler = _verteiler_rein(daten.get("verteiler", {}))
+    _pruefen(verteiler)
+    # ``ausgeblendet`` ist eine Liste von Feldnamen. Ein einzelner String
+    # wuerde sonst in seine Buchstaben zerfallen ({'f','i',...}) - darum
+    # erst den Typ pruefen (Audit 10).
+    ausgeblendet = daten.get("ausgeblendet") or []
+    if not isinstance(ausgeblendet, (list, tuple)):
+        raise ProjektdateiFehler(u("„ausgeblendet“ muss eine Liste von Feldern sein"))
     return Projekt(
-        verteiler=_verteiler_rein(daten.get("verteiler", {})),
+        verteiler=verteiler,
         briefkopf=dict(daten.get("briefkopf") or {}),
         eigene_felder=dict(daten.get("eigene_felder") or {}),
-        ausgeblendet=set(daten.get("ausgeblendet") or ()),
+        ausgeblendet=set(str(feld) for feld in ausgeblendet),
         # ``eigene_felder_auf`` stand bis Fassung 9 hier; heute sagt die
         # Blattvorlage, auf welchen Blattarten die eigenen Felder stehen.
         # Der alte Schluessel wird ueberlesen, nicht beanstandet.

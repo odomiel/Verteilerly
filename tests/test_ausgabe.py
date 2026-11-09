@@ -210,6 +210,20 @@ class TestPdf(unittest.TestCase):
             pdf_schreiben(_projekt(), Path(self.ordner.name) / "fehlt" / "x.pdf")
         self.assertFalse(self.ziel.exists())
 
+    def test_auch_ein_wertfehler_raeumt_die_neu_datei_weg(self):
+        """Nicht nur OSError: ein ValueError laesst keine .pdf.neu liegen (Audit 5)."""
+        from unittest import mock
+
+        from verteilerly.ausgabe import pdf as pdfmodul
+
+        with mock.patch.object(
+            pdfmodul, "_blatt_zeichnen", side_effect=ValueError("kaputt")
+        ):
+            with self.assertRaises(AusgabeFehler):
+                pdf_schreiben(_projekt(), self.ziel)
+        self.assertFalse(self.ziel.exists())
+        self.assertFalse(self.ziel.with_name(self.ziel.name + ".neu").exists())
+
     def test_zu_langer_text_wird_gekuerzt(self):
         """Lieber Punkte als Text, der über die Spalte hinausläuft."""
         kurz = _einpassen("Leitung", SCHRIFT, 8.5, 200)

@@ -68,7 +68,10 @@ def pdf_schreiben(
             blech.showPage()
         blech.save()
         vorlaeufig.replace(ziel)
-    except OSError as fehler:
+    except Exception as fehler:
+        # Nicht nur OSError: reportlab wirft bei kaputten Werten auch
+        # ValueError. Die halbe .neu kommt weg, der Grund wird zum
+        # AusgabeFehler, den die Oberflaeche zeigt (Audit 5).
         vorlaeufig.unlink(missing_ok=True)
         raise AusgabeFehler(str(fehler)) from fehler
     return ziel

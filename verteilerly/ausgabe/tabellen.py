@@ -219,7 +219,11 @@ def csv_schreiben(projekt: Projekt, ziel: pathlib.Path) -> pathlib.Path:
                 schreiber.writerows(
                     [[_csv_sicher(wert) for wert in zeile] for zeile in zeilen]
                 )
-    except OSError as fehler:
+    except Exception as fehler:
+        # Nicht nur OSError: eine kaputte Projektdatei koennte einen Wert
+        # tragen, an dem das Schreiben scheitert. Die halbe Datei kommt
+        # weg, der Grund wird zum AusgabeFehler (Audit 5).
+        ziel.unlink(missing_ok=True)
         raise AusgabeFehler(str(fehler)) from fehler
     return ziel
 
@@ -263,7 +267,8 @@ def xlsx_schreiben(
     _formeln_entschaerfen(mappe)
     try:
         mappe.save(ziel)
-    except OSError as fehler:
+    except Exception as fehler:
+        ziel.unlink(missing_ok=True)
         raise AusgabeFehler(str(fehler)) from fehler
     return ziel
 

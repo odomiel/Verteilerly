@@ -543,6 +543,27 @@ Das ist keine Verteilerly-Projektdatei: This is not a Verteilerly project file
 '{0} ist unvollstaendig - {1}': '{0} is incomplete - {1}'
 '{0} ist keine Textdatei': '{0} is not a text file'
 '{0} ist zu tief verschachtelt': '{0} is nested too deeply'
+'{0} muss eine ganze Zahl sein': '{0} must be a whole number'
+Name und Nummer des Verteilers muessen Text sein: The frame name and number must be text
+Die Buchtnummer: The bay number
+Die Leistennummer: The strip number
+Die Stiftnummer: The pin number
+Die Leiste eines Kabelabschnitts: The strip of a cable section
+Der Startstift eines Kabelabschnitts: The start pin of a cable section
+Die DA-Zahl eines Kabelabschnitts: The pair count of a cable section
+'Bucht {0} hat keine Leisten': 'Bay {0} has no strips'
+'Die Leistennummer {0} kommt mehrfach vor': 'The strip number {0} occurs more than once'
+'Leiste {0} hat keine Stifte': 'Strip {0} has no pins'
+'Leiste {0} Stift {1}: unbekannte Aderseite {2!r}': 'Strip {0} pin {1}: unknown wire side {2!r}'
+'Ein Kabel liegt auf Leiste {0}, die es nicht gibt': 'A cable lies on strip {0}, which does
+  not exist'
+'Ein Kabel liegt auf Leiste {0} DA {1}–{2}, die es dort nicht gibt': 'A cable lies on strip
+  {0} pairs {1}–{2}, which do not exist there'
+'Eine Rangierung zeigt auf {0}, die es nicht gibt': 'A cross-connection points to {0}, which
+  does not exist'
+Eine Rangierung verbindet eine Ader mit sich selbst: A cross-connection links a wire to itself
+'{0} traegt mehr als {1} Rangierungen': '{0} carries more than {1} cross-connections'
+'„ausgeblendet“ muss eine Liste von Feldern sein': '"ausgeblendet" must be a list of fields'
 Eine Vorlage braucht einen Namen: A template needs a name
 Der Verteiler hat keine Buchten: The frame has no bays
 Es ist keine einzige Vorlage vorhanden: There is not a single template

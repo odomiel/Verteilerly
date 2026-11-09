@@ -65,6 +65,39 @@ def zu_oeffnen(argumente) -> pathlib.Path | None:
     return None
 
 
+def _letzte_rettung(art, wert, spur) -> None:
+    """Faengt einen unerwarteten Fehler, statt ihn verschwinden zu lassen.
+
+    Der Bericht geht immer auf stderr - ein Start aus dem Terminal soll
+    ihn sehen. Ist ``zeigt`` gesetzt (keine Erweiterung uebernimmt),
+    kommt zusaetzlich ein Fenster; das Programm laeuft danach weiter.
+    """
+    import traceback
+
+    if issubclass(art, KeyboardInterrupt):
+        sys.__excepthook__(art, wert, spur)
+        return
+    traceback.print_exception(art, wert, spur)
+    if getattr(_letzte_rettung, "zeigt", False):
+        try:
+            from PySide6.QtWidgets import QApplication, QMessageBox
+
+            if QApplication.instance() is not None:
+                QMessageBox.critical(
+                    None,
+                    "Unerwarteter Fehler",
+                    f"Etwas ist schiefgelaufen:\n\n{type(wert).__name__}: {wert}"
+                    "\n\nDas Programm läuft weiter.",
+                )
+        except Exception:      # noqa: BLE001 - im Fehlerfall nicht noch einmal
+            pass
+
+
+def _letzte_rettung_einrichten() -> None:
+    _letzte_rettung.zeigt = False
+    sys.excepthook = _letzte_rettung
+
+
 def main() -> int:
     if "--selbsttest" in sys.argv:
         stelle = sys.argv.index("--selbsttest")
@@ -105,7 +138,18 @@ def main() -> int:
     # sich nicht mehr verschieben. Gilt auch fuer Qts eigene Dialoge.
     dialoge_freistellen(anwendung)
 
+    # Letzte Rettung: ein unerwarteter Fehler in einem Slot ginge sonst nur
+    # auf stderr - ohne Konsole unsichtbar -, und das Fenster liefe in
+    # unklarem Zustand weiter (Audit 4). Gesetzt wird der Haken vor dem
+    # Bauen des Fensters; die Erweiterung *Protokoll* haengt sich davor und
+    # zeigt dann selbst. Damit kein zweites Fenster aufgeht, meldet die
+    # Rettung nur noch, wenn niemand den Haken uebernommen hat.
+    _letzte_rettung_einrichten()
+
     fenster = Hauptfenster()
+    if sys.excepthook is _letzte_rettung:
+        # Keine Erweiterung hat uebernommen - dann zeigt die Rettung.
+        _letzte_rettung.zeigt = True
     fenster.show()
     datei = zu_oeffnen(sys.argv[1:])
     if datei is not None:
