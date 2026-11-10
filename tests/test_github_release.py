@@ -157,35 +157,101 @@ class TestKoepfeUndProbe(unittest.TestCase):
         self.assertIn("X-GitHub-Api-Version", koepfe)
         self.assertEqual(koepfe["Content-Type"], "x/y")
 
-    def test_probe_sendet_nichts(self):
-        """Sie kommt ohne Token aus - und darf also nichts ansprechen."""
+    def _probe(self, antwort=(200, b"{}"), name=None, token="gehEIM"):
+        """--probe mit untergeschobenem Zugang; gibt (stand, aus, fehler, anfragen)."""
+        import io
+        import contextlib
+
+        anfragen = []
+
+        def gefangen(art, url, koepfe, inhalt=None):
+            anfragen.append((art, url))
+            if isinstance(antwort, Exception):
+                raise antwort
+            return antwort
+
+        with tempfile.TemporaryDirectory() as ordner:
+            datei = pathlib.Path(ordner) / (name or f"Verteilerly-{VERSION}.probe")
+            datei.write_bytes(b"Probe")
+            aus, fehler = io.StringIO(), io.StringIO()
+            with mock.patch.object(github_release, "slug_finden",
+                                   return_value="wer/was"), \
+                    mock.patch.object(github_release, "token_finden",
+                                      return_value=token), \
+                    mock.patch.object(github_release, "_anfrage",
+                                      side_effect=gefangen), \
+                    contextlib.redirect_stdout(aus), \
+                    contextlib.redirect_stderr(fehler):
+                stand = github_release.main(["--probe", str(datei)])
+        return stand, aus.getvalue(), fehler.getvalue(), anfragen
+
+    def test_probe_fragt_nur_lesend(self):
+        """Ein GET aufs Repo - kein Release, kein Anhang."""
+        stand, aus, _, anfragen = self._probe()
+        self.assertEqual(stand, 0)
+        self.assertIn("nichts gesendet", aus)
+        self.assertIn("Token gilt", aus)
+        self.assertEqual(anfragen, [("GET", f"{github_release.API}/repos/wer/was")])
+
+    def test_probe_meldet_einen_abgewiesenen_token(self):
+        """So fiel er am 10.11.2026 erst nach drei Minuten Warten auf."""
+        stand, aus, fehler, _ = self._probe(antwort=(401, b"Bad credentials"))
+        self.assertEqual(stand, 1)
+        self.assertIn("Token abgewiesen", fehler)
+        self.assertNotIn("gehEIM", aus + fehler)
+
+    def test_probe_meldet_ein_unsichtbares_repo(self):
+        stand, _, fehler, _ = self._probe(antwort=(404, b""))
+        self.assertEqual(stand, 1)
+        self.assertIn("wer/was", fehler)
+
+    def test_probe_ohne_netz_bricht_nicht_zusammen(self):
+        import urllib.error
+
+        stand, _, fehler, _ = self._probe(antwort=urllib.error.URLError("weg"))
+        self.assertEqual(stand, 1)
+        self.assertIn("nicht erreicht", fehler)
+
+    def test_probe_ohne_token_sagt_es(self):
         import io
         import contextlib
 
         with tempfile.TemporaryDirectory() as ordner:
             datei = pathlib.Path(ordner) / f"Verteilerly-{VERSION}.probe"
             datei.write_bytes(b"Probe")
-            ausgabe = io.StringIO()
-            with mock.patch.object(
-                github_release, "slug_finden",
-                side_effect=AssertionError("darf nicht gefragt werden"),
-            ), contextlib.redirect_stdout(ausgabe):
+            fehler = io.StringIO()
+            with mock.patch.object(github_release, "slug_finden",
+                                   return_value="wer/was"), \
+                    mock.patch.object(github_release, "token_finden",
+                                      side_effect=SystemExit("kein github_token")), \
+                    mock.patch.object(github_release, "_anfrage",
+                                      side_effect=AssertionError("ohne Token nicht")), \
+                    contextlib.redirect_stdout(io.StringIO()), \
+                    contextlib.redirect_stderr(fehler):
                 stand = github_release.main(["--probe", str(datei)])
-        self.assertEqual(stand, 0)
-        self.assertIn("nichts gesendet", ausgabe.getvalue())
+        self.assertEqual(stand, 1)
+        self.assertIn("github_token", fehler.getvalue())
+
+    def test_der_echte_lauf_wartet_nicht_mit_abgewiesenem_token(self):
+        with tempfile.TemporaryDirectory() as ordner:
+            datei = pathlib.Path(ordner) / f"Verteilerly-{VERSION}.probe"
+            datei.write_bytes(b"Probe")
+            with mock.patch.object(github_release, "slug_finden",
+                                   return_value="wer/was"), \
+                    mock.patch.object(github_release, "token_finden",
+                                      return_value="gehEIM"), \
+                    mock.patch.object(github_release, "_anfrage",
+                                      return_value=(401, b"")), \
+                    mock.patch.object(github_release, "auf_tag_warten",
+                                      side_effect=AssertionError("nicht warten")), \
+                    mock.patch("sys.stdout"), \
+                    self.assertRaises(SystemExit) as abbruch:
+                github_release.main([str(datei)])
+        self.assertIn("Token abgewiesen", str(abbruch.exception))
 
     def test_eine_fremde_datei_wird_angemerkt(self):
-        import io
-        import contextlib
-
-        with tempfile.TemporaryDirectory() as ordner:
-            datei = pathlib.Path(ordner) / "ohne-fassung.bin"
-            datei.write_bytes(b"x")
-            fehlerstrom = io.StringIO()
-            with contextlib.redirect_stdout(io.StringIO()), \
-                    contextlib.redirect_stderr(fehlerstrom):
-                github_release.main(["--probe", str(datei)])
-        self.assertIn("WARNUNG", fehlerstrom.getvalue())
+        _, _, fehler, _ = self._probe(name="ohne-fassung.bin")
+        self.assertIn("WARNUNG", fehler)
 
 
 if __name__ == "__main__":

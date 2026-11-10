@@ -3,7 +3,7 @@
 
     python3 werkzeuge/github_release.py auslieferung/Verteilerly-*.AppImage \\
                                         auslieferung/Verteilerly_*.exe
-    python3 werkzeuge/github_release.py --probe <dateien>    nur zeigen
+    python3 werkzeuge/github_release.py --probe <dateien>    zeigen, Token pruefen
     python3 werkzeuge/github_release.py --text notiz.md <dateien>
 
 **Zweimal aufgerufen tut es nichts doppelt.** Gibt es das Release
@@ -174,6 +174,29 @@ def _anfrage(art: str, url: str, koepfe: dict, inhalt: bytes | None = None):
         return fehler.code, fehler.read()
 
 
+def zugang_pruefen(slug: str, token: str) -> str:
+    """Nimmt GitHub den Token fuer dieses Repo an? Leer heisst ja.
+
+    Sonst steht der Grund da. Gefragt wird nur lesend (das Repo selbst);
+    der Token steht in keiner Meldung. Ein abgewiesener Token fiel frueher
+    erst auf, nachdem der echte Lauf drei Minuten auf den Tag gewartet hatte.
+    """
+    try:
+        stand, _ = _anfrage("GET", f"{API}/repos/{slug}", _koepfe(token))
+    except (urllib.error.URLError, TimeoutError, OSError) as fehler:
+        return f"GitHub nicht erreicht ({getattr(fehler, 'reason', fehler)})"
+    if stand == 200:
+        return ""
+    if stand == 401:
+        return ("Token abgewiesen - abgelaufen, widerrufen oder neu erzeugt "
+                "(github_token bzw. $GITHUB_TOKEN erneuern; der Push-Mirror "
+                "braucht ihn meist auch)")
+    if stand in (403, 404):
+        return (f"Repo {slug} fuer diesen Token nicht sichtbar (HTTP {stand}) - "
+                "gilt er fuer dieses Repo, stimmt die Kennung?")
+    return f"unerwartete Antwort HTTP {stand}"
+
+
 def auf_tag_warten(slug: str, tag: str, token: str, sekunden: int = WARTEN) -> bool:
     """Wartet, bis der Spiegel den Tag nach GitHub geschoben hat."""
     url = f"{API}/repos/{slug}/git/ref/tags/{tag}"
@@ -287,7 +310,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     zerleger.add_argument("--entwurf", action="store_true", help="als Entwurf anlegen")
     zerleger.add_argument("--vorab", action="store_true", help="als Vorabfassung")
-    zerleger.add_argument("--probe", action="store_true", help="nur zeigen, nichts senden")
+    zerleger.add_argument("--probe", action="store_true", help="nur zeigen und den Token pruefen, nichts anlegen")
     zerleger.add_argument(
         "--text-lassen", action="store_true",
         help="den Begleittext eines bestehenden Releases stehen lassen",
@@ -319,10 +342,25 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  · {datei.name} ({datei.stat().st_size} Bytes)")
     if werte.probe:
         print("\n--- Begleittext ---\n" + notiz + "\n--- nichts gesendet (--probe) ---")
+        # Gefragt wird nur lesend: ob der echte Lauf durchkaeme.
+        try:
+            slug = slug_finden()
+            token = token_finden()
+        except SystemExit as fehler:
+            print(f"· Zugang: {fehler}", file=sys.stderr)
+            return 1
+        grund = zugang_pruefen(slug, token)
+        if grund:
+            print(f"· Zugang zu {slug}: {grund}", file=sys.stderr)
+            return 1
+        print(f"· Zugang zu {slug}: Token gilt")
         return 0
 
     slug = slug_finden()
     token = token_finden()
+    grund = zugang_pruefen(slug, token)
+    if grund:
+        raise SystemExit(f"Zugang zu {slug}: {grund}")
 
     print(f"· warte auf den Tag {tag} bei {slug} (bis {werte.warten} s) …")
     if not auf_tag_warten(slug, tag, token, werte.warten):
