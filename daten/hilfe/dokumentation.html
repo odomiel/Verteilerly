@@ -1541,7 +1541,35 @@ geöffnet wird keine. Die neuen Verteiler öffnet man wie jeden anderen über
 (<code>Verteilerly.conf</code>, Gruppe <code>projekt</code>) — die Liste der
 Verteiler und die Projektdaten nicht, die gehören diesem Projekt.</p>
 
-<h3>11.5 &nbsp; Erweiterungen verwalten</h3>
+<h3>11.5 &nbsp; Ein Verteiler mit Zufallsdaten</h3>
+
+<p><b>Erweiterungen ▸ Zufallsverteiler…</b> legt einen Verteiler an und füllt
+ihn mit erfundenen Daten — zum Vorführen, zum Ausprobieren einer
+Blattvorlage oder um zu sehen, wie Belegung, Leistenblätter und Mappe bei
+einem vollen Verteiler aussehen. Gewählt wird nur die
+<b>Verteilervorlage</b>; vorgewählt ist die zuletzt genommene, beim ersten
+Mal die Standardvorlage. Alles andere wird ausgewürfelt:</p>
+
+<ul>
+<li><b>Kabel</b> verschiedener Größe auf jeder Leiste, mit einem Kabeltyp
+und den Adernfarben dazu, dazwischen hin und wieder freie Doppeladern; ab und
+zu liegt ein Kabel nicht ganz auf und bleibt als Rest für <i>Restleitungen
+auflegen</i> stehen.</li>
+<li><b>Bezeichnungen</b> an den Adern, manche mit einer <b>Bemerkung</b>.</li>
+<li><b>Rangierungen</b> zwischen Doppeladern verschiedener Leisten, a mit a
+und b mit b, und an einigen freien Adern ein Vermerk aus den Vorlagen des
+Rangierfeldes.</li>
+<li><b>Projektdaten</b>: Firma, Kunde, Anlagen- und Kundennummer, das heutige
+Datum und ein Kürzel; dazu Name und Nummer des Verteilers.</li>
+</ul>
+
+<p>Es entsteht ein <b>neuer, ungespeicherter Verteiler</b> wie nach
+<i>Datei ▸ Neuer Verteiler</i>. Ist der offene geändert, fragt das Programm
+vorher, ob er gespeichert werden soll. Die Statuszeile sagt danach, wie viele
+Kabel und Rangierungen es geworden sind. Die Daten sind erfunden und
+passen zu keiner echten Anlage.</p>
+
+<h3>11.6 &nbsp; Erweiterungen verwalten</h3>
 
 <p><b>Erweiterungen ▸ Erweiterungen verwalten…</b> listet jede gefundene
 Erweiterung mit Haken, <b>Version</b>, Herkunft und Beschreibung — oder mit dem
@@ -1569,7 +1597,7 @@ trägt darum dessen Version — das Datum des Releases,
 will: was in der Spalte
 steht, ist ihre eigene Angabe. Nennt sie keine, steht dort ein Strich.</p>
 
-<h3>11.6 &nbsp; Eine eigene Erweiterung schreiben</h3>
+<h3>11.7 &nbsp; Eine eigene Erweiterung schreiben</h3>
 
 <p>Eine Erweiterung ist eine Python-Datei — oder ein Ordner mit
 <code>__init__.py</code> — im Ordner <code>erweiterungen</code> des
@@ -1616,6 +1644,10 @@ Eintrag im Menü Erweiterungen. Ein Fehler im Aufruf wird angezeigt, statt das
 Programm anzuhalten.</td></tr>
 <tr><td><code>projekt()</code></td><td>Der offene Verteiler samt Projektdaten —
 oder <code>None</code>.</td></tr>
+<tr><td><code>projekt_zeigen(projekt)</code></td><td>Zeigt ein neues
+Projekt im Fenster wie <i>Neuer Verteiler</i>; ist das offene geändert, wird
+vorher gefragt. Gibt <code>False</code> zurück, wenn abgebrochen wurde.</td></tr>
+<tr><td><code>kabeltypen()</code></td><td>Die Kabeltypen samt Farbfolgen.</td></tr>
 <tr><td><code>vorlagen()</code></td><td>Die Verteilervorlagen, wie sie
 gerade geladen sind.</td></tr>
 <tr><td><code>blattvorlagen()</code>, <code>blattvorlage()</code></td><td>Alle
@@ -1692,10 +1724,11 @@ und sie lässt sich unter <i>Erweiterungen verwalten</i> ausschalten.</p>
 <tr><td>Blattvorlage prüfen…</td><td></td></tr>
 <tr><td>Kabeltypen prüfen…</td><td></td></tr>
 <tr><td>Projektdateien verknüpfen…</td><td></td></tr>
-<tr><td rowspan="5"><b>Erweiterungen</b></td><td>Blattvorlagen-Editor…</td><td></td></tr>
+<tr><td rowspan="6"><b>Erweiterungen</b></td><td>Blattvorlagen-Editor…</td><td></td></tr>
 <tr><td>Projekt anlegen…</td><td></td></tr>
 <tr><td>Protokoll…</td><td></td></tr>
 <tr><td>Rechtschreibung…</td><td></td></tr>
+<tr><td>Zufallsverteiler…</td><td></td></tr>
 <tr><td>Erweiterungen verwalten…</td><td></td></tr>
 <tr><td rowspan="3"><b>Hilfe</b></td><td>Dokumentation</td><td>F1</td></tr>
 <tr><td>Nach Updates sehen…</td><td></td></tr>

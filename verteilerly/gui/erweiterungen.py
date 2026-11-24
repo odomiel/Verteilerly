@@ -82,6 +82,22 @@ class Schnittstelle:
         """Die Verteilervorlagen, wie sie gerade geladen sind."""
         return self._fenster.vorlagen
 
+    def kabeltypen(self):
+        """Die Kabeltypen samt Farbfolgen, wie sie gerade geladen sind."""
+        return self._fenster.kabeltypen
+
+    def projekt_zeigen(self, projekt) -> bool:
+        """Zeigt ein neues Projekt im Fenster - wie *Datei ▸ Neuer Verteiler*.
+
+        Ist das offene geaendert, wird vorher gefragt, ob es gespeichert
+        werden soll; wer abbricht, bekommt False, und nichts aendert sich.
+        Das neue Projekt hat noch keine Datei.
+        """
+        if not self._fenster._darf_verwerfen():
+            return False
+        self._fenster._projekt_setzen(projekt, None)
+        return True
+
     def blattvorlagen(self):
         """Alle Blattvorlagen, wie sie gerade geladen sind."""
         return self._fenster.blattvorlagen

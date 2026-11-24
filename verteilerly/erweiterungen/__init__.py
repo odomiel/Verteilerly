@@ -34,7 +34,9 @@ from ..sprachen import u
 from ..version import VERSION
 
 #: Die eingebauten Erweiterungen - Module dieses Pakets.
-EINGEBAUT = ("blattvorlageneditor", "projekt", "protokoll", "rechtschreibung")
+EINGEBAUT = (
+    "blattvorlageneditor", "projekt", "protokoll", "rechtschreibung", "zufall",
+)
 
 #: Ist diese Umgebungsvariable gesetzt, wird keine fremde Erweiterung
 #: geladen - fuer den Fall, dass eine den Start verhindert, und fuer die

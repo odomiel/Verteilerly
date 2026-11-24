@@ -1492,7 +1492,33 @@ folder, enclosures and the check mark are kept (<code>Verteilerly.conf</code>, g
 <code>projekt</code>) — the list of frames and the project data are not, they
 belong to this project.</p>
 
-<h3>11.5 &nbsp; Managing extensions</h3>
+<h3>11.5 &nbsp; A frame with random data</h3>
+
+<p><b>Extensions ▸ Random frame…</b> creates a frame and fills it with
+made-up data — for demonstrations, for trying out a sheet template, or to see
+what the assignment, the strip sheets and the workbook look like for a full
+frame. Only the <b>frame template</b> is chosen; preselected is the one taken
+last, the first time the standard template. Everything else is rolled at
+random:</p>
+
+<ul>
+<li><b>Cables</b> of different sizes on every strip, each with a cable type
+and its wire colours, with free pairs in between now and then; once in a
+while a cable does not lie on completely and stays as a remainder for
+<i>Terminate remaining lines</i>.</li>
+<li><b>Designations</b> on the wires, some with a <b>remark</b>.</li>
+<li><b>Jumpers</b> between pairs on different strips, a to a and b to b,
+and on some free wires a note from the templates of the jumper field.</li>
+<li><b>Project data</b>: company, customer, plant and customer number,
+today's date and initials; plus name and number of the frame.</li>
+</ul>
+
+<p>The result is a <b>new, unsaved frame</b>, as after <i>File ▸ New
+frame</i>. If the open one has been changed, the program first asks whether
+to save it. Afterwards the status bar says how many cables and jumpers there
+are. The data is made up and fits no real installation.</p>
+
+<h3>11.6 &nbsp; Managing extensions</h3>
 
 <p><b>Extensions ▸ Manage extensions…</b> lists every extension found with a
 check mark, its <b>version</b>, its origin and description — or the reason why
@@ -1518,7 +1544,7 @@ for several builds on one day. One of <b>your own</b> counts however it likes:
 what stands in
 the column is its own statement. If it names none, a dash stands there.</p>
 
-<h3>11.6 &nbsp; Writing an extension of your own</h3>
+<h3>11.7 &nbsp; Writing an extension of your own</h3>
 
 <p>An extension is a Python file — or a folder with <code>__init__.py</code> —
 in the <code>erweiterungen</code> folder of the working folder; <i>Manage
@@ -1565,6 +1591,10 @@ entry in the Extensions menu. An error in the call is shown instead of
 stopping the program.</td></tr>
 <tr><td><code>projekt()</code></td><td>The open frame including the project
 data — or <code>None</code>.</td></tr>
+<tr><td><code>projekt_zeigen(projekt)</code></td><td>Shows a new
+project in the window, like <i>New frame</i>; if the open one has been
+changed, the program asks first. Returns <code>False</code> if cancelled.</td></tr>
+<tr><td><code>kabeltypen()</code></td><td>The cable types with their colour sequences.</td></tr>
 <tr><td><code>vorlagen()</code></td><td>The frame templates as they are
 currently loaded.</td></tr>
 <tr><td><code>blattvorlagen()</code>, <code>blattvorlage()</code></td><td>All
@@ -1642,10 +1672,11 @@ extensions</i>.</p>
 <tr><td>Check sheet template…</td><td></td></tr>
 <tr><td>Check cable types…</td><td></td></tr>
 <tr><td>Link project files…</td><td></td></tr>
-<tr><td rowspan="5"><b>Extensions</b></td><td>Sheet template editor…</td><td></td></tr>
+<tr><td rowspan="6"><b>Extensions</b></td><td>Sheet template editor…</td><td></td></tr>
 <tr><td>Create project…</td><td></td></tr>
 <tr><td>Log…</td><td></td></tr>
 <tr><td>Spell check…</td><td></td></tr>
+<tr><td>Random frame…</td><td></td></tr>
 <tr><td>Manage extensions…</td><td></td></tr>
 <tr><td rowspan="3"><b>Help</b></td><td>Documentation</td><td>F1</td></tr>
 <tr><td>Look for updates…</td><td></td></tr>

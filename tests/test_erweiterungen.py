@@ -339,7 +339,8 @@ class TestImHauptfenster(unittest.TestCase):
         self.assertEqual(
             texte,
             ["Blattvorlagen-Editor…", "Projekt anlegen…", "Protokoll…",
-             "Rechtschreibung…", "Erweiterungen verwalten…"],
+             "Rechtschreibung…", "Zufallsverteiler…",
+             "Erweiterungen verwalten…"],
         )
         editor = next(a for a in eintraege if "Blattvorlagen" in a.text())
         self.assertEqual(editor.property("erweiterung"), "blattvorlageneditor")

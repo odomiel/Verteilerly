@@ -880,6 +880,18 @@ diese Datei gibt es schon: this file already exists
 dort liegt eine Datei dieses Namens: a file of that name lies there
 kein Projekt zu dieser Zeile: no project for this row
 
+# Zufallsverteiler (Erweiterung)
+'&Zufallsverteiler…': '&Random frame…'
+Zufallsverteiler: Random frame
+Einen Verteiler nach Vorlage anlegen und mit Zufallsdaten füllen — zum Vorführen und Ausprobieren: Create a frame from a template and fill it with random data — for demonstrations and trying things out
+Einen Verteiler nach Vorlage mit Zufallsdaten füllen: Fill a frame from a template with random data
+Es ist keine Verteilervorlage geladen.: No frame template is loaded.
+'{0} ({1} DA)': '{0} ({1} DA)'
+Kabel, Adernfarben, Bezeichnungen, Rangierungen und Projektdaten werden ausgewürfelt. Es entsteht ein neuer, ungespeicherter Verteiler.: Cables, wire colours, designations, jumpers and project data are rolled at random. The result is a new, unsaved frame.
+Würfeln: Roll
+'Verteilervorlage:': 'Frame template:'
+'Zufallsverteiler nach {0}: {1} Kabel, {2} von {3} DA belegt, {4} Rangierungen': 'Random frame from {0}: {1} cables, {2} of {3} DA in use, {4} jumpers'
+
 # Rechtschreibprüfung (Erweiterung)
 '&Rechtschreibung…': '&Spell check…'
 Rechtschreibung: Spell check

@@ -101,6 +101,13 @@ wird gefragt, und wer seine Verteiler im Haus behalten will, trägt einen
 eigenen LanguageTool-Server ein oder lässt es beim Wörterbuch. Eigene Wörter —
 `Melderkreis`, Hausbegriffe — nimmt eine eigene Wortliste auf.
 
+**Ein Verteiler zum Ausprobieren** (*Erweiterungen ▸ Zufallsverteiler…*):
+gewählt wird nur die **Verteilervorlage**, den Rest würfelt das Programm —
+Kabel mit Typ und Adernfarben, Bezeichnungen, Bemerkungen, Rangierungen,
+gekürzte Kabel und Projektdaten. Es entsteht ein neuer, ungespeicherter
+Verteiler, an dem sich Blattvorlagen, Ausgabe und Bedienung zeigen lassen,
+ohne erst eine halbe Stunde zu tippen.
+
 **Dazu im Alltag.** Suchen über den ganzen Verteiler, Zurücknehmen und
 Wiederherstellen der letzten fünfzig Schritte, **schreibgeschützt öffnen**,
 helles und dunkles Erscheinungsbild, Sichern und Einspielen aller Vorlagen und
