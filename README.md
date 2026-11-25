@@ -108,6 +108,13 @@ gekürzte Kabel und Projektdaten. Es entsteht ein neuer, ungespeicherter
 Verteiler, an dem sich Blattvorlagen, Ausgabe und Bedienung zeigen lassen,
 ohne erst eine halbe Stunde zu tippen.
 
+**An Verteilerly_CSV2Excel übergeben** (Knopf *An CSV2Excel* in der
+Menüleiste, nur unter Windows): das eigene Werkzeug Verteilerly_CSV2Excel
+überträgt die CSV eines Verteilers in feste Excel-Mustertabellen. Die
+Erweiterung schreibt die CSV des offenen Verteilers und startet das Werkzeug
+mit ihr; wo es liegt, steht unter *Erweiterungen ▸ CSV2Excel einrichten…*. Sie
+ist von Haus aus aus und wird unter *Erweiterungen verwalten* eingeschaltet.
+
 **Dazu im Alltag.** Suchen über den ganzen Verteiler, Zurücknehmen und
 Wiederherstellen der letzten fünfzig Schritte, **schreibgeschützt öffnen**,
 helles und dunkles Erscheinungsbild, Sichern und Einspielen aller Vorlagen und

@@ -1523,12 +1523,47 @@ frame</i>. If the open one has been changed, the program first asks whether
 to save it. Afterwards the status bar says how many cables and jumpers there
 are. The data is made up and fits no real installation.</p>
 
-<h3>11.6 &nbsp; Managing extensions</h3>
+<h3>11.6 &nbsp; Handing over to Verteilerly_CSV2Excel</h3>
+
+<p><b>Verteilerly_CSV2Excel</b> is a separate program that transfers the CSV
+of a frame into the matching Excel template — cover sheet, frame assignment and
+strip sheets in the form of fixed sample tables. It is available <b>for Windows
+only</b>. The extension <b>CSV2Excel</b> connects the two: one press, and the
+CSV of the open frame lies in the window of Verteilerly_CSV2Excel.</p>
+
+<p>The extension is bundled but <b>switched off by default</b> — without the
+program its button would only be in the way. It is switched on under
+<i>Extensions ▸ Manage extensions…</i> and applies from the next start. It then
+adds two things:</p>
+
+<ul>
+<li><b>Extensions ▸ Set up CSV2Excel…</b> — where
+<code>Verteilerly_CSV2Excel.exe</code> lies (<i>Browse…</i>), if you like an
+<b>export folder</b> of its own for the Excel files (empty means: as set in
+Verteilerly_CSV2Excel) and the check mark <b>Process right away, without
+waiting for “Start”</b>.</li>
+<li><b>To CSV2Excel</b> — a button directly in the <b>menu bar</b>, behind
+<i>Help</i>. It writes the CSV of the open frame like <i>File ▸ Export ▸ As
+CSV…</i> into the computer's temp folder (<code>Verteilerly-CSV2Excel</code>)
+and starts Verteilerly_CSV2Excel with that file. There it appears under
+<i>Übergebene CSV-Dateien</i> with the matching template; <i>Start</i> creates
+the Excel file, with the check mark this happens at once.</li>
+</ul>
+
+<p>If it has not been set yet where the program lies, or it is no longer
+there, the button first opens <i>Set up CSV2Excel</i>. The CSV is named like
+the project file, without a file like the frame; one of the same name from last
+time is overwritten. Verteilerly_CSV2Excel names the Excel file itself after
+frame and frame number. The location of the program belongs to this computer
+and therefore travels in no backup package.</p>
+
+<h3>11.7 &nbsp; Managing extensions</h3>
 
 <p><b>Extensions ▸ Manage extensions…</b> lists every extension found with a
 check mark, its <b>version</b>, its origin and description — or the reason why
-it could not be loaded. Built-in ones are switched on, your own ones only once
-you switch them on. The choice applies from the next start and is kept in the
+it could not be loaded. Built-in ones are switched on — except <i>CSV2Excel</i>,
+which needs a program of its own —, your own ones only once you switch them
+on. The choice applies from the next start and is kept in the
 <code>Verteilerly.conf</code>.</p>
 
 <p>As long as the check mark <b>Load only bundled extensions</b> is set — and
@@ -1549,7 +1584,7 @@ for several builds on one day. One of <b>your own</b> counts however it likes:
 what stands in
 the column is its own statement. If it names none, a dash stands there.</p>
 
-<h3>11.7 &nbsp; Writing an extension of your own</h3>
+<h3>11.8 &nbsp; Writing an extension of your own</h3>
 
 <p>An extension is a Python file — or a folder with <code>__init__.py</code> —
 in the <code>erweiterungen</code> folder of the working folder; <i>Manage
@@ -1594,6 +1629,9 @@ file</b>; for that it may just as well stand next to the class as
 <tr><td><code>menueeintrag(text, aufruf, hinweis, kuerzel)</code></td><td>An
 entry in the Extensions menu. An error in the call is shown instead of
 stopping the program.</td></tr>
+<tr><td><code>menueleistenknopf(text, aufruf, hinweis)</code></td><td>A
+button directly in the menu bar, behind the last menu — for the one thing you
+need all the time. Errors are shown as for a menu entry.</td></tr>
 <tr><td><code>projekt()</code></td><td>The open frame including the project
 data — or <code>None</code>.</td></tr>
 <tr><td><code>projekt_zeigen(projekt)</code></td><td>Shows a new
@@ -1677,7 +1715,8 @@ extensions</i>.</p>
 <tr><td>Check sheet template…</td><td></td></tr>
 <tr><td>Check cable types…</td><td></td></tr>
 <tr><td>Link project files…</td><td></td></tr>
-<tr><td rowspan="6"><b>Extensions</b></td><td>Sheet template editor…</td><td></td></tr>
+<tr><td rowspan="7"><b>Extensions</b></td><td>Sheet template editor…</td><td></td></tr>
+<tr><td>Set up CSV2Excel…</td><td></td></tr>
 <tr><td>Create project…</td><td></td></tr>
 <tr><td>Log…</td><td></td></tr>
 <tr><td>Spell check…</td><td></td></tr>
@@ -1686,6 +1725,7 @@ extensions</i>.</p>
 <tr><td rowspan="3"><b>Help</b></td><td>Documentation</td><td>F1</td></tr>
 <tr><td>Look for updates…</td><td></td></tr>
 <tr><td>About Verteilerly</td><td></td></tr>
+<tr><td><b>Menu bar</b></td><td>To CSV2Excel</td><td></td></tr>
 </table>
 
 <p>In the editor <b>Alt+←</b> and <b>Alt+→</b> step from strip to strip.</p>

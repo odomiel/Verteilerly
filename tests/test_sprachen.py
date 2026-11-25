@@ -192,6 +192,8 @@ class TestWortliste(unittest.TestCase):
                    # "Server" heißt in beiden Sprachen so.
                    "Export ({0})", "&Tools", "Name: {0}", "Name:", "Version",
                    "Server:",
+                   # Der Name des Werkzeugs, das die Erweiterung ansteuert.
+                   "CSV2Excel",
                    # "2 Buchten, 80 DA": die Woerter darin uebersetzt
                    # mehrzahl() selbst, der Satz traegt nur Zahlen.
                    "{0}, {1} DA"}

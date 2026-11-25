@@ -35,7 +35,8 @@ from ..version import VERSION
 
 #: Die eingebauten Erweiterungen - Module dieses Pakets.
 EINGEBAUT = (
-    "blattvorlageneditor", "projekt", "protokoll", "rechtschreibung", "zufall",
+    "blattvorlageneditor", "csv2excel", "projekt", "protokoll", "rechtschreibung",
+    "zufall",
 )
 
 #: Ist diese Umgebungsvariable gesetzt, wird keine fremde Erweiterung
@@ -62,6 +63,10 @@ class Erweiterung:
     name: str = ""
     beschreibung: str = ""
     version: str = ""
+    #: Eine eingebaute ist an, bis sie ausgeschaltet wird - ausser sie sagt
+    #: hier nein. Dann ist sie aus, bis sie eingeschaltet wird, wie eine
+    #: fremde (etwa eine, die ein Programm braucht, das nicht jeder hat).
+    von_haus_aus_an: bool = True
 
     def einrichten(self, programm) -> None:
         raise NotImplementedError
@@ -82,6 +87,8 @@ class Fund:
     ort: pathlib.Path | None = None
     erweiterung: Erweiterung | None = None
     fehler: str = ""
+    #: Nur fuer eingebaute von Belang - fremde sind immer erst aus.
+    von_haus_aus_an: bool = True
 
 
 def _erweiterung_aus(modul) -> Erweiterung:
@@ -110,6 +117,7 @@ def _eingebaute() -> list[Fund]:
             # Fassung ist dessen Fassung, solange sie keine eigene nennen.
             erweiterung.version or VERSION,
             erweiterung=erweiterung,
+            von_haus_aus_an=bool(erweiterung.von_haus_aus_an),
         ))
     return funde
 
@@ -200,8 +208,12 @@ def finden(ordner_liste=()) -> list[Fund]:
 
 
 def eingeschaltet(fund: Fund, an, aus) -> bool:
-    """Eingebaute sind an, bis sie ausgeschaltet werden - fremde umgekehrt."""
-    if fund.eingebaut:
+    """Eingebaute sind an, bis sie ausgeschaltet werden - fremde umgekehrt.
+
+    Eine eingebaute, die ``von_haus_aus_an`` verneint, zaehlt wie eine
+    fremde: sie steht in ``an``, wenn sie eingeschaltet ist.
+    """
+    if fund.eingebaut and fund.von_haus_aus_an:
         return fund.kennung not in aus
     return fund.kennung in an
 

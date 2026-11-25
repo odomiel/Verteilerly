@@ -817,6 +817,9 @@ class Hauptfenster(QMainWindow):
         aktion(u("Erweiterungen &verwalten…"), self.erweiterungen_verwalten,
                menue=self.erweiterungsmenue,
                hinweis=u("Eingebaute und eigene Erweiterungen ein- und ausschalten"))
+        # Knoepfe, die Erweiterungen direkt in die Menueleiste setzen
+        # (``Schnittstelle.menueleistenknopf``) - sie kommen hinter *Hilfe*.
+        self.menueleistenknoepfe: list[QAction] = []
         self._erweiterungen_einrichten()
 
         hilfe = self.menuBar().addMenu(u("&Hilfe"))
@@ -830,6 +833,10 @@ class Hauptfenster(QMainWindow):
             hinweis=u("Fragt jetzt, ob eine neuere Fassung veröffentlicht ist"),
         )
         aktion(u("Ü&ber Verteilerly"), self.ueber, menue=hilfe)
+        # Die Menues stehen beieinander, die Knoepfe der Erweiterungen dahinter.
+        for knopf in self.menueleistenknoepfe:
+            self.menuBar().removeAction(knopf)
+            self.menuBar().addAction(knopf)
 
     # -- Darstellung -------------------------------------------------------
 

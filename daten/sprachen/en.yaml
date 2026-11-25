@@ -880,6 +880,33 @@ diese Datei gibt es schon: this file already exists
 dort liegt eine Datei dieses Namens: a file of that name lies there
 kein Projekt zu dieser Zeile: no project for this row
 
+# CSV2Excel (Erweiterung)
+CSV2Excel: CSV2Excel
+Die CSV des offenen Verteilers an Verteilerly_CSV2Excel übergeben (nur unter Windows): Hand the CSV of the open frame to Verteilerly_CSV2Excel (Windows only)
+An CSV2Excel: To CSV2Excel
+Die CSV des offenen Verteilers an Verteilerly_CSV2Excel übergeben: Hand the CSV of the open frame to Verteilerly_CSV2Excel
+'CSV2Excel &einrichten…': 'Set up CSV2&Excel…'
+Wählen, wo Verteilerly_CSV2Excel liegt: Choose where Verteilerly_CSV2Excel is located
+CSV2Excel einrichten: Set up CSV2Excel
+Es ist kein Verteiler offen.: No frame is open.
+"{0}\n\nBitte wählen Sie das Programm aus.": "{0}\n\nPlease choose the program."
+"Die CSV ließ sich nicht schreiben:\n\n{0}": "The CSV could not be written:\n\n{0}"
+"Verteilerly_CSV2Excel ließ sich nicht starten:\n{0}": "Verteilerly_CSV2Excel could not be started:\n{0}"
+Das Programm gibt es nur für Windows.: The program is only available for Windows.
+'An Verteilerly_CSV2Excel übergeben: {0}': 'Handed to Verteilerly_CSV2Excel: {0}'
+Es ist noch nicht eingestellt, wo Verteilerly_CSV2Excel liegt.: It has not been set yet where Verteilerly_CSV2Excel is located.
+Verteilerly_CSV2Excel liegt nicht mehr unter {0}.: Verteilerly_CSV2Excel is no longer at {0}.
+'{0} ist keine Programmdatei.': '{0} is not a program file.'
+Verteilerly_CSV2Excel überträgt die CSV eines Verteilers in die passende Excel-Vorlage. Der Knopf „An CSV2Excel“ in der Menüleiste schreibt die CSV des offenen Verteilers und übergibt sie dem Programm. Das Programm gibt es nur für Windows.: Verteilerly_CSV2Excel transfers the CSV of a frame into the matching Excel template. The button “To CSV2Excel” in the menu bar writes the CSV of the open frame and hands it to the program. The program is only available for Windows.
+wie in Verteilerly_CSV2Excel eingestellt: as set in Verteilerly_CSV2Excel
+Gleich verarbeiten, ohne auf „Start“ zu warten: Process right away, without waiting for “Start”
+'Programm:': 'Program:'
+'Exportordner:': 'Export folder:'
+Programme (*.exe): Programs (*.exe)
+Programme (*.exe);;Alle Dateien (*): Programs (*.exe);;All files (*)
+Verteilerly_CSV2Excel wählen: Choose Verteilerly_CSV2Excel
+Exportordner wählen: Choose export folder
+
 # Zufallsverteiler (Erweiterung)
 '&Zufallsverteiler…': '&Random frame…'
 Zufallsverteiler: Random frame
@@ -969,8 +996,8 @@ Die Änderungen sind noch nicht gespeichert. Verwerfen?: The changes are not sav
 E&rweiterungen: E&xtensions
 'Eigene Erweiterungen liegen in:': 'Your own extensions are in:'
 Eine Blattvorlage anpassen und als neue speichern — mit Vorschau am Blatt: Adjust a sheet template and save it as a new one — with a preview of the sheet
-? Eingebaute Erweiterungen sind eingeschaltet, eigene erst, wenn Sie sie einschalten. Eine eigene Erweiterung ist Programmcode und läuft mit allen Rechten von Verteilerly — schalten Sie nur ein, was Sie kennen. Die Wahl gilt ab dem nächsten Start.
-: Built-in extensions are switched on, your own ones only once you switch them on. An extension of your own is program code and runs with all the rights of Verteilerly — only switch on what you know. The choice applies from the next start.
+? Eingebaute Erweiterungen sind meist schon eingeschaltet, eigene erst, wenn Sie sie einschalten. Eine eigene Erweiterung ist Programmcode und läuft mit allen Rechten von Verteilerly — schalten Sie nur ein, was Sie kennen. Die Wahl gilt ab dem nächsten Start.
+: Built-in extensions are mostly switched on already, your own ones only once you switch them on. An extension of your own is program code and runs with all the rights of Verteilerly — only switch on what you know. The choice applies from the next start.
 Eingebaute und eigene Erweiterungen ein- und ausschalten: Switch built-in extensions and your own ones on and off
 Entfernen: Remove
 Erweiterung: Extension

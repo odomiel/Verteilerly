@@ -63,6 +63,28 @@ class Schnittstelle:
         self._menue.insertAction(self._trenner, handlung)
         return handlung
 
+    def menueleistenknopf(self, text: str, aufruf, hinweis: str = "") -> QAction:
+        """Ein Knopf **direkt in der Menueleiste**, hinter dem letzten Menue.
+
+        Fuer das eine, das man staendig braucht - alles andere gehoert mit
+        ``menueeintrag()`` ins Menue *Erweiterungen*. Fehler im Aufruf
+        werden gefangen wie dort.
+        """
+        handlung = QAction(text, self._fenster)
+        handlung.triggered.connect(lambda _an=False: self._ausfuehren(aufruf))
+        if hinweis:
+            handlung.setStatusTip(hinweis)
+            handlung.setToolTip(hinweis)
+        handlung.setProperty("erweiterung", self._fund.kennung)
+        handlung.setProperty("fremd", not self._fund.eingebaut)
+        self._fenster.menuBar().addAction(handlung)
+        # Das Fenster stellt sie hinter das letzte Menue, auch wenn es
+        # beim Einrichten noch nicht steht.
+        knoepfe = getattr(self._fenster, "menueleistenknoepfe", None)
+        if knoepfe is not None:
+            knoepfe.append(handlung)
+        return handlung
+
     def _ausfuehren(self, aufruf) -> None:
         try:
             aufruf()
@@ -177,8 +199,8 @@ class ErweiterungenDialog(PassenderDialog):
         self.ordner = ordner
 
         hinweis = QLabel(u(
-            "Eingebaute Erweiterungen sind eingeschaltet, eigene erst, wenn "
-            "Sie sie einschalten. Eine eigene Erweiterung ist Programmcode "
+            "Eingebaute Erweiterungen sind meist schon eingeschaltet, eigene "
+            "erst, wenn Sie sie einschalten. Eine eigene Erweiterung ist Programmcode "
             "und läuft mit allen Rechten von Verteilerly — schalten Sie nur "
             "ein, was Sie kennen. Die Wahl gilt ab dem nächsten Start."
         ))
@@ -275,12 +297,17 @@ class ErweiterungenDialog(PassenderDialog):
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(self.ordner)))
 
     def wahl(self) -> tuple[set[str], set[str]]:
-        """(eingeschaltete fremde, ausgeschaltete eingebaute)."""
+        """(eingeschaltete, die von Haus aus aus sind; ausgeschaltete eingebaute).
+
+        In ``an`` stehen die fremden und die eingebauten, die erst
+        eingeschaltet werden wollen - siehe ``eingeschaltet()``.
+        """
         an, aus = set(), set()
         for fund in self.funde:
             gesetzt = self.eintraege[fund.kennung].checkState(0) == Qt.CheckState.Checked
-            if fund.eingebaut and not gesetzt:
+            von_selbst_an = fund.eingebaut and fund.von_haus_aus_an
+            if von_selbst_an and not gesetzt:
                 aus.add(fund.kennung)
-            elif not fund.eingebaut and gesetzt:
+            elif not von_selbst_an and gesetzt:
                 an.add(fund.kennung)
         return an, aus
