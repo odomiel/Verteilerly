@@ -194,6 +194,9 @@ class TestGegenDieMenues(unittest.TestCase):
                 # Eintraege eigener Erweiterungen beschreibt die Hilfe nicht.
                 if handlung.property("fremd"):
                     continue
+                # Die zuletzt geoeffneten Dateien wechseln mit der Arbeit.
+                if handlung.property("verlauf"):
+                    continue
                 if handlung.menu() is not None:
                     gefunden.append(handlung.text())
                     sammeln(handlung.menu())
@@ -248,6 +251,9 @@ class TestGegenDieMenues(unittest.TestCase):
                     continue
                 # Eintraege eigener Erweiterungen beschreibt die Hilfe nicht.
                 if handlung.property("fremd"):
+                    continue
+                # Die zuletzt geoeffneten Dateien wechseln mit der Arbeit.
+                if handlung.property("verlauf"):
                     continue
                 if handlung.menu() is not None:
                     sammeln(handlung.menu())
@@ -335,6 +341,9 @@ class TestEnglischeDokumentation(unittest.TestCase):
                 # Eintraege eigener Erweiterungen beschreibt die Hilfe nicht.
                 if handlung.property("fremd"):
                     continue
+                # Die zuletzt geoeffneten Dateien wechseln mit der Arbeit.
+                if handlung.property("verlauf"):
+                    continue
                 gefunden.append(handlung.text())
                 if handlung.menu() is not None:
                     sammeln(handlung.menu())
@@ -394,6 +403,9 @@ class TestEnglischeDokumentation(unittest.TestCase):
                     continue
                 # Eintraege eigener Erweiterungen beschreibt die Hilfe nicht.
                 if handlung.property("fremd"):
+                    continue
+                # Die zuletzt geoeffneten Dateien wechseln mit der Arbeit.
+                if handlung.property("verlauf"):
                     continue
                 if handlung.menu() is not None:
                     sammeln(handlung.menu())

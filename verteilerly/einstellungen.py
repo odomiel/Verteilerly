@@ -112,3 +112,61 @@ def briefkopf_uebernehmen(einstellungen, projekt: Projekt) -> Projekt:
     return projekt
 
 
+
+
+# -- Zuletzt geoeffnet -------------------------------------------------------
+
+#: Die zuletzt geoeffneten oder gespeicherten Projektdateien, neueste zuerst,
+#: als JSON-Liste - ein QSettings gibt eine einelementige Liste sonst als
+#: Zeichenkette zurueck. Sie gehoert dem Rechner und reist darum in keinem
+#: Paket mit (nicht in ``UEBERNAHME_EINZELN``).
+SCHLUESSEL_ZULETZT = "zuletzt_geoeffnet"
+#: So viele stehen im Menue *Datei ▸ Zuletzt geöffnet*.
+ZULETZT_HOECHSTENS = 5
+
+
+def _gleicher_pfad(a: str, b: str) -> bool:
+    """Unter Windows ist C:\\A dasselbe wie c:\\a - normcase weiss das."""
+    import os
+
+    return os.path.normcase(os.path.normpath(a)) == os.path.normcase(os.path.normpath(b))
+
+
+def zuletzt_geoeffnet(einstellungen) -> list[str]:
+    """Die gemerkten Pfade, neueste zuerst - Unlesbares faellt weg."""
+    import json
+
+    try:
+        werte = json.loads(str(einstellungen.value(SCHLUESSEL_ZULETZT, "") or "[]"))
+    except ValueError:
+        return []
+    if not isinstance(werte, list):
+        return []
+    return [str(w) for w in werte if isinstance(w, str) and w][:ZULETZT_HOECHSTENS]
+
+
+def _zuletzt_schreiben(einstellungen, pfade: list[str]) -> list[str]:
+    import json
+
+    pfade = pfade[:ZULETZT_HOECHSTENS]
+    einstellungen.setValue(SCHLUESSEL_ZULETZT, json.dumps(pfade, ensure_ascii=False))
+    return pfade
+
+
+def zuletzt_merken(einstellungen, pfad) -> list[str]:
+    """Stellt ``pfad`` nach vorn - ein schon gemerkter rueckt nur auf."""
+    import pathlib
+
+    neu = str(pathlib.Path(pfad).absolute())
+    bisher = [p for p in zuletzt_geoeffnet(einstellungen) if not _gleicher_pfad(p, neu)]
+    return _zuletzt_schreiben(einstellungen, [neu] + bisher)
+
+
+def zuletzt_vergessen(einstellungen, pfad=None) -> list[str]:
+    """Nimmt einen Pfad aus der Liste - ohne Angabe alle."""
+    if pfad is None:
+        return _zuletzt_schreiben(einstellungen, [])
+    bisher = zuletzt_geoeffnet(einstellungen)
+    return _zuletzt_schreiben(
+        einstellungen, [p for p in bisher if not _gleicher_pfad(p, str(pfad))]
+    )

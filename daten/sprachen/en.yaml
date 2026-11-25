@@ -486,6 +486,11 @@ Ansehen, ohne die Datei zu überschreiben: Look at it without overwriting the fi
 'Die Datei lässt sich nicht schreiben: {0}': 'The file cannot be written: {0}'
 'Schreibgeschützt geöffnet: {0}': 'Opened read-only: {0}'
 Schreibgeschützt öffne&n…: Open read-o&nly…
+'&Zuletzt geöffnet': Open &recent
+(noch keine): (none yet)
+Liste &leeren: '&Clear list'
+Vergisst die zuletzt geöffneten Verteiler: Forgets the recently opened frames
+"Die Datei gibt es nicht mehr; sie ist aus der Liste genommen:\n{0}": "The file no longer exists; it has been removed from the list:\n{0}"
 'So geöffnet: {0}': 'Opened that way: {0}'
 Verteiler schreibgeschützt öffnen: Open frame read-only
 'Blatt:': 'Sheet:'

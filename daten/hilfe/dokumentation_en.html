@@ -91,6 +91,15 @@ unsaved changes the program asks; the buttons are <i>Save</i>, <i>Discard</i>
 and <i>Cancel</i>. Older files are called <code>.vtly.json</code>; they can
 still be opened, and saving them keeps their name.</p>
 
+<p><b>Open recent</b> — <b>File ▸ Open recent</b> lists the <b>last five</b>
+frames that were opened or saved, the newest at the top; a click opens one
+without a file dialog, after the same question as <i>Open</i> if the open frame
+has been changed. The menu shows the file name, the hint the full path; if two
+are called the same, the folder is added. If a file no longer exists, the
+program says so and removes it from the list. <b>Clear list</b> forgets them
+all. The list belongs to this computer: it is kept in the
+<code>Verteilerly.conf</code> and travels in no backup package.</p>
+
 <p><b>Opening read-only</b> — <b>File ▸ Open read-only…</b> (Ctrl+Shift+O)
 shows a file for <b>looking at</b>: <b>nothing can be changed</b>. No cell takes
 an entry, <i>Del</i> empties none, alignment, bold, italic and the split cell
@@ -1675,9 +1684,11 @@ extensions</i>.</p>
 
 <table border="1" cellspacing="0" cellpadding="5">
 <tr><th>Menu</th><th>Entry</th><th>Shortcut</th></tr>
-<tr><td rowspan="11"><b>File</b></td><td>New frame…</td><td>Ctrl+N</td></tr>
+<tr><td rowspan="13"><b>File</b></td><td>New frame…</td><td>Ctrl+N</td></tr>
 <tr><td>Open…</td><td>Ctrl+O</td></tr>
 <tr><td>Open read-only…</td><td>Ctrl+Shift+O</td></tr>
+<tr><td>Open recent</td><td></td></tr>
+<tr><td>Clear list</td><td></td></tr>
 <tr><td>Save</td><td>Ctrl+S</td></tr>
 <tr><td>Save as…</td><td>Ctrl+Shift+S</td></tr>
 <tr><td>Export</td><td></td></tr>

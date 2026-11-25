@@ -503,6 +503,11 @@ class Hauptfenster(QMainWindow):
         aktion(u("Schreibgeschützt öffne&n…"), self.schreibgeschuetzt_oeffnen,
                "Ctrl+Shift+O",
                hinweis=u("Ansehen, ohne die Datei zu überschreiben"))
+        # Die letzten Projektdateien - gebaut wird der Inhalt in
+        # ``zuletzt_menue_auffrischen``, nach jedem Oeffnen und Speichern.
+        self.zuletzt_menue = datei.addMenu(u("&Zuletzt geöffnet"))
+        self.zuletzt_menue.setToolTipsVisible(True)
+        self.zuletzt_menue_auffrischen()
         self.aktion_speichern = aktion(
             u("&Speichern"), self.speichern, "Ctrl+S", True,
             hinweis=u("Den Verteiler speichern"),
@@ -1804,7 +1809,67 @@ class Hauptfenster(QMainWindow):
                 mehrzahl(len(fremde), "Vermerk", "Vermerke"), gezeigt
             )
         self.statusBar().showMessage(meldung)
+        self._zuletzt_merken(pfad)
         return True
+
+    # -- Zuletzt geoeffnet --------------------------------------------------
+
+    def _zuletzt_merken(self, pfad: pathlib.Path) -> None:
+        einstellungsspeicher.zuletzt_merken(self.einstellungen, pfad)
+        self.zuletzt_menue_auffrischen()
+
+    def zuletzt_menue_auffrischen(self) -> None:
+        """Baut *Datei ▸ Zuletzt geöffnet* aus der Conf neu.
+
+        Je Datei ein Eintrag mit Nummer und Dateinamen, der ganze Pfad steht
+        im Hinweis; tragen zwei denselben Namen, kommt der Ordner dazu.
+        Ob eine Datei noch da ist, wird erst beim Oeffnen gefragt - ein
+        Netzlaufwerk soll das Menue nicht aufhalten. Die Eintraege tragen
+        die Eigenschaft ``verlauf``: sie wechseln und stehen darum nicht in
+        der Kuerzeltabelle der Hilfe.
+        """
+        menue = self.zuletzt_menue
+        menue.clear()
+        pfade = [pathlib.Path(p) for p in einstellungsspeicher.zuletzt_geoeffnet(self.einstellungen)]
+        namen = [p.name for p in pfade]
+        for nummer, pfad in enumerate(pfade, start=1):
+            name = pfad.name
+            if namen.count(name) > 1:
+                name = f"{name} — {pfad.parent.name or pfad.parent}"
+            handlung = menue.addAction(f"&{nummer} {name.replace('&', '&&')}")
+            handlung.setToolTip(str(pfad))
+            handlung.setStatusTip(str(pfad))
+            handlung.setProperty("verlauf", True)
+            handlung.triggered.connect(
+                lambda _an=False, ziel=pfad: self.zuletzt_oeffnen(ziel)
+            )
+        if not pfade:
+            leer = menue.addAction(u("(noch keine)"))
+            leer.setEnabled(False)
+            leer.setProperty("verlauf", True)
+        menue.addSeparator()
+        leeren = menue.addAction(u("Liste &leeren"))
+        leeren.setStatusTip(u("Vergisst die zuletzt geöffneten Verteiler"))
+        leeren.setEnabled(bool(pfade))
+        leeren.triggered.connect(self.zuletzt_leeren)
+
+    def zuletzt_oeffnen(self, pfad: pathlib.Path) -> bool:
+        """Oeffnet einen Eintrag der Liste - wie *Öffnen*, nur ohne Dialog."""
+        if not self._darf_verwerfen():
+            return False
+        if not pathlib.Path(pfad).is_file():
+            einstellungsspeicher.zuletzt_vergessen(self.einstellungen, pfad)
+            self.zuletzt_menue_auffrischen()
+            QMessageBox.warning(
+                self, u("Öffnen fehlgeschlagen"),
+                u("Die Datei gibt es nicht mehr; sie ist aus der Liste genommen:\n{0}").format(pfad),
+            )
+            return False
+        return self.datei_oeffnen(pathlib.Path(pfad))
+
+    def zuletzt_leeren(self) -> None:
+        einstellungsspeicher.zuletzt_vergessen(self.einstellungen)
+        self.zuletzt_menue_auffrischen()
 
     def _fremde_vermerke(self) -> list[str]:
         """Vermerke des offenen Projekts, die keine Vorlage kennt.
@@ -1835,6 +1900,7 @@ class Hauptfenster(QMainWindow):
         self._titel_setzen()
         self.aktionen_auffrischen()
         self.statusBar().showMessage(u("Gespeichert: {0}").format(self.pfad))
+        self._zuletzt_merken(self.pfad)
         return True
 
     def speichern_unter(self) -> bool:

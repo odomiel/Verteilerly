@@ -116,7 +116,8 @@ mit ihr; wo es liegt, steht unter *Erweiterungen ▸ CSV2Excel einrichten…*. S
 ist von Haus aus aus und wird unter *Erweiterungen verwalten* eingeschaltet.
 
 **Dazu im Alltag.** Suchen über den ganzen Verteiler, Zurücknehmen und
-Wiederherstellen der letzten fünfzig Schritte, **schreibgeschützt öffnen**,
+Wiederherstellen der letzten fünfzig Schritte, die **letzten fünf Verteiler**
+im Menü *Datei*, **schreibgeschützt öffnen**,
 helles und dunkles Erscheinungsbild, Sichern und Einspielen aller Vorlagen und
 Einstellungen, und ein Protokoll, das sagt, was das Programm getan hat.
 Erweitern lässt es sich mit eigenen Python-Modulen.
