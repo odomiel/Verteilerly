@@ -55,7 +55,6 @@ from ..farbcodes import (
 from ..layout import verteilerbelegungen
 from ..modell import (
     BLATTARTEN,
-    BRIEFKOPF_FELDER,
     LEISTEN_BUCHSTABEN,
     LEISTEN_ZAHLEN,
     RANGIERVORLAGEN,
@@ -1527,11 +1526,8 @@ class Hauptfenster(QMainWindow):
         gemerkt, ausgeblendet = einstellungsspeicher.briefkopf_laden(
             self.einstellungen
         )
-        # Angehakt ist, was die Vorgaben füllen - ein leeres Feld gehört
-        # auf kein Blatt, bis jemand es ausfüllt.
-        ausgeblendet = set(ausgeblendet) | {
-            name for name in BRIEFKOPF_FELDER if not gemerkt.get(name)
-        }
+        # Angehakt ist jedes Feld, auch ein leeres - abgewaehlt ist nur,
+        # was in den Vorgaben ausdruecklich abgewaehlt steht.
         dialog = NeuerVerteilerDialog(
             self.vorlagen, self, self._vorlagenordner(), gemerkt, ausgeblendet,
             self.blattvorlagen, self.vorschau.blattvorlage.id,

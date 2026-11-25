@@ -621,6 +621,11 @@ class TestDialog(unittest.TestCase):
         self.assertIsNot(eines.ausgeblendet, anderes.ausgeblendet)
         self.assertEqual(eines.verteiler.nummer, "1.1")
 
+    def test_jedes_feld_faengt_angehakt_an(self):
+        """Auch ein leeres - wie beim neuen Verteiler."""
+        aus = [n for n, h in self.dialog.projektdaten.haken.items() if not h.isChecked()]
+        self.assertEqual(aus, [])
+
     def test_was_die_blattvorlage_nicht_fuehrt_ist_abgewaehlt(self):
         projekt = self.dialog.projekt_fuer(Angabe("Keller", bauplan=((1, 2),)))
         self.assertTrue(

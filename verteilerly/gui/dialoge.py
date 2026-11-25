@@ -2050,8 +2050,8 @@ class ProjektdatenFelder(QGroupBox):
                 "keinem Blatt.")
             )
             # Der Haken ist zugleich die Beschriftung der Zeile. Er sperrt
-            # das Feld nicht: seit leere Felder abgewaehlt sind, liesse
-            # sich sonst gerade dort nichts eintragen, wo etwas fehlt.
+            # das Feld nicht: an einem abgewaehlten Feld liesse sich sonst
+            # gerade dort nichts eintragen, wo etwas fehlt.
             if inhalt_hakt_an:
                 self._mithaken(feld, haken)
             self.felder[name] = feld

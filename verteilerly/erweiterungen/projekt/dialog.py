@@ -53,7 +53,7 @@ from PySide6.QtWidgets import (
 
 from ... import einstellungen as einstellungsspeicher
 from ...layout import briefkopffelder
-from ...modell import BRIEFKOPF_FELDER, Projekt, Verteiler, mehrzahl
+from ...modell import Projekt, Verteiler, mehrzahl
 from ...sprachen import u
 from ...vorlagen import Vorlagen
 from ...gui.dialoge import ProjektdatenFelder
@@ -266,9 +266,7 @@ class ProjektDialog(PassenderDialog):
         gemerkt, ausgeblendet = einstellungsspeicher.briefkopf_laden(
             self.einstellungen
         )
-        ausgeblendet = set(ausgeblendet) | {
-            name for name in BRIEFKOPF_FELDER if not gemerkt.get(name)
-        }
+        # Angehakt ist jedes Feld, auch ein leeres - wie beim neuen Verteiler.
         self.projektdaten = ProjektdatenFelder(
             gemerkt, ausgeblendet,
             u("Projektdaten — für jeden Verteiler dieselben"),

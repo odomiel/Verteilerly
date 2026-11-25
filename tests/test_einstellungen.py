@@ -181,11 +181,12 @@ class TestVorgaben(unittest.TestCase):
         briefkopf, _ = sp.briefkopf_laden(self.fenster.einstellungen)
         self.assertEqual(briefkopf, {"firma": "Musterfirma", "kuerzel": "JD"})
 
-    def test_im_neuen_verteiler_ist_nur_angehakt_was_es_gibt(self):
-        """Was die Vorgaben nicht füllen, gehört auf kein Blatt."""
+    def test_im_neuen_verteiler_ist_jedes_feld_angehakt(self):
+        """Auch ein leeres Feld: abgewaehlt ist nur, was die Vorgaben abwaehlen."""
         from unittest import mock
 
         from verteilerly.gui.dialoge import NeuerVerteilerDialog
+        from verteilerly.modell import BRIEFKOPF_FELDER
 
         self._vorgaben_setzen(firma="Musterfirma", kuerzel="JD")
         gesehen = {}
@@ -195,17 +196,19 @@ class TestVorgaben(unittest.TestCase):
                 name for name, haken in dialog.projektdaten.haken.items()
                 if haken.isChecked()
             }
+            gesehen["verborgen"] = dialog.projektdaten.verborgene()
             dialog.name.setText("Neu")
             return NeuerVerteilerDialog.DialogCode.Accepted
 
         with mock.patch.object(NeuerVerteilerDialog, "exec", anlegen):
             self.fenster.neuer_verteiler()
 
-        self.assertEqual(gesehen["angehakt"], {"firma", "kuerzel"})
+        self.assertEqual(gesehen["angehakt"], set(BRIEFKOPF_FELDER))
         self.assertEqual(
             self.fenster.projekt.briefkopf, {"firma": "Musterfirma", "kuerzel": "JD"}
         )
-        self.assertIn("kunde", self.fenster.projekt.ausgeblendet)
+        # Abgewaehlt geht nur ins Projekt, was die Blattvorlage nicht fuehrt.
+        self.assertEqual(self.fenster.projekt.ausgeblendet, gesehen["verborgen"])
 
     def test_ein_bearbeiteter_briefkopf_aendert_die_vorgaben_nicht(self):
         """Sonst überschriebe der letzte Kunde die Vorgabe ungefragt."""
