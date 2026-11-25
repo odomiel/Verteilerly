@@ -6,8 +6,8 @@ Erweiterung schreibt die CSV wie *Datei ▸ Exportieren ▸ Als CSV* in den
 Temp-Ordner und startet das Werkzeug mit ihr als Aufrufparameter.
 
 Von Haus aus **aus** (``von_haus_aus_an``): ohne das Werkzeug waere der
-Knopf in der Menueleiste nur im Weg. Eingeschaltet traegt sie zwei Dinge
-ein - den Knopf *An CSV2Excel* direkt in der Menueleiste und *CSV2Excel
+Knopf in der Werkzeugleiste nur im Weg. Eingeschaltet traegt sie zwei Dinge
+ein - den Knopf *An CSV2Excel* in der Werkzeugleiste und *CSV2Excel
 einrichten…* im Menue *Erweiterungen*, wo der Ort des Programms gewaehlt
 wird. Der Ort gehoert dem Rechner und steht darum nicht in der
 Uebernahmeliste fuer Pakete.
@@ -50,7 +50,7 @@ class Csv2Excel(Erweiterung):
     starten = staticmethod(_starten)
 
     def einrichten(self, programm) -> None:
-        self.knopf = programm.menueleistenknopf(
+        self.knopf = programm.werkzeugknopf(
             u("An CSV2Excel"), lambda: self.uebergeben(programm),
             hinweis=u("Die CSV des offenen Verteilers an Verteilerly_CSV2Excel übergeben"),
         )

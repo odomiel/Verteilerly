@@ -897,7 +897,7 @@ Das Programm gibt es nur für Windows.: The program is only available for Window
 Es ist noch nicht eingestellt, wo Verteilerly_CSV2Excel liegt.: It has not been set yet where Verteilerly_CSV2Excel is located.
 Verteilerly_CSV2Excel liegt nicht mehr unter {0}.: Verteilerly_CSV2Excel is no longer at {0}.
 '{0} ist keine Programmdatei.': '{0} is not a program file.'
-Verteilerly_CSV2Excel überträgt die CSV eines Verteilers in die passende Excel-Vorlage. Der Knopf „An CSV2Excel“ in der Menüleiste schreibt die CSV des offenen Verteilers und übergibt sie dem Programm. Das Programm gibt es nur für Windows.: Verteilerly_CSV2Excel transfers the CSV of a frame into the matching Excel template. The button “To CSV2Excel” in the menu bar writes the CSV of the open frame and hands it to the program. The program is only available for Windows.
+Verteilerly_CSV2Excel überträgt die CSV eines Verteilers in die passende Excel-Vorlage. Der Knopf „An CSV2Excel“ in der Werkzeugleiste schreibt die CSV des offenen Verteilers und übergibt sie dem Programm. Das Programm gibt es nur für Windows.: Verteilerly_CSV2Excel transfers the CSV of a frame into the matching Excel template. The button “To CSV2Excel” in the toolbar writes the CSV of the open frame and hands it to the program. The program is only available for Windows.
 wie in Verteilerly_CSV2Excel eingestellt: as set in Verteilerly_CSV2Excel
 Gleich verarbeiten, ohne auf „Start“ zu warten: Process right away, without waiting for “Start”
 'Programm:': 'Program:'

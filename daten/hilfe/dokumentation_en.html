@@ -1542,15 +1542,16 @@ adds two things:</p>
 <b>export folder</b> of its own for the Excel files (empty means: as set in
 Verteilerly_CSV2Excel) and the check mark <b>Process right away, without
 waiting for “Start”</b>.</li>
-<li><b>To CSV2Excel</b> — a button directly in the <b>menu bar</b>, behind
-<i>Help</i>. It writes the CSV of the open frame like <i>File ▸ Export ▸ As
+<li><b>To CSV2Excel</b> — a button in the <b>toolbar</b>, between
+<i>Export</i> and <i>Terminate cable</i>. It writes the CSV of the open frame like <i>File ▸ Export ▸ As
 CSV…</i> into the computer's temp folder (<code>Verteilerly-CSV2Excel</code>)
 and starts Verteilerly_CSV2Excel with that file. There it appears under
 <i>Übergebene CSV-Dateien</i> with the matching template; <i>Start</i> creates
 the Excel file, with the check mark this happens at once.</li>
 </ul>
 
-<p>If it has not been set yet where the program lies, or it is no longer
+<p>Without an open frame the button is greyed out like <i>Export</i>. If it has
+not been set yet where the program lies, or it is no longer
 there, the button first opens <i>Set up CSV2Excel</i>. The CSV is named like
 the project file, without a file like the frame; one of the same name from last
 time is overwritten. Verteilerly_CSV2Excel names the Excel file itself after
@@ -1629,9 +1630,10 @@ file</b>; for that it may just as well stand next to the class as
 <tr><td><code>menueeintrag(text, aufruf, hinweis, kuerzel)</code></td><td>An
 entry in the Extensions menu. An error in the call is shown instead of
 stopping the program.</td></tr>
-<tr><td><code>menueleistenknopf(text, aufruf, hinweis)</code></td><td>A
-button directly in the menu bar, behind the last menu — for the one thing you
-need all the time. Errors are shown as for a menu entry.</td></tr>
+<tr><td><code>werkzeugknopf(text, aufruf, hinweis, braucht_projekt)</code></td><td>A
+button in the toolbar, behind <i>Export</i> — for the one thing you
+need all the time. With <code>braucht_projekt</code> (the default) it is greyed
+out like <i>Export</i> while no frame is open. Errors are shown as for a menu entry.</td></tr>
 <tr><td><code>projekt()</code></td><td>The open frame including the project
 data — or <code>None</code>.</td></tr>
 <tr><td><code>projekt_zeigen(projekt)</code></td><td>Shows a new
@@ -1725,7 +1727,6 @@ extensions</i>.</p>
 <tr><td rowspan="3"><b>Help</b></td><td>Documentation</td><td>F1</td></tr>
 <tr><td>Look for updates…</td><td></td></tr>
 <tr><td>About Verteilerly</td><td></td></tr>
-<tr><td><b>Menu bar</b></td><td>To CSV2Excel</td><td></td></tr>
 </table>
 
 <p>In the editor <b>Alt+←</b> and <b>Alt+→</b> step from strip to strip.</p>

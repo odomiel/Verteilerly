@@ -1595,8 +1595,8 @@ Dann trägt sie zweierlei ein:</p>
 ein eigener <b>Exportordner</b> für die Excel-Dateien (leer heißt: wie in
 Verteilerly_CSV2Excel eingestellt) und der Haken <b>Gleich verarbeiten, ohne
 auf „Start“ zu warten</b>.</li>
-<li><b>An CSV2Excel</b> — ein Knopf direkt in der <b>Menüleiste</b>, hinter
-<i>Hilfe</i>. Er schreibt die CSV des offenen Verteilers wie <i>Datei ▸
+<li><b>An CSV2Excel</b> — ein Knopf in der <b>Werkzeugleiste</b>, zwischen
+<i>Export</i> und <i>Kabel auflegen</i>. Er schreibt die CSV des offenen Verteilers wie <i>Datei ▸
 Exportieren ▸ Als CSV…</i> in den Temp-Ordner des Rechners
 (<code>Verteilerly-CSV2Excel</code>) und startet Verteilerly_CSV2Excel mit
 dieser Datei. Dort steht sie unter <i>Übergebene CSV-Dateien</i> mit der
@@ -1604,7 +1604,8 @@ passenden Vorlage; <i>Start</i> erzeugt die Excel-Datei, mit dem Haken
 geschieht das sofort.</li>
 </ul>
 
-<p>Ist noch nicht eingestellt, wo das Programm liegt, oder liegt es dort nicht
+<p>Ohne offenen Verteiler ist der Knopf ausgegraut wie <i>Export</i>. Ist noch
+nicht eingestellt, wo das Programm liegt, oder liegt es dort nicht
 mehr, öffnet der Knopf zuerst <i>CSV2Excel einrichten</i>. Die CSV heißt wie
 die Projektdatei, ohne Datei wie der Verteiler; eine gleichnamige vom letzten
 Mal wird überschrieben. Die Excel-Datei benennt Verteilerly_CSV2Excel selbst
@@ -1685,9 +1686,10 @@ auszuführen</b>; dafür darf sie auch als <code>version = "1.0"</code> oder
 <tr><td><code>menueeintrag(text, aufruf, hinweis, kuerzel)</code></td><td>Ein
 Eintrag im Menü Erweiterungen. Ein Fehler im Aufruf wird angezeigt, statt das
 Programm anzuhalten.</td></tr>
-<tr><td><code>menueleistenknopf(text, aufruf, hinweis)</code></td><td>Ein
-Knopf direkt in der Menüleiste, hinter dem letzten Menü — für das eine, das
-man ständig braucht. Fehler werden angezeigt wie beim Menüeintrag.</td></tr>
+<tr><td><code>werkzeugknopf(text, aufruf, hinweis, braucht_projekt)</code></td><td>Ein
+Knopf in der Werkzeugleiste, hinter <i>Export</i> — für das eine, das
+man ständig braucht. Mit <code>braucht_projekt</code> (Vorgabe) ist er
+wie <i>Export</i> ausgegraut, solange kein Verteiler offen ist. Fehler werden angezeigt wie beim Menüeintrag.</td></tr>
 <tr><td><code>projekt()</code></td><td>Der offene Verteiler samt Projektdaten —
 oder <code>None</code>.</td></tr>
 <tr><td><code>projekt_zeigen(projekt)</code></td><td>Zeigt ein neues
@@ -1780,7 +1782,6 @@ und sie lässt sich unter <i>Erweiterungen verwalten</i> ausschalten.</p>
 <tr><td rowspan="3"><b>Hilfe</b></td><td>Dokumentation</td><td>F1</td></tr>
 <tr><td>Nach Updates sehen…</td><td></td></tr>
 <tr><td>Über Verteilerly</td><td></td></tr>
-<tr><td><b>Menüleiste</b></td><td>An CSV2Excel</td><td></td></tr>
 </table>
 
 <p>Im Editor schalten <b>Alt+←</b> und <b>Alt+→</b> von Leiste zu Leiste.</p>

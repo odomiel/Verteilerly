@@ -63,12 +63,15 @@ class Schnittstelle:
         self._menue.insertAction(self._trenner, handlung)
         return handlung
 
-    def menueleistenknopf(self, text: str, aufruf, hinweis: str = "") -> QAction:
-        """Ein Knopf **direkt in der Menueleiste**, hinter dem letzten Menue.
+    def werkzeugknopf(
+        self, text: str, aufruf, hinweis: str = "", braucht_projekt: bool = True,
+    ) -> QAction:
+        """Ein Knopf in der **Werkzeugleiste**, hinter *Export*.
 
         Fuer das eine, das man staendig braucht - alles andere gehoert mit
         ``menueeintrag()`` ins Menue *Erweiterungen*. Fehler im Aufruf
-        werden gefangen wie dort.
+        werden gefangen wie dort. Mit ``braucht_projekt`` ist der Knopf wie
+        *Export* ausgegraut, solange kein Verteiler offen ist.
         """
         handlung = QAction(text, self._fenster)
         handlung.triggered.connect(lambda _an=False: self._ausfuehren(aufruf))
@@ -77,12 +80,10 @@ class Schnittstelle:
             handlung.setToolTip(hinweis)
         handlung.setProperty("erweiterung", self._fund.kennung)
         handlung.setProperty("fremd", not self._fund.eingebaut)
-        self._fenster.menuBar().addAction(handlung)
-        # Das Fenster stellt sie hinter das letzte Menue, auch wenn es
-        # beim Einrichten noch nicht steht.
-        knoepfe = getattr(self._fenster, "menueleistenknoepfe", None)
-        if knoepfe is not None:
-            knoepfe.append(handlung)
+        self._fenster.werkzeugleiste.insertAction(self._fenster.werkzeuganker, handlung)
+        if braucht_projekt:
+            self._fenster.projektknoepfe.append(handlung)
+            handlung.setEnabled(self._fenster.projekt is not None)
         return handlung
 
     def _ausfuehren(self, aufruf) -> None:

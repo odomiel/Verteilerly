@@ -109,7 +109,7 @@ Verteiler, an dem sich Blattvorlagen, Ausgabe und Bedienung zeigen lassen,
 ohne erst eine halbe Stunde zu tippen.
 
 **An Verteilerly_CSV2Excel übergeben** (Knopf *An CSV2Excel* in der
-Menüleiste, nur unter Windows): das eigene Werkzeug Verteilerly_CSV2Excel
+Werkzeugleiste, nur unter Windows): das eigene Werkzeug Verteilerly_CSV2Excel
 überträgt die CSV eines Verteilers in feste Excel-Mustertabellen. Die
 Erweiterung schreibt die CSV des offenen Verteilers und startet das Werkzeug
 mit ihr; wo es liegt, steht unter *Erweiterungen ▸ CSV2Excel einrichten…*. Sie

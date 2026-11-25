@@ -548,7 +548,12 @@ class Hauptfenster(QMainWindow):
             hinweis=u("Stellt wieder her, was zuletzt zurückgenommen wurde"),
         )
         bearbeiten.addSeparator()
-        werkzeuge.addSeparator()
+        # Knoepfe der Erweiterungen (``Schnittstelle.werkzeugknopf``) stellen
+        # sich vor diesen Trenner - hinter Export, vor Kabel auflegen.
+        self.werkzeugleiste = werkzeuge
+        self.werkzeuganker = werkzeuge.addSeparator()
+        # Was davon ein offenes Projekt braucht, graut ``aktionen_auffrischen`` aus.
+        self.projektknoepfe: list[QAction] = []
         self.aktion_kabel = aktion(
             u("&Kabel auflegen…"), self.kabel_auflegen, "Ctrl+K", True, bearbeiten,
             hinweis=u("Ein Kabel auf eine Leiste legen"),
@@ -817,9 +822,6 @@ class Hauptfenster(QMainWindow):
         aktion(u("Erweiterungen &verwalten…"), self.erweiterungen_verwalten,
                menue=self.erweiterungsmenue,
                hinweis=u("Eingebaute und eigene Erweiterungen ein- und ausschalten"))
-        # Knoepfe, die Erweiterungen direkt in die Menueleiste setzen
-        # (``Schnittstelle.menueleistenknopf``) - sie kommen hinter *Hilfe*.
-        self.menueleistenknoepfe: list[QAction] = []
         self._erweiterungen_einrichten()
 
         hilfe = self.menuBar().addMenu(u("&Hilfe"))
@@ -833,10 +835,6 @@ class Hauptfenster(QMainWindow):
             hinweis=u("Fragt jetzt, ob eine neuere Fassung veröffentlicht ist"),
         )
         aktion(u("Ü&ber Verteilerly"), self.ueber, menue=hilfe)
-        # Die Menues stehen beieinander, die Knoepfe der Erweiterungen dahinter.
-        for knopf in self.menueleistenknoepfe:
-            self.menuBar().removeAction(knopf)
-            self.menuBar().addAction(knopf)
 
     # -- Darstellung -------------------------------------------------------
 
@@ -1457,6 +1455,8 @@ class Hauptfenster(QMainWindow):
             handlung.setEnabled(aenderbar)
         self.export_knopf.setEnabled(offen)
         self.exportmenue.setEnabled(offen)
+        for handlung in getattr(self, "projektknoepfe", ()):
+            handlung.setEnabled(offen)
 
         # Speichern nur, wenn es etwas zu speichern gibt: ungesicherte
         # Änderungen oder eine Datei, die es noch nicht gibt.

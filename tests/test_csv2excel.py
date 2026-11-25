@@ -108,7 +108,7 @@ class TestVonHausAusAus(unittest.TestCase):
 
 
 class TestImFenster(unittest.TestCase):
-    """Der Knopf steht in der Menueleiste, solange sie eingeschaltet ist."""
+    """Der Knopf steht in der Werkzeugleiste, solange sie eingeschaltet ist."""
 
     def _fenster(self, an: bool):
         """Ein Hauptfenster - die Wahl steht vorher in der Conf der Testreihe."""
@@ -125,21 +125,41 @@ class TestImFenster(unittest.TestCase):
 
     @staticmethod
     def _leiste(fenster):
-        return [a.text().replace("&", "") for a in fenster.menuBar().actions()]
+        """Die Werkzeugleiste als Woerter - Export als EXPORT, Trenner als |."""
+        leiste = fenster.werkzeugleiste
+        woerter = []
+        for handlung in leiste.actions():
+            if handlung.isSeparator():
+                woerter.append("|")
+            elif leiste.widgetForAction(handlung) is fenster.export_knopf:
+                woerter.append("EXPORT")
+            else:
+                woerter.append(handlung.text().replace("&", ""))
+        return woerter
 
     def test_ausgeschaltet_kein_knopf(self):
         fenster = self._fenster(an=False)
         self.assertNotIn("An CSV2Excel", self._leiste(fenster))
+        menueleiste = [a.text().replace("&", "") for a in fenster.menuBar().actions()]
+        self.assertNotIn("An CSV2Excel", menueleiste)
 
-    def test_eingeschaltet_knopf_hinter_dem_letzten_menue(self):
+    def test_eingeschaltet_zwischen_export_und_kabel_auflegen(self):
         fenster = self._fenster(an=True)
         leiste = self._leiste(fenster)
-        self.assertEqual(leiste[-1], "An CSV2Excel")
-        self.assertEqual(leiste[-2], "Hilfe")
-        knopf = fenster.menuBar().actions()[-1]
-        self.assertIsNone(knopf.menu())
+        stelle = leiste.index("EXPORT")
+        self.assertEqual(
+            leiste[stelle:stelle + 4], ["EXPORT", "An CSV2Excel", "|", "Kabel auflegen…"]
+        )
+        knopf = next(a for a in fenster.werkzeugleiste.actions() if a.text() == "An CSV2Excel")
         self.assertEqual(knopf.property("erweiterung"), "csv2excel")
         self.assertFalse(knopf.property("fremd"))
+        # Ohne Verteiler aus wie Export, mit einem an.
+        self.assertFalse(knopf.isEnabled())
+        fenster._projekt_setzen(_projekt(), None)
+        self.assertTrue(knopf.isEnabled())
+        # In der Menueleiste steht er nicht.
+        menueleiste = [a.text().replace("&", "") for a in fenster.menuBar().actions()]
+        self.assertEqual(menueleiste[-1], "Hilfe")
 
         menue = next(
             a.menu() for a in fenster.menuBar().actions()

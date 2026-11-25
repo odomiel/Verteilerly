@@ -37,7 +37,7 @@ class EinrichtenDialog(PassenderDialog):
         hinweis = QLabel(u(
             "Verteilerly_CSV2Excel überträgt die CSV eines Verteilers in die "
             "passende Excel-Vorlage. Der Knopf „An CSV2Excel“ in der "
-            "Menüleiste schreibt die CSV des offenen Verteilers und übergibt "
+            "Werkzeugleiste schreibt die CSV des offenen Verteilers und übergibt "
             "sie dem Programm. Das Programm gibt es nur für Windows."
         ))
         hinweis.setWordWrap(True)
