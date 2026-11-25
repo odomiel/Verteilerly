@@ -10,7 +10,9 @@ quer durch den Block, der trennt, was darueber steht - er hat nichts
 auszurichten und traegt darum keinen Knopf.
 
 Die Breiten sind Anteile: ohne Haken bei *Breiten selbst festlegen*
-teilt das Programm nach Augenmass.
+teilt das Programm nach Augenmass. In der Bauart der Mustertabellen gibt
+es keine Breiten je Block - dort steht der letzte Block rechts, die
+uebrigen links untereinander (``mustertabellen_setzen``).
 """
 
 from __future__ import annotations
@@ -95,6 +97,9 @@ class SchriftfeldEditor(QWidget):
         self._symbole: dict[tuple[str, str], QIcon] = {}
         self.listen: list[QListWidget] = []
         self.breiten: list[QDoubleSpinBox] = []
+        #: Bauart der Mustertabellen: Bloecke links untereinander, der
+        #: letzte rechts - keine Breiten je Block.
+        self.mustertabellen = False
 
         self.hinweis = hinweis = QLabel(u(
             "Welche Angaben in welchem Block stehen. Einträge lassen sich "
@@ -167,6 +172,20 @@ class SchriftfeldEditor(QWidget):
         if not self.eigene_breiten.isChecked():
             return bloecke, ()
         return bloecke, tuple(round(feld.value(), 3) for feld in self.breiten)
+
+    def mustertabellen_setzen(self, an: bool) -> None:
+        """Schaltet die Ansicht auf die Bauart der Mustertabellen um.
+
+        Die Bloecke bleiben, wie sie sind; nur sagt jeder, wo er auf dem
+        Blatt steht, und die Breiten je Block fallen weg - dort teilt die
+        *linke Haelfte* des Dialogs.
+        """
+        if an == self.mustertabellen:
+            return
+        self._bloecke = self._aus_listen()
+        self.mustertabellen = an
+        self.eigene_breiten.setVisible(not an)
+        self._aufbauen()
 
     # -- Bearbeiten ----------------------------------------------------------
 
@@ -260,7 +279,7 @@ class SchriftfeldEditor(QWidget):
             spalte = QWidget()
             aufbau = QVBoxLayout(spalte)
             aufbau.setContentsMargins(0, 0, 0, 0)
-            aufbau.addWidget(QLabel(u("{0}. Block").format(stelle + 1)))
+            aufbau.addWidget(QLabel(self._blockname(stelle, teile)))
             aufbau.addWidget(self._liste(stelle), 1)
             aufbau.addLayout(self._listenknoepfe(stelle))
             breite = QDoubleSpinBox()
@@ -271,11 +290,20 @@ class SchriftfeldEditor(QWidget):
             breite.setValue(self._breiten[stelle] if len(self._breiten) == teile else vorgabe[stelle])
             breite.setEnabled(self.eigene_breiten.isChecked())
             breite.valueChanged.connect(self._breite_geaendert)
+            breite.setVisible(not self.mustertabellen)
             aufbau.addWidget(breite)
             self.breiten.append(breite)
             self.bloecke.addWidget(spalte, 1)
         self.block_hinzu.setEnabled(len(self._bloecke) < HOECHSTENS_BLOECKE)
         self.block_weg.setEnabled(len(self._bloecke) > 1)
+
+    def _blockname(self, stelle: int, teile: int) -> str:
+        """Wie der Block ueber seiner Liste heisst - und wo er steht."""
+        if not self.mustertabellen:
+            return u("{0}. Block").format(stelle + 1)
+        if teile > 1 and stelle == teile - 1:
+            return u("{0}. Block — rechts").format(stelle + 1)
+        return u("{0}. Block — links").format(stelle + 1)
 
     def _liste(self, block: int) -> QListWidget:
         liste = QListWidget()

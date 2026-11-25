@@ -79,10 +79,12 @@ def einstellung_bewahren(test, einstellungen, schluessel: str) -> None:
 
     test.addCleanup(zurueck)
 
-from verteilerly.blattvorlagen import Blattvorlage
+from verteilerly.blattvorlagen import Blattvorlage, Schriftfeldeintrag
 
-#: Eine Blattvorlage mit dem Schriftfeld der Bauart "beispiel": links die
-#: Matrix und der Verteiler, rechts Firma und Kunde mit ihren Anschriften.
+#: Eine Blattvorlage mit dem Schriftfeld der Bauart "beispiel": links oben
+#: die Matrix, darunter der Verteiler, rechts Firma und Kunde mit ihren
+#: Anschriften - die Bloecke in der Reihenfolge, in der sie dort stehen,
+#: die Werte mittig wie in den Mustertabellen.
 #: Sie steht hier im Quelltext, nicht als Datei im Repo - geprueft wird
 #: die Bauart, die das Programm kann, nicht eine mitgelieferte Vorlage.
 BEISPIELVORLAGE = Blattvorlage(
@@ -92,9 +94,12 @@ BEISPIELVORLAGE = Blattvorlage(
     schriftfeld_hoehe=38.0,
     schriftfeld_art="beispiel",
     schriftfeld_anteile=(0.42, 0.58),
-    schriftfeld=(
-        ("verteiler", "verteilernummer", "leiste"),
-        ("erstellt", "stand", "geprueft"),
-        ("firma", "kunde"),
+    schriftfeld=tuple(
+        tuple(Schriftfeldeintrag(marke, "mitte") for marke in block)
+        for block in (
+            ("erstellt", "stand", "geprueft"),
+            ("verteiler", "verteilernummer", "leiste"),
+            ("firma", "kunde"),
+        )
     ),
 )

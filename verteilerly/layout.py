@@ -13,7 +13,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
 
-from .blattvorlagen import LINKS, MITTE, RECHTS, STANDARD, Blattvorlage, Spalte
+from .blattvorlagen import (
+    LINKS,
+    MITTE,
+    RECHTS,
+    STANDARD,
+    Blattvorlage,
+    Schriftfeldeintrag,
+    Spalte,
+)
 from .modell import (
     BLATTARTEN,
     BLATTBESCHRIFTUNG,
@@ -553,11 +561,9 @@ def briefkopffelder(vorlage: Blattvorlage) -> tuple[str, ...]:
     ``BRIEFKOPF_FELDER`` - eine Liste, die mit der Vorlage die Ordnung
     wechselt, laesst sich nicht wiederfinden.
 
-    Die Bauart ``beispiel`` fuehrt ihr Schriftfeld fest im Programm; dort
-    gelten alle Felder.
+    Das gilt fuer beide Bauarten: auch ``beispiel`` zeichnet, was in
+    ihren Bloecken steht.
     """
-    if vorlage.schriftfeld_art == "beispiel":
-        return BRIEFKOPF_FELDER
     # Was auch ohne Schriftfeld wirkt, gilt immer.
     gefuehrt: set[str] = set(OHNE_SCHRIFTFELD)
     for block in vorlage.schriftfeld:
@@ -695,53 +701,127 @@ def schriftfeldspalten(
     ]
 
 
+@dataclass(frozen=True)
+class Beispielzeile:
+    """Eine Zeile eines Blocks der Bauart ``beispiel``.
+
+    ``art`` ist ``paar`` (Beschriftung, Datum, Name - eine Zeile der
+    Matrix), ``feld`` (Beschriftung und Wert) oder ``strich``.
+    """
+
+    art: str
+    beschriftung: str = ""
+    wert: str = ""
+    name: str = ""
+    ausrichtung: str = MITTE
+
+
+@dataclass(frozen=True)
+class Beispielkasten:
+    """Ein Kasten der rechten Haelfte: eine Angabe, Zeile fuer Zeile."""
+
+    beschriftung: str
+    zeilen: tuple[str, ...]
+    sichtbar: bool
+    ausrichtung: str = MITTE
+
+
+def beispielbloecke(vorlage: Blattvorlage) -> tuple[tuple, tuple]:
+    """Welche Bloecke links stehen und welcher rechts.
+
+    Der **letzte** Block ist die rechte Haelfte - je Angabe ein Kasten,
+    untereinander. Die uebrigen stehen links untereinander, in der
+    Reihenfolge der Datei. Mit nur einem Block bleibt rechts frei.
+
+    Ein eigenes Feld, das in keinem Block steht, kommt zum Block mit dem
+    Verteiler: bis 2026.11.25 stand es dort von selbst, und eine aeltere
+    Vorlage soll es nicht verlieren.
+    """
+    bloecke = [list(block) for block in vorlage.schriftfeld if block]
+    if not bloecke:
+        return (), ()
+    links, rechts = (bloecke[:-1], bloecke[-1]) if len(bloecke) > 1 else (bloecke, [])
+    platziert = {e.marke for block in bloecke for e in block}
+    fehlend = [n for n in vorlage.eigene_felder if n not in platziert]
+    if fehlend and links:
+        ziel = next(
+            (block for block in links if any(e.marke == "verteiler" for e in block)),
+            links[-1],
+        )
+        ziel.extend(Schriftfeldeintrag(n, MITTE) for n in fehlend)
+    return tuple(tuple(block) for block in links), tuple(rechts)
+
+
 def beispielschriftfeld(
     projekt: Projekt,
     leiste: int | None = None,
     blattart: str = "leisten",
     vorlage: Blattvorlage = STANDARD,
-) -> tuple[
-    list[tuple[str, str, str]], list[tuple[str, str]], list[tuple[str, list[str]]]
-]:
-    """Die drei Teile dieses Schriftfeldes, als reine Werte.
+    blatttitel: str = "",
+) -> tuple[list[list[Beispielzeile]], list[Beispielkasten]]:
+    """Die beiden Haelften dieses Schriftfeldes, als reine Werte.
 
-    Erstens die Matrix - je Zeile Beschriftung, Datum und Name -,
-    zweitens der Verteiler mit Nummer, Leiste und den eigenen Feldern,
-    drittens die beiden Anschriften mit ihren Zeilen. Wer daraus ein
-    Blatt zeichnet oder eine Tabelle baut, nimmt dieselben Werte.
+    Links je Block eine Liste von Zeilen - eine Paarmarke (Erstellt,
+    Stand, Geprueft, Gezeichnet) wird zur Zeile der Matrix aus Datum und
+    Name, alles andere zu Beschriftung und Wert. Rechts je Angabe des
+    letzten Blocks ein Kasten. Was gezeichnet wird und was in die Mappe
+    kommt, steht damit an **einer** Stelle - und es ist das, was in den
+    Bloecken der Vorlage steht.
     """
-    matrix = [
-        (
-            projekt.beschriftung(marke),
-            _wert(projekt, marke + "_am"),
-            _wert(projekt, marke + "_von"),
-        )
-        for marke in ("erstellt", "stand", "geprueft")
-        if _marke_sichtbar(marke, projekt)
-    ]
+    links_bloecke, rechts_block = beispielbloecke(vorlage)
+    traeger = Blatt(0, 0, titel=blatttitel)
 
-    v = projekt.verteiler
-    verteiler = [
-        (_mit_doppelpunkt(projekt.beschriftung("verteiler")), v.name),
-        (_mit_doppelpunkt(projekt.beschriftung("verteilernummer")), v.nummer),
-    ]
-    if blattart == "belegung":
-        verteiler += projekt.eigene_felder_hier("belegung", vorlage)
-    else:
-        verteiler.append((
-            _mit_doppelpunkt(projekt.beschriftung("leiste")),
-            "" if leiste is None else projekt.leistenname(leiste),
-        ))
-        verteiler += projekt.eigene_felder_hier(blattart, vorlage)
+    links: list[list[Beispielzeile]] = []
+    for block in links_bloecke:
+        zeilen: list[Beispielzeile] = []
+        for eintrag in block:
+            marke = eintrag.marke
+            if marke == "strich":
+                zeilen.append(Beispielzeile("strich"))
+            elif marke in PAARMARKEN:
+                if not _marke_sichtbar(marke, projekt):
+                    continue
+                name = _wert(projekt, marke + "_von")
+                if marke == "gezeichnet":
+                    kuerzel = _wert(projekt, "kuerzel")
+                    name = f"{name} ({kuerzel})" if name and kuerzel else name or kuerzel
+                zeilen.append(Beispielzeile(
+                    "paar", projekt.beschriftung(marke),
+                    _wert(projekt, marke + "_am"), name, eintrag.ausrichtung,
+                ))
+            else:
+                for beschriftung, wert in schriftfeldzeilen(_eintraege(
+                    marke, projekt, traeger, leiste, blattart, vorlage
+                )):
+                    zeilen.append(Beispielzeile(
+                        "feld",
+                        _mit_doppelpunkt(beschriftung) if beschriftung else "",
+                        wert, "", eintrag.ausrichtung,
+                    ))
+        links.append(zeilen)
 
-    anschriften: list[tuple[str, list[str]]] = []
-    for marke in ("firma", "kunde"):
-        if not _marke_sichtbar(marke, projekt):
-            anschriften.append((projekt.beschriftung(marke), []))
+    rechts: list[Beispielkasten] = []
+    for eintrag in rechts_block:
+        marke = eintrag.marke
+        if marke == "strich":
             continue
-        zeilen = [teil.strip() for teil in _wert(projekt, marke).split("\n")]
-        anschriften.append((projekt.beschriftung(marke), [t for t in zeilen if t]))
-    return matrix, verteiler, anschriften
+        zeilen_roh = _eintraege(marke, projekt, traeger, leiste, blattart, vorlage)
+        beschriftung = zeilen_roh[0][0] if zeilen_roh else projekt.beschriftung(marke)
+        teile = tuple(
+            teil.strip()
+            for _name, wert in zeilen_roh
+            for teil in str(wert).split("\n")
+            if teil.strip()
+        )
+        rechts.append(Beispielkasten(
+            beschriftung, teile, bool(zeilen_roh), eintrag.ausrichtung
+        ))
+    return links, rechts
+
+
+def beispiel_mit_matrix(zeilen: list[Beispielzeile]) -> bool:
+    """Ob ein Block die Kopfzeile Datum / Name braucht."""
+    return any(z.art == "paar" for z in zeilen)
 
 
 def schriftfeld(
@@ -824,68 +904,94 @@ def _schriftfeld_beispiel(
     vorlage: Blattvorlage,
     blattart: str = "leisten",
 ) -> None:
-    """Das Schriftfeld der Mustertabellen, Feld fuer Feld nachgebaut.
+    """Das Schriftfeld der Mustertabellen - aus den Bloecken der Vorlage.
 
-    Links oben eine Matrix: die Spalten Datum und Name, die Zeilen
-    Erstellt, Stand und Geprueft. Links unten der Verteiler mit Nummer
-    und Leiste. Rechts daneben zwei Kaesten uebereinander - Firma oben,
-    Kunde unten -, in denen die Anschrift zeilenweise steht.
+    Links die Bloecke untereinander (ein Block mit Paarmarken als Matrix
+    aus Datum und Name), rechts je Angabe des letzten Blocks ein Kasten,
+    in dem sie Zeile fuer Zeile steht. Wie sich die beiden Haelften die
+    Breite teilen, sagt ``schriftfeld_anteile``.
     """
     rand = vorlage.rand
     hoehe = vorlage.schriftfeld_hoehe
     oben = blatt.hoehe - rand - hoehe
     breite = blatt.breite - 2 * rand
-
-    # Wie sich die beiden Haelften teilen, sagt die Blattvorlage: links
-    # die Matrix und der Verteiler, rechts die beiden Anschriften.
-    linkes = breite * schriftfeldanteile(2, vorlage.schriftfeld_anteile)[0]
-    mitte_y = oben + hoehe / 2
-
-    blatt.rechteck(rand, oben, breite, hoehe, fuellung=None, staerke=0.4)
-    blatt.linie(rand + linkes, oben, rand + linkes, oben + hoehe, 0.2, LINIE_FEIN)
-    blatt.linie(rand, mitte_y, rand + breite, mitte_y, 0.2, LINIE_FEIN)
-
-    _beispiel_matrix(blatt, projekt, vorlage, rand, oben, linkes, hoehe / 2)
-    _beispiel_verteiler(
-        blatt, projekt, leiste, vorlage, rand, mitte_y, linkes, hoehe / 2, blattart
+    links, rechts = beispielschriftfeld(
+        projekt, leiste, blattart, vorlage, blatt.titel
     )
 
-    anschriften = rand + linkes
-    weite = breite - linkes
-    for i, marke in enumerate(("firma", "kunde")):
-        _beispiel_anschrift(
-            blatt, projekt, vorlage, marke,
-            anschriften, oben + i * hoehe / 2, weite, hoehe / 2,
+    linkes = breite * schriftfeldanteile(2, vorlage.schriftfeld_anteile)[0]
+    if not rechts and len(vorlage.schriftfeld) < 2:
+        linkes = breite
+    blatt.rechteck(rand, oben, breite, hoehe, fuellung=None, staerke=0.4)
+    if linkes < breite:
+        blatt.linie(rand + linkes, oben, rand + linkes, oben + hoehe, 0.2, LINIE_FEIN)
+
+    # Die Zeilenhoehe ist in allen linken Bloecken dieselbe, damit sie
+    # dieselbe Schrift tragen - bei zwei Bloecken ein Achtel der Hoehe,
+    # wie in den Mustertabellen.
+    if links:
+        teil_h = hoehe / len(links)
+        zeile_h = min(
+            teil_h / max(
+                len(z) + (1 if beispiel_mit_matrix(z) else 0), 1
+            )
+            for z in links
         )
+        zeile_h = min(zeile_h, hoehe / 8)
+        for k, zeilen in enumerate(links):
+            y = oben + k * teil_h
+            if k:
+                blatt.linie(rand, y, rand + linkes, y, 0.2, LINIE_FEIN)
+            _beispiel_block(blatt, vorlage, zeilen, rand, y, linkes, teil_h, zeile_h)
+
+    if rechts:
+        kasten_h = hoehe / len(rechts)
+        for i, kasten in enumerate(rechts):
+            y = oben + i * kasten_h
+            if i:
+                blatt.linie(rand + linkes, y, rand + breite, y, 0.2, LINIE_FEIN)
+            _beispiel_kasten(
+                blatt, vorlage, kasten, rand + linkes, y, breite - linkes, kasten_h
+            )
 
 
-def _beispiel_matrix(
-    blatt: Blatt, projekt: Projekt, vorlage: Blattvorlage,
-    x: float, y: float, breite: float, hoehe: float,
+def _beispiel_block(
+    blatt: Blatt, vorlage: Blattvorlage, zeilen: list[Beispielzeile],
+    x: float, y: float, breite: float, hoehe: float, zeile_h: float,
 ) -> None:
-    """Erstellt / Stand / Geprueft, je mit Datum und Name."""
-    marken = beispielschriftfeld(projekt)[0]
-    zeilen = len(marken) + 1                      # die Kopfzeile zaehlt mit
-    zeile_h = hoehe / max(zeilen, 4)
+    """Ein linker Block: Matrix-Zeilen und Beschriftung mit Wert."""
+    matrix = beispiel_mit_matrix(zeilen)
+    anzahl = len(zeilen) + (1 if matrix else 0)
+    erste = y + (hoehe - zeile_h * anzahl) / 2
     label_b = breite * BESCHRIFTUNGSANTEIL
     spalte_b = (breite - label_b) / 2
-
-    for i, ueberschrift in enumerate(("Datum", "Name")):
+    if matrix:
+        for i, ueberschrift in enumerate(("Datum", "Name")):
+            blatt.text(
+                x + label_b + i * spalte_b, erste, spalte_b, zeile_h, ueberschrift,
+                vorlage.schrift_klein, MITTE, False, TINTE_LEISE,
+            )
+        erste += zeile_h
+    for j, zeile in enumerate(zeilen):
+        zeile_y = erste + j * zeile_h
+        if zeile.art == "strich":
+            mitte = zeile_y + zeile_h / 2
+            blatt.linie(x, mitte, x + breite, mitte, 0.2, LINIE_FEIN)
+            continue
         blatt.text(
-            x + label_b + i * spalte_b, y, spalte_b, zeile_h, ueberschrift,
-            vorlage.schrift_klein, MITTE, False, TINTE_LEISE,
-        )
-
-    for j, (beschriftung, datum, name) in enumerate(marken, 1):
-        zeile_y = y + j * zeile_h
-        blatt.text(
-            x + 2, zeile_y, label_b - 3, zeile_h, beschriftung,
+            x + 2, zeile_y, label_b - 3, zeile_h, zeile.beschriftung,
             vorlage.schrift_klein, LINKS, False, TINTE_LEISE,
         )
-        for i, wert in enumerate((datum, name)):
+        if zeile.art == "paar":
+            for i, wert in enumerate((zeile.wert, zeile.name)):
+                blatt.text(
+                    x + label_b + i * spalte_b, zeile_y, spalte_b, zeile_h,
+                    wert, vorlage.schrift_normal, zeile.ausrichtung,
+                )
+        else:
             blatt.text(
-                x + label_b + i * spalte_b, zeile_y, spalte_b, zeile_h,
-                wert, vorlage.schrift_normal, MITTE,
+                x + label_b, zeile_y, breite - label_b - 2, zeile_h, zeile.wert,
+                vorlage.schrift_normal, zeile.ausrichtung,
             )
 
 
@@ -894,62 +1000,30 @@ def _mit_doppelpunkt(text: str) -> str:
     return text if text.endswith((":", ".")) else text + ":"
 
 
-def _beispiel_verteiler(
-    blatt: Blatt, projekt: Projekt, leiste: int | None, vorlage: Blattvorlage,
-    x: float, y: float, breite: float, hoehe: float, blattart: str = "leisten",
-) -> None:
-    """Verteiler, Nummer und Leiste - Beschriftung links, Wert daneben.
-
-    Auf der Verteilerbelegung gibt es keine einzelne Leiste; dort stehen
-    an ihrer Stelle die eigenen Felder.
-    """
-    zeilen = beispielschriftfeld(projekt, leiste, blattart, vorlage)[1]
-    # Die Zeilenhoehe richtet sich nach der Matrix darueber, damit beide
-    # Haelften dieselbe Schrift tragen; der Block steht dann aber mittig
-    # zwischen den beiden Strichen statt oben angeschlagen.
-    zeile_h = hoehe / max(len(zeilen), 4)
-    erste = y + (hoehe - zeile_h * len(zeilen)) / 2
-    # Dieselbe Fluchtlinie wie die Matrix darueber.
-    label_b = breite * BESCHRIFTUNGSANTEIL
-    for j, (name, wert) in enumerate(zeilen):
-        zeile_y = erste + j * zeile_h
-        blatt.text(
-            x + 2, zeile_y, label_b - 3, zeile_h, name,
-            vorlage.schrift_klein, LINKS, False, TINTE_LEISE,
-        )
-        blatt.text(
-            x + label_b, zeile_y, breite - label_b - 2, zeile_h, wert,
-            vorlage.schrift_normal, MITTE,
-        )
-
-
-def _beispiel_anschrift(
-    blatt: Blatt, projekt: Projekt, vorlage: Blattvorlage, marke: str,
+def _beispiel_kasten(
+    blatt: Blatt, vorlage: Blattvorlage, kasten: Beispielkasten,
     x: float, y: float, breite: float, hoehe: float,
 ) -> None:
-    """Ein Kasten mit einer Anschrift - Zeile fuer Zeile, mittig."""
-    if not _marke_sichtbar(marke, projekt):
+    """Ein Kasten der rechten Haelfte - die Angabe Zeile fuer Zeile.
+
+    Ein abgewaehltes Feld bleibt leer; ein leeres, aber angewaehltes
+    zeigt seine Beschriftung, damit klar ist, was hinein gehoert.
+    """
+    if not kasten.sichtbar:
         return
-    beschriftung, zeilen = dict(
-        (m, (b, z))
-        for m, (b, z) in zip(
-            ("firma", "kunde"), beispielschriftfeld(projekt)[2]
-        )
-    )[marke]
-    if not zeilen:
+    if not kasten.zeilen:
         blatt.text(
-            x + 3, y, breite - 6, hoehe, beschriftung,
+            x + 3, y, breite - 6, hoehe, kasten.beschriftung,
             vorlage.schrift_klein, LINKS, False, TINTE_LEISE,
         )
         return
-
-    zeile_h = min(vorlage.schrift_normal * 0.45 + 1.4, hoehe / len(zeilen))
-    block = zeile_h * len(zeilen)
+    zeile_h = min(vorlage.schrift_normal * 0.45 + 1.4, hoehe / len(kasten.zeilen))
+    block = zeile_h * len(kasten.zeilen)
     erste = y + (hoehe - block) / 2
-    for i, teil in enumerate(zeilen):
+    for i, teil in enumerate(kasten.zeilen):
         blatt.text(
             x + 3, erste + i * zeile_h, breite - 6, zeile_h, teil,
-            vorlage.schrift_normal, MITTE,
+            vorlage.schrift_normal, kasten.ausrichtung,
         )
 
 

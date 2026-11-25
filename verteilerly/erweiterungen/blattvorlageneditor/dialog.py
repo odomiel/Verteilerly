@@ -92,8 +92,8 @@ SONDERWERT = {"schrift_leiste": "automatisch"}
 # Die Hoehe des Schriftfeldes steht bei seinen Bloecken, nicht beim Blatt.
 SCHRIFTFELDHOEHE = ("schriftfeld_hoehe", "Höhe", "mm", 10.0, 80.0, 0.5)
 #: Die Bauarten des Schriftfeldes - Name in der Oberflaeche, Kennung in
-#: der Datei. "beispiel" steht fest im Programm (die Aufteilung der
-#: Mustertabellen), darum gibt es dafuer keine Bloecke einzustellen.
+#: der Datei. Beide zeichnen die Bloecke; "beispiel" legt sie nur anders
+#: hin (links untereinander, der letzte rechts - wie die Mustertabellen).
 SCHRIFTFELDARTEN = (
     ("Blöcke", "standard"),
     ("Wie die Mustertabellen", "beispiel"),
@@ -314,8 +314,7 @@ class EditorDialog(PassenderDialog):
         self.zahlen[feld] = hoehe
 
         # Welche Bauart das Schriftfeld hat. Die Bloecke baut der Editor
-        # selbst; die Aufteilung der Mustertabellen steht im Programm -
-        # umschalten laesst sich aber beides.
+        # in beiden; die Bauart sagt nur, wie sie auf dem Blatt liegen.
         self.bauart = QComboBox()
         for name, kennung in SCHRIFTFELDARTEN:
             self.bauart.addItem(u(name), kennung)
@@ -327,17 +326,15 @@ class EditorDialog(PassenderDialog):
 
         self.schriftfeld = SchriftfeldEditor()
         self.schriftfeld.geaendert.connect(self._geaendert)
-        # Eine Vorlage, deren Schriftfeld im Programm steht, laesst sich
-        # hier nicht umbauen - gesagt werden muss das aber, sonst sieht
-        # die ausgegraute Liste wie ein Fehler aus.
+        # Bei den Mustertabellen liegen die Bloecke anders als
+        # nebeneinander - das muss dastehen, sonst sucht man die Breiten.
         self.schriftfeldhinweis = QLabel()
         self.schriftfeldhinweis.setWordWrap(True)
         self.schriftfeldhinweis.hide()
 
         # Die Mustertabellen teilen ihr Schriftfeld in zwei Haelften -
-        # links der Verteiler, rechts die Anschriften. Wie breit die
-        # linke ist, steht als schriftfeld_anteile in der Vorlage; die
-        # Bloecke daneben haben damit nichts zu tun.
+        # links die Bloecke untereinander, rechts der letzte. Wie breit
+        # die linke ist, steht als schriftfeld_anteile in der Vorlage.
         self.linke_haelfte = QDoubleSpinBox()
         self.linke_haelfte.setRange(0.1, 0.9)
         self.linke_haelfte.setSingleStep(0.01)
@@ -364,17 +361,22 @@ class EditorDialog(PassenderDialog):
         self._geaendert()
 
     def _schriftfeldbauart_zeigen(self) -> None:
-        """Sperrt die Bloecke, wenn die Bauart sie nicht hergibt."""
-        eigene_bauart = self.bauart.currentData() != "standard"
-        self.schriftfeld.setEnabled(not eigene_bauart)
-        self.schriftfeldhinweis.setVisible(eigene_bauart)
-        self.teilungszeile.setVisible(eigene_bauart)
-        if eigene_bauart:
+        """Sagt, wie die Bauart die Bloecke hinlegt.
+
+        Bis 2026.11.25 stand das Schriftfeld der Mustertabellen fest im
+        Programm, die Liste hier war ausgegraut - und zeigte Bloecke in
+        einer Reihenfolge, die das Blatt gar nicht hatte.
+        """
+        mustertabellen = self.bauart.currentData() == "beispiel"
+        self.schriftfeld.mustertabellen_setzen(mustertabellen)
+        self.schriftfeldhinweis.setVisible(mustertabellen)
+        self.teilungszeile.setVisible(mustertabellen)
+        if mustertabellen:
             self.schriftfeldhinweis.setText(
-                u("Die Bauart „{0}“ führt ihr Schriftfeld fest im Programm — "
-                  "die Blöcke sind hier nicht einstellbar. Einstellbar sind "
-                  "die Höhe und die Teilung der beiden Hälften.").format(
-                      self.bauart.currentData())
+                u("Wie die Mustertabellen: der letzte Block steht rechts, je "
+                  "Angabe ein Kasten untereinander; die übrigen Blöcke stehen "
+                  "links untereinander. Erstellt, Stand, Geprüft und "
+                  "Gezeichnet werden dort zur Tabelle aus Datum und Name.")
             )
 
     # -- Eigene Felder -------------------------------------------------------
@@ -643,10 +645,9 @@ class EditorDialog(PassenderDialog):
         # ein Speichern verwarf die Bauart samt Breiten.
         art = self.bauart.currentData()
         if art != "standard":
-            # Die Bloecke bleiben, wie sie in der Datei stehen - diese
-            # Bauart zeichnet sie nicht. Einzustellen ist nur, wie sich
-            # die beiden Haelften die Breite teilen.
-            schriftfeld = self.basis.schriftfeld
+            # Die Bloecke kommen aus dem Editor wie bei "standard"; statt
+            # der Breiten je Block zaehlt die Teilung der beiden Haelften.
+            schriftfeld = self.schriftfeld.werte()[0]
             links = round(self.linke_haelfte.value(), 2)
             anteile = (links, round(1.0 - links, 2))
         else:

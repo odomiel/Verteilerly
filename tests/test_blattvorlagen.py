@@ -372,8 +372,8 @@ class TestMitgelieferte(unittest.TestCase):
         self.assertEqual(
             [[eintrag.marke for eintrag in block] for block in vorlage.schriftfeld],
             [
-                ["verteiler", "verteilernummer", "leiste"],
                 ["erstellt", "stand", "geprueft"],
+                ["verteiler", "verteilernummer", "leiste"],
                 ["firma", "kunde"],
             ],
         )

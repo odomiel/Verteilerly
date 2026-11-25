@@ -766,9 +766,13 @@ Blatt.</td></tr>
 </table>
 
 <p>Das Schriftfeld lässt sich auch <b>anders bauen</b>: mit
-<code>schriftfeld_art: beispiel</code> steht links oben eine Matrix aus Datum
-und Name mit Erstellt, Stand und Geprüft, links unten Verteiler, Nummer und
-Leiste und rechts zwei Kästen mit den Anschriften von Firma und Kunde. Eine
+<code>schriftfeld_art: beispiel</code> liegen die Blöcke wie in den
+Mustertabellen: der <b>letzte</b> Block steht rechts, je Angabe ein Kasten
+untereinander (etwa die Anschriften von Firma und Kunde), die übrigen stehen
+links untereinander — ein Block mit Erstellt, Stand, Geprüft oder Gezeichnet
+als Matrix aus Datum und Name, die anderen als Beschriftung und Wert. Was in
+den Blöcken steht und in welcher Reihenfolge, bestimmt also auch hier die
+Vorlage. Eine
 fertige Vorlage dafür wird nicht mitgeliefert — die Bauart steht jeder eigenen
 Blattvorlage offen. Wer schon eine solche Vorlage angelegt hat, hat sie in
 seinem Arbeitsordner liegen; sie bleibt, wo sie ist.</p>
@@ -960,8 +964,10 @@ schriftfeld:
 <p><code>schriftfeld_anteile</code> gibt die Breiten der Blöcke als Verhältnis
 (<code>[0.42, 0.58]</code>); ohne Angabe teilt das Programm nach Augenmaß.
 <code>schriftfeld_art</code> ist <code>standard</code> (Beschriftung und Wert in
-Spalten) oder <code>beispiel</code> (Matrix, Verteiler und zwei Anschriften wie
-oben beschrieben).</p>
+Spalten) oder <code>beispiel</code> (die Blöcke links untereinander, der letzte
+rechts, wie oben beschrieben); dort sind es genau zwei Anteile, für die linke
+und die rechte Hälfte. Ein eigenes Feld, das bei <code>beispiel</code> in keinem
+Block steht, kommt zum Block mit dem Verteiler.</p>
 
 <h4>Die Maße der Verteilerbelegung</h4>
 
@@ -1006,8 +1012,8 @@ spalten:
 kabel_gedreht: false
 
 schriftfeld:
-  - [verteiler, verteilernummer, leiste]
   - [erstellt, geprueft]
+  - [verteiler, verteilernummer, leiste]
   - [firma, kunde]
 schriftfeld_art: beispiel
 schriftfeld_anteile: [0.4, 0.6]
@@ -1110,9 +1116,9 @@ CSV tragen weiterhin alles.</p>
 Zeilenhöhen, den verbundenen Kabelblock samt Drehung und die Einrichtung auf
 A4. <b>Auch das Schriftfeld sieht aus wie auf dem Blatt</b>: derselbe gerahmte
 Block in der Aufteilung der Blattvorlage — bei
-<code>schriftfeld_art: beispiel</code> also links oben die Matrix aus Datum und
-Name, links unten Verteiler, Nummer und Leiste, rechts die beiden Anschriften
-in eigenen Kästen. Die
+<code>schriftfeld_art: beispiel</code> also links die Blöcke untereinander, die
+Matrix aus Datum und Name eingeschlossen, rechts je Angabe des letzten Blocks
+ein eigener Kasten. Die
 Verteilerbelegung trägt es ebenfalls, und das Deckblatt führt dieselbe Liste
 wie das gedruckte.</p>
 
@@ -1321,17 +1327,17 @@ nichts auszurichten. <i>Block hinzufügen</i> und <i>Letzten Block
 entfernen</i> ändern die Zahl der Blöcke; einer bleibt immer stehen. Mit <i>Breiten selbst festlegen</i> bekommt jeder Block seinen Anteil
 an der Breite, sonst teilt das Programm nach Augenmaß.</p>
 
-<p><b>Die Bauart</b> steht über der Höhe und bestimmt, woher das Schriftfeld
-kommt: <i>Blöcke</i> baut der Editor selbst — das ist der Normalfall —, <i>Wie
-die Mustertabellen</i> nimmt das feste Schriftfeld der ODS-Vorlagen
-(<code>schriftfeld_art: beispiel</code>): links oben die Matrix aus Datum und
-Name, darunter der Verteiler, rechts Firma und Kunde als zwei Kästen. Diese
-Anordnung steht im Programm, nicht in der Vorlage; die Blockliste ist dann
-<b>gesperrt</b> und sagt es auch. Einstellbar bleiben die <b>Höhe</b> und die
-<b>linke Hälfte</b> — ihr Anteil an der Breite, der Rest gehört den
-Anschriften (<code>schriftfeld_anteile</code>). Umschalten geht in beide
-Richtungen, und was dabei nicht gezeichnet wird, bleibt in der Datei stehen:
-die Blöcke überleben einen Ausflug zu den Mustertabellen.</p>
+<p><b>Die Bauart</b> steht über der Höhe und bestimmt, wie die Blöcke des
+Schriftfeldes liegen: <i>Blöcke</i> stellt sie nebeneinander — das ist der Normalfall —, <i>Wie
+die Mustertabellen</i> legt sie wie die ODS-Vorlagen
+(<code>schriftfeld_art: beispiel</code>): der letzte Block steht rechts, je
+Angabe ein Kasten, die übrigen links untereinander, und Erstellt, Stand,
+Geprüft und Gezeichnet werden dort zur Matrix aus Datum und Name. Die
+Blockliste bleibt in beiden Bauarten <b>einstellbar</b>; über jeder Liste
+steht, ob der Block links oder rechts landet. Statt der Breiten je Block gilt
+bei den Mustertabellen die <b>linke Hälfte</b> — ihr Anteil an der Breite, der
+Rest gehört dem rechten Block (<code>schriftfeld_anteile</code>). Umschalten
+geht in beide Richtungen, die Blöcke bleiben dabei, wie sie sind.</p>
 
 <p>Die Gruppe <b>Eigene Felder</b> darunter legt die <b>frei benannten
 Zeilen</b> des Schriftfeldes an: <i>Hinzufügen</i> setzt eine neue in die Liste

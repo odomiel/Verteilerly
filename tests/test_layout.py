@@ -20,6 +20,7 @@ from verteilerly.modell import Aderadresse, Kabelabschnitt, Projekt, Verteiler
 from . import BEISPIELVORLAGE
 
 
+
 def _texte(blatt: Blatt) -> list[str]:
     return [e.text for e in blatt.elemente if isinstance(e, Text)]
 
@@ -746,16 +747,14 @@ class TestBriefkopffelder(unittest.TestCase):
             [name for name in BRIEFKOPF_FELDER if name in felder],
         )
 
-    def test_die_mustertabellen_fuehren_alles(self):
-        """Ihr Schriftfeld steht fest im Programm."""
-        import dataclasses
-
-        from verteilerly.blattvorlagen import STANDARD
+    def test_die_mustertabellen_fuehren_was_in_ihren_bloecken_steht(self):
+        """Wie jede Vorlage - ihr Schriftfeld steht nicht mehr im Programm."""
         from verteilerly.layout import briefkopffelder
-        from verteilerly.modell import BRIEFKOPF_FELDER
 
-        vorlage = dataclasses.replace(STANDARD, schriftfeld_art="beispiel")
-        self.assertEqual(briefkopffelder(vorlage), BRIEFKOPF_FELDER)
+        felder = briefkopffelder(BEISPIELVORLAGE)
+        self.assertIn("firma", felder)
+        self.assertIn("erstellt_am", felder)
+        self.assertNotIn("anlagennummer", felder)
 
 
 class TestLeistenblatt(unittest.TestCase):
@@ -1343,6 +1342,83 @@ class TestSchriftfeldBeispiel(unittest.TestCase):
         felder = {e.text: e for e in self._blatt().elemente if isinstance(e, Text)}
         self.assertEqual(felder["01.01.1970"].x, felder["Verteiler Name"].x)
         self.assertEqual(felder["Erstellt"].x, felder["Verteiler-Nr."].x)
+
+    def _vorlage(self, *bloecke, **mehr):
+        import dataclasses
+
+        from verteilerly.blattvorlagen import Schriftfeldeintrag
+
+        return dataclasses.replace(
+            self.vorlage,
+            schriftfeld=tuple(
+                tuple(Schriftfeldeintrag(m, "mitte") for m in block)
+                for block in bloecke
+            ),
+            **mehr,
+        )
+
+    def test_die_reihenfolge_der_bloecke_ist_die_auf_dem_blatt(self):
+        """Bis 2026.11.25 stand die Matrix oben, gleich was die Datei sagte."""
+        self.vorlage = self._vorlage(
+            ("verteiler", "verteilernummer", "leiste"),
+            ("erstellt", "stand", "geprueft"),
+            ("firma", "kunde"),
+        )
+        stellen = {e.text: e.y for e in self._blatt().elemente if isinstance(e, Text)}
+        self.assertLess(stellen["Verteiler:"], stellen["Erstellt"])
+
+    def test_was_im_block_steht_steht_auf_dem_blatt(self):
+        self.projekt.briefkopf["anlagennummer"] = "A-4711"
+        self.vorlage = self._vorlage(
+            ("erstellt",),
+            ("verteiler", "anlagennummer"),
+            ("firma",),
+        )
+        texte = _texte(self._blatt())
+        self.assertIn("A-4711", texte)
+        # Was in keinem Block steht, fehlt - auch Stand und Kunde.
+        self.assertNotIn("Stand", texte)
+        self.assertNotIn("Kunde Beliebig", texte)
+        self.assertNotIn("Verteiler-Nr.", texte)
+
+    def test_der_letzte_block_steht_rechts_je_angabe_ein_kasten(self):
+        self.vorlage = self._vorlage(
+            ("erstellt", "stand", "geprueft"),
+            ("verteiler", "verteilernummer", "leiste"),
+            ("firma", "kunde", "verteiler"),
+        )
+        felder = [e for e in self._blatt().elemente if isinstance(e, Text)]
+        rechts = [e for e in felder if e.text == "Verteiler Name"]
+        # Einmal links im Verteilerblock, einmal rechts als eigener Kasten.
+        self.assertEqual(len(rechts), 2)
+        firma = next(e for e in felder if e.text == "Firma Beliebig")
+        self.assertGreater(max(e.x for e in rechts), firma.x - 5)
+
+    def test_die_ausrichtung_des_eintrags_gilt(self):
+        import dataclasses
+
+        from verteilerly.blattvorlagen import Schriftfeldeintrag
+
+        self.vorlage = dataclasses.replace(self.vorlage, schriftfeld=(
+            (Schriftfeldeintrag("erstellt", "mitte"),),
+            (Schriftfeldeintrag("verteiler", "rechts"),),
+            (Schriftfeldeintrag("firma", "links"),),
+        ))
+        felder = {e.text: e for e in self._blatt().elemente if isinstance(e, Text)}
+        self.assertEqual(felder["Verteiler Name"].ausrichtung, "rechts")
+        self.assertEqual(felder["Firma Beliebig"].ausrichtung, "links")
+
+    def test_ein_unplatziertes_eigenes_feld_kommt_zum_verteiler(self):
+        """Aeltere Vorlagen dieser Bauart setzten es dorthin von selbst."""
+        import dataclasses
+
+        self.projekt.eigene_felder["Auftrag"] = "4711"
+        self.vorlage = dataclasses.replace(
+            self.vorlage, eigene_felder=("Auftrag",)
+        )
+        stellen = {e.text: e.y for e in self._blatt().elemente if isinstance(e, Text)}
+        self.assertIn("4711", stellen)
+        self.assertGreater(stellen["4711"], stellen["Verteiler Name"])
 
     def test_verteilerblock_unter_der_matrix(self):
         blatt = self._blatt()

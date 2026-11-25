@@ -21,6 +21,7 @@ from ..layout import (
     LINIE,
     LINIE_FEIN,
     schriftfeldanteile,
+    beispiel_mit_matrix,
     beispielschriftfeld,
     belegungsgruppen,
     belegungsmasse,
@@ -642,17 +643,24 @@ def _schriftfeld_beispiel(
 ) -> int:
     """Das Schriftfeld der Mustertabellen, im Raster nachgebaut.
 
-    Links oben die Matrix aus Datum und Name, links unten der Verteiler,
-    rechts zwei Kaesten mit den Anschriften - dieselbe Aufteilung wie auf
-    dem gezeichneten Blatt.
+    Dieselben Bloecke an denselben Plaetzen wie auf dem gezeichneten
+    Blatt (``layout.beispielschriftfeld``): links untereinander, ein
+    Block mit Paarmarken als Matrix aus Datum und Name, rechts je Angabe
+    des letzten Blocks ein Kasten.
     """
-    matrix, verteiler, anschriften = beispielschriftfeld(
-        projekt, leiste_nr, blattart, vorlage
+    links_bloecke, kaesten = beispielschriftfeld(
+        projekt, leiste_nr, blattart, vorlage,
+        _blatttitel(projekt, leiste_nr, blattart),
     )
-    links = _spaltenteilung(
-        blatt, zeug, schriftfeldanteile(2, vorlage.schriftfeld_anteile),
-        bis=spaltenzahl, mindestens=2,
-    )[0]
+    if not links_bloecke and not kaesten:
+        return zeile
+    if kaesten or len(vorlage.schriftfeld) > 1:
+        links = _spaltenteilung(
+            blatt, zeug, schriftfeldanteile(2, vorlage.schriftfeld_anteile),
+            bis=spaltenzahl, mindestens=2,
+        )[0]
+    else:
+        links = spaltenzahl
     # Die linke Haelfte traegt drei Felder: Beschriftung, Datum, Name -
     # in denselben Anteilen wie auf dem Blatt.
     rest = (1.0 - BESCHRIFTUNGSANTEIL) / 2
@@ -662,72 +670,87 @@ def _schriftfeld_beispiel(
     datum = min(label_bis + 1, links)
     name = min(datum_bis + 1, links)
 
+    # Jeder linke Block bekommt gleich viele Zeilen - wie auf dem Blatt
+    # dieselbe Hoehe.
+    hoehe = max(
+        [len(z) + (1 if beispiel_mit_matrix(z) else 0) for z in links_bloecke] + [3]
+    )
     oben = zeile
-    hoehe = max(len(matrix) + 1, len(verteiler), 3)
-    mitte = oben + hoehe          # erste Zeile der unteren Haelfte
-    unten = mitte + hoehe - 1
+    gesamt = max(hoehe * max(len(links_bloecke), 1), len(kaesten))
+    unten = oben + gesamt - 1
 
-    # Oben links: die Kopfzeile aus Datum und Name, darunter die Zeilen.
-    for spalte, letzte, ueberschrift in (
-        (datum, datum_bis, "Datum"), (name, name_bis, "Name"),
-    ):
-        if spalte <= links:
-            _beschriftet(blatt, zeug, oben, spalte, ueberschrift, vorlage, "mitte")
-            if letzte > spalte:
-                blatt.merge_cells(
-                    start_row=oben, start_column=spalte,
-                    end_row=oben, end_column=letzte,
-                )
-    for i, (beschriftung, wert_datum, wert_name) in enumerate(matrix, 1):
-        _beschriftet(blatt, zeug, oben + i, 1, beschriftung, vorlage)
-        _wertfeld(blatt, zeug, oben + i, datum, wert_datum, vorlage, "mitte")
-        if name <= links:
-            _wertfeld(blatt, zeug, oben + i, name, wert_name, vorlage, "mitte")
-        for erste, letzte in ((datum, datum_bis), (name, name_bis)):
-            if letzte > erste:
-                blatt.merge_cells(
-                    start_row=oben + i, start_column=erste,
-                    end_row=oben + i, end_column=letzte,
-                )
+    for k, zeilen in enumerate(links_bloecke):
+        anfang = oben + k * hoehe
+        z = anfang
+        if beispiel_mit_matrix(zeilen):
+            for spalte, letzte, ueberschrift in (
+                (datum, datum_bis, "Datum"), (name, name_bis, "Name"),
+            ):
+                if spalte <= links:
+                    _beschriftet(blatt, zeug, z, spalte, ueberschrift, vorlage, "mitte")
+                    if letzte > spalte:
+                        blatt.merge_cells(
+                            start_row=z, start_column=spalte,
+                            end_row=z, end_column=letzte,
+                        )
+            z += 1
+        for eintrag in zeilen:
+            if eintrag.art == "strich":
+                _querstrich(blatt, zeug, z, 1, links)
+                z += 1
+                continue
+            _beschriftet(blatt, zeug, z, 1, eintrag.beschriftung, vorlage)
+            if eintrag.art == "paar":
+                _wertfeld(blatt, zeug, z, datum, eintrag.wert, vorlage,
+                          eintrag.ausrichtung)
+                if name <= links:
+                    _wertfeld(blatt, zeug, z, name, eintrag.name, vorlage,
+                              eintrag.ausrichtung)
+                for erste, letzte in ((datum, datum_bis), (name, name_bis)):
+                    if letzte > erste:
+                        blatt.merge_cells(
+                            start_row=z, start_column=erste,
+                            end_row=z, end_column=letzte,
+                        )
+            else:
+                _wertfeld(blatt, zeug, z, datum, str(eintrag.wert), vorlage,
+                          eintrag.ausrichtung)
+                if links > datum:
+                    blatt.merge_cells(
+                        start_row=z, start_column=datum,
+                        end_row=z, end_column=links,
+                    )
+            z += 1
+        _block_rahmen(blatt, zeug, anfang, anfang + hoehe - 1, 1, links)
 
-    # Unten links: Verteiler, Nummer, Leiste.
-    for i, (beschriftung, wert) in enumerate(verteiler):
-        _beschriftet(blatt, zeug, mitte + i, 1, beschriftung, vorlage)
-        _wertfeld(blatt, zeug, mitte + i, datum, str(wert), vorlage, "mitte")
-        if links > datum:
-            blatt.merge_cells(
-                start_row=mitte + i, start_column=datum,
-                end_row=mitte + i, end_column=links,
-            )
-
-    # Rechts: zwei Kaesten uebereinander, die Anschrift zeilenweise.
-    if links < spaltenzahl:
-        for i, (beschriftung, zeilen) in enumerate(anschriften):
-            erste = oben if i == 0 else mitte
+    # Rechts: die Kaesten uebereinander, die Angabe zeilenweise.
+    if kaesten and links < spaltenzahl:
+        grenzen = [oben + round(i * gesamt / len(kaesten)) for i in range(len(kaesten) + 1)]
+        for kasten, erste, naechste in zip(kaesten, grenzen, grenzen[1:]):
+            letzte = max(naechste - 1, erste)
             blatt.merge_cells(
                 start_row=erste, start_column=links + 1,
-                end_row=erste + hoehe - 1, end_column=spaltenzahl,
+                end_row=letzte, end_column=spaltenzahl,
             )
             feld = blatt.cell(row=erste, column=links + 1)
-            if zeilen:
-                feld.value = "\n".join(zeilen)
+            if kasten.zeilen:
+                feld.value = "\n".join(kasten.zeilen)
                 feld.font = zeug.schrift(vorlage.schrift_normal)
+                lage = {"mitte": "center", "rechts": "right"}.get(
+                    kasten.ausrichtung, "left"
+                )
                 feld.alignment = zeug.Alignment(
-                    horizontal="center", vertical="center", wrap_text=True
+                    horizontal=lage, vertical="center", wrap_text=True
                 )
             else:
-                feld.value = beschriftung
+                feld.value = kasten.beschriftung
                 feld.font = zeug.schrift(vorlage.schrift_klein, False, "#555555")
                 feld.alignment = zeug.lage("links")
-            _block_rahmen(
-                blatt, zeug, erste, erste + hoehe - 1, links + 1, spaltenzahl
-            )
+            _block_rahmen(blatt, zeug, erste, letzte, links + 1, spaltenzahl)
 
-    _block_rahmen(blatt, zeug, oben, unten, 1, links)
-    _block_rahmen(blatt, zeug, mitte, unten, 1, links)
     for i in range(oben, unten + 1):
         blatt.row_dimensions[i].height = zeilenhoehe(
-            vorlage.schriftfeld_hoehe / (2 * hoehe)
+            vorlage.schriftfeld_hoehe / gesamt
         )
     return unten + 1
 

@@ -1041,7 +1041,7 @@ class TestSchriftfeldEditor(unittest.TestCase):
 
 
 class TestEigeneBauartImEditor(unittest.TestCase):
-    """Ein Schriftfeld, das im Programm steht, baut der Editor nicht um."""
+    """Die Bauart der Mustertabellen: dieselben Bloecke, anders hingelegt."""
 
     def setUp(self):
         from verteilerly.erweiterungen.blattvorlageneditor.dialog import EditorDialog
@@ -1063,11 +1063,25 @@ class TestEigeneBauartImEditor(unittest.TestCase):
             vorlage.schriftfeld_anteile, BEISPIELVORLAGE.schriftfeld_anteile
         )
 
-    def test_die_bloecke_sind_gesperrt_und_begruendet(self):
-        self.dialog.basis_uebernehmen(BEISPIELVORLAGE)
-        self.assertFalse(self.dialog.schriftfeld.isEnabled())
-        self.assertFalse(self.dialog.schriftfeldhinweis.isHidden())
-        self.assertIn("beispiel", self.dialog.schriftfeldhinweis.text())
+    def test_die_bloecke_sind_einstellbar_und_erklaert(self):
+        """Bis 2026.11.25 waren sie ausgegraut und stimmten nicht mit dem Blatt."""
+        d = self.dialog
+        d.basis_uebernehmen(BEISPIELVORLAGE)
+        self.assertTrue(d.schriftfeld.isEnabled())
+        self.assertFalse(d.schriftfeldhinweis.isHidden())
+        self.assertIn("rechts", d.schriftfeldhinweis.text())
+        # Breiten je Block gibt es hier nicht - die linke Haelfte teilt.
+        self.assertTrue(d.schriftfeld.eigene_breiten.isHidden())
+        self.assertTrue(all(feld.isHidden() for feld in d.schriftfeld.breiten))
+
+    def test_eine_geaenderte_angabe_kommt_in_die_vorlage(self):
+        """Was im Editor steht, zeichnet das Blatt."""
+        d = self.dialog
+        d.basis_uebernehmen(BEISPIELVORLAGE)
+        d.schriftfeld.marke_hinzufuegen(1, "anlagennummer")
+        bloecke = d.vorlage().schriftfeld
+        self.assertEqual(bloecke[1][-1].marke, "anlagennummer")
+        self.assertEqual(d.vorlage().schriftfeld_art, "beispiel")
 
     def test_die_hoehe_bleibt_einstellbar(self):
         """Sie wirkt auch auf diese Bauart."""
@@ -1104,11 +1118,13 @@ class TestEigeneBauartImEditor(unittest.TestCase):
         vorlage = d.vorlage()
         self.assertEqual(vorlage.schriftfeld_art, "beispiel")
         self.assertEqual(vorlage.schriftfeld_anteile, (0.4, 0.6))
-        self.assertFalse(d.schriftfeld.isEnabled())
+        self.assertEqual(vorlage.schriftfeld, STANDARD.schriftfeld)
+        self.assertTrue(d.schriftfeld.mustertabellen)
 
         d.bauart.setCurrentIndex(d.bauart.findData("standard"))
         self.assertEqual(d.vorlage().schriftfeld_art, "standard")
         self.assertTrue(d.schriftfeld.isEnabled())
+        self.assertFalse(d.schriftfeld.mustertabellen)
         self.assertTrue(d.schriftfeldhinweis.isHidden())
 
     def test_die_umgeschaltete_bauart_uebersteht_die_datei(self):
@@ -1380,13 +1396,8 @@ class TestSchriftfeldImEditor(unittest.TestCase):
         # teilt dann nach Augenmaß, wie beim Lesen einer Datei.
         self.assertEqual(d.schriftfeld.werte()[1], ())
 
-    def test_der_editor_baut_nur_schriftfelder_in_bloecken(self):
-        """Die feste Aufteilung der Mustertabellen stellt er nicht ein.
-
-        Er schreibt sie aber auch nicht um: die Vorlage behaelt ihre
-        Bauart samt Breiten, sonst zeigte die Vorschau ein anderes Blatt
-        als das Programm zeichnet.
-        """
+    def test_die_mustertabellen_behalten_bauart_und_teilung(self):
+        """Sonst zeigte die Vorschau ein anderes Blatt als das Programm."""
         d = self.dialog
         d.basiswahl.setCurrentIndex(d.basiswahl.findData(BEISPIELVORLAGE.id))
         self.assertEqual(BEISPIELVORLAGE.schriftfeld_art, "beispiel")
@@ -1394,7 +1405,7 @@ class TestSchriftfeldImEditor(unittest.TestCase):
         self.assertEqual(
             d.vorlage().schriftfeld_anteile, BEISPIELVORLAGE.schriftfeld_anteile
         )
-        self.assertFalse(d.schriftfeld.isEnabled())
+        self.assertEqual(d.vorlage().schriftfeld, BEISPIELVORLAGE.schriftfeld)
 
     def test_der_briefkopf_wird_gespeichert_und_wieder_gelesen(self):
         import yaml

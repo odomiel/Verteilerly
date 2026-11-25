@@ -736,9 +736,12 @@ per sheet.</td></tr>
 </table>
 
 <p>The title block can also be <b>built differently</b>: with
-<code>schriftfeld_art: beispiel</code> the matrix of date and name with
-created, revised and checked stands top left, frame, number and strip bottom
-left, and two boxes with the addresses of company and customer on the right. No
+<code>schriftfeld_art: beispiel</code> the blocks lie as in the sample tables:
+the <b>last</b> block stands on the right, one box per entry, one below the
+other (the addresses of company and customer, say); the others stand on the
+left, one below the other — a block with created, revised, checked or drawn as
+a matrix of date and name, the rest as label and value. What stands in the
+blocks, and in which order, is therefore up to the template here too. No
 ready-made template for it is supplied — the arrangement is open to any sheet
 template of your own. Whoever has already made such a template has it in their
 working folder; it stays where it is.</p>
@@ -926,8 +929,10 @@ fields one by one.</p>
 <p><code>schriftfeld_anteile</code> gives the widths of the blocks as a ratio
 (<code>[0.42, 0.58]</code>); without it the program divides them by eye.
 <code>schriftfeld_art</code> is <code>standard</code> (label and value in
-columns) or <code>beispiel</code> (matrix, frame and two addresses as described
-above).</p>
+columns) or <code>beispiel</code> (the blocks on the left one below the other,
+the last one on the right, as described above); there it takes exactly two
+shares, for the left and the right half. An own field that stands in no block
+with <code>beispiel</code> joins the block with the frame.</p>
 
 <h4>The measures of the frame layout</h4>
 
@@ -972,8 +977,8 @@ spalten:
 kabel_gedreht: false
 
 schriftfeld:
-  - [verteiler, verteilernummer, leiste]
   - [erstellt, geprueft]
+  - [verteiler, verteilernummer, leiste]
   - [firma, kunde]
 schriftfeld_art: beispiel
 schriftfeld_anteile: [0.4, 0.6]
@@ -1074,9 +1079,9 @@ everything.</p>
 sizes, the row heights, the merged cable block including its rotation and the
 setup for A4. <b>The title block looks like the one on the sheet as well</b>:
 the same framed block in the arrangement of the sheet template — with
-<code>schriftfeld_art: beispiel</code> the matrix of date and name at the top
-left, frame, number and strip at the bottom left, the two addresses in boxes of
-their own on the right. The frame layout carries it too, and the cover sheet lists the same rows
+<code>schriftfeld_art: beispiel</code> the blocks on the left one below the
+other, the matrix of date and name included, and one box of its own per entry
+of the last block on the right. The frame layout carries it too, and the cover sheet lists the same rows
 as the printed one.</p>
 
 <p><b>The pages are filled just as in the PDF</b>: row heights, cell sizes and
@@ -1278,17 +1283,17 @@ the number of blocks; one always remains. With
 <i>Set the widths myself</i> every block gets its share of the width,
 otherwise the program divides by eye.</p>
 
-<p><b>The kind</b> stands above the height and decides where the title block
-comes from: <i>Blocks</i> is built by the editor itself — the normal case —,
-<i>Like the sample tables</i> takes the fixed title block of the ODS templates
-(<code>schriftfeld_art: beispiel</code>): the matrix of date and name at the
-top left, the frame below it, company and customer as two boxes on the right.
-That arrangement lives in the program, not in the template; the block list is
-then <b>locked</b> and says so. The <b>height</b> and the <b>left half</b>
-remain adjustable — its share of the width, the rest belongs to the addresses
-(<code>schriftfeld_anteile</code>). Switching works both ways, and whatever is
-not drawn stays in the file: the blocks survive a trip to the sample
-tables.</p>
+<p><b>The kind</b> stands above the height and decides how the blocks of the
+title block lie: <i>Blocks</i> puts them side by side — the normal case —,
+<i>Like the sample tables</i> lays them out like the ODS templates
+(<code>schriftfeld_art: beispiel</code>): the last block on the right, one box
+per entry, the others on the left one below the other, where created, revised,
+checked and drawn become a matrix of date and name. The block list stays
+<b>adjustable</b> in both kinds; above each list it says whether the block lands
+on the left or the right. Instead of a width per block the sample tables use
+the <b>left half</b> — its share of the width, the rest belongs to the right
+block (<code>schriftfeld_anteile</code>). Switching works both ways, the blocks
+stay as they are.</p>
 
 <p>The group <b>Own fields</b> below it creates the <b>freely named rows</b> of
 the title block: <i>Add</i> puts a new one into the list (the name is typed
