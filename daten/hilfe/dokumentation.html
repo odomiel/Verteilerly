@@ -1586,12 +1586,13 @@ passen zu keiner echten Anlage.</p>
 
 <h3>11.6 &nbsp; An Verteilerly_CSV2Excel übergeben</h3>
 
-<p><b>Verteilerly_CSV2Excel</b> ist ein eigenes Programm, das die CSV eines
-Verteilers in die passende Excel-Vorlage überträgt — Deckblatt,
-Verteilerbelegung und Leistenblätter in der Form fester Mustertabellen. Es gibt
-es <b>nur für Windows</b>. Die Erweiterung <b>CSV2Excel</b> verbindet beide:
-ein Druck genügt, und die CSV des offenen Verteilers liegt im Fenster von
-Verteilerly_CSV2Excel.</p>
+<p><b>Verteilerly_CSV2Excel</b> ist ein eigenes Programm, das einen Verteiler
+in die passende Excel-Vorlage überträgt — Deckblatt, Verteilerbelegung und
+Leistenblätter in der Form fester Mustertabellen. Es liest die CSV eines
+Verteilers und ab seiner Version 1.2.0 auch die <b>Projektdatei</b>
+(<code>.vtly</code>) selbst. Es gibt es <b>nur für Windows</b>. Die
+Erweiterung <b>CSV2Excel</b> verbindet beide: ein Druck genügt, und der offene
+Verteiler liegt im Fenster von Verteilerly_CSV2Excel.</p>
 
 <p>Die Erweiterung ist mitgeliefert, aber <b>von Haus aus ausgeschaltet</b> —
 ohne das Programm wäre ihr Knopf nur im Weg. Eingeschaltet wird sie unter
@@ -1600,26 +1601,32 @@ Dann trägt sie zweierlei ein:</p>
 
 <ul>
 <li><b>Erweiterungen ▸ CSV2Excel einrichten…</b> — wo
-<code>Verteilerly_CSV2Excel.exe</code> liegt (<i>Durchsuchen…</i>), auf Wunsch
-ein eigener <b>Exportordner</b> für die Excel-Dateien (leer heißt: wie in
-Verteilerly_CSV2Excel eingestellt) und der Haken <b>Gleich verarbeiten, ohne
-auf „Start“ zu warten</b>.</li>
+<code>Verteilerly_CSV2Excel.exe</code> liegt (<i>Durchsuchen…</i>), wie
+übergeben wird (<b>Übergeben als</b>: <i>CSV</i>, <i>Projektdatei (.vtly)</i>
+oder <i>Jedes Mal fragen</i>; Vorgabe ist die CSV, die auch ältere Fassungen
+des Programms verstehen), auf Wunsch ein eigener <b>Exportordner</b> für die
+Excel-Dateien (leer heißt: wie in Verteilerly_CSV2Excel eingestellt) und der
+Haken <b>Gleich verarbeiten, ohne auf „Start“ zu warten</b>.</li>
 <li><b>An CSV2Excel</b> — ein Knopf in der <b>Werkzeugleiste</b>, zwischen
-<i>Export</i> und <i>Kabel auflegen</i>. Er schreibt die CSV des offenen Verteilers wie <i>Datei ▸
-Exportieren ▸ Als CSV…</i> in den Temp-Ordner des Rechners
-(<code>Verteilerly-CSV2Excel</code>) und startet Verteilerly_CSV2Excel mit
-dieser Datei. Dort steht sie unter <i>Übergebene CSV-Dateien</i> mit der
-passenden Vorlage; <i>Start</i> erzeugt die Excel-Datei, mit dem Haken
-geschieht das sofort.</li>
+<i>Export</i> und <i>Kabel auflegen</i>. Er schreibt den offenen Verteiler als
+CSV (wie <i>Datei ▸ Exportieren ▸ Als CSV…</i>) oder als Projektdatei in den
+Temp-Ordner des Rechners (<code>Verteilerly-CSV2Excel</code>) und startet
+Verteilerly_CSV2Excel mit dieser Datei. Steht die Wahl auf <i>Jedes Mal
+fragen</i>, fragt er vorher: <i>Als CSV</i>, <i>Als Projektdatei (.vtly)</i>
+oder <i>Abbrechen</i>. Im Programm steht die Datei dann unter den übergebenen
+Dateien mit der passenden Vorlage; <i>Start</i> erzeugt die Excel-Datei, mit
+dem Haken geschieht das sofort.</li>
 </ul>
 
-<p>Ohne offenen Verteiler ist der Knopf ausgegraut wie <i>Export</i>. Ist noch
-nicht eingestellt, wo das Programm liegt, oder liegt es dort nicht
-mehr, öffnet der Knopf zuerst <i>CSV2Excel einrichten</i>. Die CSV heißt wie
-die Projektdatei, ohne Datei wie der Verteiler; eine gleichnamige vom letzten
-Mal wird überschrieben. Die Excel-Datei benennt Verteilerly_CSV2Excel selbst
-nach Verteiler und Verteilernummer. Der Ort des Programms gehört dem Rechner
-und reist darum in keinem Sicherungspaket mit.</p>
+<p>Übergeben wird immer der <b>Stand im Fenster</b>, auch ungespeicherte
+Änderungen — als Projektdatei eine Kopie im Temp-Ordner; die eigene Datei auf
+der Platte bleibt unberührt. Ohne offenen Verteiler ist der Knopf ausgegraut
+wie <i>Export</i>. Ist noch nicht eingestellt, wo das Programm liegt, oder
+liegt es dort nicht mehr, öffnet der Knopf zuerst <i>CSV2Excel einrichten</i>.
+Die Datei heißt wie die Projektdatei, ohne Datei wie der Verteiler; eine
+gleichnamige vom letzten Mal wird überschrieben. Die Excel-Datei benennt
+Verteilerly_CSV2Excel selbst nach Verteiler und Verteilernummer. Der Ort des
+Programms gehört dem Rechner und reist darum in keinem Sicherungspaket mit.</p>
 
 <h3>11.7 &nbsp; Erweiterungen verwalten</h3>
 

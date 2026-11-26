@@ -110,9 +110,10 @@ ohne erst eine halbe Stunde zu tippen.
 
 **An Verteilerly_CSV2Excel übergeben** (Knopf *An CSV2Excel* in der
 Werkzeugleiste, nur unter Windows): das eigene Werkzeug Verteilerly_CSV2Excel
-überträgt die CSV eines Verteilers in feste Excel-Mustertabellen. Die
-Erweiterung schreibt die CSV des offenen Verteilers und startet das Werkzeug
-mit ihr; wo es liegt, steht unter *Erweiterungen ▸ CSV2Excel einrichten…*. Sie
+überträgt einen Verteiler in feste Excel-Mustertabellen. Die
+Erweiterung schreibt den offenen Verteiler als CSV oder als Projektdatei
+(`.vtly`, ab Werkzeug 1.2.0) – fest eingestellt oder jedes Mal gefragt – und
+startet das Werkzeug mit ihr; wo es liegt, steht unter *Erweiterungen ▸ CSV2Excel einrichten…*. Sie
 ist von Haus aus aus und wird unter *Erweiterungen verwalten* eingeschaltet.
 
 **Dazu im Alltag.** Suchen über den ganzen Verteiler, Zurücknehmen und

@@ -17,8 +17,21 @@ from ..projekt.anlage import sicherer_name
 
 #: So heisst das Werkzeug, wie es ausgeliefert wird.
 PROGRAMMNAME = "Verteilerly_CSV2Excel.exe"
-#: Unterordner im Temp-Ordner, in den die CSV fuer die Uebergabe kommt.
+#: Unterordner im Temp-Ordner, in den die Datei fuer die Uebergabe kommt.
 ABLAGE = "Verteilerly-CSV2Excel"
+
+#: Was uebergeben wird. Das Werkzeug liest seit 1.2.0 auch die
+#: Projektdatei selbst; die CSV bleibt Vorgabe, weil sie auch aeltere
+#: Fassungen des Werkzeugs verstehen.
+CSV, VTLY, FRAGEN = "csv", "vtly", "fragen"
+FORMATE = (CSV, VTLY, FRAGEN)
+ENDUNGEN = {CSV: ".csv", VTLY: ".vtly"}
+
+
+def format_lesen(wert) -> str:
+    """Die Wahl aus der Conf - Unbekanntes faellt auf die CSV zurueck."""
+    wert = str(wert or "").strip().lower()
+    return wert if wert in FORMATE else CSV
 
 
 def ablageordner() -> pathlib.Path:
@@ -32,16 +45,17 @@ def ablageordner() -> pathlib.Path:
     return pathlib.Path(tempfile.gettempdir()) / ABLAGE
 
 
-def csv_name(projekt, pfad: pathlib.Path | None) -> str:
-    """Der Dateiname der CSV - wie beim Export vorgeschlagen.
+def dateiname(projekt, pfad: pathlib.Path | None, art: str = CSV) -> str:
+    """Der Name der uebergebenen Datei - wie beim Export vorgeschlagen.
 
-    Erst der Name der Projektdatei, dann der des Verteilers. Das Werkzeug
-    benennt seine Mappe nach Verteiler und Verteilernummer und nimmt den
-    Namen der CSV nur, wenn der Verteiler keinen hat.
+    Erst der Name der Projektdatei, dann der des Verteilers; die Endung
+    nach ``art``. Das Werkzeug benennt seine Mappe nach Verteiler und
+    Verteilernummer und nimmt den Dateinamen nur, wenn der Verteiler
+    keinen hat.
     """
     stamm = pfad.name.split(".")[0] if pfad else ""
     stamm = sicherer_name(stamm or projekt.verteiler.name)
-    return f"{stamm or 'verteiler'}.csv"
+    return f"{stamm or 'verteiler'}{ENDUNGEN[art]}"
 
 
 def argumente(csv: pathlib.Path, export: str = "", sofort: bool = False) -> list[str]:

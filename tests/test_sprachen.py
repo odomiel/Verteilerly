@@ -149,6 +149,10 @@ class TestWortliste(unittest.TestCase):
         from verteilerly.gui.hauptfenster import LEISTENWEISEN
 
         gebraucht |= {erklaerung for _k, _b, erklaerung in LEISTENWEISEN}
+        # Was die Erweiterung CSV2Excel uebergibt, steht als Tabelle im Dialog.
+        from verteilerly.erweiterungen.csv2excel.dialog import FORMATWAHL
+
+        gebraucht |= {text for _kennung, text in FORMATWAHL}
         # Der Blattvorlagen-Editor fuehrt seine Beschriftungen als Tabellen,
         # die eingebauten Erweiterungen Name und Beschreibung als Attribute.
         from verteilerly import erweiterungen

@@ -887,22 +887,22 @@ kein Projekt zu dieser Zeile: no project for this row
 
 # CSV2Excel (Erweiterung)
 CSV2Excel: CSV2Excel
-Die CSV des offenen Verteilers an Verteilerly_CSV2Excel übergeben (nur unter Windows): Hand the CSV of the open frame to Verteilerly_CSV2Excel (Windows only)
+Den offenen Verteiler an Verteilerly_CSV2Excel übergeben, als CSV oder Projektdatei (nur unter Windows): Hand the open frame to Verteilerly_CSV2Excel, as CSV or project file (Windows only)
 An CSV2Excel: To CSV2Excel
-Die CSV des offenen Verteilers an Verteilerly_CSV2Excel übergeben: Hand the CSV of the open frame to Verteilerly_CSV2Excel
+Den offenen Verteiler an Verteilerly_CSV2Excel übergeben: Hand the open frame to Verteilerly_CSV2Excel
 'CSV2Excel &einrichten…': 'Set up CSV2&Excel…'
 Wählen, wo Verteilerly_CSV2Excel liegt: Choose where Verteilerly_CSV2Excel is located
 CSV2Excel einrichten: Set up CSV2Excel
 Es ist kein Verteiler offen.: No frame is open.
 "{0}\n\nBitte wählen Sie das Programm aus.": "{0}\n\nPlease choose the program."
-"Die CSV ließ sich nicht schreiben:\n\n{0}": "The CSV could not be written:\n\n{0}"
+"{0} ließ sich nicht schreiben:\n\n{1}": "{0} could not be written:\n\n{1}"
 "Verteilerly_CSV2Excel ließ sich nicht starten:\n{0}": "Verteilerly_CSV2Excel could not be started:\n{0}"
 Das Programm gibt es nur für Windows.: The program is only available for Windows.
 'An Verteilerly_CSV2Excel übergeben: {0}': 'Handed to Verteilerly_CSV2Excel: {0}'
 Es ist noch nicht eingestellt, wo Verteilerly_CSV2Excel liegt.: It has not been set yet where Verteilerly_CSV2Excel is located.
 Verteilerly_CSV2Excel liegt nicht mehr unter {0}.: Verteilerly_CSV2Excel is no longer at {0}.
 '{0} ist keine Programmdatei.': '{0} is not a program file.'
-Verteilerly_CSV2Excel überträgt die CSV eines Verteilers in die passende Excel-Vorlage. Der Knopf „An CSV2Excel“ in der Werkzeugleiste schreibt die CSV des offenen Verteilers und übergibt sie dem Programm. Das Programm gibt es nur für Windows.: Verteilerly_CSV2Excel transfers the CSV of a frame into the matching Excel template. The button “To CSV2Excel” in the toolbar writes the CSV of the open frame and hands it to the program. The program is only available for Windows.
+Verteilerly_CSV2Excel überträgt einen Verteiler in die passende Excel-Vorlage. Der Knopf „An CSV2Excel“ in der Werkzeugleiste schreibt den offenen Verteiler als CSV oder als Projektdatei und übergibt ihn dem Programm; Projektdateien liest es ab Version 1.2.0. Das Programm gibt es nur für Windows.: Verteilerly_CSV2Excel transfers a frame into the matching Excel template. The button “To CSV2Excel” in the toolbar writes the open frame as a CSV or as a project file and hands it to the program; it reads project files from version 1.2.0 on. The program is only available for Windows.
 wie in Verteilerly_CSV2Excel eingestellt: as set in Verteilerly_CSV2Excel
 Gleich verarbeiten, ohne auf „Start“ zu warten: Process right away, without waiting for “Start”
 'Programm:': 'Program:'
@@ -911,6 +911,12 @@ Programme (*.exe): Programs (*.exe)
 Programme (*.exe);;Alle Dateien (*): Programs (*.exe);;All files (*)
 Verteilerly_CSV2Excel wählen: Choose Verteilerly_CSV2Excel
 Exportordner wählen: Choose export folder
+'Übergeben als:': 'Hand over as:'
+Projektdatei (.vtly): Project file (.vtly)
+Jedes Mal fragen: Ask every time
+Wie soll der Verteiler übergeben werden?: How should the frame be handed over?
+Als CSV: As CSV
+Als Projektdatei (.vtly): As project file (.vtly)
 
 # Zufallsverteiler (Erweiterung)
 '&Zufallsverteiler…': '&Random frame…'

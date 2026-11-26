@@ -7,6 +7,7 @@ import sys
 
 from PySide6.QtWidgets import (
     QCheckBox,
+    QComboBox,
     QDialogButtonBox,
     QFileDialog,
     QFormLayout,
@@ -21,24 +22,32 @@ from PySide6.QtWidgets import (
 
 from ...gui.passform import PassenderDialog
 from ...sprachen import u
-from .uebergabe import PROGRAMMNAME, programm_grund
+from .uebergabe import CSV, FRAGEN, PROGRAMMNAME, VTLY, format_lesen, programm_grund
+
+#: Die Wahl im Feld *Übergeben als*, in dieser Reihenfolge.
+FORMATWAHL = (
+    (CSV, "CSV"),
+    (VTLY, "Projektdatei (.vtly)"),
+    (FRAGEN, "Jedes Mal fragen"),
+)
 
 
 class EinrichtenDialog(PassenderDialog):
-    """Programmort, sofort verarbeiten, eigener Exportordner."""
+    """Programmort, Format, sofort verarbeiten, eigener Exportordner."""
 
     def __init__(
         self, programm: str = "", sofort: bool = False, export: str = "",
-        parent: QWidget | None = None,
+        parent: QWidget | None = None, art: str = CSV,
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle(u("CSV2Excel einrichten"))
 
         hinweis = QLabel(u(
-            "Verteilerly_CSV2Excel überträgt die CSV eines Verteilers in die "
-            "passende Excel-Vorlage. Der Knopf „An CSV2Excel“ in der "
-            "Werkzeugleiste schreibt die CSV des offenen Verteilers und übergibt "
-            "sie dem Programm. Das Programm gibt es nur für Windows."
+            "Verteilerly_CSV2Excel überträgt einen Verteiler in die passende "
+            "Excel-Vorlage. Der Knopf „An CSV2Excel“ in der Werkzeugleiste "
+            "schreibt den offenen Verteiler als CSV oder als Projektdatei und "
+            "übergibt ihn dem Programm; Projektdateien liest es ab Version "
+            "1.2.0. Das Programm gibt es nur für Windows."
         ))
         hinweis.setWordWrap(True)
 
@@ -58,11 +67,19 @@ class EinrichtenDialog(PassenderDialog):
         exportzeile.addWidget(self.exportfeld, 1)
         exportzeile.addWidget(exportknopf)
 
+        self.formatwahl = QComboBox()
+        for kennung, text in FORMATWAHL:
+            self.formatwahl.addItem(u(text), kennung)
+        self.formatwahl.setCurrentIndex(
+            self.formatwahl.findData(format_lesen(art))
+        )
+
         self.sofort_haken = QCheckBox(u("Gleich verarbeiten, ohne auf „Start“ zu warten"))
         self.sofort_haken.setChecked(sofort)
 
         formular = QFormLayout()
         formular.addRow(u("Programm:"), programmzeile)
+        formular.addRow(u("Übergeben als:"), self.formatwahl)
         formular.addRow(u("Exportordner:"), exportzeile)
         formular.addRow("", self.sofort_haken)
 
@@ -117,6 +134,9 @@ class EinrichtenDialog(PassenderDialog):
 
     def export(self) -> str:
         return self.exportfeld.text().strip()
+
+    def format(self) -> str:
+        return self.formatwahl.currentData()
 
     def sofort(self) -> bool:
         return self.sofort_haken.isChecked()

@@ -47,13 +47,28 @@ class TestUebergabe(unittest.TestCase):
 
     def test_der_name_folgt_der_projektdatei(self):
         pfad = pathlib.Path("/irgendwo/Halle Ost.vtly")
-        self.assertEqual(uebergabe.csv_name(_projekt(), pfad), "Halle Ost.csv")
+        self.assertEqual(uebergabe.dateiname(_projekt(), pfad), "Halle Ost.csv")
+        self.assertEqual(
+            uebergabe.dateiname(_projekt(), pfad, uebergabe.VTLY), "Halle Ost.vtly"
+        )
+        # Eine alte .vtly.json gibt ihren Stamm her, nicht ihre Endung.
+        alt = pathlib.Path("/irgendwo/Halle Ost.vtly.json")
+        self.assertEqual(
+            uebergabe.dateiname(_projekt(), alt, uebergabe.VTLY), "Halle Ost.vtly"
+        )
 
     def test_ohne_datei_heisst_sie_wie_der_verteiler(self):
-        self.assertEqual(uebergabe.csv_name(_projekt("HVt/UVt"), None), "HVt UVt.csv")
+        self.assertEqual(uebergabe.dateiname(_projekt("HVt/UVt"), None), "HVt UVt.csv")
 
     def test_ohne_jeden_namen_bleibt_verteiler(self):
-        self.assertEqual(uebergabe.csv_name(_projekt(""), None), "verteiler.csv")
+        self.assertEqual(uebergabe.dateiname(_projekt(""), None), "verteiler.csv")
+
+    def test_das_format_aus_der_conf(self):
+        self.assertEqual(uebergabe.format_lesen(None), uebergabe.CSV)
+        self.assertEqual(uebergabe.format_lesen("VTLY"), uebergabe.VTLY)
+        self.assertEqual(uebergabe.format_lesen("fragen"), uebergabe.FRAGEN)
+        # Was eine spaetere Fassung schreibt, faellt auf die CSV zurueck.
+        self.assertEqual(uebergabe.format_lesen("xlsx"), uebergabe.CSV)
 
     def test_der_aufruf(self):
         csv = pathlib.Path("/tmp/a.csv")
@@ -239,6 +254,56 @@ class TestUebergeben(unittest.TestCase):
         )])
         self.assertIn("Hauptverteiler.csv", programm.meldungen[-1])
 
+    def test_als_projektdatei(self):
+        from verteilerly import projektdatei
+        from verteilerly.erweiterungen.csv2excel import SCHLUESSEL_FORMAT
+
+        self.conf.setValue(SCHLUESSEL_PROGRAMM, str(self.werkzeug))
+        self.conf.setValue(SCHLUESSEL_FORMAT, uebergabe.VTLY)
+        projekt = _projekt()
+        projekt.briefkopf["kunde"] = "Ungespeichert GmbH"
+        self.assertTrue(self.erweiterung.uebergeben(Programmattrappe(self.conf, projekt)))
+
+        vtly = self.ablage / "Hauptverteiler.vtly"
+        self.assertEqual(self.aufrufe[0][1], [str(vtly)])
+        self.assertFalse((self.ablage / "Hauptverteiler.csv").exists())
+        # Uebergeben wird der Stand im Fenster - auch was nie gespeichert war.
+        gelesen = projektdatei.laden(vtly)
+        self.assertEqual(gelesen.verteiler.name, "Hauptverteiler")
+        self.assertEqual(gelesen.briefkopf["kunde"], "Ungespeichert GmbH")
+
+    def test_jedes_mal_fragen(self):
+        from verteilerly.erweiterungen.csv2excel import SCHLUESSEL_FORMAT
+
+        self.conf.setValue(SCHLUESSEL_PROGRAMM, str(self.werkzeug))
+        self.conf.setValue(SCHLUESSEL_FORMAT, uebergabe.FRAGEN)
+        programm = Programmattrappe(self.conf, _projekt())
+        for antwort, endung in ((uebergabe.VTLY, ".vtly"), (uebergabe.CSV, ".csv")):
+            with mock.patch.object(self.erweiterung, "format_erfragen", return_value=antwort):
+                self.assertTrue(self.erweiterung.uebergeben(programm))
+            self.assertEqual(pathlib.Path(self.aufrufe[-1][1][0]).suffix, endung)
+
+        # Abgebrochen: nichts geschrieben, nichts gestartet.
+        zuvor = len(self.aufrufe)
+        with mock.patch.object(self.erweiterung, "format_erfragen", return_value=None):
+            self.assertFalse(self.erweiterung.uebergeben(programm))
+        self.assertEqual(len(self.aufrufe), zuvor)
+
+    def test_die_rueckfrage_bietet_beide_an(self):
+        from PySide6.QtWidgets import QMessageBox
+
+        def exec_(kasten):
+            texte = [k.text() for k in kasten.buttons()]
+            self.assertIn("Als CSV", texte)
+            self.assertIn("Als Projektdatei (.vtly)", texte)
+            knopf = next(k for k in kasten.buttons() if k.text() == "Als Projektdatei (.vtly)")
+            knopf.click()
+            return 0
+
+        with mock.patch.object(QMessageBox, "exec", exec_):
+            wahl = Csv2Excel.format_erfragen(Programmattrappe(self.conf, _projekt()))
+        self.assertEqual(wahl, uebergabe.VTLY)
+
     def test_ohne_projekt_wird_nichts_gestartet(self):
         self.conf.setValue(SCHLUESSEL_PROGRAMM, str(self.werkzeug))
         with mock.patch("PySide6.QtWidgets.QMessageBox.information") as hinweis:
@@ -287,9 +352,22 @@ class TestEinrichtenDialog(unittest.TestCase):
     def test_zeigt_und_liefert_die_werte(self):
         dialog = self._dialog("C:/Tools/x.exe", True, "D:/Excel")
         self.assertEqual(
-            (dialog.programm(), dialog.sofort(), dialog.export()),
-            ("C:/Tools/x.exe", True, "D:/Excel"),
+            (dialog.programm(), dialog.sofort(), dialog.export(), dialog.format()),
+            ("C:/Tools/x.exe", True, "D:/Excel", uebergabe.CSV),
         )
+
+    def test_die_formatwahl(self):
+        from verteilerly.erweiterungen.csv2excel.dialog import EinrichtenDialog
+
+        dialog = EinrichtenDialog(art=uebergabe.FRAGEN)
+        bauteil_zurueckgeben(self, dialog)
+        self.assertEqual(dialog.format(), uebergabe.FRAGEN)
+        self.assertEqual(
+            [dialog.formatwahl.itemText(i) for i in range(dialog.formatwahl.count())],
+            ["CSV", "Projektdatei (.vtly)", "Jedes Mal fragen"],
+        )
+        dialog.formatwahl.setCurrentIndex(1)
+        self.assertEqual(dialog.format(), uebergabe.VTLY)
 
     def test_ein_falscher_pfad_wird_nicht_angenommen(self):
         dialog = self._dialog("/gibt/es/nicht.exe")
@@ -316,11 +394,12 @@ class TestEinrichtenDialog(unittest.TestCase):
                 dialog.programmfeld.setText("")
                 dialog.exportfeld.setText("E:/Mappen")
                 dialog.sofort_haken.setChecked(True)
+                dialog.formatwahl.setCurrentIndex(dialog.formatwahl.findData("vtly"))
                 return EinrichtenDialog.DialogCode.Accepted
 
             with mock.patch.object(EinrichtenDialog, "exec", exec_):
                 self.assertTrue(Csv2Excel().einstellen(programm))
-            self.assertEqual(Csv2Excel.werte(programm), ("", True, "E:/Mappen"))
+            self.assertEqual(Csv2Excel.werte(programm), ("", True, "E:/Mappen", "vtly"))
 
 
 if __name__ == "__main__":
