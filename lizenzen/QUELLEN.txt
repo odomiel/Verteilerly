@@ -62,7 +62,7 @@ Fremdbestandteile in Qt                  BSD / MIT / FTL / IJG / zlib /
     This software is based in part on the work of the
     Independent JPEG Group.
 
-Python 3.14                              PSF License 2.0
+Python 3.15                              PSF License 2.0
     Text: Python-LICENSE.txt
     Eingebaute Fremdbestandteile (expat, libffi, mpdecimal, zlib, HACL*,
     mimalloc, Zstandard-Anbindung u. a.): Python-Fremdbestandteile.txt

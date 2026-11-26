@@ -45,16 +45,16 @@ ANZEIGENAME = "Verteilerly"
 # Der Dateityp der Projektdatei - dasselbe Wort wie in verknuepfung.py,
 # das sich im Programm selbst bei der Dateiverwaltung anmeldet.
 MIMETYP = "application/x-verteilerly-projekt"
-PYTHONFASSUNG = "3.14"
+PYTHONFASSUNG = "3.15"
 BASIS_URL = (
-    "https://github.com/niess/python-appimage/releases/download/python3.14/"
-    "python3.14.9-cp314-cp314-manylinux2014_x86_64.AppImage"
+    "https://github.com/niess/python-appimage/releases/download/python3.15/"
+    "python3.15.1-cp315-cp315-manylinux2014_x86_64.AppImage"
 )
 # SHA-256 des erwarteten Abbilds. Wird ``BASIS_URL`` auf eine neue Fassung
 # gesetzt, gehoert diese Summe zusammen mit angepasst (GitHub nennt sie am
 # Release-Anhang als ``digest``) - sonst bricht ``holen`` ab. Das veroeffentlichte
 # AppImage landet bei den Nutzern; ein vertauschter Download faellt so auf.
-BASIS_SHA256 = "4b41368bce1f49c08817ef96fe480e99e38bd34fe5c98fbaaa72b09680453f01"
+BASIS_SHA256 = "b994dc553831118c42f6c9d5a95ed7894259520c710fbac951c8f2065dde0e96"
 # appimagetool auf ein festes Release genagelt, nicht den wandernden Tag
 # ``continuous``: so baut jeder Lauf mit demselben, gepruefen Werkzeug.
 WERKZEUG_URL = (
