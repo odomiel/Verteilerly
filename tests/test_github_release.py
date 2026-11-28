@@ -65,7 +65,7 @@ class TestTextNachziehen(unittest.TestCase):
     def setUp(self):
         self.gesendet = []
 
-        def gefangen(art, url, koepfe, inhalt=None):
+        def gefangen(art, url, koepfe, inhalt=None, antwortkoepfe=None):
             self.gesendet.append((art, url, inhalt))
             return 200, b"{}"
 
@@ -142,6 +142,15 @@ class TestKennungUndToken(unittest.TestCase):
                 github_release.token_finden()
             self.assertIn("github_token", str(fehler.exception))
 
+    def test_zwei_zeilen_brechen_ab_ohne_den_inhalt(self):
+        """Der neue Token unter dem alten: urllib zeigte sonst beide."""
+        (self.ordner / "github_token").write_text("altesGEHEIM\nneuesGEHEIM\n")
+        with mock.patch.dict("os.environ", {"GITHUB_TOKEN": ""}):
+            with self.assertRaises(SystemExit) as fehler:
+                github_release.token_finden()
+        self.assertIn("einen Token in einer Zeile", str(fehler.exception))
+        self.assertNotIn("GEHEIM", str(fehler.exception))
+
     def test_im_quelltext_steht_keine_kennung(self):
         """Das Repo wird oeffentlich gespiegelt - dort gehoert nichts hin."""
         quelle = pathlib.Path(github_release.__file__).read_text(encoding="utf-8")
@@ -164,7 +173,7 @@ class TestKoepfeUndProbe(unittest.TestCase):
 
         anfragen = []
 
-        def gefangen(art, url, koepfe, inhalt=None):
+        def gefangen(art, url, koepfe, inhalt=None, antwortkoepfe=None):
             anfragen.append((art, url))
             if isinstance(antwort, Exception):
                 raise antwort
@@ -252,6 +261,58 @@ class TestKoepfeUndProbe(unittest.TestCase):
     def test_eine_fremde_datei_wird_angemerkt(self):
         _, _, fehler, _ = self._probe(name="ohne-fassung.bin")
         self.assertIn("WARNUNG", fehler)
+
+
+class TestTokenAblauf(unittest.TestCase):
+    def setUp(self):
+        import datetime
+
+        self.jetzt = datetime.datetime(2026, 11, 28, tzinfo=datetime.timezone.utc)
+
+    def _ablauf(self, wert):
+        return github_release.token_ablauf(
+            {"github-authentication-token-expiration": wert}
+        )
+
+    def test_der_kopf_wird_gelesen_mit_utc_und_versatz(self):
+        utc = self._ablauf("2027-10-31 23:00:00 UTC")
+        versatz = self._ablauf("2027-11-01 00:00:00 +0100")
+        self.assertEqual(utc, versatz)
+        self.assertEqual((utc.year, utc.month, utc.day), (2027, 10, 31))
+
+    def test_ohne_oder_mit_unsinn_kein_ablauf(self):
+        self.assertIsNone(github_release.token_ablauf({}))
+        self.assertIsNone(self._ablauf("bald"))
+        self.assertEqual(github_release.ablauf_hinweis(None), "")
+
+    def test_gewarnt_wird_erst_kurz_vorher(self):
+        fern = self._ablauf("2027-10-31 23:00:00 UTC")
+        nah = self._ablauf("2026-12-10 12:00:00 UTC")
+        self.assertEqual(github_release.ablauf_hinweis(fern, self.jetzt), "")
+        hinweis = github_release.ablauf_hinweis(nah, self.jetzt)
+        self.assertIn("10.12.2026", hinweis)
+        self.assertIn("12 Tagen", hinweis)
+
+    def test_die_probe_warnt_vor_dem_ablauf(self):
+        import contextlib
+        import datetime
+        import io
+
+        bald = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=5)
+
+        def gefangen(art, url, koepfe, inhalt=None, antwortkoepfe=None):
+            antwortkoepfe["github-authentication-token-expiration"] = (
+                f"{bald:%Y-%m-%d %H:%M:%S} UTC"
+            )
+            return 200, b"{}"
+
+        fehler = io.StringIO()
+        with mock.patch.object(github_release, "_anfrage", side_effect=gefangen), \
+                contextlib.redirect_stderr(fehler):
+            self.assertEqual(github_release.zugang_pruefen("wer/was", "tok"), "")
+        self.assertIn("laeuft am", fehler.getvalue())
+        self.assertNotIn("tok", fehler.getvalue())
+
 
 
 if __name__ == "__main__":

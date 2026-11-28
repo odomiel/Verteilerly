@@ -42,6 +42,7 @@ ohne die virtuelle Umgebung.
 from __future__ import annotations
 
 import argparse
+import datetime
 import hashlib
 import json
 import os
@@ -63,6 +64,8 @@ CONFORDNER = pathlib.Path(
 ) / "Verteilerly"
 #: Wie lange auf den Tag gewartet wird, den der Spiegel hinueberschiebt.
 WARTEN = 180
+#: So viele Tage vor dem Ablauf des Tokens wird gewarnt.
+ABLAUF_WARNUNG = 30
 
 
 # -- Kennung und Token: nie im Repo ---------------------------------------
@@ -95,6 +98,14 @@ def token_finden() -> str:
             "GitHub-Token fehlt. Setze GITHUB_TOKEN oder lege "
             f"{CONFORDNER / 'github_token'} an (fein eingestellt, "
             "Contents: Read and write)."
+        )
+    # Zwei Zeilen in der Datei (der neue Token unter dem alten) gaeben
+    # einen ungueltigen Kopf, und urllib schriebe dann BEIDE Tokens in
+    # seine Fehlermeldung. Darum vorher abbrechen - ohne den Inhalt.
+    if any(zeichen.isspace() for zeichen in token):
+        raise SystemExit(
+            f"{CONFORDNER / 'github_token'} bzw. $GITHUB_TOKEN muss genau "
+            "einen Token in einer Zeile enthalten (Inhalt nicht gezeigt)."
         )
     return token
 
@@ -165,13 +176,48 @@ def _koepfe(token: str, dazu: dict | None = None) -> dict:
     return koepfe
 
 
-def _anfrage(art: str, url: str, koepfe: dict, inhalt: bytes | None = None):
+def _anfrage(art: str, url: str, koepfe: dict, inhalt: bytes | None = None,
+             antwortkoepfe: dict | None = None):
+    """``(stand, inhalt)``; ``antwortkoepfe`` wird, wenn gegeben, gefuellt."""
     bitte = urllib.request.Request(url, data=inhalt, method=art, headers=koepfe)
     try:
         with urllib.request.urlopen(bitte) as antwort:
+            if antwortkoepfe is not None:
+                antwortkoepfe.update((k.lower(), v) for k, v in antwort.headers.items())
             return antwort.status, antwort.read()
     except urllib.error.HTTPError as fehler:
         return fehler.code, fehler.read()
+
+
+def token_ablauf(koepfe: dict) -> datetime.datetime | None:
+    """Wann der Token ablaeuft - GitHub sagt es in jeder Antwort.
+
+    ``github-authentication-token-expiration: 2027-10-31 23:00:00 UTC``
+    (oder mit Versatz wie ``+0100``). Ohne Kopf - ein Token ohne Ablauf
+    oder eine Antwort von woanders - ``None``.
+    """
+    wert = (koepfe or {}).get("github-authentication-token-expiration", "").strip()
+    if not wert:
+        return None
+    try:
+        return datetime.datetime.strptime(
+            wert.replace(" UTC", " +0000"), "%Y-%m-%d %H:%M:%S %z"
+        )
+    except ValueError:
+        return None
+
+
+def ablauf_hinweis(ablauf: datetime.datetime | None,
+                   jetzt: datetime.datetime | None = None) -> str:
+    """Leer, solange der Ablauf weiter als ``ABLAUF_WARNUNG`` Tage weg ist."""
+    if ablauf is None:
+        return ""
+    jetzt = jetzt or datetime.datetime.now(datetime.timezone.utc)
+    tage = (ablauf - jetzt).days
+    if tage >= ABLAUF_WARNUNG:
+        return ""
+    return (f"WARNUNG: der GitHub-Token laeuft am {ablauf:%d.%m.%Y} ab "
+            f"(in {max(tage, 0)} Tagen) - rechtzeitig erneuern.")
 
 
 def zugang_pruefen(slug: str, token: str) -> str:
@@ -181,11 +227,16 @@ def zugang_pruefen(slug: str, token: str) -> str:
     der Token steht in keiner Meldung. Ein abgewiesener Token fiel frueher
     erst auf, nachdem der echte Lauf drei Minuten auf den Tag gewartet hatte.
     """
+    antwortkoepfe: dict = {}
     try:
-        stand, _ = _anfrage("GET", f"{API}/repos/{slug}", _koepfe(token))
+        stand, _ = _anfrage("GET", f"{API}/repos/{slug}", _koepfe(token),
+                            antwortkoepfe=antwortkoepfe)
     except (urllib.error.URLError, TimeoutError, OSError) as fehler:
         return f"GitHub nicht erreicht ({getattr(fehler, 'reason', fehler)})"
     if stand == 200:
+        hinweis = ablauf_hinweis(token_ablauf(antwortkoepfe))
+        if hinweis:
+            print(hinweis, file=sys.stderr)
         return ""
     if stand == 401:
         return ("Token abgewiesen - abgelaufen, widerrufen oder neu erzeugt "
